@@ -6,28 +6,126 @@ export const dashboardStats = [
 ];
 
 export const customersData = [
-  { name: "Osid Barakat", address: "Palestine", phone: "0590000000" },
-  { name: "Mahmoud Kharouf", address: "Palestine", phone: "0561231231" },
-  { name: "Saleem", address: "Tulkarm", phone: "0561231231" },
+  {
+    id: "CUST-1001",
+    name: "Osid Barakat",
+    email: "osid@example.com",
+    phone: "0590000000",
+    joinedAt: "2026-04-01",
+  },
+  {
+    id: "CUST-1002",
+    name: "Mahmoud Kharouf",
+    email: "mahmoud@example.com",
+    phone: "0561231231",
+    joinedAt: "2026-04-02",
+  },
+  {
+    id: "CUST-1003",
+    name: "Saleem",
+    email: "saleem@example.com",
+    phone: "0565554443",
+    joinedAt: "2026-04-03",
+  },
 ];
 
 export const productsData = [
-  { name: "Laptop", price: "$1200" },
-  { name: "Phone", price: "$800" },
-  { name: "Monitor", price: "$350" },
-  { name: "Keyboard", price: "$90" },
+  {
+    id: "PROD-1001",
+    name: "Laptop",
+    category: "Electronics",
+    price: 1200,
+    stock: 10,
+    status: "Low Stock",
+    createdAt: "2026-04-01",
+  },
+  {
+    id: "PROD-1002",
+    name: "Phone",
+    category: "Electronics",
+    price: 800,
+    stock: 25,
+    status: "In Stock",
+    createdAt: "2026-04-02",
+  },
+  {
+    id: "PROD-1003",
+    name: "Monitor",
+    category: "Accessories",
+    price: 350,
+    stock: 18,
+    status: "In Stock",
+    createdAt: "2026-04-03",
+  },
+  {
+    id: "PROD-1004",
+    name: "Keyboard",
+    category: "Accessories",
+    price: 90,
+    stock: 40,
+    status: "In Stock",
+    createdAt: "2026-04-04",
+  },
 ];
 
 export const purchasesData = [
-  { customer: "Osid Barakat", product: "Laptop", quantity: "2", total: "$2400" },
-  { customer: "Mahmoud Kharouf", product: "Phone", quantity: "1", total: "$800" },
-  { customer: "Saleem", product: "Monitor", quantity: "3", total: "$1050" },
+  {
+    id: "PUR-3001",
+    customer: "Osid Barakat",
+    product: "Laptop",
+    quantity: 2,
+    totalCost: 2400,
+    paidAmount: 2400,
+    remainingDebt: 0,
+    date: "2026-04-01",
+    status: "Paid",
+  },
+  {
+    id: "PUR-3002",
+    customer: "Mahmoud Kharouf",
+    product: "Phone",
+    quantity: 1,
+    totalCost: 800,
+    paidAmount: 300,
+    remainingDebt: 500,
+    date: "2026-04-02",
+    status: "Partial",
+  },
+  {
+    id: "PUR-3003",
+    customer: "Saleem",
+    product: "Monitor",
+    quantity: 3,
+    totalCost: 1050,
+    paidAmount: 0,
+    remainingDebt: 1050,
+    date: "2026-04-03",
+    status: "Debt",
+  },
 ];
 
 export const invoicesData = [
-  { number: "#INV-1001", customer: "Osid Barakat", status: "Paid", total: "$2400" },
-  { number: "#INV-1002", customer: "Mahmoud Kharouf", status: "Pending", total: "$800" },
-  { number: "#INV-1003", customer: "Saleem", status: "Partial", total: "$1050" },
+  {
+    id: "INV-1001",
+    customer: "Osid Barakat",
+    amount: 2400,
+    status: "Paid",
+    date: "2026-04-01",
+  },
+  {
+    id: "INV-1002",
+    customer: "Mahmoud Kharouf",
+    amount: 800,
+    status: "Pending",
+    date: "2026-04-02",
+  },
+  {
+    id: "INV-1003",
+    customer: "Saleem",
+    amount: 1050,
+    status: "Partial",
+    date: "2026-04-03",
+  },
 ];
 
 export const paymentsData = [
@@ -35,10 +133,11 @@ export const paymentsData = [
   { customer: "Mahmoud Kharouf", method: "Card", date: "2026-04-02", amount: "$800" },
   { customer: "Saleem", method: "Bank Transfer", date: "2026-04-01", amount: "$1050" },
 ];
+
 export const recentInvoices = [
-  { number: "#INV-1001", customer: "Osid Barakat", status: "Paid", total: "$2400" },
-  { number: "#INV-1002", customer: "Mahmoud Kharouf", status: "Pending", total: "$800" },
-  { number: "#INV-1003", customer: "Saleem", status: "Partial", total: "$1050" },
+  { id: "INV-1001", customer: "Osid Barakat", status: "Paid", amount: 2400, date: "2026-04-01" },
+  { id: "INV-1002", customer: "Mahmoud Kharouf", status: "Pending", amount: 800, date: "2026-04-02" },
+  { id: "INV-1003", customer: "Saleem", status: "Partial", amount: 1050, date: "2026-04-03" },
 ];
 
 export const recentPayments = [

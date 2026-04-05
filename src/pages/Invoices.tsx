@@ -1,47 +1,66 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   type Invoice,
+  getCustomers,
   getInvoices,
-  resetInvoices,
   saveInvoices,
 } from "../data/storage";
 
+type SortKey = "id" | "customer" | "date" | "amount" | "status";
+type SortDirection = "asc" | "desc";
+
 export default function Invoices() {
   const [invoices, setInvoices] = useState<Invoice[]>(() => getInvoices());
+  const [customers] = useState(() => getCustomers());
   const [searchTerm, setSearchTerm] = useState("");
   const [showModal, setShowModal] = useState(false);
+  const [sortConfig, setSortConfig] = useState<{
+    key: SortKey;
+    direction: SortDirection;
+  }>({
+    key: "date",
+    direction: "desc",
+  });
 
   const [form, setForm] = useState({
     customer: "",
     amount: "",
-    status: "Paid" as "Paid" | "Pending",
+    status: "Paid" as "Paid" | "Pending" | "Partial",
   });
 
   useEffect(() => {
     saveInvoices(invoices);
   }, [invoices]);
 
+  const requestSort = (key: SortKey) => {
+    setSortConfig((prev) => ({
+      key,
+      direction: prev.key === key && prev.direction === "asc" ? "desc" : "asc",
+    }));
+  };
+
   const filteredInvoices = useMemo(() => {
     const value = searchTerm.trim().toLowerCase();
-    if (!value) return invoices;
 
-    return invoices.filter((invoice) =>
-      [
-        invoice.id,
-        invoice.customer,
-        invoice.date,
-        invoice.amount,
-        invoice.status,
-      ]
+    const filtered = invoices.filter((invoice) =>
+      [invoice.id, invoice.customer, invoice.date, invoice.amount, invoice.status]
         .join(" ")
         .toLowerCase()
         .includes(value)
     );
-  }, [invoices, searchTerm]);
+
+    return [...filtered].sort((a, b) => {
+      const aValue = a[sortConfig.key];
+      const bValue = b[sortConfig.key];
+
+      if (aValue < bValue) return sortConfig.direction === "asc" ? -1 : 1;
+      if (aValue > bValue) return sortConfig.direction === "asc" ? 1 : -1;
+      return 0;
+    });
+  }, [invoices, searchTerm, sortConfig]);
 
   const paidCount = invoices.filter((invoice) => invoice.status === "Paid").length;
   const pendingCount = invoices.filter((invoice) => invoice.status === "Pending").length;
-
   const totalAmount = invoices.reduce((sum, invoice) => sum + invoice.amount, 0);
   const paidAmount = invoices
     .filter((invoice) => invoice.status === "Paid")
@@ -74,10 +93,15 @@ export default function Invoices() {
     closeModal();
   };
 
-  const handleReset = () => {
-    resetInvoices();
-    setInvoices(getInvoices());
-  };
+  const sortableHeader = (label: string, key: SortKey) => (
+    <th
+      style={{ cursor: "pointer" }}
+      onClick={() => requestSort(key)}
+      title={`Sort by ${label}`}
+    >
+      {label} {sortConfig.key === key ? (sortConfig.direction === "asc" ? "↑" : "↓") : ""}
+    </th>
+  );
 
   return (
     <>
@@ -151,21 +175,17 @@ export default function Invoices() {
                   : "Search all invoices"}
               </span>
             </div>
-
-            <button className="quick-action-btn secondary" onClick={handleReset}>
-              Reset Data
-            </button>
           </div>
 
           <div className="table-wrapper">
             <table className="dashboard-table">
               <thead>
                 <tr>
-                  <th>ID</th>
-                  <th>Customer</th>
-                  <th>Date</th>
-                  <th>Amount</th>
-                  <th>Status</th>
+                  {sortableHeader("ID", "id")}
+                  {sortableHeader("Customer", "customer")}
+                  {sortableHeader("Date", "date")}
+                  {sortableHeader("Amount", "amount")}
+                  {sortableHeader("Status", "status")}
                 </tr>
               </thead>
               <tbody>
@@ -181,7 +201,9 @@ export default function Invoices() {
                           className={
                             invoice.status === "Paid"
                               ? "status-badge status-paid"
-                              : "status-badge status-pending"
+                              : invoice.status === "Partial"
+                              ? "status-badge status-pending"
+                              : "status-badge status-out"
                           }
                         >
                           {invoice.status}
@@ -218,13 +240,18 @@ export default function Invoices() {
             <form className="modal-form">
               <div>
                 <label className="modal-label">Customer Name</label>
-                <input
+                <select
                   className="modal-input"
-                  type="text"
-                  placeholder="Enter customer name"
                   value={form.customer}
                   onChange={(e) => setForm((prev) => ({ ...prev, customer: e.target.value }))}
-                />
+                >
+                  <option value="">Select customer</option>
+                  {customers.map((customer) => (
+                    <option key={customer.id} value={customer.name}>
+                      {customer.name}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>
@@ -246,11 +273,12 @@ export default function Invoices() {
                   onChange={(e) =>
                     setForm((prev) => ({
                       ...prev,
-                      status: e.target.value as "Paid" | "Pending",
+                      status: e.target.value as "Paid" | "Pending" | "Partial",
                     }))
                   }
                 >
                   <option>Paid</option>
+                  <option>Partial</option>
                   <option>Pending</option>
                 </select>
               </div>

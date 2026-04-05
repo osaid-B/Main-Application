@@ -2,67 +2,87 @@ import { useEffect, useMemo, useState } from "react";
 import {
   type Customer,
   getCustomers,
-  resetCustomers,
   saveCustomers,
 } from "../data/storage";
+
+type SortKey = "id" | "name" | "email" | "phone" | "joinedAt";
+type SortDirection = "asc" | "desc";
+
+const phoneRegex = /^(059|056)\d{7}$/;
 
 export default function Customers() {
   const [customers, setCustomers] = useState<Customer[]>(() => getCustomers());
   const [searchTerm, setSearchTerm] = useState("");
   const [showModal, setShowModal] = useState(false);
+  const [phoneError, setPhoneError] = useState("");
+  const [sortConfig, setSortConfig] = useState<{
+    key: SortKey;
+    direction: SortDirection;
+  }>({
+    key: "joinedAt",
+    direction: "desc",
+  });
 
   const [form, setForm] = useState({
     name: "",
     email: "",
     phone: "",
-    status: "Active" as "Active" | "Inactive",
   });
 
   useEffect(() => {
     saveCustomers(customers);
   }, [customers]);
 
-  const filteredCustomers = useMemo(() => {
-    const value = searchTerm.trim().toLowerCase();
-    if (!value) return customers;
+  const requestSort = (key: SortKey) => {
+    setSortConfig((prev) => ({
+      key,
+      direction: prev.key === key && prev.direction === "asc" ? "desc" : "asc",
+    }));
+  };
 
-    return customers.filter((customer) =>
-      [
-        customer.id,
-        customer.name,
-        customer.email,
-        customer.phone,
-        customer.status,
-        customer.joinedAt,
-      ]
+  const sortedAndFilteredCustomers = useMemo(() => {
+    const value = searchTerm.trim().toLowerCase();
+
+    const filtered = customers.filter((customer) =>
+      [customer.id, customer.name, customer.email, customer.phone, customer.joinedAt]
         .join(" ")
         .toLowerCase()
         .includes(value)
     );
-  }, [customers, searchTerm]);
 
-  const activeCount = customers.filter((customer) => customer.status === "Active").length;
-  const inactiveCount = customers.filter((customer) => customer.status === "Inactive").length;
+    return [...filtered].sort((a, b) => {
+      const aValue = a[sortConfig.key];
+      const bValue = b[sortConfig.key];
+
+      if (aValue < bValue) return sortConfig.direction === "asc" ? -1 : 1;
+      if (aValue > bValue) return sortConfig.direction === "asc" ? 1 : -1;
+      return 0;
+    });
+  }, [customers, searchTerm, sortConfig]);
 
   const closeModal = () => {
     setShowModal(false);
+    setPhoneError("");
     setForm({
       name: "",
       email: "",
       phone: "",
-      status: "Active",
     });
   };
 
   const handleAddCustomer = () => {
     if (!form.name || !form.email || !form.phone) return;
 
+    if (!phoneRegex.test(form.phone)) {
+      setPhoneError("Phone must be 10 digits and start with 059 or 056.");
+      return;
+    }
+
     const newCustomer: Customer = {
       id: `CUST-${1000 + customers.length + 1}`,
       name: form.name,
       email: form.email,
       phone: form.phone,
-      status: form.status,
       joinedAt: new Date().toISOString().split("T")[0],
     };
 
@@ -70,10 +90,15 @@ export default function Customers() {
     closeModal();
   };
 
-  const handleReset = () => {
-    resetCustomers();
-    setCustomers(getCustomers());
-  };
+  const sortableHeader = (label: string, key: SortKey) => (
+    <th
+      style={{ cursor: "pointer" }}
+      onClick={() => requestSort(key)}
+      title={`Sort by ${label}`}
+    >
+      {label} {sortConfig.key === key ? (sortConfig.direction === "asc" ? "↑" : "↓") : ""}
+    </th>
+  );
 
   return (
     <>
@@ -101,24 +126,6 @@ export default function Customers() {
             <h3 className="stat-value">{customers.length}</h3>
             <p className="stat-change">All customer records</p>
           </div>
-
-          <div className="stat-card">
-            <div className="stat-card-top">
-              <span className="stat-icon">✅</span>
-              <span className="stat-title">Active Customers</span>
-            </div>
-            <h3 className="stat-value">{activeCount}</h3>
-            <p className="stat-change">Currently active</p>
-          </div>
-
-          <div className="stat-card">
-            <div className="stat-card-top">
-              <span className="stat-icon">⏸️</span>
-              <span className="stat-title">Inactive Customers</span>
-            </div>
-            <h3 className="stat-value">{inactiveCount}</h3>
-            <p className="stat-change">Need follow-up</p>
-          </div>
         </div>
 
         <div className="dashboard-card">
@@ -128,59 +135,43 @@ export default function Customers() {
               <input
                 type="text"
                 className="dashboard-search-input"
-                placeholder="Search by name, email, phone, status..."
+                placeholder="Search by name, email, phone..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
               <span className="dashboard-search-meta">
                 {searchTerm.trim()
-                  ? `${filteredCustomers.length} result(s)`
+                  ? `${sortedAndFilteredCustomers.length} result(s)`
                   : "Search all customers"}
               </span>
             </div>
-
-            <button className="quick-action-btn secondary" onClick={handleReset}>
-              Reset Data
-            </button>
           </div>
 
           <div className="table-wrapper">
             <table className="dashboard-table">
               <thead>
                 <tr>
-                  <th>ID</th>
-                  <th>Name</th>
-                  <th>Email</th>
-                  <th>Phone</th>
-                  <th>Status</th>
-                  <th>Joined</th>
+                  {sortableHeader("ID", "id")}
+                  {sortableHeader("Name", "name")}
+                  {sortableHeader("Email", "email")}
+                  {sortableHeader("Phone", "phone")}
+                  {sortableHeader("Joined", "joinedAt")}
                 </tr>
               </thead>
               <tbody>
-                {filteredCustomers.length > 0 ? (
-                  filteredCustomers.map((customer) => (
+                {sortedAndFilteredCustomers.length > 0 ? (
+                  sortedAndFilteredCustomers.map((customer) => (
                     <tr key={customer.id}>
                       <td>{customer.id}</td>
                       <td>{customer.name}</td>
                       <td>{customer.email}</td>
                       <td>{customer.phone}</td>
-                      <td>
-                        <span
-                          className={
-                            customer.status === "Active"
-                              ? "status-badge status-paid"
-                              : "status-badge status-pending"
-                          }
-                        >
-                          {customer.status}
-                        </span>
-                      </td>
                       <td>{customer.joinedAt}</td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={6} className="empty-state-cell">
+                    <td colSpan={5} className="empty-state-cell">
                       No matching customers found.
                     </td>
                   </tr>
@@ -232,27 +223,17 @@ export default function Customers() {
                 <input
                   className="modal-input"
                   type="text"
-                  placeholder="Enter phone"
+                  inputMode="numeric"
+                  maxLength={10}
+                  placeholder="059xxxxxxx or 056xxxxxxx"
                   value={form.phone}
-                  onChange={(e) => setForm((prev) => ({ ...prev, phone: e.target.value }))}
+                  onChange={(e) => {
+                    const onlyDigits = e.target.value.replace(/\D/g, "").slice(0, 10);
+                    setForm((prev) => ({ ...prev, phone: onlyDigits }));
+                    setPhoneError("");
+                  }}
                 />
-              </div>
-
-              <div>
-                <label className="modal-label">Status</label>
-                <select
-                  className="modal-input"
-                  value={form.status}
-                  onChange={(e) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      status: e.target.value as "Active" | "Inactive",
-                    }))
-                  }
-                >
-                  <option>Active</option>
-                  <option>Inactive</option>
-                </select>
+                {phoneError ? <p className="form-error-text">{phoneError}</p> : null}
               </div>
 
               <div className="modal-actions">

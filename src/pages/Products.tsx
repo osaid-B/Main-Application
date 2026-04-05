@@ -2,9 +2,14 @@ import { useEffect, useMemo, useState } from "react";
 import {
   type Product,
   getProducts,
-  resetProducts,
   saveProducts,
 } from "../data/storage";
+
+type SortKey = "id" | "name" | "category" | "price" | "stock" | "status" | "createdAt";
+type SortDirection = "asc" | "desc";
+
+const productOptions = ["Laptop", "Phone", "Monitor", "Keyboard"];
+const categoryOptions = ["Electronics", "Accessories", "Furniture"];
 
 function getProductStatus(stock: number): Product["status"] {
   if (stock <= 0) return "Out of Stock";
@@ -16,6 +21,13 @@ export default function Products() {
   const [products, setProducts] = useState<Product[]>(() => getProducts());
   const [searchTerm, setSearchTerm] = useState("");
   const [showModal, setShowModal] = useState(false);
+  const [sortConfig, setSortConfig] = useState<{
+    key: SortKey;
+    direction: SortDirection;
+  }>({
+    key: "createdAt",
+    direction: "desc",
+  });
 
   const [form, setForm] = useState({
     name: "",
@@ -28,11 +40,17 @@ export default function Products() {
     saveProducts(products);
   }, [products]);
 
+  const requestSort = (key: SortKey) => {
+    setSortConfig((prev) => ({
+      key,
+      direction: prev.key === key && prev.direction === "asc" ? "desc" : "asc",
+    }));
+  };
+
   const filteredProducts = useMemo(() => {
     const value = searchTerm.trim().toLowerCase();
-    if (!value) return products;
 
-    return products.filter((product) =>
+    const filtered = products.filter((product) =>
       [
         product.id,
         product.name,
@@ -46,7 +64,16 @@ export default function Products() {
         .toLowerCase()
         .includes(value)
     );
-  }, [products, searchTerm]);
+
+    return [...filtered].sort((a, b) => {
+      const aValue = a[sortConfig.key];
+      const bValue = b[sortConfig.key];
+
+      if (aValue < bValue) return sortConfig.direction === "asc" ? -1 : 1;
+      if (aValue > bValue) return sortConfig.direction === "asc" ? 1 : -1;
+      return 0;
+    });
+  }, [products, searchTerm, sortConfig]);
 
   const inStockCount = products.filter((product) => product.status === "In Stock").length;
   const lowStockCount = products.filter((product) => product.status === "Low Stock").length;
@@ -89,10 +116,15 @@ export default function Products() {
     closeModal();
   };
 
-  const handleReset = () => {
-    resetProducts();
-    setProducts(getProducts());
-  };
+  const sortableHeader = (label: string, key: SortKey) => (
+    <th
+      style={{ cursor: "pointer" }}
+      onClick={() => requestSort(key)}
+      title={`Sort by ${label}`}
+    >
+      {label} {sortConfig.key === key ? (sortConfig.direction === "asc" ? "↑" : "↓") : ""}
+    </th>
+  );
 
   return (
     <>
@@ -175,23 +207,19 @@ export default function Products() {
                   : "Search all products"}
               </span>
             </div>
-
-            <button className="quick-action-btn secondary" onClick={handleReset}>
-              Reset Data
-            </button>
           </div>
 
           <div className="table-wrapper">
             <table className="dashboard-table">
               <thead>
                 <tr>
-                  <th>ID</th>
-                  <th>Name</th>
-                  <th>Category</th>
-                  <th>Price</th>
-                  <th>Stock</th>
-                  <th>Status</th>
-                  <th>Created</th>
+                  {sortableHeader("ID", "id")}
+                  {sortableHeader("Name", "name")}
+                  {sortableHeader("Category", "category")}
+                  {sortableHeader("Price", "price")}
+                  {sortableHeader("Stock", "stock")}
+                  {sortableHeader("Status", "status")}
+                  {sortableHeader("Created", "createdAt")}
                 </tr>
               </thead>
               <tbody>
@@ -248,24 +276,34 @@ export default function Products() {
             <form className="modal-form">
               <div>
                 <label className="modal-label">Product Name</label>
-                <input
+                <select
                   className="modal-input"
-                  type="text"
-                  placeholder="Enter product name"
                   value={form.name}
                   onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
-                />
+                >
+                  <option value="">Select product</option>
+                  {productOptions.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>
                 <label className="modal-label">Category</label>
-                <input
+                <select
                   className="modal-input"
-                  type="text"
-                  placeholder="Enter category"
                   value={form.category}
                   onChange={(e) => setForm((prev) => ({ ...prev, category: e.target.value }))}
-                />
+                >
+                  <option value="">Select category</option>
+                  {categoryOptions.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>
