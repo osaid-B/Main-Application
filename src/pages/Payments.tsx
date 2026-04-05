@@ -1,198 +1,370 @@
 import { useEffect, useMemo, useState } from "react";
 import {
-  type Invoice,
-  getInvoices,
-  resetInvoices,
-  saveInvoices,
+  type Payment,
+  getCustomers,
+  getPayments,
+  savePayments,
 } from "../data/storage";
 
-export default function Invoices() {
-  const [invoices, setInvoices] = useState<Invoice[]>(() => getInvoices());
-  const [searchTerm, setSearchTerm] = useState("");
-  const [showModal, setShowModal] = useState(false);
+type SortKey = "customer" | "method" | "date" | "amount";
+type SortDirection = "asc" | "desc";
+type PaymentMethod = "Cash" | "Card" | "Bank Transfer" | "Check";
 
-  const [form, setForm] = useState({
-    customer: "",
-    amount: "",
-    status: "Paid" as "Paid" | "Pending",
+type PaymentForm = {
+  customer: string;
+  method: PaymentMethod;
+  date: string;
+  amount: string;
+  notes: string;
+};
+
+const initialForm: PaymentForm = {
+  customer: "",
+  method: "Cash",
+  date: new Date().toISOString().split("T")[0],
+  amount: "",
+  notes: "",
+};
+
+function formatCurrency(value: number) {
+  return `$${value.toLocaleString()}`;
+}
+
+export default function Payments() {
+  const [payments, setPayments] = useState<Payment[]>(() => getPayments());
+  const [customers] = useState(() => getCustomers());
+  const [searchTerm, setSearchTerm] = useState("");
+  const [showFormModal, setShowFormModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
+  const [deleteConfirmValue, setDeleteConfirmValue] = useState("");
+  const [isEditing, setIsEditing] = useState(false);
+
+  const [sortConfig, setSortConfig] = useState<{
+    key: SortKey;
+    direction: SortDirection;
+  }>({
+    key: "date",
+    direction: "desc",
   });
 
+  const [form, setForm] = useState<PaymentForm>(initialForm);
+
   useEffect(() => {
-    saveInvoices(invoices);
-  }, [invoices]);
+    savePayments(payments);
+  }, [payments]);
 
-  const filteredInvoices = useMemo(() => {
+  const totalAmount = payments.reduce((sum, payment) => sum + payment.amount, 0);
+  const cashCount = payments.filter((payment) => payment.method === "Cash").length;
+  const cardCount = payments.filter((payment) => payment.method === "Card").length;
+  const transferCount = payments.filter((payment) => payment.method === "Bank Transfer").length;
+  const checkCount = payments.filter((payment) => payment.method === "Check").length;
+
+  const latestPaymentDate =
+    payments.length > 0
+      ? [...payments].sort((a, b) => b.date.localeCompare(a.date))[0].date
+      : "No payments yet";
+
+  const requestSort = (key: SortKey) => {
+    setSortConfig((prev) => ({
+      key,
+      direction: prev.key === key && prev.direction === "asc" ? "desc" : "asc",
+    }));
+  };
+
+  const filteredPayments = useMemo(() => {
     const value = searchTerm.trim().toLowerCase();
-    if (!value) return invoices;
 
-    return invoices.filter((invoice) =>
+    const filtered = payments.filter((payment) =>
       [
-        invoice.id,
-        invoice.customer,
-        invoice.date,
-        invoice.amount,
-        invoice.status,
+        payment.customer,
+        payment.method,
+        payment.date,
+        payment.amount,
+        payment.notes ?? "",
       ]
         .join(" ")
         .toLowerCase()
         .includes(value)
     );
-  }, [invoices, searchTerm]);
 
-  const paidCount = invoices.filter((invoice) => invoice.status === "Paid").length;
-  const pendingCount = invoices.filter((invoice) => invoice.status === "Pending").length;
+    return [...filtered].sort((a, b) => {
+      const aValue = a[sortConfig.key];
+      const bValue = b[sortConfig.key];
 
-  const totalAmount = invoices.reduce((sum, invoice) => sum + invoice.amount, 0);
-  const paidAmount = invoices
-    .filter((invoice) => invoice.status === "Paid")
-    .reduce((sum, invoice) => sum + invoice.amount, 0);
-
-  const closeModal = () => {
-    setShowModal(false);
-    setForm({
-      customer: "",
-      amount: "",
-      status: "Paid",
+      if (aValue < bValue) return sortConfig.direction === "asc" ? -1 : 1;
+      if (aValue > bValue) return sortConfig.direction === "asc" ? 1 : -1;
+      return 0;
     });
+  }, [payments, searchTerm, sortConfig]);
+
+  const resetFormState = () => {
+    setForm({
+      ...initialForm,
+      date: new Date().toISOString().split("T")[0],
+    });
+    setSelectedPayment(null);
+    setIsEditing(false);
   };
 
-  const handleAddInvoice = () => {
-    if (!form.customer || !form.amount) return;
+  const closeFormModal = () => {
+    setShowFormModal(false);
+    resetFormState();
+  };
+
+  const closeDeleteModal = () => {
+    setShowDeleteModal(false);
+    setSelectedPayment(null);
+    setDeleteConfirmValue("");
+  };
+
+  const openAddModal = () => {
+    resetFormState();
+    setShowFormModal(true);
+  };
+
+  const openEditModal = (payment: Payment) => {
+    setSelectedPayment(payment);
+    setIsEditing(true);
+    setForm({
+      customer: payment.customer,
+      method: payment.method,
+      date: payment.date,
+      amount: String(payment.amount),
+      notes: payment.notes ?? "",
+    });
+    setShowFormModal(true);
+  };
+
+  const openDeleteModal = (payment: Payment) => {
+    setSelectedPayment(payment);
+    setDeleteConfirmValue("");
+    setShowDeleteModal(true);
+  };
+
+  const handleSavePayment = () => {
+    if (!form.customer || !form.amount || !form.date) return;
 
     const amountNumber = Number(form.amount);
     if (Number.isNaN(amountNumber)) return;
 
-    const newInvoice: Invoice = {
-      id: `INV-${1000 + invoices.length + 1}`,
+    const payload: Payment = {
       customer: form.customer,
+      method: form.method,
+      date: form.date,
       amount: amountNumber,
-      status: form.status,
-      date: new Date().toISOString().split("T")[0],
+      notes: form.notes.trim() || undefined,
     };
 
-    setInvoices((prev) => [newInvoice, ...prev]);
-    closeModal();
+    if (isEditing && selectedPayment) {
+      setPayments((prev) =>
+        prev.map((payment) =>
+          payment.customer === selectedPayment.customer &&
+          payment.date === selectedPayment.date &&
+          payment.amount === selectedPayment.amount
+            ? payload
+            : payment
+        )
+      );
+    } else {
+      setPayments((prev) => [payload, ...prev]);
+    }
+
+    closeFormModal();
   };
 
-  const handleReset = () => {
-    resetInvoices();
-    setInvoices(getInvoices());
+  const handleDeletePayment = () => {
+    if (!selectedPayment) return;
+
+    const confirmKey = `${selectedPayment.customer}-${selectedPayment.date}`;
+    if (deleteConfirmValue.trim() !== confirmKey) return;
+
+    setPayments((prev) =>
+      prev.filter(
+        (payment) =>
+          !(
+            payment.customer === selectedPayment.customer &&
+            payment.date === selectedPayment.date &&
+            payment.amount === selectedPayment.amount
+          )
+      )
+    );
+
+    closeDeleteModal();
   };
+
+  const sortableHeader = (label: string, key: SortKey) => (
+    <th
+      style={{ cursor: "pointer" }}
+      onClick={() => requestSort(key)}
+      title={`Sort by ${label}`}
+    >
+      {label} {sortConfig.key === key ? (sortConfig.direction === "asc" ? "↑" : "↓") : ""}
+    </th>
+  );
 
   return (
     <>
-      <div className="invoices-page">
-        <div className="invoices-header">
+      <div className="payments-page payments-enhanced-page">
+        <div className="payments-header enhanced-page-header">
           <div>
-            <p className="dashboard-badge">Invoice Management</p>
-            <h1 className="dashboard-title">Invoices</h1>
+            <p className="dashboard-badge">Payments Management</p>
+            <h1 className="dashboard-title">Payments</h1>
             <p className="dashboard-subtitle">
-              Create, track, and search invoices with a clean and organized workflow.
+              Manage payment records, add new payments, edit details, and delete safely.
             </p>
           </div>
 
-          <button className="quick-action-btn" onClick={() => setShowModal(true)}>
-            + Add Invoice
+          <button className="quick-action-btn" onClick={openAddModal}>
+            + Add Payment
           </button>
         </div>
 
-        <div className="invoices-stats-grid">
-          <div className="stat-card">
-            <div className="stat-card-top">
-              <span className="stat-icon">🧾</span>
-              <span className="stat-title">Total Invoices</span>
+        <div className="payments-hero-grid">
+          <div className="payment-hero-card payment-hero-primary">
+            <div className="payment-hero-top">
+              <span className="payment-hero-icon">💵</span>
+              <div>
+                <h3>Total Payments</h3>
+                <p>All payment records</p>
+              </div>
             </div>
-            <h3 className="stat-value">{invoices.length}</h3>
-            <p className="stat-change">All invoices in system</p>
+            <strong>{payments.length}</strong>
           </div>
 
-          <div className="stat-card">
-            <div className="stat-card-top">
-              <span className="stat-icon">✅</span>
-              <span className="stat-title">Paid Invoices</span>
+          <div className="payment-hero-card">
+            <div className="payment-hero-top">
+              <span className="payment-hero-icon">💰</span>
+              <div>
+                <h3>Total Amount</h3>
+                <p>Total collected</p>
+              </div>
             </div>
-            <h3 className="stat-value">{paidCount}</h3>
-            <p className="stat-change">Completed invoices</p>
+            <strong>{formatCurrency(totalAmount)}</strong>
           </div>
 
-          <div className="stat-card">
-            <div className="stat-card-top">
-              <span className="stat-icon">⏳</span>
-              <span className="stat-title">Pending Invoices</span>
+          <div className="payment-hero-card">
+            <div className="payment-hero-top">
+              <span className="payment-hero-icon">💵</span>
+              <div>
+                <h3>Cash</h3>
+                <p>Cash payments</p>
+              </div>
             </div>
-            <h3 className="stat-value">{pendingCount}</h3>
-            <p className="stat-change">Awaiting payment</p>
+            <strong>{cashCount}</strong>
           </div>
 
-          <div className="stat-card">
-            <div className="stat-card-top">
-              <span className="stat-icon">💵</span>
-              <span className="stat-title">Total Amount</span>
+          <div className="payment-hero-card">
+            <div className="payment-hero-top">
+              <span className="payment-hero-icon">💳</span>
+              <div>
+                <h3>Card</h3>
+                <p>Card payments</p>
+              </div>
             </div>
-            <h3 className="stat-value">${totalAmount}</h3>
-            <p className="stat-change">${paidAmount} paid already</p>
+            <strong>{cardCount}</strong>
+          </div>
+
+          <div className="payment-hero-card">
+            <div className="payment-hero-top">
+              <span className="payment-hero-icon">🏦</span>
+              <div>
+                <h3>Transfer</h3>
+                <p>Bank transfers</p>
+              </div>
+            </div>
+            <strong>{transferCount}</strong>
+          </div>
+
+          <div className="payment-hero-card">
+            <div className="payment-hero-top">
+              <span className="payment-hero-icon">🧾</span>
+              <div>
+                <h3>Checks</h3>
+                <p>Check payments</p>
+              </div>
+            </div>
+            <strong>{checkCount}</strong>
+          </div>
+
+          <div className="payment-hero-card payment-hero-wide">
+            <div className="payment-hero-top">
+              <span className="payment-hero-icon">📅</span>
+              <div>
+                <h3>Latest Payment</h3>
+                <p>Most recent payment date</p>
+              </div>
+            </div>
+            <strong>{latestPaymentDate}</strong>
           </div>
         </div>
 
-        <div className="dashboard-card">
-          <div className="invoices-toolbar">
-            <div className="dashboard-search-box invoices-search-box">
-              <label className="dashboard-search-label">Search invoices</label>
+        <div className="dashboard-card payments-table-card">
+          <div className="payments-toolbar enhanced-toolbar">
+            <div className="dashboard-search-box payments-search-box enhanced-search-box">
+              <label className="dashboard-search-label">Search payments</label>
               <input
                 type="text"
                 className="dashboard-search-input"
-                placeholder="Search by customer, amount, date, status..."
+                placeholder="Search by customer, method, date, amount..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
               <span className="dashboard-search-meta">
                 {searchTerm.trim()
-                  ? `${filteredInvoices.length} result(s)`
-                  : "Search all invoices"}
+                  ? `${filteredPayments.length} result(s)`
+                  : "Search all payments"}
               </span>
             </div>
-
-            <button className="quick-action-btn secondary" onClick={handleReset}>
-              Reset Data
-            </button>
           </div>
 
           <div className="table-wrapper">
-            <table className="dashboard-table">
+            <table className="dashboard-table payments-enhanced-table">
               <thead>
                 <tr>
-                  <th>ID</th>
-                  <th>Customer</th>
-                  <th>Date</th>
-                  <th>Amount</th>
-                  <th>Status</th>
+                  {sortableHeader("Customer", "customer")}
+                  {sortableHeader("Method", "method")}
+                  {sortableHeader("Date", "date")}
+                  {sortableHeader("Amount", "amount")}
+                  <th>Notes</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredInvoices.length > 0 ? (
-                  filteredInvoices.map((invoice) => (
-                    <tr key={invoice.id}>
-                      <td>{invoice.id}</td>
-                      <td>{invoice.customer}</td>
-                      <td>{invoice.date}</td>
-                      <td>${invoice.amount}</td>
+                {filteredPayments.length > 0 ? (
+                  filteredPayments.map((payment, index) => (
+                    <tr key={`${payment.customer}-${payment.date}-${payment.amount}-${index}`}>
+                      <td>{payment.customer}</td>
                       <td>
-                        <span
-                          className={
-                            invoice.status === "Paid"
-                              ? "status-badge status-paid"
-                              : "status-badge status-pending"
-                          }
-                        >
-                          {invoice.status}
-                        </span>
+                        <span className="payment-method-chip">{payment.method}</span>
+                      </td>
+                      <td>{payment.date}</td>
+                      <td>{formatCurrency(payment.amount)}</td>
+                      <td>{payment.notes || <span className="muted-dash">—</span>}</td>
+                      <td>
+                        <div className="row-actions">
+                          <button
+                            type="button"
+                            className="table-action-btn edit-btn"
+                            onClick={() => openEditModal(payment)}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            className="table-action-btn delete-btn"
+                            onClick={() => openDeleteModal(payment)}
+                          >
+                            Delete
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={5} className="empty-state-cell">
-                      No matching invoices found.
+                    <td colSpan={6} className="empty-state-cell">
+                      No matching payments found.
                     </td>
                   </tr>
                 )}
@@ -202,15 +374,19 @@ export default function Invoices() {
         </div>
       </div>
 
-      {showModal && (
-        <div className="modal-overlay" onClick={closeModal}>
-          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+      {showFormModal && (
+        <div className="modal-overlay" onClick={closeFormModal}>
+          <div className="modal-card enhanced-modal-card" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <div>
-                <h2>Add Invoice</h2>
-                <p>Enter the new invoice information.</p>
+                <h2>{isEditing ? "Edit Payment" : "Add Payment"}</h2>
+                <p>
+                  {isEditing
+                    ? "Update payment information."
+                    : "Enter the new payment information."}
+                </p>
               </div>
-              <button className="modal-close-btn" onClick={closeModal}>
+              <button className="modal-close-btn" onClick={closeFormModal}>
                 ×
               </button>
             </div>
@@ -218,12 +394,46 @@ export default function Invoices() {
             <form className="modal-form">
               <div>
                 <label className="modal-label">Customer Name</label>
-                <input
+                <select
                   className="modal-input"
-                  type="text"
-                  placeholder="Enter customer name"
                   value={form.customer}
                   onChange={(e) => setForm((prev) => ({ ...prev, customer: e.target.value }))}
+                >
+                  <option value="">Select customer</option>
+                  {customers.map((customer) => (
+                    <option key={customer.id} value={customer.name}>
+                      {customer.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="modal-label">Method</label>
+                <select
+                  className="modal-input"
+                  value={form.method}
+                  onChange={(e) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      method: e.target.value as PaymentMethod,
+                    }))
+                  }
+                >
+                  <option value="Cash">Cash</option>
+                  <option value="Card">Card</option>
+                  <option value="Bank Transfer">Bank Transfer</option>
+                  <option value="Check">Check</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="modal-label">Date</label>
+                <input
+                  className="modal-input"
+                  type="date"
+                  value={form.date}
+                  onChange={(e) => setForm((prev) => ({ ...prev, date: e.target.value }))}
                 />
               </div>
 
@@ -239,31 +449,78 @@ export default function Invoices() {
               </div>
 
               <div>
-                <label className="modal-label">Status</label>
-                <select
-                  className="modal-input"
-                  value={form.status}
-                  onChange={(e) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      status: e.target.value as "Paid" | "Pending",
-                    }))
-                  }
-                >
-                  <option>Paid</option>
-                  <option>Pending</option>
-                </select>
+                <label className="modal-label">Notes</label>
+                <textarea
+                  className="modal-input modal-textarea"
+                  placeholder="Optional notes"
+                  value={form.notes}
+                  onChange={(e) => setForm((prev) => ({ ...prev, notes: e.target.value }))}
+                />
               </div>
 
               <div className="modal-actions">
-                <button type="button" className="modal-secondary-btn" onClick={closeModal}>
+                <button type="button" className="modal-secondary-btn" onClick={closeFormModal}>
                   Cancel
                 </button>
-                <button type="button" className="modal-primary-btn" onClick={handleAddInvoice}>
-                  Save Invoice
+                <button type="button" className="modal-primary-btn" onClick={handleSavePayment}>
+                  {isEditing ? "Save Changes" : "Save Payment"}
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {showDeleteModal && selectedPayment && (
+        <div className="modal-overlay" onClick={closeDeleteModal}>
+          <div className="modal-card delete-confirm-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div>
+                <h2>Delete Payment</h2>
+                <p>
+                  To confirm deletion, type:
+                  <strong> {selectedPayment.customer}-{selectedPayment.date}</strong>
+                </p>
+              </div>
+              <button className="modal-close-btn" onClick={closeDeleteModal}>
+                ×
+              </button>
+            </div>
+
+            <div className="delete-confirm-box">
+              <div className="delete-warning-card">
+                <strong>{selectedPayment.customer}</strong>
+                <p>{formatCurrency(selectedPayment.amount)}</p>
+                <span className="delete-id-tag">
+                  {selectedPayment.customer}-{selectedPayment.date}
+                </span>
+              </div>
+
+              <input
+                className="modal-input"
+                type="text"
+                placeholder={`Type ${selectedPayment.customer}-${selectedPayment.date}`}
+                value={deleteConfirmValue}
+                onChange={(e) => setDeleteConfirmValue(e.target.value)}
+              />
+
+              <div className="modal-actions">
+                <button type="button" className="modal-secondary-btn" onClick={closeDeleteModal}>
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="modal-danger-btn"
+                  onClick={handleDeletePayment}
+                  disabled={
+                    deleteConfirmValue.trim() !==
+                    `${selectedPayment.customer}-${selectedPayment.date}`
+                  }
+                >
+                  Confirm Delete
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

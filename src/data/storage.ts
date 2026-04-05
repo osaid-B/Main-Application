@@ -22,8 +22,9 @@ export type Product = {
   category: string;
   price: number;
   stock: number;
-  status: ProductStatus;
+  status: "In Stock" | "Low Stock" | "Out of Stock";
   createdAt: string;
+  imageUrl?: string;
 };
 
 export type PurchaseStatus = "Paid" | "Partial" | "Debt";
@@ -40,6 +41,8 @@ export type Purchase = {
   status: PurchaseStatus;
 };
 
+export type PaymentMethod = "Cash" | "Card" | "Bank Transfer" | "Check";
+
 export type InvoiceStatus = "Paid" | "Pending" | "Partial";
 
 export type Invoice = {
@@ -48,15 +51,18 @@ export type Invoice = {
   amount: number;
   status: InvoiceStatus;
   date: string;
+  paymentMethod: PaymentMethod;
+  checkNumber?: string;
+  checkDueDate?: string;
+  notes?: string;
 };
-
 export type Payment = {
   customer: string;
-  method: string;
+  method: "Cash" | "Card" | "Bank Transfer" | "Check";
   date: string;
   amount: number;
+  notes?: string;
 };
-
 const STORAGE_KEYS = {
   customers: "dashboard_customers",
   products: "dashboard_products",

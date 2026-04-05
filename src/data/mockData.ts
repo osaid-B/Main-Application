@@ -40,6 +40,7 @@ export const productsData: Product[] = [
     stock: 10,
     status: "Low Stock",
     createdAt: "2026-04-01",
+    imageUrl: "https://via.placeholder.com/80x80?text=Laptop",
   },
   {
     id: "PROD-1002",
@@ -49,6 +50,7 @@ export const productsData: Product[] = [
     stock: 25,
     status: "In Stock",
     createdAt: "2026-04-02",
+    imageUrl: "https://via.placeholder.com/80x80?text=Phone",
   },
   {
     id: "PROD-1003",
@@ -58,6 +60,7 @@ export const productsData: Product[] = [
     stock: 18,
     status: "In Stock",
     createdAt: "2026-04-03",
+    imageUrl: "https://via.placeholder.com/80x80?text=Monitor",
   },
   {
     id: "PROD-1004",
@@ -67,6 +70,7 @@ export const productsData: Product[] = [
     stock: 0,
     status: "Out of Stock",
     createdAt: "2026-04-04",
+    imageUrl: "https://via.placeholder.com/80x80?text=Keyboard",
   },
 ];
 
@@ -105,7 +109,6 @@ export const purchasesData: Purchase[] = [
     status: "Debt",
   },
 ];
-
 export const invoicesData: Invoice[] = [
   {
     id: "INV-1001",
@@ -113,6 +116,8 @@ export const invoicesData: Invoice[] = [
     amount: 2400,
     status: "Paid",
     date: "2026-04-01",
+    paymentMethod: "Cash",
+    notes: "Paid directly",
   },
   {
     id: "INV-1002",
@@ -120,6 +125,10 @@ export const invoicesData: Invoice[] = [
     amount: 800,
     status: "Pending",
     date: "2026-04-02",
+    paymentMethod: "Check",
+    checkNumber: "CHK-2026-001",
+    checkDueDate: "2026-04-10",
+    notes: "Awaiting check clearance",
   },
   {
     id: "INV-1003",
@@ -127,27 +136,31 @@ export const invoicesData: Invoice[] = [
     amount: 1050,
     status: "Partial",
     date: "2026-04-03",
+    paymentMethod: "Card",
+    notes: "Partially paid by card",
   },
 ];
-
 export const paymentsData: Payment[] = [
   {
     customer: "Osid Barakat",
     method: "Cash",
     date: "2026-04-03",
     amount: 2400,
+    notes: "Paid directly at branch",
   },
   {
     customer: "Mahmoud Kharouf",
     method: "Card",
     date: "2026-04-02",
     amount: 800,
+    notes: "Paid with Visa card",
   },
   {
     customer: "Saleem",
     method: "Bank Transfer",
     date: "2026-04-01",
     amount: 1050,
+    notes: "Transferred from company account",
   },
 ];
 
