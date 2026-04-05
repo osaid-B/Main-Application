@@ -54,7 +54,7 @@ export type Payment = {
   customer: string;
   method: string;
   date: string;
-  amount: string;
+  amount: number;
 };
 
 const STORAGE_KEYS = {
@@ -72,10 +72,12 @@ function cloneData<T>(data: T): T {
 function safeRead<T>(key: string, fallback: T): T {
   try {
     const stored = localStorage.getItem(key);
-    if (!stored) return cloneData(fallback);
 
-    const parsed = JSON.parse(stored) as T;
-    return parsed;
+    if (!stored) {
+      return cloneData(fallback);
+    }
+
+    return JSON.parse(stored) as T;
   } catch {
     return cloneData(fallback);
   }
@@ -85,14 +87,14 @@ function safeWrite<T>(key: string, value: T) {
   try {
     localStorage.setItem(key, JSON.stringify(value));
   } catch {
-    // ignore storage write errors
+    // تجاهل أخطاء localStorage
   }
 }
 
 /* ----------------------------- Customers ----------------------------- */
 
 export function getCustomers(): Customer[] {
-  return safeRead<Customer[]>(STORAGE_KEYS.customers, customersData as Customer[]);
+  return safeRead<Customer[]>(STORAGE_KEYS.customers, customersData);
 }
 
 export function saveCustomers(customers: Customer[]) {
@@ -106,7 +108,7 @@ export function resetCustomers() {
 /* ----------------------------- Products ------------------------------ */
 
 export function getProducts(): Product[] {
-  return safeRead<Product[]>(STORAGE_KEYS.products, productsData as Product[]);
+  return safeRead<Product[]>(STORAGE_KEYS.products, productsData);
 }
 
 export function saveProducts(products: Product[]) {
@@ -120,7 +122,7 @@ export function resetProducts() {
 /* ----------------------------- Purchases ----------------------------- */
 
 export function getPurchases(): Purchase[] {
-  return safeRead<Purchase[]>(STORAGE_KEYS.purchases, purchasesData as Purchase[]);
+  return safeRead<Purchase[]>(STORAGE_KEYS.purchases, purchasesData);
 }
 
 export function savePurchases(purchases: Purchase[]) {
@@ -134,7 +136,7 @@ export function resetPurchases() {
 /* ------------------------------ Invoices ----------------------------- */
 
 export function getInvoices(): Invoice[] {
-  return safeRead<Invoice[]>(STORAGE_KEYS.invoices, invoicesData as Invoice[]);
+  return safeRead<Invoice[]>(STORAGE_KEYS.invoices, invoicesData);
 }
 
 export function saveInvoices(invoices: Invoice[]) {
@@ -148,7 +150,7 @@ export function resetInvoices() {
 /* ------------------------------ Payments ----------------------------- */
 
 export function getPayments(): Payment[] {
-  return safeRead<Payment[]>(STORAGE_KEYS.payments, paymentsData as Payment[]);
+  return safeRead<Payment[]>(STORAGE_KEYS.payments, paymentsData);
 }
 
 export function savePayments(payments: Payment[]) {
@@ -162,7 +164,9 @@ export function resetPayments() {
 /* ---------------------------- Utilities ------------------------------ */
 
 export function clearAllDashboardStorage() {
-  Object.values(STORAGE_KEYS).forEach((key) => localStorage.removeItem(key));
+  Object.values(STORAGE_KEYS).forEach((key) => {
+    localStorage.removeItem(key);
+  });
 }
 
 export function seedDashboardStorage() {

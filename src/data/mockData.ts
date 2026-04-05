@@ -1,3 +1,5 @@
+import type { Customer, Invoice, Payment, Product, Purchase } from "./storage";
+
 export const dashboardStats = [
   { title: "Total Sales", value: "$12,450" },
   { title: "Customers", value: "245" },
@@ -5,7 +7,7 @@ export const dashboardStats = [
   { title: "Products", value: "124" },
 ];
 
-export const customersData = [
+export const customersData: Customer[] = [
   {
     id: "CUST-1001",
     name: "Osid Barakat",
@@ -29,7 +31,7 @@ export const customersData = [
   },
 ];
 
-export const productsData = [
+export const productsData: Product[] = [
   {
     id: "PROD-1001",
     name: "Laptop",
@@ -62,13 +64,13 @@ export const productsData = [
     name: "Keyboard",
     category: "Accessories",
     price: 90,
-    stock: 40,
-    status: "In Stock",
+    stock: 0,
+    status: "Out of Stock",
     createdAt: "2026-04-04",
   },
 ];
 
-export const purchasesData = [
+export const purchasesData: Purchase[] = [
   {
     id: "PUR-3001",
     customer: "Osid Barakat",
@@ -104,7 +106,7 @@ export const purchasesData = [
   },
 ];
 
-export const invoicesData = [
+export const invoicesData: Invoice[] = [
   {
     id: "INV-1001",
     customer: "Osid Barakat",
@@ -128,20 +130,65 @@ export const invoicesData = [
   },
 ];
 
-export const paymentsData = [
-  { customer: "Osid Barakat", method: "Cash", date: "2026-04-03", amount: "$2400" },
-  { customer: "Mahmoud Kharouf", method: "Card", date: "2026-04-02", amount: "$800" },
-  { customer: "Saleem", method: "Bank Transfer", date: "2026-04-01", amount: "$1050" },
+export const paymentsData: Payment[] = [
+  {
+    customer: "Osid Barakat",
+    method: "Cash",
+    date: "2026-04-03",
+    amount: 2400,
+  },
+  {
+    customer: "Mahmoud Kharouf",
+    method: "Card",
+    date: "2026-04-02",
+    amount: 800,
+  },
+  {
+    customer: "Saleem",
+    method: "Bank Transfer",
+    date: "2026-04-01",
+    amount: 1050,
+  },
 ];
 
 export const recentInvoices = [
-  { id: "INV-1001", customer: "Osid Barakat", status: "Paid", amount: 2400, date: "2026-04-01" },
-  { id: "INV-1002", customer: "Mahmoud Kharouf", status: "Pending", amount: 800, date: "2026-04-02" },
-  { id: "INV-1003", customer: "Saleem", status: "Partial", amount: 1050, date: "2026-04-03" },
+  {
+    id: "INV-1001",
+    customer: "Osid Barakat",
+    status: "Paid",
+    amount: 2400,
+    date: "2026-04-01",
+  },
+  {
+    id: "INV-1002",
+    customer: "Mahmoud Kharouf",
+    status: "Pending",
+    amount: 800,
+    date: "2026-04-02",
+  },
+  {
+    id: "INV-1003",
+    customer: "Saleem",
+    status: "Partial",
+    amount: 1050,
+    date: "2026-04-03",
+  },
 ];
 
 export const recentPayments = [
-  { customer: "Osid Barakat", method: "Cash", amount: "$2400" },
-  { customer: "Mahmoud Kharouf", method: "Card", amount: "$800" },
-  { customer: "Saleem", method: "Bank Transfer", amount: "$1050" },
+  {
+    customer: "Osid Barakat",
+    method: "Cash",
+    amount: 2400,
+  },
+  {
+    customer: "Mahmoud Kharouf",
+    method: "Card",
+    amount: 800,
+  },
+  {
+    customer: "Saleem",
+    method: "Bank Transfer",
+    amount: 1050,
+  },
 ];
