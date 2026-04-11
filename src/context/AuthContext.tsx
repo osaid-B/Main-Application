@@ -16,6 +16,15 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const AUTH_STORAGE_KEY = "dashboard_auth_user";
 
+function isValidUser(value: unknown): value is User {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "username" in value &&
+    typeof (value as User).username === "string"
+  );
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
 
@@ -24,16 +33,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!storedUser) return;
 
     try {
-      const parsedUser = JSON.parse(storedUser) as User;
-      setUser(parsedUser);
+      const parsedUser: unknown = JSON.parse(storedUser);
+
+      if (isValidUser(parsedUser)) {
+        setUser(parsedUser);
+      } else {
+        localStorage.removeItem(AUTH_STORAGE_KEY);
+      }
     } catch {
       localStorage.removeItem(AUTH_STORAGE_KEY);
     }
   }, []);
 
   const login = (username: string, password: string) => {
-    if (username === "admin" && password === "1234") {
-      const loggedInUser = { username };
+    const trimmedUsername = username.trim();
+    const trimmedPassword = password.trim();
+
+    if (trimmedUsername === "admin" && trimmedPassword === "1234") {
+      const loggedInUser = { username: trimmedUsername };
       setUser(loggedInUser);
       localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(loggedInUser));
       return true;

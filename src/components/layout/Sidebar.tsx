@@ -1,8 +1,10 @@
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import { useSettings } from "../../context/SettingsContext";
 
 export default function Sidebar() {
   const { user, logout } = useAuth();
+  const { t, isArabic } = useSettings();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -14,39 +16,45 @@ export default function Sidebar() {
     isActive ? "sidebar-link active" : "sidebar-link";
 
   return (
-    <aside className="sidebar">
+    <aside className="sidebar" dir={isArabic ? "rtl" : "ltr"}>
       <div>
-        <h2 className="sidebar-title">Business Dashboard</h2>
+        <h2 className="sidebar-title">{t.sidebar.title}</h2>
 
         <nav className="sidebar-nav">
           <NavLink to="/dashboard" className={getLinkClass}>
-            Dashboard
+            {t.sidebar.dashboard}
           </NavLink>
           <NavLink to="/customers" className={getLinkClass}>
-            Customers
+            {t.sidebar.customers}
           </NavLink>
           <NavLink to="/products" className={getLinkClass}>
-            Products
+            {t.sidebar.products}
           </NavLink>
           <NavLink to="/purchases" className={getLinkClass}>
-            Purchases
+            {t.sidebar.purchases}
           </NavLink>
           <NavLink to="/invoices" className={getLinkClass}>
-            Invoices
+            {t.sidebar.invoices}
           </NavLink>
           <NavLink to="/payments" className={getLinkClass}>
-            Payments
+            {t.sidebar.payments}
+          </NavLink>
+          <NavLink to="/employees" className={getLinkClass}>
+            {t.sidebar.employees}
+          </NavLink>
+          <NavLink to="/settings" className={getLinkClass}>
+            {t.sidebar.settings}
           </NavLink>
         </nav>
       </div>
 
       <div className="sidebar-footer">
         <p className="sidebar-user">
-          Logged in as <strong>{user?.username}</strong>
+          {t.sidebar.loggedInAs} <strong>{user?.username}</strong>
         </p>
 
         <button className="logout-button" onClick={handleLogout}>
-          Logout
+          {t.common.logout}
         </button>
       </div>
     </aside>

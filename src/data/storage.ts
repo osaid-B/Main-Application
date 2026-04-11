@@ -1,257 +1,163 @@
-export type Customer = {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  status: "Active" | "Inactive";
-  joinedAt: string;
-};
+import type {
+  Customer,
+  Employee,
+  Invoice,
+  InvoiceItem,
+  Payment,
+  Product,
+  Purchase,
+  Supplier,
+} from "./types";
 
-export type Product = {
-  id: string;
-  name: string;
-  category: string;
-  price: number;
-  stock: number;
-  status: "In Stock" | "Low Stock" | "Out of Stock";
-  createdAt: string;
-};
+import {
+  customersData,
+  employeesData,
+  invoicesData,
+  invoiceItemsData,
+  paymentsData,
+  productsData,
+  purchasesData,
+  suppliersData,
+} from "./mockData";
 
-export type Invoice = {
-  id: string;
-  customer: string;
-  date: string;
-  amount: number;
-  status: "Paid" | "Pending";
-};
+const CUSTOMERS_KEY = "dashboard_customers";
+const SUPPLIERS_KEY = "dashboard_suppliers";
+const PRODUCTS_KEY = "dashboard_products";
+const PURCHASES_KEY = "dashboard_purchases";
+const INVOICES_KEY = "dashboard_invoices";
+const INVOICE_ITEMS_KEY = "dashboard_invoice_items";
+const PAYMENTS_KEY = "dashboard_payments";
+const EMPLOYEES_KEY = "dashboard_employees";
 
-export type Payment = {
-  id: string;
-  customer: string;
-  method: "Cash" | "Card" | "Bank Transfer";
-  amount: number;
-  date: string;
-  status: "Completed" | "Pending";
-};
+function readStorage<T>(key: string, fallback: T): T {
+  const data = localStorage.getItem(key);
 
-export type Purchase = {
-  id: string;
-  supplier: string;
-  product: string;
-  quantity: number;
-  totalCost: number;
-  date: string;
-  status: "Received" | "Pending";
-};
+  if (!data) return fallback;
 
-const STORAGE_KEYS = {
-  customers: "shared_customers_data",
-  products: "shared_products_data",
-  invoices: "shared_invoices_data",
-  payments: "shared_payments_data",
-  purchases: "shared_purchases_data",
-};
-
-const defaultCustomers: Customer[] = [
-  {
-    id: "CUST-1001",
-    name: "Ahmed Ali",
-    email: "ahmed@email.com",
-    phone: "0599000001",
-    status: "Active",
-    joinedAt: "2026-04-01",
-  },
-  {
-    id: "CUST-1002",
-    name: "Sara Mohamed",
-    email: "sara@email.com",
-    phone: "0599000002",
-    status: "Active",
-    joinedAt: "2026-04-02",
-  },
-  {
-    id: "CUST-1003",
-    name: "Omar Khaled",
-    email: "omar@email.com",
-    phone: "0599000003",
-    status: "Inactive",
-    joinedAt: "2026-04-03",
-  },
-  {
-    id: "CUST-1004",
-    name: "Lina Sameer",
-    email: "lina@email.com",
-    phone: "0599000004",
-    status: "Active",
-    joinedAt: "2026-04-03",
-  },
-];
-
-const defaultProducts: Product[] = [
-  {
-    id: "PROD-1001",
-    name: "Wireless Mouse",
-    category: "Accessories",
-    price: 25,
-    stock: 42,
-    status: "In Stock",
-    createdAt: "2026-04-01",
-  },
-  {
-    id: "PROD-1002",
-    name: "Mechanical Keyboard",
-    category: "Accessories",
-    price: 80,
-    stock: 12,
-    status: "Low Stock",
-    createdAt: "2026-04-02",
-  },
-  {
-    id: "PROD-1003",
-    name: "Office Chair",
-    category: "Furniture",
-    price: 150,
-    stock: 0,
-    status: "Out of Stock",
-    createdAt: "2026-04-03",
-  },
-];
-
-const defaultInvoices: Invoice[] = [
-  {
-    id: "INV-1001",
-    customer: "Ahmed Ali",
-    date: "2026-04-01",
-    amount: 250,
-    status: "Paid",
-  },
-  {
-    id: "INV-1002",
-    customer: "Sara Mohamed",
-    date: "2026-04-02",
-    amount: 420,
-    status: "Pending",
-  },
-];
-
-const defaultPayments: Payment[] = [
-  {
-    id: "PAY-2001",
-    customer: "Ahmed Ali",
-    method: "Cash",
-    amount: 250,
-    date: "2026-04-01",
-    status: "Completed",
-  },
-  {
-    id: "PAY-2002",
-    customer: "Sara Mohamed",
-    method: "Card",
-    amount: 420,
-    date: "2026-04-02",
-    status: "Pending",
-  },
-];
-
-const defaultPurchases: Purchase[] = [
-  {
-    id: "PUR-3001",
-    supplier: "Tech Source",
-    product: "Wireless Mouse",
-    quantity: 20,
-    totalCost: 300,
-    date: "2026-04-01",
-    status: "Received",
-  },
-  {
-    id: "PUR-3002",
-    supplier: "Office Hub",
-    product: "Office Chair",
-    quantity: 10,
-    totalCost: 1200,
-    date: "2026-04-02",
-    status: "Pending",
-  },
-  {
-    id: "PUR-3003",
-    supplier: "Digital Market",
-    product: "Mechanical Keyboard",
-    quantity: 15,
-    totalCost: 900,
-    date: "2026-04-03",
-    status: "Received",
-  },
-];
-
-function loadData<T>(key: string, fallback: T): T {
   try {
-    const saved = localStorage.getItem(key);
-    return saved ? (JSON.parse(saved) as T) : fallback;
+    return JSON.parse(data) as T;
   } catch {
+    localStorage.removeItem(key);
     return fallback;
   }
 }
 
-function saveData<T>(key: string, value: T) {
+function writeStorage<T>(key: string, value: T) {
   localStorage.setItem(key, JSON.stringify(value));
 }
 
+/* Customers */
 export function getCustomers(): Customer[] {
-  return loadData(STORAGE_KEYS.customers, defaultCustomers);
+  return readStorage<Customer[]>(CUSTOMERS_KEY, customersData);
 }
 
 export function saveCustomers(customers: Customer[]) {
-  saveData(STORAGE_KEYS.customers, customers);
+  writeStorage(CUSTOMERS_KEY, customers);
 }
 
 export function resetCustomers() {
-  saveCustomers(defaultCustomers);
+  writeStorage(CUSTOMERS_KEY, customersData);
 }
 
+/* Suppliers */
+export function getSuppliers(): Supplier[] {
+  return readStorage<Supplier[]>(SUPPLIERS_KEY, suppliersData);
+}
+
+export function saveSuppliers(suppliers: Supplier[]) {
+  writeStorage(SUPPLIERS_KEY, suppliers);
+}
+
+export function resetSuppliers() {
+  writeStorage(SUPPLIERS_KEY, suppliersData);
+}
+
+/* Products */
 export function getProducts(): Product[] {
-  return loadData(STORAGE_KEYS.products, defaultProducts);
+  return readStorage<Product[]>(PRODUCTS_KEY, productsData);
 }
 
 export function saveProducts(products: Product[]) {
-  saveData(STORAGE_KEYS.products, products);
+  writeStorage(PRODUCTS_KEY, products);
 }
 
 export function resetProducts() {
-  saveProducts(defaultProducts);
+  writeStorage(PRODUCTS_KEY, productsData);
 }
 
-export function getInvoices(): Invoice[] {
-  return loadData(STORAGE_KEYS.invoices, defaultInvoices);
-}
-
-export function saveInvoices(invoices: Invoice[]) {
-  saveData(STORAGE_KEYS.invoices, invoices);
-}
-
-export function resetInvoices() {
-  saveInvoices(defaultInvoices);
-}
-
-export function getPayments(): Payment[] {
-  return loadData(STORAGE_KEYS.payments, defaultPayments);
-}
-
-export function savePayments(payments: Payment[]) {
-  saveData(STORAGE_KEYS.payments, payments);
-}
-
-export function resetPayments() {
-  savePayments(defaultPayments);
-}
-
+/* Purchases */
 export function getPurchases(): Purchase[] {
-  return loadData(STORAGE_KEYS.purchases, defaultPurchases);
+  return readStorage<Purchase[]>(PURCHASES_KEY, purchasesData);
 }
 
 export function savePurchases(purchases: Purchase[]) {
-  saveData(STORAGE_KEYS.purchases, purchases);
+  writeStorage(PURCHASES_KEY, purchases);
 }
 
 export function resetPurchases() {
-  savePurchases(defaultPurchases);
+  writeStorage(PURCHASES_KEY, purchasesData);
+}
+
+/* Invoices */
+export function getInvoices(): Invoice[] {
+  return readStorage<Invoice[]>(INVOICES_KEY, invoicesData);
+}
+
+export function saveInvoices(invoices: Invoice[]) {
+  writeStorage(INVOICES_KEY, invoices);
+}
+
+export function resetInvoices() {
+  writeStorage(INVOICES_KEY, invoicesData);
+}
+
+/* Invoice Items */
+export function getInvoiceItems(): InvoiceItem[] {
+  return readStorage<InvoiceItem[]>(INVOICE_ITEMS_KEY, invoiceItemsData);
+}
+
+export function saveInvoiceItems(items: InvoiceItem[]) {
+  writeStorage(INVOICE_ITEMS_KEY, items);
+}
+
+export function resetInvoiceItems() {
+  writeStorage(INVOICE_ITEMS_KEY, invoiceItemsData);
+}
+
+/* Payments */
+export function getPayments(): Payment[] {
+  return readStorage<Payment[]>(PAYMENTS_KEY, paymentsData);
+}
+
+export function savePayments(payments: Payment[]) {
+  writeStorage(PAYMENTS_KEY, payments);
+}
+
+export function resetPayments() {
+  writeStorage(PAYMENTS_KEY, paymentsData);
+}
+
+/* Employees */
+export function getEmployees(): Employee[] {
+  return readStorage<Employee[]>(EMPLOYEES_KEY, employeesData);
+}
+
+export function saveEmployees(employees: Employee[]) {
+  writeStorage(EMPLOYEES_KEY, employees);
+}
+
+export function resetEmployees() {
+  writeStorage(EMPLOYEES_KEY, employeesData);
+}
+
+/* Optional helper: reset everything */
+export function resetAllStorage() {
+  resetCustomers();
+  resetSuppliers();
+  resetProducts();
+  resetPurchases();
+  resetInvoices();
+  resetInvoiceItems();
+  resetPayments();
+  resetEmployees();
 }
