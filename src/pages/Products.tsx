@@ -1,27 +1,15 @@
+import "./Products.css";
 import { useEffect, useMemo, useState } from "react";
 import {
   getInvoiceItems,
+  getProductCategories,
   getProducts,
   getPurchases,
+  saveProductCategories,
   saveProducts,
 } from "../data/storage";
-import {
-  calculateProductSoldQuantity,
-  
-} from "../data/relations";
-import type {
-  InvoiceItem,
-  Product,
-  ProductStatus,
-  Purchase,
-} from "../data/types";
-
-type ExtendedProduct = Product & {
-  purchasedQuantity: number;
-  soldQuantity: number;
-  calculatedStock: number;
-  calculatedStatus: ProductStatus;
-};
+import { calculateProductSoldQuantity } from "../data/relations";
+import type { InvoiceItem, Product, Purchase } from "../data/types";
 
 type ProductForm = {
   name: string;
@@ -30,671 +18,1005 @@ type ProductForm = {
   stock: string;
 };
 
-type ProductFormErrors = {
+type FormErrors = {
   name?: string;
   category?: string;
   price?: string;
   stock?: string;
 };
 
-const EMPTY_FORM: ProductForm = {
+type SortKey =
+  | "id"
+  | "name"
+  | "category"
+  | "price"
+  | "stock"
+  | "sold"
+  | "available"
+  | "status";
+
+type SortMode = "added" | "desc" | "asc";
+type PendingCloseTarget = "add" | "edit" | null;
+
+type ProductRow = Product & {
+  price: number;
+  stock: number;
+  sold: number;
+  available: number;
+  statusLabel: "Out of Stock" | "Low Stock" | "In Stock";
+  addedAt: number;
+};
+
+const emptyForm: ProductForm = {
   name: "",
   category: "",
   price: "",
   stock: "",
 };
 
-function getCalculatedProductStatus(stock: number): ProductStatus {
-  if (stock <= 0) return "Out of Stock";
-  if (stock <= 15) return "Low Stock";
+const DELETE_CONFIRMATION_CODE = "123";
+
+function normalizeProducts(products: Product[]): Product[] {
+  return products.map((product, index) => ({
+    ...product,
+    id: product.id || `PROD-${1000 + index + 1}`,
+    name: product.name || "",
+    category: product.category || "",
+    price: Number(product.price || 0),
+    stock: Number(product.stock || 0),
+    addedAt: Number((product as Product & { addedAt?: number }).addedAt || 0),
+  }));
+}
+
+function getStatusLabel(available: number): ProductRow["statusLabel"] {
+  if (available <= 0) return "Out of Stock";
+  if (available <= 5) return "Low Stock";
   return "In Stock";
 }
 
-function calculatePurchasedQuantity(productId: string, purchases: Purchase[]) {
-  return purchases
-    .filter((purchase) => purchase.productId === productId)
-    .filter((purchase) => purchase.status === "Received")
-    .reduce((sum, purchase) => sum + Number(purchase.quantity || 0), 0);
+function normalizeCategoryName(value: string) {
+  return value.trim().replace(/\s+/g, " ");
 }
 
-function buildProductsWithRelations(
-  products: Product[],
-  purchases: Purchase[],
-  invoiceItems: InvoiceItem[]
-): ExtendedProduct[] {
-  return products.map((product) => {
-    const purchasedQuantity = calculatePurchasedQuantity(product.id, purchases);
-    const soldQuantity = calculateProductSoldQuantity(product.id, invoiceItems);
+function ConfirmCloseModal({
+  open,
+  onKeepEditing,
+  onDiscard,
+  title,
+  description,
+  discardLabel = "Discard Changes",
+}: {
+  open: boolean;
+  onKeepEditing: () => void;
+  onDiscard: () => void;
+  title: string;
+  description: string;
+  discardLabel?: string;
+}) {
+  if (!open) return null;
 
-    const baseStock = Number(product.stock || 0);
-    const calculatedStock = Math.max(baseStock + purchasedQuantity - soldQuantity, 0);
-    const calculatedStatus = getCalculatedProductStatus(calculatedStock);
+  return (
+    <div className="modal-overlay" onClick={onKeepEditing}>
+      <div
+        className="modal-card confirm-close-modal"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="modal-header">
+          <div>
+            <h2>{title}</h2>
+            <p>{description}</p>
+          </div>
 
-    return {
-      ...product,
-      purchasedQuantity,
-      soldQuantity,
-      calculatedStock,
-      calculatedStatus,
-    };
-  });
+          <button
+            type="button"
+            className="modal-close-btn"
+            onClick={onKeepEditing}
+          >
+            ×
+          </button>
+        </div>
+
+        <div className="confirm-close-box">
+          <div className="confirm-close-icon">!</div>
+          <div>
+            <h3>Unsaved changes detected</h3>
+            <p>
+              You have entered data that has not been saved yet. If you close
+              now, your changes will be lost.
+            </p>
+          </div>
+        </div>
+
+        <div className="modal-actions">
+          <button
+            type="button"
+            className="modal-secondary-btn"
+            onClick={onKeepEditing}
+          >
+            Continue Editing
+          </button>
+
+          <button
+            type="button"
+            className="modal-danger-btn"
+            onClick={onDiscard}
+          >
+            {discardLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CategoryManagerModal({
+  open,
+  categories,
+  products,
+  selectedCategory,
+  onClose,
+  onSelectCategory,
+  onAddCategory,
+  onRenameCategory,
+  onRequestDeleteCategory,
+}: {
+  open: boolean;
+  categories: string[];
+  products: Product[];
+  selectedCategory: string;
+  onClose: () => void;
+  onSelectCategory: (value: string) => void;
+  onAddCategory: (value: string) => void;
+  onRenameCategory: (oldName: string, newName: string) => void;
+  onRequestDeleteCategory: (category: string) => void;
+}) {
+  const [newCategory, setNewCategory] = useState("");
+  const [renameTarget, setRenameTarget] = useState("");
+  const [renameValue, setRenameValue] = useState("");
+  const [search, setSearch] = useState("");
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!open) {
+      setNewCategory("");
+      setRenameTarget("");
+      setRenameValue("");
+      setSearch("");
+      setError("");
+    }
+  }, [open]);
+
+  const filteredCategories = useMemo(() => {
+    const value = search.trim().toLowerCase();
+    if (!value) return categories;
+
+    return categories.filter((category) =>
+      category.toLowerCase().includes(value)
+    );
+  }, [categories, search]);
+
+  const getCategoryUsageCount = (category: string) => {
+    return products.filter(
+      (product) =>
+        normalizeCategoryName(product.category || "").toLowerCase() ===
+        normalizeCategoryName(category).toLowerCase()
+    ).length;
+  };
+
+  if (!open) return null;
+
+  const handleAdd = () => {
+    const value = normalizeCategoryName(newCategory);
+
+    if (!value) {
+      setError("Please enter a category name.");
+      return;
+    }
+
+    if (
+      categories.some(
+        (category) => category.toLowerCase() === value.toLowerCase()
+      )
+    ) {
+      setError("This category already exists.");
+      return;
+    }
+
+    onAddCategory(value);
+    onSelectCategory(value);
+    setNewCategory("");
+    setError("");
+  };
+
+  const handleRename = () => {
+    const oldValue = normalizeCategoryName(renameTarget);
+    const newValue = normalizeCategoryName(renameValue);
+
+    if (!oldValue) {
+      setError("Please select a category to edit.");
+      return;
+    }
+
+    if (!newValue) {
+      setError("Please enter the new category name.");
+      return;
+    }
+
+    if (
+      categories.some(
+        (category) =>
+          category.toLowerCase() === newValue.toLowerCase() &&
+          category.toLowerCase() !== oldValue.toLowerCase()
+      )
+    ) {
+      setError("Another category already has this name.");
+      return;
+    }
+
+    onRenameCategory(oldValue, newValue);
+    onSelectCategory(newValue);
+    setRenameTarget("");
+    setRenameValue("");
+    setError("");
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div
+        className="modal-card category-manager-modal"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="modal-header">
+          <div>
+            <h2>Manage Categories</h2>
+            <p>Organize your product categories in one compact workspace.</p>
+          </div>
+
+          <button type="button" className="modal-close-btn" onClick={onClose}>
+            ×
+          </button>
+        </div>
+
+        <div className="category-manager-scroll">
+          <div className="modal-form category-manager-form">
+            <div className="category-manager-layout">
+              <div className="category-panel">
+                <label className="modal-label">Available Categories</label>
+
+                <input
+                  className="modal-input"
+                  type="text"
+                  placeholder="Search categories"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+
+                <div className="category-list">
+                  {filteredCategories.length > 0 ? (
+                    filteredCategories.map((category) => {
+                      const usedBy = getCategoryUsageCount(category);
+
+                      return (
+                        <button
+                          key={category}
+                          type="button"
+                          className={`category-item ${
+                            selectedCategory === category ? "active" : ""
+                          }`}
+                          onClick={() => onSelectCategory(category)}
+                        >
+                          <div className="category-item-main">
+                            <span>{category}</span>
+                            <small>{usedBy} product(s)</small>
+                          </div>
+
+                          {selectedCategory === category && (
+                            <span className="category-item-badge">Selected</span>
+                          )}
+                        </button>
+                      );
+                    })
+                  ) : (
+                    <div className="category-empty-state">
+                      No matching categories found.
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="category-panel">
+                <div className="category-section">
+                  <label className="modal-label">Add New Category</label>
+                  <input
+                    className="modal-input"
+                    type="text"
+                    placeholder="Enter new category name"
+                    value={newCategory}
+                    onChange={(e) => {
+                      setNewCategory(e.target.value);
+                      setError("");
+                    }}
+                  />
+                  <button
+                    type="button"
+                    className="modal-primary-btn full-width-btn"
+                    onClick={handleAdd}
+                  >
+                    Add Category
+                  </button>
+                </div>
+
+                <div className="category-section">
+                  <label className="modal-label">Edit Existing Category</label>
+                  <select
+                    className="modal-select"
+                    value={renameTarget}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setRenameTarget(value);
+                      setRenameValue(value);
+                      setError("");
+                    }}
+                  >
+                    <option value="">Select category to edit</option>
+                    {categories.map((category) => (
+                      <option key={category} value={category}>
+                        {category}
+                      </option>
+                    ))}
+                  </select>
+
+                  <input
+                    className="modal-input"
+                    type="text"
+                    placeholder="Enter new category name"
+                    value={renameValue}
+                    onChange={(e) => {
+                      setRenameValue(e.target.value);
+                      setError("");
+                    }}
+                  />
+
+                  <button
+                    type="button"
+                    className="modal-secondary-btn full-width-btn"
+                    onClick={handleRename}
+                  >
+                    Save Category Changes
+                  </button>
+                </div>
+
+                <div className="category-section">
+                  <label className="modal-label">Delete Category</label>
+                  <p className="category-helper-text">
+                    Delete with confirmation. Linked categories will show a warning first.
+                  </p>
+
+                  <div className="category-delete-list">
+                    {categories.map((category) => (
+                      <button
+                        key={category}
+                        type="button"
+                        className="category-delete-btn"
+                        onClick={() => onRequestDeleteCategory(category)}
+                      >
+                        <span>{category}</span>
+                        <span>Delete</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {error && <p className="field-error">{error}</p>}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="category-manager-footer">
+          <button
+            type="button"
+            className="modal-secondary-btn"
+            onClick={onClose}
+          >
+            Done
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DeleteCategoryModal({
+  open,
+  category,
+  usageCount,
+  code,
+  error,
+  onChangeCode,
+  onClose,
+  onConfirm,
+}: {
+  open: boolean;
+  category: string | null;
+  usageCount: number;
+  code: string;
+  error: string;
+  onChangeCode: (value: string) => void;
+  onClose: () => void;
+  onConfirm: () => void;
+}) {
+  if (!open || !category) return null;
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div
+        className="modal-card delete-category-modal"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="modal-header">
+          <div>
+            <h2>Delete Category</h2>
+            <p>This action needs confirmation.</p>
+          </div>
+
+          <button type="button" className="modal-close-btn" onClick={onClose}>
+            ×
+          </button>
+        </div>
+
+        <div className="modal-form">
+          <p className="delete-warning">
+            You are about to delete category <strong>{category}</strong>.
+          </p>
+
+          <p className="delete-help">
+            This category is currently used by <strong>{usageCount}</strong>{" "}
+            product(s).
+            {usageCount > 0
+              ? " Products using this category will be moved to an empty category until reassigned."
+              : " It is not linked to any product."}
+          </p>
+
+          <p className="delete-help">
+            To confirm deletion, type exactly <strong>123</strong>.
+          </p>
+
+          <div style={{ marginTop: "16px" }}>
+            <input
+              className="modal-input"
+              type="text"
+              placeholder="Type 123"
+              value={code}
+              onChange={(e) => onChangeCode(e.target.value)}
+            />
+            {error && <p className="field-error">{error}</p>}
+          </div>
+
+          <div className="modal-actions" style={{ marginTop: "20px" }}>
+            <button
+              type="button"
+              className="modal-secondary-btn"
+              onClick={onClose}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="modal-danger-btn"
+              onClick={onConfirm}
+            >
+              Delete Category
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default function Products() {
+  const [products, setProducts] = useState<Product[]>(() => {
+    const normalized = normalizeProducts(getProducts());
+
+    return normalized.map((product, index) => ({
+      ...product,
+      addedAt:
+        Number((product as Product & { addedAt?: number }).addedAt || 0) ||
+        Date.now() - index,
+    }));
+  });
+
+  const [categories, setCategories] = useState<string[]>(() =>
+    getProductCategories()
+  );
+
   const [purchases] = useState<Purchase[]>(() => getPurchases());
   const [invoiceItems] = useState<InvoiceItem[]>(() => getInvoiceItems());
-
-  const [products, setProducts] = useState<ExtendedProduct[]>(() =>
-    buildProductsWithRelations(getProducts(), getPurchases(), getInvoiceItems())
-  );
 
   const [searchTerm, setSearchTerm] = useState("");
 
   const [showAddModal, setShowAddModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [addForm, setAddForm] = useState<ProductForm>(emptyForm);
+  const [addErrors, setAddErrors] = useState<FormErrors>({});
 
-  const [selectedProduct, setSelectedProduct] = useState<ExtendedProduct | null>(null);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [editForm, setEditForm] = useState<ProductForm>(emptyForm);
+  const [editErrors, setEditErrors] = useState<FormErrors>({});
 
-  const [form, setForm] = useState<ProductForm>(EMPTY_FORM);
-  const [errors, setErrors] = useState<ProductFormErrors>({});
-  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [deleteProduct, setDeleteProduct] = useState<Product | null>(null);
+  const [deleteCode, setDeleteCode] = useState("");
+  const [deleteError, setDeleteError] = useState("");
 
-  const [toast, setToast] = useState<{
-    show: boolean;
-    message: string;
-  }>({
-    show: false,
-    message: "",
-  });
+  const [sortKey, setSortKey] = useState<SortKey | null>(null);
+  const [sortMode, setSortMode] = useState<SortMode>("added");
+
+  const [pendingCloseTarget, setPendingCloseTarget] =
+    useState<PendingCloseTarget>(null);
+
+  const [showCategoryManager, setShowCategoryManager] = useState(false);
+  const [deleteCategoryTarget, setDeleteCategoryTarget] = useState<string | null>(null);
+  const [deleteCategoryCode, setDeleteCategoryCode] = useState("");
+  const [deleteCategoryError, setDeleteCategoryError] = useState("");
 
   useEffect(() => {
-    if (!toast.show) return;
-    const timer = window.setTimeout(() => {
-      setToast({ show: false, message: "" });
-    }, 2500);
+    saveProducts(products);
+  }, [products]);
 
-    return () => window.clearTimeout(timer);
-  }, [toast.show]);
+  useEffect(() => {
+    const derivedCategories = Array.from(
+      new Set(
+        products
+          .map((product) => normalizeCategoryName(product.category || ""))
+          .filter(Boolean)
+      )
+    ).sort((a, b) => a.localeCompare(b));
 
-  const filteredProducts = useMemo(() => {
+    setCategories((prev) =>
+      Array.from(new Set([...prev, ...derivedCategories])).sort((a, b) =>
+        a.localeCompare(b)
+      )
+    );
+  }, [products]);
+
+  useEffect(() => {
+    saveProductCategories(categories);
+  }, [categories]);
+
+  const categoryOptions = useMemo(() => {
+    return categories
+      .map((category) => normalizeCategoryName(category))
+      .filter(Boolean)
+      .sort((a, b) => a.localeCompare(b));
+  }, [categories]);
+
+  const hasAddUnsavedChanges = useMemo(() => {
+    return (
+      addForm.name.trim() !== "" ||
+      addForm.category.trim() !== "" ||
+      addForm.price.trim() !== "" ||
+      addForm.stock.trim() !== ""
+    );
+  }, [addForm]);
+
+  const hasEditUnsavedChanges = useMemo(() => {
+    if (!editingProduct) return false;
+
+    return (
+      editForm.name.trim() !== (editingProduct.name || "") ||
+      editForm.category.trim() !== (editingProduct.category || "") ||
+      editForm.price.trim() !== String(editingProduct.price ?? "") ||
+      editForm.stock.trim() !== String(editingProduct.stock ?? "")
+    );
+  }, [editForm, editingProduct]);
+
+  const productRows = useMemo<ProductRow[]>(() => {
+    return products
+      .filter((product) => product.name?.trim() !== "")
+      .map((product) => {
+        const receivedQty = purchases
+          .filter(
+            (purchase) =>
+              purchase.productId === product.id &&
+              purchase.status === "Received"
+          )
+          .reduce((sum, purchase) => sum + Number(purchase.quantity || 0), 0);
+
+        const soldQty = calculateProductSoldQuantity(product.id, invoiceItems);
+        const available = Math.max(
+          Number(product.stock || 0) + receivedQty - soldQty,
+          0
+        );
+
+        return {
+          ...product,
+          price: Number(product.price || 0),
+          stock: Number(product.stock || 0),
+          sold: soldQty,
+          available,
+          statusLabel: getStatusLabel(available),
+          addedAt: Number((product as Product & { addedAt?: number }).addedAt || 0),
+        };
+      });
+  }, [products, purchases, invoiceItems]);
+
+  const filteredAndSortedProducts = useMemo(() => {
     const value = searchTerm.trim().toLowerCase();
-    if (!value) return products;
 
-    return products.filter((product) =>
-      [
+    const filtered = productRows.filter((product) => {
+      if (!value) return true;
+
+      return [
         product.id,
         product.name,
         product.category,
         product.price,
         product.stock,
-        product.calculatedStock,
-        product.calculatedStatus,
+        product.sold,
+        product.available,
+        product.statusLabel,
       ]
         .join(" ")
         .toLowerCase()
-        .includes(value)
-    );
-  }, [products, searchTerm]);
-
-  const validateForm = (data: ProductForm) => {
-    const nextErrors: ProductFormErrors = {};
-
-    if (!data.name.trim()) {
-      nextErrors.name = "Product name is required.";
-    }
-
-    if (!data.category.trim()) {
-      nextErrors.category = "Category is required.";
-    }
-
-    if (data.price.trim() === "") {
-      nextErrors.price = "Price is required.";
-    } else if (Number.isNaN(Number(data.price))) {
-      nextErrors.price = "Price must be a valid number.";
-    } else if (Number(data.price) < 0) {
-      nextErrors.price = "Price cannot be negative.";
-    }
-
-    if (data.stock.trim() === "") {
-      nextErrors.stock = "Initial stock is required.";
-    } else if (Number.isNaN(Number(data.stock))) {
-      nextErrors.stock = "Stock must be a valid number.";
-    } else if (Number(data.stock) < 0) {
-      nextErrors.stock = "Stock cannot be negative.";
-    }
-
-    return nextErrors;
-  };
-
-  const refreshProducts = (updatedProducts: Product[]) => {
-    saveProducts(updatedProducts);
-    setProducts(buildProductsWithRelations(updatedProducts, purchases, invoiceItems));
-  };
-
-  const showSuccessToast = (message: string) => {
-    setToast({
-      show: true,
-      message,
+        .includes(value);
     });
+
+    if (!sortKey || sortMode === "added") {
+      return [...filtered].sort((a, b) => b.addedAt - a.addedAt);
+    }
+
+    const sorted = [...filtered].sort((a, b) => {
+      let aValue: string | number = "";
+      let bValue: string | number = "";
+
+      switch (sortKey) {
+        case "id":
+          aValue = a.id;
+          bValue = b.id;
+          break;
+        case "name":
+          aValue = a.name;
+          bValue = b.name;
+          break;
+        case "category":
+          aValue = a.category;
+          bValue = b.category;
+          break;
+        case "price":
+          aValue = a.price;
+          bValue = b.price;
+          break;
+        case "stock":
+          aValue = a.stock;
+          bValue = b.stock;
+          break;
+        case "sold":
+          aValue = a.sold;
+          bValue = b.sold;
+          break;
+        case "available":
+          aValue = a.available;
+          bValue = b.available;
+          break;
+        case "status":
+          aValue = a.statusLabel;
+          bValue = b.statusLabel;
+          break;
+      }
+
+      if (typeof aValue === "number" && typeof bValue === "number") {
+        return sortMode === "desc" ? bValue - aValue : aValue - bValue;
+      }
+
+      return sortMode === "desc"
+        ? String(bValue).localeCompare(String(aValue))
+        : String(aValue).localeCompare(String(bValue));
+    });
+
+    return sorted;
+  }, [productRows, searchTerm, sortKey, sortMode]);
+
+  const validateForm = (form: ProductForm): FormErrors => {
+    const errors: FormErrors = {};
+
+    if (!form.name.trim()) {
+      errors.name = "Product name is required.";
+    }
+
+    if (!form.category.trim()) {
+      errors.category = "Category is required.";
+    }
+
+    if (!form.price.trim()) {
+      errors.price = "Price is required.";
+    } else if (Number.isNaN(Number(form.price))) {
+      errors.price = "Price must be a valid number.";
+    } else if (Number(form.price) < 0) {
+      errors.price = "Price cannot be negative.";
+    }
+
+    if (!form.stock.trim()) {
+      errors.stock = "Base stock is required.";
+    } else if (Number.isNaN(Number(form.stock))) {
+      errors.stock = "Base stock must be a valid number.";
+    } else if (Number(form.stock) < 0) {
+      errors.stock = "Base stock cannot be negative.";
+    }
+
+    return errors;
   };
 
   const closeAddModal = () => {
     setShowAddModal(false);
-    setForm(EMPTY_FORM);
-    setErrors({});
+    setAddForm(emptyForm);
+    setAddErrors({});
   };
 
   const closeEditModal = () => {
-    setShowEditModal(false);
-    setSelectedProduct(null);
-    setForm(EMPTY_FORM);
-    setErrors({});
+    setEditingProduct(null);
+    setEditForm(emptyForm);
+    setEditErrors({});
   };
 
-  const closeDeleteModal = () => {
-    setShowDeleteModal(false);
-    setSelectedProduct(null);
-    setDeleteConfirmText("");
-  };
-
-  const handleFormFieldChange = (field: keyof ProductForm, value: string) => {
-    setForm((prev) => ({ ...prev, [field]: value }));
-
-    setErrors((prev) => {
-      const next = { ...prev };
-
-      if (field === "name") {
-        if (!value.trim()) next.name = "Product name is required.";
-        else delete next.name;
-      }
-
-      if (field === "category") {
-        if (!value.trim()) next.category = "Category is required.";
-        else delete next.category;
-      }
-
-      if (field === "price") {
-        if (value.trim() === "") next.price = "Price is required.";
-        else if (Number.isNaN(Number(value))) next.price = "Price must be a valid number.";
-        else if (Number(value) < 0) next.price = "Price cannot be negative.";
-        else delete next.price;
-      }
-
-      if (field === "stock") {
-        if (value.trim() === "") next.stock = "Initial stock is required.";
-        else if (Number.isNaN(Number(value))) next.stock = "Stock must be a valid number.";
-        else if (Number(value) < 0) next.stock = "Stock cannot be negative.";
-        else delete next.stock;
-      }
-
-      return next;
-    });
-  };
-
-  const handleAddProduct = () => {
-    const validationErrors = validateForm(form);
-    setErrors(validationErrors);
-
-    if (Object.keys(validationErrors).length > 0) return;
-
-    const currentProducts = getProducts();
-
-    const initialStock = Number(form.stock);
-    const newProduct: Product = {
-      id: `PROD-${1000 + currentProducts.length + 1}`,
-      name: form.name.trim(),
-      category: form.category.trim(),
-      price: Number(form.price),
-      stock: initialStock,
-      status: getCalculatedProductStatus(initialStock),
-      createdAt: new Date().toISOString().split("T")[0],
-      isDeleted: false,
-    };
-
-    const updatedProducts = [newProduct, ...currentProducts];
-    refreshProducts(updatedProducts);
-
-    closeAddModal();
-    showSuccessToast("Product added successfully.");
-  };
-
-  const openEditModal = (product: ExtendedProduct) => {
-    setSelectedProduct(product);
-    setForm({
-      name: product.name,
-      category: product.category,
-      price: String(product.price),
-      stock: String(product.stock),
-    });
-    setErrors({});
-    setShowEditModal(true);
-  };
-
-  const handleConfirmEdit = () => {
-    if (!selectedProduct) return;
-
-    const validationErrors = validateForm(form);
-    setErrors(validationErrors);
-
-    if (Object.keys(validationErrors).length > 0) return;
-
-    const updatedProducts = getProducts().map((product) =>
-      product.id === selectedProduct.id
-        ? {
-            ...product,
-            name: form.name.trim(),
-            category: form.category.trim(),
-            price: Number(form.price),
-            stock: Number(form.stock),
-            status: getCalculatedProductStatus(Number(form.stock)),
-          }
-        : product
-    );
-
-    refreshProducts(updatedProducts);
-    closeEditModal();
-    showSuccessToast("Product updated successfully.");
-  };
-
-  const openDeleteModal = (product: ExtendedProduct) => {
-    setSelectedProduct(product);
-    setDeleteConfirmText("");
-    setShowDeleteModal(true);
-  };
-
-  const handleDeleteProduct = () => {
-    if (!selectedProduct || deleteConfirmText !== "DELETE") return;
-
-    const linkedInvoiceItems = invoiceItems.some(
-      (item) => item.productId === selectedProduct.id
-    );
-
-    const linkedPurchases = purchases.some(
-      (purchase) => purchase.productId === selectedProduct.id
-    );
-
-    if (linkedInvoiceItems || linkedPurchases) {
-      showSuccessToast("Cannot delete product because it is linked to purchases or invoices.");
-      closeDeleteModal();
+  const attemptCloseAddModal = () => {
+    if (hasAddUnsavedChanges) {
+      setPendingCloseTarget("add");
       return;
     }
 
-    const updatedProducts = getProducts().filter(
-      (product) => product.id !== selectedProduct.id
-    );
-
-    refreshProducts(updatedProducts);
-    closeDeleteModal();
-    showSuccessToast("Product deleted successfully.");
+    closeAddModal();
   };
 
-  const deleteEnabled = deleteConfirmText === "DELETE";
+  const attemptCloseEditModal = () => {
+    if (hasEditUnsavedChanges) {
+      setPendingCloseTarget("edit");
+      return;
+    }
 
-  const priceInvalid =
-    form.price.trim() === "" ||
-    Number.isNaN(Number(form.price)) ||
-    Number(form.price) < 0;
+    closeEditModal();
+  };
 
-  const stockInvalid =
-    form.stock.trim() === "" ||
-    Number.isNaN(Number(form.stock)) ||
-    Number(form.stock) < 0;
+  const discardPendingChanges = () => {
+    if (pendingCloseTarget === "add") closeAddModal();
+    if (pendingCloseTarget === "edit") closeEditModal();
+    setPendingCloseTarget(null);
+  };
+
+  const openEditModal = (product: Product) => {
+    setEditingProduct(product);
+    setEditForm({
+      name: product.name || "",
+      category: product.category || "",
+      price: String(product.price ?? ""),
+      stock: String(product.stock ?? ""),
+    });
+    setEditErrors({});
+  };
+
+  const requestDeleteProduct = (product: Product) => {
+    setDeleteProduct(product);
+    setDeleteCode("");
+    setDeleteError("");
+  };
+
+  const closeDeleteModal = () => {
+    setDeleteProduct(null);
+    setDeleteCode("");
+    setDeleteError("");
+  };
+
+  const handleSort = (key: SortKey) => {
+    if (sortKey !== key) {
+      setSortKey(key);
+      setSortMode("desc");
+      return;
+    }
+
+    if (sortMode === "desc") {
+      setSortMode("asc");
+      return;
+    }
+
+    setSortKey(null);
+    setSortMode("added");
+  };
+
+  const getSortIndicator = (key: SortKey) => {
+    if (sortKey !== key) return "";
+    if (sortMode === "desc") return "↓";
+    if (sortMode === "asc") return "↑";
+    return "";
+  };
+
+  const handleAddProduct = () => {
+    const errors = validateForm(addForm);
+    setAddErrors(errors);
+
+    if (Object.keys(errors).length > 0) return;
+
+    const newProduct: Product = {
+      id: `PROD-${1000 + products.length + 1}`,
+      name: addForm.name.trim(),
+      category: normalizeCategoryName(addForm.category),
+      price: Number(addForm.price),
+      stock: Number(addForm.stock),
+      addedAt: Date.now(),
+    } as Product;
+
+    setProducts((prev) => [newProduct, ...prev]);
+    setCategories((prev) =>
+      Array.from(new Set([...prev, normalizeCategoryName(addForm.category)])).sort(
+        (a, b) => a.localeCompare(b)
+      )
+    );
+    closeAddModal();
+  };
+
+  const handleEditProduct = () => {
+    if (!editingProduct) return;
+
+    const errors = validateForm(editForm);
+    setEditErrors(errors);
+
+    if (Object.keys(errors).length > 0) return;
+
+    setProducts((prev) =>
+      prev.map((product) =>
+        product.id === editingProduct.id
+          ? {
+              ...product,
+              name: editForm.name.trim(),
+              category: normalizeCategoryName(editForm.category),
+              price: Number(editForm.price),
+              stock: Number(editForm.stock),
+            }
+          : product
+      )
+    );
+
+    setCategories((prev) =>
+      Array.from(new Set([...prev, normalizeCategoryName(editForm.category)])).sort(
+        (a, b) => a.localeCompare(b)
+      )
+    );
+
+    closeEditModal();
+  };
+
+  const handleConfirmDelete = () => {
+    if (deleteCode.trim() !== DELETE_CONFIRMATION_CODE) {
+      setDeleteError("Incorrect confirmation code. Please type 123.");
+      return;
+    }
+
+    setProducts((prev) =>
+      prev.filter((product) => product.id !== deleteProduct?.id)
+    );
+    closeDeleteModal();
+  };
+
+  const handleAddCategory = (categoryName: string) => {
+    const value = normalizeCategoryName(categoryName);
+    if (!value) return;
+
+    setCategories((prev) => {
+      if (prev.some((item) => item.toLowerCase() === value.toLowerCase())) {
+        return prev;
+      }
+      return [...prev, value].sort((a, b) => a.localeCompare(b));
+    });
+  };
+
+  const handleRenameCategory = (oldName: string, newName: string) => {
+    const oldValue = normalizeCategoryName(oldName);
+    const newValue = normalizeCategoryName(newName);
+
+    if (!oldValue || !newValue) return;
+
+    setCategories((prev) =>
+      prev
+        .map((category) =>
+          category.toLowerCase() === oldValue.toLowerCase() ? newValue : category
+        )
+        .filter(Boolean)
+        .filter(
+          (value, index, arr) =>
+            arr.findIndex((item) => item.toLowerCase() === value.toLowerCase()) ===
+            index
+        )
+        .sort((a, b) => a.localeCompare(b))
+    );
+
+    setProducts((prev) =>
+      prev.map((product) =>
+        normalizeCategoryName(product.category || "").toLowerCase() ===
+        oldValue.toLowerCase()
+          ? { ...product, category: newValue }
+          : product
+      )
+    );
+
+    setAddForm((prev) => ({
+      ...prev,
+      category:
+        prev.category.toLowerCase() === oldValue.toLowerCase()
+          ? newValue
+          : prev.category,
+    }));
+
+    setEditForm((prev) => ({
+      ...prev,
+      category:
+        prev.category.toLowerCase() === oldValue.toLowerCase()
+          ? newValue
+          : prev.category,
+    }));
+  };
+
+  const requestDeleteCategory = (category: string) => {
+    setDeleteCategoryTarget(category);
+    setDeleteCategoryCode("");
+    setDeleteCategoryError("");
+  };
+
+  const closeDeleteCategoryModal = () => {
+    setDeleteCategoryTarget(null);
+    setDeleteCategoryCode("");
+    setDeleteCategoryError("");
+  };
+
+  const deleteCategoryUsageCount = useMemo(() => {
+    if (!deleteCategoryTarget) return 0;
+
+    return products.filter(
+      (product) =>
+        normalizeCategoryName(product.category || "").toLowerCase() ===
+        normalizeCategoryName(deleteCategoryTarget).toLowerCase()
+    ).length;
+  }, [deleteCategoryTarget, products]);
+
+  const handleConfirmDeleteCategory = () => {
+    if (!deleteCategoryTarget) return;
+
+    if (deleteCategoryCode.trim() !== DELETE_CONFIRMATION_CODE) {
+      setDeleteCategoryError("Incorrect confirmation code. Please type 123.");
+      return;
+    }
+
+    const target = normalizeCategoryName(deleteCategoryTarget);
+
+    setCategories((prev) =>
+      prev.filter((category) => category.toLowerCase() !== target.toLowerCase())
+    );
+
+    setProducts((prev) =>
+      prev.map((product) =>
+        normalizeCategoryName(product.category || "").toLowerCase() ===
+        target.toLowerCase()
+          ? { ...product, category: "" }
+          : product
+      )
+    );
+
+    setAddForm((prev) => ({
+      ...prev,
+      category:
+        prev.category.toLowerCase() === target.toLowerCase() ? "" : prev.category,
+    }));
+
+    setEditForm((prev) => ({
+      ...prev,
+      category:
+        prev.category.toLowerCase() === target.toLowerCase() ? "" : prev.category,
+    }));
+
+    closeDeleteCategoryModal();
+  };
+
+  const activeFormCategory = editingProduct ? editForm.category : addForm.category;
 
   return (
     <>
-      <style>{`
-        .products-page {
-          display: flex;
-          flex-direction: column;
-          gap: 24px;
-        }
-
-        .products-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-          gap: 16px;
-          flex-wrap: wrap;
-        }
-
-        .products-toolbar {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-end;
-          gap: 16px;
-          flex-wrap: wrap;
-        }
-
-        .products-search-box {
-          flex: 1;
-          min-width: 260px;
-        }
-
-        .table-wrapper {
-          overflow-x: auto;
-        }
-
-        .dashboard-table {
-          width: 100%;
-          border-collapse: collapse;
-          min-width: 1240px;
-        }
-
-        .dashboard-table th,
-        .dashboard-table td {
-          padding: 14px 16px;
-          text-align: left;
-          vertical-align: middle;
-          border-bottom: 1px solid rgba(148, 163, 184, 0.14);
-        }
-
-        .dashboard-table th {
-          font-size: 13px;
-          font-weight: 700;
-          color: #64748b;
-          background: rgba(248, 250, 252, 0.9);
-          white-space: nowrap;
-        }
-
-        .dashboard-table td {
-          font-size: 14px;
-          color: #1e293b;
-        }
-
-        .empty-state-cell {
-          text-align: center;
-          color: #94a3b8;
-          padding: 32px 16px;
-        }
-
-        .status-badge {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          min-width: 90px;
-          padding: 6px 12px;
-          border-radius: 999px;
-          font-size: 12px;
-          font-weight: 700;
-        }
-
-        .status-in-stock {
-          background: rgba(34, 197, 94, 0.12);
-          color: #15803d;
-        }
-
-        .status-low-stock {
-          background: rgba(245, 158, 11, 0.14);
-          color: #b45309;
-        }
-
-        .status-out-of-stock {
-          background: rgba(239, 68, 68, 0.12);
-          color: #b91c1c;
-        }
-
-        .table-actions {
-          display: flex;
-          gap: 8px;
-          flex-wrap: wrap;
-        }
-
-        .table-btn {
-          border: none;
-          border-radius: 10px;
-          padding: 8px 12px;
-          font-size: 13px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.2s ease;
-        }
-
-        .table-btn.edit {
-          background: #e2e8f0;
-          color: #0f172a;
-        }
-
-        .table-btn.edit:hover {
-          background: #cbd5e1;
-        }
-
-        .table-btn.delete {
-          background: #ef4444;
-          color: white;
-        }
-
-        .table-btn.delete:hover {
-          background: #dc2626;
-        }
-
-        .modal-overlay {
-          position: fixed;
-          inset: 0;
-          background: rgba(15, 23, 42, 0.5);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 20px;
-          z-index: 999;
-          backdrop-filter: blur(2px);
-        }
-
-        .modal-card {
-          width: 100%;
-          max-width: 680px;
-          background: #ffffff;
-          border-radius: 20px;
-          box-shadow: 0 24px 64px rgba(15, 23, 42, 0.18);
-          overflow: hidden;
-          animation: modalPop 0.18s ease;
-        }
-
-        .modal-card.small {
-          max-width: 480px;
-        }
-
-        .modal-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-          gap: 12px;
-          padding: 20px 22px 16px;
-          border-bottom: 1px solid rgba(148, 163, 184, 0.14);
-        }
-
-        .modal-header h2 {
-          margin: 0;
-          font-size: 20px;
-          font-weight: 700;
-          color: #0f172a;
-        }
-
-        .modal-header p {
-          margin: 6px 0 0;
-          color: #64748b;
-          font-size: 14px;
-        }
-
-        .modal-close-btn {
-          border: none;
-          background: transparent;
-          font-size: 28px;
-          line-height: 1;
-          cursor: pointer;
-          color: #64748b;
-          padding: 0;
-        }
-
-        .modal-form,
-        .modal-content {
-          padding: 20px 22px 22px;
-        }
-
-        .modal-grid {
-          display: grid;
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-          gap: 16px;
-        }
-
-        .modal-grid-full {
-          grid-column: 1 / -1;
-        }
-
-        .modal-label {
-          display: block;
-          margin-bottom: 8px;
-          font-size: 13px;
-          font-weight: 700;
-          color: #475569;
-        }
-
-        .modal-input,
-        .modal-textarea {
-          width: 100%;
-          border: 1px solid #cbd5e1;
-          border-radius: 12px;
-          padding: 12px 14px;
-          font-size: 14px;
-          outline: none;
-          transition: all 0.2s ease;
-          background: white;
-        }
-
-        .modal-input:focus,
-        .modal-textarea:focus {
-          border-color: #3b82f6;
-          box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.12);
-        }
-
-        .field-error {
-          display: block;
-          margin-top: 6px;
-          color: #dc2626;
-          font-size: 12px;
-          font-weight: 600;
-        }
-
-        .modal-actions {
-          display: flex;
-          justify-content: flex-end;
-          gap: 10px;
-          flex-wrap: wrap;
-          margin-top: 24px;
-        }
-
-        .modal-primary-btn,
-        .modal-secondary-btn,
-        .modal-danger-btn {
-          border: none;
-          border-radius: 12px;
-          padding: 11px 16px;
-          font-size: 14px;
-          font-weight: 700;
-          cursor: pointer;
-          transition: all 0.2s ease;
-        }
-
-        .modal-primary-btn {
-          background: #2563eb;
-          color: white;
-        }
-
-        .modal-primary-btn:hover:not(:disabled) {
-          background: #1d4ed8;
-        }
-
-        .modal-secondary-btn {
-          background: #e2e8f0;
-          color: #0f172a;
-        }
-
-        .modal-secondary-btn:hover:not(:disabled) {
-          background: #cbd5e1;
-        }
-
-        .modal-danger-btn {
-          background: #dc2626;
-          color: white;
-        }
-
-        .modal-danger-btn:hover:not(:disabled) {
-          background: #b91c1c;
-        }
-
-        .modal-primary-btn:disabled,
-        .modal-secondary-btn:disabled,
-        .modal-danger-btn:disabled {
-          opacity: 0.55;
-          cursor: not-allowed;
-        }
-
-        .danger-text {
-          margin: 0 0 10px;
-          color: #b91c1c;
-          font-weight: 700;
-        }
-
-        .confirm-text {
-          margin: 0;
-          color: #475569;
-          line-height: 1.7;
-          font-size: 14px;
-        }
-
-        .toast-message {
-          position: fixed;
-          right: 24px;
-          bottom: 24px;
-          background: #16a34a;
-          color: white;
-          padding: 12px 16px;
-          border-radius: 12px;
-          box-shadow: 0 16px 34px rgba(15, 23, 42, 0.16);
-          font-size: 14px;
-          font-weight: 700;
-          z-index: 1200;
-        }
-
-        @keyframes modalPop {
-          from {
-            opacity: 0;
-            transform: translateY(8px) scale(0.98);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0) scale(1);
-          }
-        }
-
-        @media (max-width: 900px) {
-          .modal-grid {
-            grid-template-columns: 1fr;
-          }
-        }
-
-        @media (max-width: 768px) {
-          .table-actions {
-            flex-direction: column;
-            align-items: stretch;
-          }
-
-          .table-btn {
-            width: 100%;
-          }
-
-          .modal-actions {
-            flex-direction: column-reverse;
-          }
-
-          .modal-primary-btn,
-          .modal-secondary-btn,
-          .modal-danger-btn {
-            width: 100%;
-          }
-        }
-      `}</style>
-
       <div className="products-page">
         <div className="products-header">
           <div>
@@ -705,25 +1027,29 @@ export default function Products() {
             </p>
           </div>
 
-          <button className="quick-action-btn" onClick={() => setShowAddModal(true)}>
+          <button
+            type="button"
+            className="quick-action-btn"
+            onClick={() => setShowAddModal(true)}
+          >
             + Add Product
           </button>
         </div>
 
         <div className="dashboard-card">
           <div className="products-toolbar">
-            <div className="dashboard-search-box products-search-box">
+            <div className="dashboard-search-box">
               <label className="dashboard-search-label">Search products</label>
               <input
                 type="text"
                 className="dashboard-search-input"
-                placeholder="Search by product name, category, price, stock, or status..."
+                placeholder="Search by product name, category, price, stock, or status."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
               <span className="dashboard-search-meta">
                 {searchTerm.trim()
-                  ? `${filteredProducts.length} result(s)`
+                  ? `${filteredAndSortedProducts.length} result(s)`
                   : "Search all products"}
               </span>
             </div>
@@ -733,42 +1059,56 @@ export default function Products() {
             <table className="dashboard-table">
               <thead>
                 <tr>
-                  <th>ID</th>
-                  <th>Name</th>
-                  <th>Category</th>
-                  <th>Price</th>
-                  <th>Base Stock</th>
-                  <th>Purchased</th>
-                  <th>Sold</th>
-                  <th>Available</th>
-                  <th>Status</th>
+                  <th className="sortable" onClick={() => handleSort("id")}>
+                    <span className="sort-label">ID {getSortIndicator("id")}</span>
+                  </th>
+                  <th className="sortable" onClick={() => handleSort("name")}>
+                    <span className="sort-label">Name {getSortIndicator("name")}</span>
+                  </th>
+                  <th className="sortable" onClick={() => handleSort("category")}>
+                    <span className="sort-label">Category {getSortIndicator("category")}</span>
+                  </th>
+                  <th className="sortable" onClick={() => handleSort("price")}>
+                    <span className="sort-label">Price {getSortIndicator("price")}</span>
+                  </th>
+                  <th className="sortable" onClick={() => handleSort("stock")}>
+                    <span className="sort-label">Base Stock {getSortIndicator("stock")}</span>
+                  </th>
+                  <th className="sortable" onClick={() => handleSort("sold")}>
+                    <span className="sort-label">Sold {getSortIndicator("sold")}</span>
+                  </th>
+                  <th className="sortable" onClick={() => handleSort("available")}>
+                    <span className="sort-label">Available {getSortIndicator("available")}</span>
+                  </th>
+                  <th className="sortable" onClick={() => handleSort("status")}>
+                    <span className="sort-label">Status {getSortIndicator("status")}</span>
+                  </th>
                   <th>Actions</th>
                 </tr>
               </thead>
 
               <tbody>
-                {filteredProducts.length > 0 ? (
-                  filteredProducts.map((product) => (
-                    <tr key={product.id}>
+                {filteredAndSortedProducts.length > 0 ? (
+                  filteredAndSortedProducts.map((product) => (
+                    <tr key={`${product.id}-${product.addedAt}`}>
                       <td>{product.id}</td>
                       <td>{product.name}</td>
-                      <td>{product.category}</td>
+                      <td>{product.category || "Unassigned"}</td>
                       <td>${product.price}</td>
                       <td>{product.stock}</td>
-                      <td>{product.purchasedQuantity}</td>
-                      <td>{product.soldQuantity}</td>
-                      <td>{product.calculatedStock}</td>
+                      <td>{product.sold}</td>
+                      <td>{product.available}</td>
                       <td>
                         <span
                           className={
-                            product.calculatedStatus === "In Stock"
-                              ? "status-badge status-in-stock"
-                              : product.calculatedStatus === "Low Stock"
+                            product.statusLabel === "Out of Stock"
+                              ? "status-badge status-out-of-stock"
+                              : product.statusLabel === "Low Stock"
                               ? "status-badge status-low-stock"
-                              : "status-badge status-out-of-stock"
+                              : "status-badge status-in-stock"
                           }
                         >
-                          {product.calculatedStatus}
+                          {product.statusLabel}
                         </span>
                       </td>
                       <td>
@@ -783,7 +1123,7 @@ export default function Products() {
                           <button
                             type="button"
                             className="table-btn delete"
-                            onClick={() => openDeleteModal(product)}
+                            onClick={() => requestDeleteProduct(product)}
                           >
                             Delete
                           </button>
@@ -793,7 +1133,7 @@ export default function Products() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={10} className="empty-state-cell">
+                    <td colSpan={9} className="empty-state-cell">
                       No matching products found.
                     </td>
                   </tr>
@@ -805,19 +1145,24 @@ export default function Products() {
       </div>
 
       {showAddModal && (
-        <div className="modal-overlay" onClick={closeAddModal}>
+        <div className="modal-overlay" onClick={attemptCloseAddModal}>
           <div className="modal-card" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <div>
                 <h2>Add Product</h2>
                 <p>Enter the new product information.</p>
               </div>
-              <button className="modal-close-btn" onClick={closeAddModal}>
+
+              <button
+                type="button"
+                className="modal-close-btn"
+                onClick={attemptCloseAddModal}
+              >
                 ×
               </button>
             </div>
 
-            <form className="modal-form" onSubmit={(e) => e.preventDefault()}>
+            <form className="modal-form">
               <div className="modal-grid">
                 <div>
                   <label className="modal-label">Name</label>
@@ -825,23 +1170,58 @@ export default function Products() {
                     className="modal-input"
                     type="text"
                     placeholder="Enter product name"
-                    value={form.name}
-                    onChange={(e) => handleFormFieldChange("name", e.target.value)}
+                    value={addForm.name}
+                    onChange={(e) => {
+                      setAddForm((prev) => ({ ...prev, name: e.target.value }));
+                      setAddErrors((prev) => ({ ...prev, name: undefined }));
+                    }}
                   />
-                  {errors.name && <span className="field-error">{errors.name}</span>}
+                  {addErrors.name && <p className="field-error">{addErrors.name}</p>}
                 </div>
 
-                <div>
+                <div className="category-field">
                   <label className="modal-label">Category</label>
-                  <input
-                    className="modal-input"
-                    type="text"
-                    placeholder="Enter category"
-                    value={form.category}
-                    onChange={(e) => handleFormFieldChange("category", e.target.value)}
-                  />
-                  {errors.category && (
-                    <span className="field-error">{errors.category}</span>
+
+                  <div className="category-select-row">
+                    <select
+                      className="modal-select"
+                      value={addForm.category}
+                      onChange={(e) => {
+                        setAddForm((prev) => ({
+                          ...prev,
+                          category: e.target.value,
+                        }));
+                        setAddErrors((prev) => ({
+                          ...prev,
+                          category: undefined,
+                        }));
+                      }}
+                    >
+                      <option value="">Select category</option>
+                      {categoryOptions.map((category) => (
+                        <option key={category} value={category}>
+                          {category}
+                        </option>
+                      ))}
+                    </select>
+
+                    <button
+                      type="button"
+                      className="category-manage-btn"
+                      onClick={() => setShowCategoryManager(true)}
+                    >
+                      Manage
+                    </button>
+                  </div>
+
+                  {addForm.category && (
+                    <div className="selected-category-chip">
+                      Selected: {addForm.category}
+                    </div>
+                  )}
+
+                  {addErrors.category && (
+                    <p className="field-error">{addErrors.category}</p>
                   )}
                 </div>
 
@@ -853,10 +1233,13 @@ export default function Products() {
                     min="0"
                     step="0.01"
                     placeholder="Enter price"
-                    value={form.price}
-                    onChange={(e) => handleFormFieldChange("price", e.target.value)}
+                    value={addForm.price}
+                    onChange={(e) => {
+                      setAddForm((prev) => ({ ...prev, price: e.target.value }));
+                      setAddErrors((prev) => ({ ...prev, price: undefined }));
+                    }}
                   />
-                  {errors.price && <span className="field-error">{errors.price}</span>}
+                  {addErrors.price && <p className="field-error">{addErrors.price}</p>}
                 </div>
 
                 <div>
@@ -867,22 +1250,28 @@ export default function Products() {
                     min="0"
                     step="1"
                     placeholder="Enter initial stock"
-                    value={form.stock}
-                    onChange={(e) => handleFormFieldChange("stock", e.target.value)}
+                    value={addForm.stock}
+                    onChange={(e) => {
+                      setAddForm((prev) => ({ ...prev, stock: e.target.value }));
+                      setAddErrors((prev) => ({ ...prev, stock: undefined }));
+                    }}
                   />
-                  {errors.stock && <span className="field-error">{errors.stock}</span>}
+                  {addErrors.stock && <p className="field-error">{addErrors.stock}</p>}
                 </div>
               </div>
 
               <div className="modal-actions">
-                <button type="button" className="modal-secondary-btn" onClick={closeAddModal}>
+                <button
+                  type="button"
+                  className="modal-secondary-btn"
+                  onClick={attemptCloseAddModal}
+                >
                   Cancel
                 </button>
                 <button
                   type="button"
                   className="modal-primary-btn"
                   onClick={handleAddProduct}
-                  disabled={priceInvalid || stockInvalid}
                 >
                   Save Product
                 </button>
@@ -892,20 +1281,25 @@ export default function Products() {
         </div>
       )}
 
-      {showEditModal && (
-        <div className="modal-overlay" onClick={closeEditModal}>
+      {editingProduct && (
+        <div className="modal-overlay" onClick={attemptCloseEditModal}>
           <div className="modal-card" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <div>
                 <h2>Edit Product</h2>
-                <p>Update the product details below.</p>
+                <p>Update the selected product information.</p>
               </div>
-              <button className="modal-close-btn" onClick={closeEditModal}>
+
+              <button
+                type="button"
+                className="modal-close-btn"
+                onClick={attemptCloseEditModal}
+              >
                 ×
               </button>
             </div>
 
-            <form className="modal-form" onSubmit={(e) => e.preventDefault()}>
+            <form className="modal-form">
               <div className="modal-grid">
                 <div>
                   <label className="modal-label">Name</label>
@@ -913,23 +1307,58 @@ export default function Products() {
                     className="modal-input"
                     type="text"
                     placeholder="Enter product name"
-                    value={form.name}
-                    onChange={(e) => handleFormFieldChange("name", e.target.value)}
+                    value={editForm.name}
+                    onChange={(e) => {
+                      setEditForm((prev) => ({ ...prev, name: e.target.value }));
+                      setEditErrors((prev) => ({ ...prev, name: undefined }));
+                    }}
                   />
-                  {errors.name && <span className="field-error">{errors.name}</span>}
+                  {editErrors.name && <p className="field-error">{editErrors.name}</p>}
                 </div>
 
-                <div>
+                <div className="category-field">
                   <label className="modal-label">Category</label>
-                  <input
-                    className="modal-input"
-                    type="text"
-                    placeholder="Enter category"
-                    value={form.category}
-                    onChange={(e) => handleFormFieldChange("category", e.target.value)}
-                  />
-                  {errors.category && (
-                    <span className="field-error">{errors.category}</span>
+
+                  <div className="category-select-row">
+                    <select
+                      className="modal-select"
+                      value={editForm.category}
+                      onChange={(e) => {
+                        setEditForm((prev) => ({
+                          ...prev,
+                          category: e.target.value,
+                        }));
+                        setEditErrors((prev) => ({
+                          ...prev,
+                          category: undefined,
+                        }));
+                      }}
+                    >
+                      <option value="">Select category</option>
+                      {categoryOptions.map((category) => (
+                        <option key={category} value={category}>
+                          {category}
+                        </option>
+                      ))}
+                    </select>
+
+                    <button
+                      type="button"
+                      className="category-manage-btn"
+                      onClick={() => setShowCategoryManager(true)}
+                    >
+                      Manage
+                    </button>
+                  </div>
+
+                  {editForm.category && (
+                    <div className="selected-category-chip">
+                      Selected: {editForm.category}
+                    </div>
+                  )}
+
+                  {editErrors.category && (
+                    <p className="field-error">{editErrors.category}</p>
                   )}
                 </div>
 
@@ -941,10 +1370,13 @@ export default function Products() {
                     min="0"
                     step="0.01"
                     placeholder="Enter price"
-                    value={form.price}
-                    onChange={(e) => handleFormFieldChange("price", e.target.value)}
+                    value={editForm.price}
+                    onChange={(e) => {
+                      setEditForm((prev) => ({ ...prev, price: e.target.value }));
+                      setEditErrors((prev) => ({ ...prev, price: undefined }));
+                    }}
                   />
-                  {errors.price && <span className="field-error">{errors.price}</span>}
+                  {editErrors.price && <p className="field-error">{editErrors.price}</p>}
                 </div>
 
                 <div>
@@ -955,22 +1387,28 @@ export default function Products() {
                     min="0"
                     step="1"
                     placeholder="Enter initial stock"
-                    value={form.stock}
-                    onChange={(e) => handleFormFieldChange("stock", e.target.value)}
+                    value={editForm.stock}
+                    onChange={(e) => {
+                      setEditForm((prev) => ({ ...prev, stock: e.target.value }));
+                      setEditErrors((prev) => ({ ...prev, stock: undefined }));
+                    }}
                   />
-                  {errors.stock && <span className="field-error">{errors.stock}</span>}
+                  {editErrors.stock && <p className="field-error">{editErrors.stock}</p>}
                 </div>
               </div>
 
               <div className="modal-actions">
-                <button type="button" className="modal-secondary-btn" onClick={closeEditModal}>
+                <button
+                  type="button"
+                  className="modal-secondary-btn"
+                  onClick={attemptCloseEditModal}
+                >
                   Cancel
                 </button>
                 <button
                   type="button"
                   className="modal-primary-btn"
-                  onClick={handleConfirmEdit}
-                  disabled={priceInvalid || stockInvalid}
+                  onClick={handleEditProduct}
                 >
                   Save Changes
                 </button>
@@ -980,45 +1418,58 @@ export default function Products() {
         </div>
       )}
 
-      {showDeleteModal && (
+      {deleteProduct && (
         <div className="modal-overlay" onClick={closeDeleteModal}>
-          <div className="modal-card small" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <div>
                 <h2>Delete Product</h2>
                 <p>This action cannot be undone.</p>
               </div>
-              <button className="modal-close-btn" onClick={closeDeleteModal}>
+
+              <button
+                type="button"
+                className="modal-close-btn"
+                onClick={closeDeleteModal}
+              >
                 ×
               </button>
             </div>
 
-            <div className="modal-content">
-              <p className="danger-text">
-                You are about to permanently delete product {selectedProduct?.name}.
+            <div className="modal-form">
+              <p className="delete-warning">
+                You are about to permanently delete product {deleteProduct.name}
+              </p>
+              <p className="delete-help">
+                To confirm deletion, type exactly <strong>123</strong> below.
               </p>
 
-              <p className="confirm-text" style={{ marginBottom: 14 }}>
-                To confirm deletion, type exactly <strong>DELETE</strong> below.
-              </p>
+              <div style={{ marginTop: "16px" }}>
+                <input
+                  className="modal-input"
+                  type="text"
+                  placeholder="Type 123"
+                  value={deleteCode}
+                  onChange={(e) => {
+                    setDeleteCode(e.target.value);
+                    setDeleteError("");
+                  }}
+                />
+                {deleteError && <p className="field-error">{deleteError}</p>}
+              </div>
 
-              <input
-                className="modal-input"
-                type="text"
-                placeholder="Type DELETE"
-                value={deleteConfirmText}
-                onChange={(e) => setDeleteConfirmText(e.target.value)}
-              />
-
-              <div className="modal-actions">
-                <button type="button" className="modal-secondary-btn" onClick={closeDeleteModal}>
+              <div className="modal-actions" style={{ marginTop: "20px" }}>
+                <button
+                  type="button"
+                  className="modal-secondary-btn"
+                  onClick={closeDeleteModal}
+                >
                   Cancel
                 </button>
                 <button
                   type="button"
                   className="modal-danger-btn"
-                  onClick={handleDeleteProduct}
-                  disabled={!deleteEnabled}
+                  onClick={handleConfirmDelete}
                 >
                   Delete
                 </button>
@@ -1028,7 +1479,47 @@ export default function Products() {
         </div>
       )}
 
-      {toast.show && <div className="toast-message">{toast.message}</div>}
+      <CategoryManagerModal
+        open={showCategoryManager}
+        categories={categoryOptions}
+        products={productRows}
+        selectedCategory={activeFormCategory}
+        onClose={() => setShowCategoryManager(false)}
+        onSelectCategory={(value) => {
+          if (editingProduct) {
+            setEditForm((prev) => ({ ...prev, category: value }));
+            setEditErrors((prev) => ({ ...prev, category: undefined }));
+          } else {
+            setAddForm((prev) => ({ ...prev, category: value }));
+            setAddErrors((prev) => ({ ...prev, category: undefined }));
+          }
+        }}
+        onAddCategory={handleAddCategory}
+        onRenameCategory={handleRenameCategory}
+        onRequestDeleteCategory={requestDeleteCategory}
+      />
+
+      <DeleteCategoryModal
+        open={!!deleteCategoryTarget}
+        category={deleteCategoryTarget}
+        usageCount={deleteCategoryUsageCount}
+        code={deleteCategoryCode}
+        error={deleteCategoryError}
+        onChangeCode={(value) => {
+          setDeleteCategoryCode(value);
+          setDeleteCategoryError("");
+        }}
+        onClose={closeDeleteCategoryModal}
+        onConfirm={handleConfirmDeleteCategory}
+      />
+
+      <ConfirmCloseModal
+        open={pendingCloseTarget !== null}
+        title="Unsaved Changes"
+        description="Please confirm before closing this form."
+        onKeepEditing={() => setPendingCloseTarget(null)}
+        onDiscard={discardPendingChanges}
+      />
     </>
   );
 }

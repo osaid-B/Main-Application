@@ -17,6 +17,8 @@ type FormErrors = {
   location?: string;
 };
 
+type PendingCloseTarget = "add" | "edit" | null;
+
 const emptyForm: CustomerForm = {
   name: "",
   email: "",
@@ -25,7 +27,35 @@ const emptyForm: CustomerForm = {
   notes: "",
 };
 
-const DELETE_CONFIRMATION_CODE = "DELETE";
+const DELETE_CONFIRMATION_CODE = "123";
+const NOTE_PREVIEW_LIMIT = 220;
+
+const COMMON_EMAIL_DOMAINS = [
+  "gmail.com",
+  "yahoo.com",
+  "outlook.com",
+  "hotmail.com",
+  "icloud.com",
+  "live.com",
+  "msn.com",
+  "proton.me",
+  "protonmail.com",
+  "aol.com",
+  "mail.com",
+  "zoho.com",
+  "gmx.com",
+  "yandex.com",
+  "fastmail.com",
+  "me.com",
+  "pm.me",
+  "qq.com",
+  "163.com",
+  "126.com",
+  "naver.com",
+  "daum.net",
+  "rediffmail.com",
+  "inbox.com",
+];
 
 function isValidPhone(phone: string) {
   return /^(059|056)\d{7}$/.test(phone);
@@ -34,6 +64,200 @@ function isValidPhone(phone: string) {
 function isValidEmail(email: string) {
   if (!email.trim()) return true;
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+function buildEmailSuggestions(input: string) {
+  const value = input.trim().toLowerCase();
+  if (!value) return [];
+
+  const hasAt = value.includes("@");
+  const [localPart, domainPartRaw = ""] = value.split("@");
+  const domainPart = domainPartRaw.trim();
+
+  if (!localPart.trim()) return [];
+
+  if (!hasAt) {
+    return COMMON_EMAIL_DOMAINS.slice(0, 10).map(
+      (domain) => `${localPart}@${domain}`
+    );
+  }
+
+  return COMMON_EMAIL_DOMAINS.filter((domain) => domain.startsWith(domainPart))
+    .slice(0, 10)
+    .map((domain) => `${localPart}@${domain}`);
+}
+
+function EmailInput({
+  value,
+  onChange,
+  error,
+  placeholder,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  error?: string;
+  placeholder?: string;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  const suggestions = useMemo(() => buildEmailSuggestions(value), [value]);
+
+  const shouldShowSuggestions =
+    isOpen && value.trim() !== "" && suggestions.length > 0;
+
+  return (
+    <div style={{ position: "relative" }}>
+      <input
+        className="modal-input"
+        type="email"
+        placeholder={placeholder || "Enter email address (Optional)"}
+        value={value}
+        autoComplete="off"
+        onFocus={() => setIsOpen(true)}
+        onBlur={() => {
+          setTimeout(() => setIsOpen(false), 150);
+        }}
+        onChange={(e) => onChange(e.target.value)}
+      />
+
+      {shouldShowSuggestions && (
+        <div
+          style={{
+            position: "absolute",
+            top: "calc(100% + 8px)",
+            left: 0,
+            right: 0,
+            zIndex: 30,
+            background: "#ffffff",
+            border: "1px solid #dbe7f3",
+            borderRadius: "16px",
+            boxShadow: "0 18px 40px rgba(15, 23, 42, 0.10)",
+            padding: "8px",
+            maxHeight: "240px",
+            overflowY: "auto",
+          }}
+        >
+          <div
+            style={{
+              padding: "8px 10px 10px",
+              fontSize: "12px",
+              fontWeight: 700,
+              color: "#7b97b0",
+            }}
+          >
+            Suggested email addresses
+          </div>
+
+          {suggestions.map((suggestion) => (
+            <button
+              key={suggestion}
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => {
+                onChange(suggestion);
+                setIsOpen(false);
+              }}
+              style={{
+                width: "100%",
+                textAlign: "left",
+                border: "none",
+                background: "transparent",
+                padding: "12px 14px",
+                borderRadius: "12px",
+                cursor: "pointer",
+                color: "#1e293b",
+                fontSize: "14px",
+                fontWeight: 600,
+              }}
+            >
+              {suggestion}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {error && <p className="form-error">{error}</p>}
+    </div>
+  );
+}
+
+function ConfirmCloseModal({
+  open,
+  onKeepEditing,
+  onDiscard,
+  title,
+  description,
+}: {
+  open: boolean;
+  onKeepEditing: () => void;
+  onDiscard: () => void;
+  title: string;
+  description: string;
+}) {
+  if (!open) return null;
+
+  return (
+    <div className="modal-overlay" onClick={onKeepEditing}>
+      <div
+        className="modal-card"
+        onClick={(e) => e.stopPropagation()}
+        style={{ maxWidth: "520px" }}
+      >
+        <div className="modal-header">
+          <div>
+            <h2>{title}</h2>
+            <p>{description}</p>
+          </div>
+
+          <button className="modal-close-btn" onClick={onKeepEditing}>
+            ×
+          </button>
+        </div>
+
+        <div
+          style={{
+            marginTop: "6px",
+            background: "#f8fbff",
+            border: "1px solid #dbe7f3",
+            borderRadius: "16px",
+            padding: "16px 18px",
+            color: "#4b6580",
+            lineHeight: 1.8,
+            fontSize: "14px",
+            fontWeight: 500,
+          }}
+        >
+          You have unsaved changes. If you close now, the entered data will be
+          lost.
+        </div>
+
+        <div className="modal-actions" style={{ marginTop: "22px" }}>
+          <button
+            type="button"
+            className="modal-secondary-btn"
+            onClick={onKeepEditing}
+          >
+            Continue Editing
+          </button>
+
+          <button
+            type="button"
+            className="quick-action-btn delete-btn"
+            onClick={onDiscard}
+            style={{
+              minWidth: "170px",
+              background:
+                "linear-gradient(135deg, #f97316 0%, #ef4444 100%)",
+              border: "none",
+              color: "#fff",
+            }}
+          >
+            Discard Changes
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default function Customers() {
@@ -59,10 +283,14 @@ export default function Customers() {
   const [editErrors, setEditErrors] = useState<FormErrors>({});
 
   const [selectedNote, setSelectedNote] = useState<string | null>(null);
+  const [isNoteExpanded, setIsNoteExpanded] = useState(false);
 
   const [deleteCustomerId, setDeleteCustomerId] = useState<string | null>(null);
   const [deleteCode, setDeleteCode] = useState("");
   const [deleteError, setDeleteError] = useState("");
+
+  const [pendingCloseTarget, setPendingCloseTarget] =
+    useState<PendingCloseTarget>(null);
 
   useEffect(() => {
     saveCustomers(customers);
@@ -89,6 +317,29 @@ export default function Customers() {
         .includes(value);
     });
   }, [customers, searchTerm]);
+
+  const hasAddUnsavedChanges = useMemo(() => {
+    return (
+      form.name.trim() !== "" ||
+      form.email.trim() !== "" ||
+      form.phone.trim() !== "" ||
+      form.location.trim() !== "" ||
+      form.notes.trim() !== ""
+    );
+  }, [form]);
+
+  const hasEditUnsavedChanges = useMemo(() => {
+    if (!editingCustomer) return false;
+
+    return (
+      editForm.name.trim() !== (editingCustomer.name || "") ||
+      editForm.email.trim() !== (editingCustomer.email || "") ||
+      editForm.phone.trim() !== (editingCustomer.phone || "") ||
+      editForm.location.trim() !==
+        (editingCustomer.location || editingCustomer.address || "") ||
+      editForm.notes.trim() !== (editingCustomer.notes || "")
+    );
+  }, [editForm, editingCustomer]);
 
   const validateForm = (values: CustomerForm): FormErrors => {
     const errors: FormErrors = {};
@@ -125,22 +376,38 @@ export default function Customers() {
     setFormErrors({});
   };
 
-  const openEditModal = (customer: Customer) => {
-    setEditingCustomer(customer);
-    setEditForm({
-      name: customer.name || "",
-      email: customer.email || "",
-      phone: customer.phone || "",
-      location: customer.location || customer.address || "",
-      notes: customer.notes || "",
-    });
-    setEditErrors({});
-  };
-
   const closeEditModal = () => {
     setEditingCustomer(null);
     setEditForm(emptyForm);
     setEditErrors({});
+  };
+
+  const attemptCloseAddModal = () => {
+    if (hasAddUnsavedChanges) {
+      setPendingCloseTarget("add");
+      return;
+    }
+
+    closeAddModal();
+  };
+
+  const attemptCloseEditModal = () => {
+    if (hasEditUnsavedChanges) {
+      setPendingCloseTarget("edit");
+      return;
+    }
+
+    closeEditModal();
+  };
+
+  const discardPendingChanges = () => {
+    if (pendingCloseTarget === "add") {
+      closeAddModal();
+    } else if (pendingCloseTarget === "edit") {
+      closeEditModal();
+    }
+
+    setPendingCloseTarget(null);
   };
 
   const handlePhoneChange = (
@@ -198,6 +465,18 @@ export default function Customers() {
     closeAddModal();
   };
 
+  const openEditModal = (customer: Customer) => {
+    setEditingCustomer(customer);
+    setEditForm({
+      name: customer.name || "",
+      email: customer.email || "",
+      phone: customer.phone || "",
+      location: customer.location || customer.address || "",
+      notes: customer.notes || "",
+    });
+    setEditErrors({});
+  };
+
   const handleEditCustomer = () => {
     if (!editingCustomer) return;
 
@@ -239,7 +518,7 @@ export default function Customers() {
 
   const confirmDeleteCustomer = () => {
     if (deleteCode.trim() !== DELETE_CONFIRMATION_CODE) {
-      setDeleteError("Incorrect confirmation code. Please type DELETE.");
+      setDeleteError("Incorrect confirmation code. Please type 123.");
       return;
     }
 
@@ -249,6 +528,27 @@ export default function Customers() {
 
     closeDeleteModal();
   };
+
+  const openNoteModal = (note?: string) => {
+    const cleanNote = note?.trim() || "No notes available.";
+    setSelectedNote(cleanNote);
+    setIsNoteExpanded(false);
+  };
+
+  const closeNoteModal = () => {
+    setSelectedNote(null);
+    setIsNoteExpanded(false);
+  };
+
+  const shouldShowReadMore =
+    !!selectedNote &&
+    selectedNote !== "No notes available." &&
+    selectedNote.length > NOTE_PREVIEW_LIMIT;
+
+  const displayedNote =
+    selectedNote && !isNoteExpanded && shouldShowReadMore
+      ? `${selectedNote.slice(0, NOTE_PREVIEW_LIMIT)}...`
+      : selectedNote;
 
   return (
     <>
@@ -335,11 +635,7 @@ export default function Customers() {
 
                           <button
                             className="quick-action-btn secondary"
-                            onClick={() =>
-                              setSelectedNote(
-                                customer.notes || "No notes available."
-                              )
-                            }
+                            onClick={() => openNoteModal(customer.notes)}
                           >
                             Note
                           </button>
@@ -368,7 +664,7 @@ export default function Customers() {
       </div>
 
       {showAddModal && (
-        <div className="modal-overlay" onClick={closeAddModal}>
+        <div className="modal-overlay" onClick={attemptCloseAddModal}>
           <div className="modal-card" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <div>
@@ -376,7 +672,7 @@ export default function Customers() {
                 <p>Enter the new customer information.</p>
               </div>
 
-              <button className="modal-close-btn" onClick={closeAddModal}>
+              <button className="modal-close-btn" onClick={attemptCloseAddModal}>
                 ×
               </button>
             </div>
@@ -406,19 +702,16 @@ export default function Customers() {
                     (Optional)
                   </span>
                 </label>
-                <input
-                  className="modal-input"
-                  type="email"
-                  placeholder="Enter email address (Optional)"
+
+                <EmailInput
                   value={form.email}
-                  onChange={(e) => {
-                    setForm((prev) => ({ ...prev, email: e.target.value }));
+                  placeholder="Enter email address (Optional)"
+                  error={formErrors.email}
+                  onChange={(value) => {
+                    setForm((prev) => ({ ...prev, email: value }));
                     setFormErrors((prev) => ({ ...prev, email: undefined }));
                   }}
                 />
-                {formErrors.email && (
-                  <p className="form-error">{formErrors.email}</p>
-                )}
               </div>
 
               <div>
@@ -472,7 +765,7 @@ export default function Customers() {
                 <button
                   type="button"
                   className="modal-secondary-btn"
-                  onClick={closeAddModal}
+                  onClick={attemptCloseAddModal}
                 >
                   Cancel
                 </button>
@@ -536,7 +829,7 @@ export default function Customers() {
       )}
 
       {editingCustomer && (
-        <div className="modal-overlay" onClick={closeEditModal}>
+        <div className="modal-overlay" onClick={attemptCloseEditModal}>
           <div className="modal-card" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <div>
@@ -544,7 +837,7 @@ export default function Customers() {
                 <p>Update customer information.</p>
               </div>
 
-              <button className="modal-close-btn" onClick={closeEditModal}>
+              <button className="modal-close-btn" onClick={attemptCloseEditModal}>
                 ×
               </button>
             </div>
@@ -572,19 +865,16 @@ export default function Customers() {
                     (Optional)
                   </span>
                 </label>
-                <input
-                  className="modal-input"
-                  type="email"
-                  placeholder="Enter email address (Optional)"
+
+                <EmailInput
                   value={editForm.email}
-                  onChange={(e) => {
-                    setEditForm((prev) => ({ ...prev, email: e.target.value }));
+                  placeholder="Enter email address (Optional)"
+                  error={editErrors.email}
+                  onChange={(value) => {
+                    setEditForm((prev) => ({ ...prev, email: value }));
                     setEditErrors((prev) => ({ ...prev, email: undefined }));
                   }}
                 />
-                {editErrors.email && (
-                  <p className="form-error">{editErrors.email}</p>
-                )}
               </div>
 
               <div>
@@ -640,7 +930,7 @@ export default function Customers() {
                 <button
                   type="button"
                   className="modal-secondary-btn"
-                  onClick={closeEditModal}
+                  onClick={attemptCloseEditModal}
                 >
                   Cancel
                 </button>
@@ -673,14 +963,14 @@ export default function Customers() {
             </div>
 
             <p style={{ margin: 0, lineHeight: "1.8", color: "#567895" }}>
-              To confirm deletion, type <strong>DELETE</strong>
+              To confirm deletion, type <strong>123</strong>
             </p>
 
             <div style={{ marginTop: "16px" }}>
               <input
                 className="modal-input"
                 type="text"
-                placeholder="Type DELETE"
+                placeholder="Type 123"
                 value={deleteCode}
                 onChange={(e) => {
                   setDeleteCode(e.target.value);
@@ -712,7 +1002,7 @@ export default function Customers() {
       )}
 
       {selectedNote !== null && (
-        <div className="modal-overlay" onClick={() => setSelectedNote(null)}>
+        <div className="modal-overlay" onClick={closeNoteModal}>
           <div className="modal-card" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <div>
@@ -720,29 +1010,66 @@ export default function Customers() {
                 <p>Customer note details.</p>
               </div>
 
-              <button
-                className="modal-close-btn"
-                onClick={() => setSelectedNote(null)}
-              >
+              <button className="modal-close-btn" onClick={closeNoteModal}>
                 ×
               </button>
             </div>
 
-            <p style={{ whiteSpace: "pre-wrap", lineHeight: "1.8", margin: 0 }}>
-              {selectedNote}
-            </p>
+            <div style={{ padding: "8px 0 0" }}>
+              <p
+                style={{
+                  whiteSpace: "pre-wrap",
+                  lineHeight: "1.9",
+                  margin: 0,
+                  color: "#334155",
+                  fontSize: "15px",
+                  fontWeight: 500,
+                  wordBreak: "break-word",
+                  overflowWrap: "anywhere",
+                  userSelect: "text",
+                  maxHeight: isNoteExpanded ? "320px" : "unset",
+                  overflowY: isNoteExpanded ? "auto" : "visible",
+                }}
+              >
+                {displayedNote}
+              </p>
+
+              {shouldShowReadMore && (
+                <button
+                  type="button"
+                  onClick={() => setIsNoteExpanded((prev) => !prev)}
+                  style={{
+                    marginTop: "14px",
+                    border: "none",
+                    background: "transparent",
+                    color: "#2563eb",
+                    fontSize: "14px",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    padding: 0,
+                  }}
+                >
+                  {isNoteExpanded ? "Read Less" : "Read More"}
+                </button>
+              )}
+            </div>
 
             <div className="modal-actions" style={{ marginTop: "20px" }}>
-              <button
-                className="modal-primary-btn"
-                onClick={() => setSelectedNote(null)}
-              >
+              <button className="modal-primary-btn" onClick={closeNoteModal}>
                 Close
               </button>
             </div>
           </div>
         </div>
       )}
+
+      <ConfirmCloseModal
+        open={pendingCloseTarget !== null}
+        title="Unsaved Changes"
+        description="Please confirm before closing this form."
+        onKeepEditing={() => setPendingCloseTarget(null)}
+        onDiscard={discardPendingChanges}
+      />
     </>
   );
 }

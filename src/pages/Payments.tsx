@@ -1,50 +1,32 @@
 import { useEffect, useMemo, useState } from "react";
-import {
-  getCustomers,
-  getInvoices,
-  getPayments,
-  savePayments,
-} from "../data/storage";
-import {
-  calculateInvoiceRemainingAmount,
-  getCustomerById,
-  getInvoiceById,
-} from "../data/relations";
-import type { Customer, Invoice, Payment, PaymentMethod } from "../data/types";
-import { useSettings } from "../context/SettingsContext";
+import { getEmployees, saveEmployees } from "../data/storage";
+import type {
+  AttendanceRecord,
+  AttendanceRecordStatus,
+  Employee,
+  SalaryType,
+} from "../data/types";
 
-type LocalPaymentStatus = "Completed" | "Pending";
-
-type ExtendedPayment = Payment & {
-  paymentId: string;
-  invoiceNumber: string;
-  customerName: string;
-  amount: number;
-  status: LocalPaymentStatus;
-  method: PaymentMethod;
-  date: string;
-  notes?: string;
-};
-
-type PaymentForm = {
-  paymentId: string;
-  invoiceId: string;
-  customerId: string;
-  amount: string;
-  status: LocalPaymentStatus;
-  method: PaymentMethod;
-  date: string;
+type EmployeeForm = {
+  name: string;
+  phone: string;
+  workStart: string;
+  workEnd: string;
+  salaryType: SalaryType;
+  hourlyRate: string;
+  fixedSalary: string;
+  advance: string;
   notes: string;
 };
 
-type PaymentFormErrors = {
-  paymentId?: string;
-  invoiceId?: string;
-  customerId?: string;
-  amount?: string;
-  status?: string;
-  method?: string;
-  date?: string;
+type EmployeeFormErrors = {
+  name?: string;
+  phone?: string;
+  workStart?: string;
+  workEnd?: string;
+  hourlyRate?: string;
+  fixedSalary?: string;
+  advance?: string;
 };
 
 type ToastState = {
@@ -52,220 +34,493 @@ type ToastState = {
   type: "success" | "error" | "warning" | "info";
 } | null;
 
-type ConfirmDialogState =
+type DeleteDialogState =
   | {
-      type: "update";
-      paymentId: string;
-    }
-  | {
-      type: "delete";
-      paymentId: string;
+      employeeId: string;
+      employeeName: string;
+      confirmText: string;
     }
   | null;
 
-const EMPTY_FORM: PaymentForm = {
-  paymentId: "",
-  invoiceId: "",
-  customerId: "",
-  amount: "",
-  status: "Completed",
-  method: "Cash",
-  date: new Date().toISOString().split("T")[0],
+type AdvanceDialogState =
+  | {
+      employeeId: string;
+      employeeName: string;
+      amount: string;
+      error?: string;
+    }
+  | null;
+
+type AttendanceHistoryDialogState =
+  | {
+      employeeId: string;
+      employeeName: string;
+    }
+  | null;
+
+type ViewMode = "overview" | "attendance";
+type AttendanceRange = "today" | "week" | "month";
+
+type AttendanceFilter =
+  | "all"
+  | "not-started"
+  | "working"
+  | "finished"
+  | "late"
+  | "absent";
+
+type TodayAttendanceStatus =
+  | "Not Started"
+  | "Working"
+  | "Finished"
+  | "Late"
+  | "Absent";
+
+type ReportSortKey =
+  | "name"
+  | "finished"
+  | "working"
+  | "late"
+  | "absent"
+  | "totalHours"
+  | "gross"
+  | "advance"
+  | "net";
+
+type ReportSortDirection = "asc" | "desc";
+
+const EMPTY_FORM: EmployeeForm = {
+  name: "",
+  phone: "",
+  workStart: "08:00",
+  workEnd: "17:00",
+  salaryType: "hourly",
+  hourlyRate: "10",
+  fixedSalary: "0",
+  advance: "0",
   notes: "",
 };
 
-function normalizePayment(
-  payment: Payment,
-  invoices: Invoice[],
-  customers: Customer[],
-  index: number,
-  unknownCustomer: string
-): ExtendedPayment {
-  const invoice = getInvoiceById(invoices, payment.invoiceId);
-  const customer = getCustomerById(customers, payment.customerId);
+const DELETE_CONFIRMATION_CODE = "123";
 
-  return {
-    ...payment,
-    paymentId: payment.paymentId ?? payment.id ?? `PAY-${1000 + index + 1}`,
-    invoiceNumber: invoice?.id ?? payment.invoiceId,
-    customerName: customer?.name ?? unknownCustomer,
-    amount: Number(payment.amount ?? 0),
-    status: payment.status === "Pending" ? "Pending" : "Completed",
-    method:
-      payment.method === "Card" || payment.method === "Bank Transfer"
-        ? payment.method
-        : "Cash",
-    date: payment.date ?? new Date().toISOString().split("T")[0],
-    notes: payment.notes ?? "",
-  };
+const timeToMinutes = (time: string) => {
+  const [h, m] = time.split(":").map(Number);
+  return h * 60 + m;
+};
+
+const calculateHours = (start: string, end: string) => {
+  const diff = timeToMinutes(end) - timeToMinutes(start);
+  return Math.max(diff / 60, 0);
+};
+
+const getTodayDate = () => new Date().toISOString().slice(0, 10);
+
+const formatDayLabel = (date: Date) =>
+  date.toLocaleDateString("en-US", { weekday: "short" });
+
+function getLastNDates(count: number) {
+  const days: { date: string; label: string; day: string }[] = [];
+  const today = new Date();
+
+  for (let i = count - 1; i >= 0; i -= 1) {
+    const d = new Date(today);
+    d.setDate(today.getDate() - i);
+
+    days.push({
+      date: d.toISOString().slice(0, 10),
+      label: String(d.getDate()).padStart(2, "0"),
+      day: formatDayLabel(d),
+    });
+  }
+
+  return days;
 }
 
-function normalizePaymentList(
-  payments: Payment[],
-  invoices: Invoice[],
-  customers: Customer[],
-  unknownCustomer: string
+function getLastNDatesDetailed(count: number) {
+  const days: {
+    date: string;
+    label: string;
+    day: string;
+    month: string;
+  }[] = [];
+
+  const today = new Date();
+
+  for (let i = count - 1; i >= 0; i -= 1) {
+    const d = new Date(today);
+    d.setDate(today.getDate() - i);
+
+    days.push({
+      date: d.toISOString().slice(0, 10),
+      label: String(d.getDate()).padStart(2, "0"),
+      day: d.toLocaleDateString("en-US", { weekday: "short" }),
+      month: d.toLocaleDateString("en-US", { month: "short" }),
+    });
+  }
+
+  return days;
+}
+
+function getStartOfWeek(date = new Date()) {
+  const d = new Date(date);
+  const day = d.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  d.setDate(d.getDate() + diff);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function getStartOfMonth(date = new Date()) {
+  const d = new Date(date.getFullYear(), date.getMonth(), 1);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function isDateInRange(dateStr: string, range: AttendanceRange) {
+  const target = new Date(`${dateStr}T00:00:00`);
+  const today = new Date();
+  today.setHours(23, 59, 59, 999);
+
+  if (range === "today") return dateStr === getTodayDate();
+  if (range === "week") return target >= getStartOfWeek() && target <= today;
+  return target >= getStartOfMonth() && target <= today;
+}
+
+function getAttendanceRangeLabel(range: AttendanceRange) {
+  if (range === "today") return "today";
+  if (range === "week") return "this-week";
+  return "this-month";
+}
+
+function getRangeTitle(range: AttendanceRange) {
+  if (range === "today") return "Today Summary";
+  if (range === "week") return "This Week Summary";
+  return "This Month Summary";
+}
+
+function downloadTextFile(
+  filename: string,
+  content: string,
+  type = "text/plain"
 ) {
-  return payments.map((payment, index) =>
-    normalizePayment(payment, invoices, customers, index, unknownCustomer)
-  );
+  const blob = new Blob([content], { type });
+  const url = URL.createObjectURL(blob);
+
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+
+  URL.revokeObjectURL(url);
 }
 
-function calculateRemainingForEditing(
-  invoice: Invoice,
-  payments: Payment[],
-  editingPaymentId?: string
-) {
-  const filteredPayments = payments.filter(
-    (payment) =>
-      payment.id !== editingPaymentId && payment.paymentId !== editingPaymentId
-  );
-
-  return calculateInvoiceRemainingAmount(invoice, filteredPayments);
+function toCsvValue(value: string | number) {
+  const stringValue = String(value ?? "");
+  const escaped = stringValue.replace(/"/g, '""');
+  return `"${escaped}"`;
 }
 
-function translatePaymentStatus(status: string, t: any) {
-  switch (status) {
-    case "Paid":
-      return t.status.paid;
-    case "Completed":
-      return t.status.completed;
-    case "Pending":
-      return t.status.pending;
-    default:
-      return status;
-  }
-}
+function validateEmployeeForm(values: EmployeeForm): EmployeeFormErrors {
+  const errors: EmployeeFormErrors = {};
 
-function translatePaymentMethod(method: string, t: any) {
-  switch (method) {
-    case "Cash":
-      return t.payments.cash;
-    case "Card":
-      return t.payments.card;
-    case "Bank Transfer":
-      return t.payments.bankTransfer;
-    default:
-      return method;
-  }
-}
-
-function validatePaymentForm(
-  values: PaymentForm,
-  invoices: Invoice[],
-  payments: Payment[],
-  editingPaymentId: string | undefined,
-  t: any
-): PaymentFormErrors {
-  const errors: PaymentFormErrors = {};
-
-  if (!values.paymentId.trim()) {
-    errors.paymentId = t.payments.paymentIdRequired;
+  if (!values.name.trim()) {
+    errors.name = "Employee name is required.";
   }
 
-  if (!values.invoiceId.trim()) {
-    errors.invoiceId = t.payments.invoiceRequired;
+  if (!values.phone.trim()) {
+    errors.phone = "Phone number is required.";
+  } else if (
+    !(values.phone.startsWith("059") || values.phone.startsWith("056"))
+  ) {
+    errors.phone = "Phone number must start with 059 or 056.";
+  } else if (values.phone.length !== 10) {
+    errors.phone = "Phone number must be exactly 10 digits.";
   }
 
-  const selectedInvoice = invoices.find(
-    (invoice) => invoice.id === values.invoiceId
-  );
-
-  if (!selectedInvoice) {
-    errors.invoiceId = t.payments.invoiceInvalid;
+  if (!values.workStart) {
+    errors.workStart = "Work start time is required.";
   }
 
-  if (!values.customerId.trim()) {
-    errors.customerId = t.payments.customerRequired;
+  if (!values.workEnd) {
+    errors.workEnd = "Work end time is required.";
+  } else if (
+    values.workStart &&
+    timeToMinutes(values.workEnd) <= timeToMinutes(values.workStart)
+  ) {
+    errors.workEnd = "Work end time must be later than work start time.";
   }
 
-  if (values.amount === "") {
-    errors.amount = t.payments.amountRequired;
-  } else if (Number.isNaN(Number(values.amount))) {
-    errors.amount = t.payments.amountNumber;
-  } else if (Number(values.amount) <= 0) {
-    errors.amount = t.payments.amountPositive;
+  if (values.salaryType === "hourly") {
+    if (values.hourlyRate === "") {
+      errors.hourlyRate = "Hourly rate is required.";
+    } else if (
+      Number.isNaN(Number(values.hourlyRate)) ||
+      Number(values.hourlyRate) < 0
+    ) {
+      errors.hourlyRate = "Hourly rate must be a valid positive number.";
+    }
   }
 
-  if (!values.date.trim()) {
-    errors.date = t.payments.dateRequired;
-  }
-
-  if (!values.method) {
-    errors.method = t.payments.methodRequired;
+  if (values.salaryType === "fixed") {
+    if (values.fixedSalary === "") {
+      errors.fixedSalary = "Fixed salary is required.";
+    } else if (
+      Number.isNaN(Number(values.fixedSalary)) ||
+      Number(values.fixedSalary) < 0
+    ) {
+      errors.fixedSalary = "Fixed salary must be a valid positive number.";
+    }
   }
 
   if (
-    selectedInvoice &&
-    values.amount !== "" &&
-    !Number.isNaN(Number(values.amount))
+    values.advance !== "" &&
+    (Number.isNaN(Number(values.advance)) || Number(values.advance) < 0)
   ) {
-    const remainingAmount = calculateRemainingForEditing(
-      selectedInvoice,
-      payments,
-      editingPaymentId
-    );
-
-    if (
-      values.status === "Completed" &&
-      Number(values.amount) > remainingAmount
-    ) {
-      errors.amount = `${t.payments.remainingBalance}: ${remainingAmount}`;
-    }
+    errors.advance = "Advance must be a valid positive number.";
   }
 
   return errors;
 }
 
-function PaymentFormModal({
+function getAttendanceRecords(employee: Employee): AttendanceRecord[] {
+  return Array.isArray(employee.attendanceRecords)
+    ? employee.attendanceRecords
+    : [];
+}
+
+function getTodayAttendanceRecord(
+  employee: Employee
+): AttendanceRecord | undefined {
+  const today = getTodayDate();
+  const record = getAttendanceRecords(employee).find(
+    (item) => item.date === today
+  );
+
+  if (record) return record;
+
+  if (employee.checkIn || employee.checkOut) {
+    const actualHours =
+      employee.checkIn && employee.checkOut
+        ? calculateHours(employee.checkIn, employee.checkOut)
+        : 0;
+
+    const legacyStatus: AttendanceRecordStatus =
+      employee.checkIn && employee.checkOut
+        ? "finished"
+        : employee.checkIn
+        ? timeToMinutes(employee.checkIn) > timeToMinutes(employee.workStart)
+          ? "late"
+          : "working"
+        : "not-started";
+
+    return {
+      date: today,
+      checkIn: employee.checkIn,
+      checkOut: employee.checkOut,
+      status: legacyStatus,
+      actualHours,
+    };
+  }
+
+  return undefined;
+}
+
+function getTodayStatus(employee: Employee): TodayAttendanceStatus {
+  const record = getTodayAttendanceRecord(employee);
+
+  if (!record || (!record.checkIn && !record.checkOut)) return "Not Started";
+  if (record.status === "absent") return "Absent";
+  if (record.status === "late" && !record.checkOut) return "Late";
+  if (record.checkIn && !record.checkOut) return "Working";
+  if (record.checkIn && record.checkOut) return "Finished";
+  return "Not Started";
+}
+
+function getTodayActualHours(employee: Employee) {
+  const record = getTodayAttendanceRecord(employee);
+
+  if (!record) return 0;
+  if (typeof record.actualHours === "number") return record.actualHours;
+  if (record.checkIn && record.checkOut) {
+    return calculateHours(record.checkIn, record.checkOut);
+  }
+
+  return 0;
+}
+
+function upsertTodayAttendance(
+  employee: Employee,
+  updater: (current?: AttendanceRecord) => AttendanceRecord
+): Employee {
+  const today = getTodayDate();
+  const records = getAttendanceRecords(employee);
+  const index = records.findIndex((item) => item.date === today);
+  const current =
+    index >= 0 ? records[index] : getTodayAttendanceRecord(employee);
+  const nextRecord = updater(current);
+
+  const nextRecords =
+    index >= 0
+      ? records.map((item, i) => (i === index ? nextRecord : item))
+      : [...records, nextRecord];
+
+  return {
+    ...employee,
+    attendanceRecords: nextRecords,
+    checkIn: nextRecord.checkIn,
+    checkOut: nextRecord.checkOut,
+  };
+}
+
+function getMiniHistoryStatus(
+  employee: Employee,
+  date: string
+): AttendanceRecordStatus | "empty" {
+  const record = getAttendanceRecords(employee).find(
+    (item) => item.date === date
+  );
+  if (!record) return "empty";
+  return record.status;
+}
+
+function getAttendanceStatusLabel(status: AttendanceRecordStatus | "empty") {
+  if (status === "working") return "Working";
+  if (status === "finished") return "Finished";
+  if (status === "late") return "Late";
+  if (status === "absent") return "Absent";
+  if (status === "not-started") return "Not Started";
+  return "No Record";
+}
+
+function getEmployeeAttendanceSummary(employee: Employee) {
+  const records = getAttendanceRecords(employee);
+
+  return records.reduce(
+    (acc, record) => {
+      if (record.status === "working") acc.working += 1;
+      if (record.status === "finished") acc.finished += 1;
+      if (record.status === "late") acc.late += 1;
+      if (record.status === "absent") acc.absent += 1;
+      return acc;
+    },
+    {
+      working: 0,
+      finished: 0,
+      late: 0,
+      absent: 0,
+    }
+  );
+}
+
+function getEmployeeRangeSummary(employee: Employee, range: AttendanceRange) {
+  const records = getAttendanceRecords(employee).filter((record) =>
+    isDateInRange(record.date, range)
+  );
+
+  return records.reduce(
+    (acc, record) => {
+      if (record.status === "working") acc.working += 1;
+      if (record.status === "finished") acc.finished += 1;
+      if (record.status === "late") acc.late += 1;
+      if (record.status === "absent") acc.absent += 1;
+      acc.totalHours += Number(record.actualHours || 0);
+      return acc;
+    },
+    {
+      working: 0,
+      finished: 0,
+      late: 0,
+      absent: 0,
+      totalHours: 0,
+    }
+  );
+}
+
+function getGlobalRangeSummary(employees: Employee[], range: AttendanceRange) {
+  return employees.reduce(
+    (acc, employee) => {
+      const summary = getEmployeeRangeSummary(employee, range);
+      acc.working += summary.working;
+      acc.finished += summary.finished;
+      acc.late += summary.late;
+      acc.absent += summary.absent;
+      acc.totalHours += summary.totalHours;
+      return acc;
+    },
+    {
+      working: 0,
+      finished: 0,
+      late: 0,
+      absent: 0,
+      totalHours: 0,
+    }
+  );
+}
+
+function getEmployeePayrollForRange(employee: Employee, range: AttendanceRange) {
+  const summary = getEmployeeRangeSummary(employee, range);
+
+  const gross =
+    employee.salaryType === "hourly"
+      ? summary.totalHours * Number(employee.hourlyRate || 0)
+      : Number(employee.fixedSalary || 0);
+
+  const advance = Number(employee.advance || 0);
+  const net = gross - advance;
+
+  return {
+    totalHours: summary.totalHours,
+    gross,
+    advance,
+    net,
+  };
+}
+
+function getEmployeeReportRow(employee: Employee, range: AttendanceRange) {
+  const summary = getEmployeeRangeSummary(employee, range);
+  const payroll = getEmployeePayrollForRange(employee, range);
+
+  return {
+    id: employee.id,
+    name: employee.name,
+    phone: employee.phone,
+    finished: summary.finished,
+    working: summary.working,
+    late: summary.late,
+    absent: summary.absent,
+    totalHours: summary.totalHours,
+    gross: payroll.gross,
+    advance: payroll.advance,
+    net: payroll.net,
+  };
+}
+
+function EmployeeFormModal({
   title,
   description,
   values,
   errors,
-  invoices,
-  customers,
-  payments,
-  editingPaymentId,
   onChange,
   onClose,
   onSubmit,
   submitLabel,
-  t,
-  isArabic,
 }: {
   title: string;
   description: string;
-  values: PaymentForm;
-  errors: PaymentFormErrors;
-  invoices: Invoice[];
-  customers: Customer[];
-  payments: Payment[];
-  editingPaymentId?: string;
-  onChange: (field: keyof PaymentForm, value: string) => void;
+  values: EmployeeForm;
+  errors: EmployeeFormErrors;
+  onChange: (field: keyof EmployeeForm, value: string) => void;
   onClose: () => void;
   onSubmit: () => void;
   submitLabel: string;
-  t: any;
-  isArabic: boolean;
 }) {
-  const selectedInvoice = invoices.find(
-    (invoice) => invoice.id === values.invoiceId
-  );
-
-  const selectedCustomer = customers.find(
-    (customer) => customer.id === values.customerId
-  );
-
-  const remainingAmount = selectedInvoice
-    ? calculateRemainingForEditing(selectedInvoice, payments, editingPaymentId)
-    : 0;
-
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div
-        className="modal-card"
+        className="modal-card employees-modal-card"
         onClick={(e) => e.stopPropagation()}
-        dir={isArabic ? "rtl" : "ltr"}
       >
         <div className="modal-header">
           <div>
@@ -285,137 +540,130 @@ function PaymentFormModal({
             onSubmit();
           }}
         >
-          <div className="modal-grid">
+          <div className="employees-form-grid">
             <div>
-              <label className="modal-label">{t.payments.paymentId}</label>
+              <label className="modal-label">Employee Name</label>
               <input
                 className="modal-input"
                 type="text"
-                value={values.paymentId}
-                onChange={(e) => onChange("paymentId", e.target.value)}
-                placeholder={t.payments.enterPaymentId}
+                placeholder="Enter employee name"
+                value={values.name}
+                onChange={(e) => onChange("name", e.target.value)}
               />
-              {errors.paymentId && (
-                <p className="field-error">{errors.paymentId}</p>
+              {errors.name && <p className="form-error">{errors.name}</p>}
+            </div>
+
+            <div>
+              <label className="modal-label">Phone</label>
+              <input
+                className="modal-input"
+                type="text"
+                placeholder="Enter phone number"
+                value={values.phone}
+                onChange={(e) =>
+                  onChange(
+                    "phone",
+                    e.target.value.replace(/\D/g, "").slice(0, 10)
+                  )
+                }
+              />
+              {errors.phone && <p className="form-error">{errors.phone}</p>}
+            </div>
+
+            <div>
+              <label className="modal-label">Work Start</label>
+              <input
+                className="modal-input"
+                type="time"
+                value={values.workStart}
+                onChange={(e) => onChange("workStart", e.target.value)}
+              />
+              {errors.workStart && (
+                <p className="form-error">{errors.workStart}</p>
               )}
             </div>
 
             <div>
-              <label className="modal-label">{t.common.invoice}</label>
+              <label className="modal-label">Work End</label>
+              <input
+                className="modal-input"
+                type="time"
+                value={values.workEnd}
+                onChange={(e) => onChange("workEnd", e.target.value)}
+              />
+              {errors.workEnd && <p className="form-error">{errors.workEnd}</p>}
+            </div>
+
+            <div>
+              <label className="modal-label">Salary Type</label>
               <select
                 className="modal-input"
-                value={values.invoiceId}
-                onChange={(e) => {
-                  const invoice = invoices.find((inv) => inv.id === e.target.value);
-                  onChange("invoiceId", e.target.value);
-                  onChange("customerId", invoice?.customerId ?? "");
-                }}
+                value={values.salaryType}
+                onChange={(e) =>
+                  onChange("salaryType", e.target.value as SalaryType)
+                }
               >
-                <option value="">{t.payments.selectInvoice}</option>
-                {invoices.map((invoice) => {
-                  const customer = customers.find(
-                    (cust) => cust.id === invoice.customerId
-                  );
-
-                  return (
-                    <option key={invoice.id} value={invoice.id}>
-                      {invoice.id} - {customer?.name ?? t.payments.unknownCustomer}
-                    </option>
-                  );
-                })}
+                <option value="hourly">Hourly Salary</option>
+                <option value="fixed">Fixed Salary</option>
               </select>
-              {errors.invoiceId && <p className="field-error">{errors.invoiceId}</p>}
             </div>
 
-            <div>
-              <label className="modal-label">{t.common.customer}</label>
-              <input
-                className="modal-input"
-                type="text"
-                value={selectedCustomer?.name ?? ""}
-                placeholder={t.payments.customerName}
-                readOnly
-              />
-              {errors.customerId && (
-                <p className="field-error">{errors.customerId}</p>
-              )}
-            </div>
+            {values.salaryType === "hourly" ? (
+              <div>
+                <label className="modal-label">Hourly Rate</label>
+                <input
+                  className="modal-input"
+                  type="number"
+                  min="0"
+                  step="1"
+                  placeholder="Enter hourly rate"
+                  value={values.hourlyRate}
+                  onChange={(e) => onChange("hourlyRate", e.target.value)}
+                />
+                {errors.hourlyRate && (
+                  <p className="form-error">{errors.hourlyRate}</p>
+                )}
+              </div>
+            ) : (
+              <div>
+                <label className="modal-label">Fixed Salary</label>
+                <input
+                  className="modal-input"
+                  type="number"
+                  min="0"
+                  step="1"
+                  placeholder="Enter fixed salary"
+                  value={values.fixedSalary}
+                  onChange={(e) => onChange("fixedSalary", e.target.value)}
+                />
+                {errors.fixedSalary && (
+                  <p className="form-error">{errors.fixedSalary}</p>
+                )}
+              </div>
+            )}
 
             <div>
-              <label className="modal-label">{t.common.amount}</label>
+              <label className="modal-label">Advance</label>
               <input
                 className="modal-input"
                 type="number"
-                min="0.01"
-                step="0.01"
-                value={values.amount}
-                onChange={(e) => onChange("amount", e.target.value)}
-                placeholder={t.payments.enterAmount}
+                min="0"
+                step="1"
+                placeholder="Enter advance"
+                value={values.advance}
+                onChange={(e) => onChange("advance", e.target.value)}
               />
-              {selectedInvoice ? (
-                <p
-                  style={{
-                    marginTop: "6px",
-                    fontSize: "12px",
-                    color: "#64748b",
-                    fontWeight: 600,
-                  }}
-                >
-                  {t.payments.remainingBalance}: ${remainingAmount}
-                </p>
-              ) : null}
-              {errors.amount && <p className="field-error">{errors.amount}</p>}
+              {errors.advance && <p className="form-error">{errors.advance}</p>}
             </div>
 
-            <div>
-              <label className="modal-label">{t.common.status}</label>
-              <select
-                className="modal-input"
-                value={values.status}
-                onChange={(e) =>
-                  onChange("status", e.target.value as LocalPaymentStatus)
-                }
-              >
-                <option value="Completed">{t.payments.completed}</option>
-                <option value="Pending">{t.payments.pending}</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="modal-label">{t.common.method}</label>
-              <select
-                className="modal-input"
-                value={values.method}
-                onChange={(e) =>
-                  onChange("method", e.target.value as PaymentMethod)
-                }
-              >
-                <option value="Cash">{t.payments.cash}</option>
-                <option value="Card">{t.payments.card}</option>
-                <option value="Bank Transfer">{t.payments.bankTransfer}</option>
-              </select>
-              {errors.method && <p className="field-error">{errors.method}</p>}
-            </div>
-
-            <div>
-              <label className="modal-label">{t.common.date}</label>
-              <input
-                className="modal-input"
-                type="date"
-                value={values.date}
-                onChange={(e) => onChange("date", e.target.value)}
-              />
-              {errors.date && <p className="field-error">{errors.date}</p>}
-            </div>
-
-            <div className="modal-grid-full">
-              <label className="modal-label">{t.common.notes}</label>
+            <div className="employees-form-grid-full">
+              <label className="modal-label">Notes</label>
               <textarea
-                className="modal-textarea"
+                className="modal-input"
+                rows={4}
+                placeholder="Add employee notes..."
                 value={values.notes}
                 onChange={(e) => onChange("notes", e.target.value)}
-                placeholder={t.payments.enterNotes}
-                rows={3}
               />
             </div>
           </div>
@@ -426,7 +674,7 @@ function PaymentFormModal({
               className="modal-secondary-btn"
               onClick={onClose}
             >
-              {t.common.cancel}
+              Cancel
             </button>
 
             <button type="submit" className="modal-primary-btn">
@@ -439,36 +687,29 @@ function PaymentFormModal({
   );
 }
 
-function ConfirmDialog({
-  title,
-  description,
-  confirmLabel,
-  confirmClassName,
-  onConfirm,
+function DeleteConfirmModal({
+  state,
+  onChange,
   onClose,
-  t,
-  isArabic,
+  onConfirm,
 }: {
-  title: string;
-  description: string;
-  confirmLabel: string;
-  confirmClassName?: string;
-  onConfirm: () => void;
+  state: NonNullable<DeleteDialogState>;
+  onChange: (value: string) => void;
   onClose: () => void;
-  t: any;
-  isArabic: boolean;
+  onConfirm: () => void;
 }) {
+  const isValid = state.confirmText === DELETE_CONFIRMATION_CODE;
+
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div
-        className="modal-card confirm-dialog-card"
+        className="modal-card confirm-dialog-card employees-danger-modal"
         onClick={(e) => e.stopPropagation()}
-        dir={isArabic ? "rtl" : "ltr"}
       >
         <div className="modal-header">
           <div>
-            <h2>{title}</h2>
-            <p>{t.payments.confirmationRequired}</p>
+            <h2>Delete Employee</h2>
+            <p>Danger zone</p>
           </div>
 
           <button type="button" className="modal-close-btn" onClick={onClose}>
@@ -476,23 +717,45 @@ function ConfirmDialog({
           </button>
         </div>
 
-        <p className="confirm-dialog-text">{description}</p>
+        <div className="employees-confirm-body">
+          <p className="employees-danger-text">
+            You are about to permanently delete{" "}
+            <strong>{state.employeeName}</strong>. This action cannot be undone.
+          </p>
 
-        <div className="modal-actions" style={{ marginTop: "20px" }}>
+          <label className="modal-label">
+            Type <strong>{DELETE_CONFIRMATION_CODE}</strong> to confirm
+          </label>
+
+          <input
+            className="modal-input"
+            type="text"
+            placeholder={`Type ${DELETE_CONFIRMATION_CODE}`}
+            value={state.confirmText}
+            onChange={(e) => onChange(e.target.value)}
+          />
+        </div>
+
+        <div className="modal-actions">
           <button
             type="button"
             className="modal-secondary-btn"
             onClick={onClose}
           >
-            {t.common.cancel}
+            Cancel
           </button>
 
           <button
             type="button"
-            className={confirmClassName || "modal-primary-btn"}
+            className="quick-action-btn delete-btn"
+            disabled={!isValid}
             onClick={onConfirm}
+            style={{
+              opacity: isValid ? 1 : 0.5,
+              cursor: isValid ? "pointer" : "not-allowed",
+            }}
           >
-            {confirmLabel}
+            Delete Employee
           </button>
         </div>
       </div>
@@ -500,47 +763,340 @@ function ConfirmDialog({
   );
 }
 
-export default function Payments() {
-  const { t, isArabic } = useSettings();
+function AdvanceModal({
+  state,
+  onChange,
+  onClose,
+  onConfirm,
+}: {
+  state: NonNullable<AdvanceDialogState>;
+  onChange: (value: string) => void;
+  onClose: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div
+        className="modal-card confirm-dialog-card"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="modal-header">
+          <div>
+            <h2>Add Advance</h2>
+            <p>Record a new advance payment</p>
+          </div>
 
-  const [customers] = useState<Customer[]>(() => getCustomers());
-  const [invoices] = useState<Invoice[]>(() => getInvoices());
-  const [payments, setPayments] = useState<ExtendedPayment[]>(() =>
-    normalizePaymentList(
-      getPayments(),
-      getInvoices(),
-      getCustomers(),
-      t.payments.unknownCustomer
-    )
+          <button type="button" className="modal-close-btn" onClick={onClose}>
+            ×
+          </button>
+        </div>
+
+        <div className="employees-confirm-body">
+          <p className="employees-muted-text">
+            Add an advance for <strong>{state.employeeName}</strong>.
+          </p>
+
+          <label className="modal-label">Advance Amount</label>
+          <input
+            className="modal-input"
+            type="number"
+            min="0"
+            step="1"
+            placeholder="Enter advance amount"
+            value={state.amount}
+            onChange={(e) => onChange(e.target.value)}
+          />
+
+          {state.error && <p className="form-error">{state.error}</p>}
+        </div>
+
+        <div className="modal-actions">
+          <button
+            type="button"
+            className="modal-secondary-btn"
+            onClick={onClose}
+          >
+            Cancel
+          </button>
+
+          <button
+            type="button"
+            className="modal-primary-btn"
+            onClick={onConfirm}
+          >
+            Confirm Advance
+          </button>
+        </div>
+      </div>
+    </div>
   );
+}
 
+function AttendanceHistoryModal({
+  employee,
+  onClose,
+}: {
+  employee: Employee;
+  onClose: () => void;
+}) {
+  const days = getLastNDatesDetailed(30);
+  const summary = getEmployeeAttendanceSummary(employee);
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div
+        className="modal-card employees-history-modal"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="modal-header">
+          <div>
+            <h2>Attendance History</h2>
+            <p>
+              Review the recent attendance pattern for{" "}
+              <strong>{employee.name}</strong>.
+            </p>
+          </div>
+
+          <button type="button" className="modal-close-btn" onClick={onClose}>
+            ×
+          </button>
+        </div>
+
+        <div className="modal-form">
+          <div className="employees-history-summary-grid">
+            <div className="employees-summary-box">
+              <span>Working</span>
+              <strong>{summary.working}</strong>
+            </div>
+
+            <div className="employees-summary-box">
+              <span>Finished</span>
+              <strong>{summary.finished}</strong>
+            </div>
+
+            <div className="employees-summary-box">
+              <span>Late</span>
+              <strong>{summary.late}</strong>
+            </div>
+
+            <div className="employees-summary-box">
+              <span>Absent</span>
+              <strong>{summary.absent}</strong>
+            </div>
+          </div>
+
+          <div className="employees-history-modal-grid">
+            {days.map((day) => {
+              const status = getMiniHistoryStatus(employee, day.date);
+
+              return (
+                <div
+                  key={`${employee.id}-${day.date}`}
+                  className={`employees-history-modal-cell ${status}`}
+                  title={`${day.date} - ${getAttendanceStatusLabel(status)}`}
+                >
+                  <small>{day.day}</small>
+                  <strong>{day.label}</strong>
+                  <span>{day.month}</span>
+                  <em>{getAttendanceStatusLabel(status)}</em>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="modal-actions">
+            <button
+              type="button"
+              className="modal-primary-btn"
+              onClick={onClose}
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function OverviewCard({
+  employee,
+  attendanceRange,
+  recentDays,
+  onAdvance,
+  onEdit,
+  onHistory,
+  onDelete,
+}: {
+  employee: Employee;
+  attendanceRange: AttendanceRange;
+  recentDays: { date: string; label: string; day: string }[];
+  onAdvance: () => void;
+  onEdit: () => void;
+  onHistory: () => void;
+  onDelete: () => void;
+}) {
+  const todayRecord = getTodayAttendanceRecord(employee);
+  const actualHours = getTodayActualHours(employee);
+  const netSalary = getEmployeePayrollForRange(employee, attendanceRange).net;
+  const attendanceStatus = getTodayStatus(employee);
+
+  return (
+    <article className="employees-staff-card employees-staff-card-lite">
+      <div className="employees-lite-top">
+        <div className="employees-lite-user">
+          <div className="employees-lite-avatar">
+            {employee.name.charAt(0).toUpperCase()}
+          </div>
+
+          <div className="employees-lite-meta">
+            <h3>{employee.name}</h3>
+            <span>{employee.id}</span>
+            <span>{employee.phone}</span>
+          </div>
+        </div>
+
+        <div className="employees-lite-badges">
+          <span className="employees-lite-badge">
+            {employee.salaryType === "hourly" ? "Hourly" : "Fixed"}
+          </span>
+
+          <span
+            className={`employees-lite-status ${
+              attendanceStatus === "Not Started"
+                ? "not-started"
+                : attendanceStatus === "Working"
+                ? "working"
+                : attendanceStatus === "Late"
+                ? "late"
+                : attendanceStatus === "Absent"
+                ? "absent"
+                : "finished"
+            }`}
+          >
+            {attendanceStatus}
+          </span>
+        </div>
+      </div>
+
+      <div className="employees-lite-grid">
+        <div className="employees-lite-box">
+          <span>Shift</span>
+          <strong>
+            {employee.workStart} - {employee.workEnd}
+          </strong>
+        </div>
+
+        <div className="employees-lite-box">
+          <span>Today</span>
+          <strong>
+            {todayRecord?.checkIn || "--"} / {todayRecord?.checkOut || "--"}
+          </strong>
+          <small>{actualHours.toFixed(2)} h</small>
+        </div>
+
+        <div className="employees-lite-box">
+          <span>
+            {attendanceRange === "today"
+              ? "Net Today"
+              : attendanceRange === "week"
+              ? "Net Week"
+              : "Net Month"}
+          </span>
+          <strong
+            className={
+              netSalary >= 0
+                ? "employees-net-positive-text"
+                : "employees-net-negative-text"
+            }
+          >
+            ${netSalary.toFixed(2)}
+          </strong>
+        </div>
+      </div>
+
+      <div className="employees-lite-history">
+        <div className="employees-lite-history-head">
+          <span>Last 7 Days</span>
+          <small>Attendance</small>
+        </div>
+
+        <div className="employees-lite-history-strip">
+          {recentDays.map((day) => {
+            const status = getMiniHistoryStatus(employee, day.date);
+
+            return (
+              <div
+                key={`${employee.id}-${day.date}`}
+                className={`employees-lite-history-cell ${status}`}
+                title={`${day.date} - ${getAttendanceStatusLabel(status)}`}
+              >
+                <small>{day.day}</small>
+                <strong>{day.label}</strong>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {employee.notes ? (
+        <div className="employees-lite-notes">
+          <span>Notes</span>
+          <p>{employee.notes}</p>
+        </div>
+      ) : null}
+
+      <div className="employees-lite-actions">
+        <button type="button" className="quick-action-btn secondary" onClick={onAdvance}>
+          Advance
+        </button>
+
+        <button type="button" className="quick-action-btn secondary" onClick={onEdit}>
+          Edit
+        </button>
+
+        <button type="button" className="quick-action-btn secondary" onClick={onHistory}>
+          History
+        </button>
+
+        <button type="button" className="quick-action-btn delete-btn" onClick={onDelete}>
+          Delete
+        </button>
+      </div>
+    </article>
+  );
+}
+
+export default function Employees() {
+  const [employees, setEmployees] = useState<Employee[]>(() => getEmployees());
   const [searchTerm, setSearchTerm] = useState("");
+  const [viewMode, setViewMode] = useState<ViewMode>("overview");
+  const [attendanceFilter, setAttendanceFilter] =
+    useState<AttendanceFilter>("all");
+  const [attendanceRange, setAttendanceRange] =
+    useState<AttendanceRange>("today");
 
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [addForm, setAddForm] = useState<PaymentForm>(EMPTY_FORM);
-  const [addErrors, setAddErrors] = useState<PaymentFormErrors>({});
+  const [showEmployeeModal, setShowEmployeeModal] = useState(false);
+  const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
 
-  const [editingPayment, setEditingPayment] = useState<ExtendedPayment | null>(null);
-  const [editForm, setEditForm] = useState<PaymentForm>(EMPTY_FORM);
-  const [editErrors, setEditErrors] = useState<PaymentFormErrors>({});
+  const [form, setForm] = useState<EmployeeForm>(EMPTY_FORM);
+  const [formErrors, setFormErrors] = useState<EmployeeFormErrors>({});
 
-  const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogState>(null);
   const [toast, setToast] = useState<ToastState>(null);
+  const [deleteDialog, setDeleteDialog] = useState<DeleteDialogState>(null);
+  const [advanceDialog, setAdvanceDialog] = useState<AdvanceDialogState>(null);
+  const [attendanceHistoryDialog, setAttendanceHistoryDialog] =
+    useState<AttendanceHistoryDialogState>(null);
+
+  const [reportSortKey, setReportSortKey] = useState<ReportSortKey>("name");
+  const [reportSortDirection, setReportSortDirection] =
+    useState<ReportSortDirection>("asc");
+
+  const recentDays = useMemo(() => getLastNDates(7), []);
 
   useEffect(() => {
-    setPayments(
-      normalizePaymentList(
-        getPayments(),
-        getInvoices(),
-        getCustomers(),
-        t.payments.unknownCustomer
-      )
-    );
-  }, [t.payments.unknownCustomer]);
-
-  useEffect(() => {
-    savePayments(payments);
-  }, [payments]);
+    saveEmployees(employees);
+  }, [employees]);
 
   useEffect(() => {
     if (!toast) return;
@@ -548,657 +1104,1033 @@ export default function Payments() {
     return () => window.clearTimeout(timer);
   }, [toast]);
 
-  const filteredPayments = useMemo(() => {
+  const filteredEmployees = useMemo(() => {
     const value = searchTerm.trim().toLowerCase();
+    if (!value) return employees;
 
-    return payments.filter((payment) =>
-      [
-        payment.paymentId,
-        payment.invoiceNumber,
-        payment.customerName,
-        payment.amount,
-        payment.status,
-        payment.method,
-        payment.date,
-        payment.notes,
+    return employees.filter((emp) => {
+      const todayRecord = getTodayAttendanceRecord(emp);
+
+      return [
+        emp.id,
+        emp.name,
+        emp.phone,
+        emp.workStart,
+        emp.workEnd,
+        emp.salaryType,
+        emp.notes || "",
+        todayRecord?.checkIn || "",
+        todayRecord?.checkOut || "",
+        todayRecord?.status || "",
       ]
         .join(" ")
         .toLowerCase()
-        .includes(value)
-    );
-  }, [payments, searchTerm]);
-
-  const setAddField = (field: keyof PaymentForm, value: string) => {
-    setAddForm((prev) => ({ ...prev, [field]: value }));
-    setAddErrors((prev) => ({ ...prev, [field]: undefined }));
-  };
-
-  const setEditField = (field: keyof PaymentForm, value: string) => {
-    setEditForm((prev) => ({ ...prev, [field]: value }));
-    setEditErrors((prev) => ({ ...prev, [field]: undefined }));
-  };
-
-  const closeAddModal = () => {
-    setShowAddModal(false);
-    setAddForm(EMPTY_FORM);
-    setAddErrors({});
-  };
-
-  const closeEditModal = () => {
-    setEditingPayment(null);
-    setEditForm(EMPTY_FORM);
-    setEditErrors({});
-  };
-
-  const openEditModal = (payment: ExtendedPayment) => {
-    setEditingPayment(payment);
-    setEditForm({
-      paymentId: payment.paymentId,
-      invoiceId: payment.invoiceId,
-      customerId: payment.customerId,
-      amount: String(payment.amount),
-      status: payment.status,
-      method: payment.method ?? "Cash",
-      date: payment.date,
-      notes: payment.notes ?? "",
+        .includes(value);
     });
-    setEditErrors({});
-  };
+  }, [employees, searchTerm]);
 
-  const handleRequestAddPayment = () => {
-    const errors = validatePaymentForm(addForm, invoices, payments, undefined, t);
-    setAddErrors(errors);
+  const attendanceEmployees = useMemo(() => {
+    return filteredEmployees.filter((emp) => {
+      const status = getTodayStatus(emp);
 
-    if (Object.keys(errors).length > 0) return;
+      if (attendanceFilter === "all") return true;
+      if (attendanceFilter === "not-started") return status === "Not Started";
+      if (attendanceFilter === "working") return status === "Working";
+      if (attendanceFilter === "finished") return status === "Finished";
+      if (attendanceFilter === "late") return status === "Late";
+      if (attendanceFilter === "absent") return status === "Absent";
 
-    const newPayment: ExtendedPayment = normalizePayment(
-      {
-        id: addForm.paymentId.trim(),
-        paymentId: addForm.paymentId.trim(),
-        invoiceId: addForm.invoiceId.trim(),
-        customerId: addForm.customerId.trim(),
-        amount: Number(addForm.amount),
-        status: addForm.status,
-        method: addForm.method,
-        date: addForm.date,
-        notes: addForm.notes.trim(),
+      return true;
+    });
+  }, [filteredEmployees, attendanceFilter]);
+
+  const rangeSummary = useMemo(() => {
+    return getGlobalRangeSummary(employees, attendanceRange);
+  }, [employees, attendanceRange]);
+
+  const payrollSummary = useMemo(() => {
+    return employees.reduce(
+      (acc, employee) => {
+        const payroll = getEmployeePayrollForRange(employee, attendanceRange);
+        acc.gross += payroll.gross;
+        acc.advance += payroll.advance;
+        acc.net += payroll.net;
+        return acc;
       },
-      invoices,
-      customers,
-      payments.length,
-      t.payments.unknownCustomer
+      { gross: 0, advance: 0, net: 0 }
     );
+  }, [employees, attendanceRange]);
 
-    setPayments((prev) => [newPayment, ...prev]);
-    closeAddModal();
-    setToast({ type: "success", message: t.payments.addSuccess });
+  const attendanceReportRows = useMemo(() => {
+    const rows = employees
+      .map((employee) => getEmployeeReportRow(employee, attendanceRange))
+      .filter(
+        (row) =>
+          row.finished > 0 ||
+          row.working > 0 ||
+          row.late > 0 ||
+          row.absent > 0 ||
+          row.totalHours > 0
+      );
+
+    return [...rows].sort((a, b) => {
+      if (reportSortKey === "name") {
+        const result = a.name.localeCompare(b.name);
+        return reportSortDirection === "asc" ? result : -result;
+      }
+
+      const result =
+        Number(a[reportSortKey] as number) - Number(b[reportSortKey] as number);
+
+      return reportSortDirection === "asc" ? result : -result;
+    });
+  }, [employees, attendanceRange, reportSortKey, reportSortDirection]);
+
+  const getReportSortIndicator = (key: ReportSortKey) => {
+    if (reportSortKey !== key) return "";
+    return reportSortDirection === "asc" ? "↑" : "↓";
   };
 
-  const handleRequestEditPayment = () => {
-    if (!editingPayment) return;
+  const toggleReportSort = (key: ReportSortKey) => {
+    if (reportSortKey === key) {
+      setReportSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
+      return;
+    }
 
-    const errors = validatePaymentForm(
-      editForm,
-      invoices,
-      payments,
-      editingPayment.paymentId,
-      t
-    );
-    setEditErrors(errors);
+    setReportSortKey(key);
+    setReportSortDirection(key === "name" ? "asc" : "desc");
+  };
+
+  const setField = (field: keyof EmployeeForm, value: string) => {
+    setForm((prev) => ({ ...prev, [field]: value }));
+    setFormErrors((prev) => ({ ...prev, [field]: undefined }));
+  };
+
+  const resetFormState = () => {
+    setShowEmployeeModal(false);
+    setEditingEmployee(null);
+    setForm(EMPTY_FORM);
+    setFormErrors({});
+  };
+
+  const openAddModal = () => {
+    setEditingEmployee(null);
+    setForm(EMPTY_FORM);
+    setFormErrors({});
+    setShowEmployeeModal(true);
+  };
+
+  const openEditModal = (employee: Employee) => {
+    setEditingEmployee(employee);
+    setForm({
+      name: employee.name,
+      phone: employee.phone,
+      workStart: employee.workStart,
+      workEnd: employee.workEnd,
+      salaryType: employee.salaryType,
+      hourlyRate: String(employee.hourlyRate ?? 0),
+      fixedSalary: String(employee.fixedSalary ?? 0),
+      advance: String(employee.advance ?? 0),
+      notes: employee.notes ?? "",
+    });
+    setFormErrors({});
+    setShowEmployeeModal(true);
+  };
+
+  const handleSaveEmployee = () => {
+    const errors = validateEmployeeForm(form);
+    setFormErrors(errors);
 
     if (Object.keys(errors).length > 0) return;
 
-    setConfirmDialog({
-      type: "update",
-      paymentId: editingPayment.paymentId,
+    if (editingEmployee) {
+      setEmployees((prev) =>
+        prev.map((emp) =>
+          emp.id === editingEmployee.id
+            ? {
+                ...emp,
+                name: form.name.trim(),
+                phone: form.phone.trim(),
+                workStart: form.workStart,
+                workEnd: form.workEnd,
+                salaryType: form.salaryType,
+                hourlyRate:
+                  form.salaryType === "hourly"
+                    ? Number(form.hourlyRate)
+                    : undefined,
+                fixedSalary:
+                  form.salaryType === "fixed"
+                    ? Number(form.fixedSalary)
+                    : undefined,
+                advance: Number(form.advance || 0),
+                notes: form.notes.trim(),
+              }
+            : emp
+        )
+      );
+
+      resetFormState();
+      setToast({ type: "success", message: "Employee updated successfully." });
+      return;
+    }
+
+    const newEmployee: Employee = {
+      id: `EMP-${1000 + employees.length + 1}`,
+      name: form.name.trim(),
+      phone: form.phone.trim(),
+      workStart: form.workStart,
+      workEnd: form.workEnd,
+      salaryType: form.salaryType,
+      hourlyRate:
+        form.salaryType === "hourly" ? Number(form.hourlyRate) : undefined,
+      fixedSalary:
+        form.salaryType === "fixed" ? Number(form.fixedSalary) : undefined,
+      advance: Number(form.advance || 0),
+      notes: form.notes.trim(),
+      attendanceRecords: [],
+      isDeleted: false,
+    };
+
+    setEmployees((prev) => [newEmployee, ...prev]);
+    resetFormState();
+    setToast({ type: "success", message: "Employee added successfully." });
+  };
+
+  const markCheckIn = (employeeId: string) => {
+    const now = new Date().toTimeString().slice(0, 5);
+
+    setEmployees((prev) =>
+      prev.map((emp) => {
+        if (emp.id !== employeeId) return emp;
+
+        return upsertTodayAttendance(emp, (current) => ({
+          date: getTodayDate(),
+          checkIn: now,
+          checkOut: undefined,
+          status:
+            timeToMinutes(now) > timeToMinutes(emp.workStart)
+              ? "late"
+              : "working",
+          actualHours: 0,
+          notes: current?.notes,
+        }));
+      })
+    );
+
+    setToast({ type: "success", message: "Check-in saved successfully." });
+  };
+
+  const markCheckOut = (employeeId: string) => {
+    const now = new Date().toTimeString().slice(0, 5);
+
+    setEmployees((prev) =>
+      prev.map((emp) => {
+        if (emp.id !== employeeId) return emp;
+
+        return upsertTodayAttendance(emp, (current) => {
+          const checkIn = current?.checkIn || now;
+
+          return {
+            date: getTodayDate(),
+            checkIn,
+            checkOut: now,
+            status: "finished",
+            actualHours: calculateHours(checkIn, now),
+            notes: current?.notes,
+          };
+        });
+      })
+    );
+
+    setToast({ type: "success", message: "Check-out saved successfully." });
+  };
+
+  const markAbsent = (employeeId: string) => {
+    setEmployees((prev) =>
+      prev.map((emp) => {
+        if (emp.id !== employeeId) return emp;
+
+        return upsertTodayAttendance(emp, (current) => ({
+          date: getTodayDate(),
+          checkIn: current?.checkIn,
+          checkOut: current?.checkOut,
+          status: "absent",
+          actualHours: 0,
+          notes: current?.notes,
+        }));
+      })
+    );
+
+    setToast({ type: "warning", message: "Employee marked as absent." });
+  };
+
+  const handleExportReportCsv = () => {
+    if (attendanceReportRows.length === 0) {
+      setToast({
+        type: "warning",
+        message: "No report data available to export.",
+      });
+      return;
+    }
+
+    const headers = [
+      "Employee",
+      "Employee ID",
+      "Phone",
+      "Finished",
+      "Working",
+      "Late",
+      "Absent",
+      "Total Hours",
+      "Gross Payroll",
+      "Advance",
+      "Net Payroll",
+    ];
+
+    const rows = attendanceReportRows.map((row) => [
+      row.name,
+      row.id,
+      row.phone,
+      row.finished,
+      row.working,
+      row.late,
+      row.absent,
+      row.totalHours.toFixed(2),
+      row.gross.toFixed(2),
+      row.advance.toFixed(2),
+      row.net.toFixed(2),
+    ]);
+
+    const csvContent = [
+      headers.map(toCsvValue).join(","),
+      ...rows.map((row) => row.map(toCsvValue).join(",")),
+    ].join("\n");
+
+    downloadTextFile(
+      `attendance-report-${getAttendanceRangeLabel(attendanceRange)}.csv`,
+      csvContent,
+      "text/csv;charset=utf-8;"
+    );
+
+    setToast({
+      type: "success",
+      message: "Attendance report exported successfully.",
     });
   };
 
-  const handleConfirmUpdate = () => {
-    if (!editingPayment || confirmDialog?.type !== "update") return;
+  const handlePrintReport = () => {
+    if (attendanceReportRows.length === 0) {
+      setToast({
+        type: "warning",
+        message: "No report data available to print.",
+      });
+      return;
+    }
 
-    setPayments((prev) =>
-      prev.map((payment, index) =>
-        payment.paymentId === editingPayment.paymentId
-          ? normalizePayment(
-              {
-                ...payment,
-                id: editForm.paymentId.trim(),
-                paymentId: editForm.paymentId.trim(),
-                invoiceId: editForm.invoiceId.trim(),
-                customerId: editForm.customerId.trim(),
-                amount: Number(editForm.amount),
-                status: editForm.status,
-                method: editForm.method,
-                date: editForm.date,
-                notes: editForm.notes.trim(),
-              },
-              invoices,
-              customers,
-              index,
-              t.payments.unknownCustomer
-            )
-          : payment
+    const title = `Attendance & Payroll Report - ${getRangeTitle(
+      attendanceRange
+    )}`;
+
+    const tableRows = attendanceReportRows
+      .map(
+        (row) => `
+        <tr>
+          <td>${row.name}</td>
+          <td>${row.finished}</td>
+          <td>${row.working}</td>
+          <td>${row.late}</td>
+          <td>${row.absent}</td>
+          <td>${row.totalHours.toFixed(2)} h</td>
+          <td>$${row.gross.toFixed(2)}</td>
+          <td>$${row.advance.toFixed(2)}</td>
+          <td>$${row.net.toFixed(2)}</td>
+        </tr>
+      `
       )
-    );
+      .join("");
 
-    closeEditModal();
-    setConfirmDialog(null);
-    setToast({ type: "success", message: t.payments.updateSuccess });
-  };
+    const printHtml = `
+      <!DOCTYPE html>
+      <html lang="en">
+        <head>
+          <meta charset="UTF-8" />
+          <title>${title}</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 24px; color: #0f172a; }
+            h1 { margin: 0 0 8px; font-size: 24px; }
+            p { margin: 0 0 18px; color: #475569; }
+            .summary {
+              display: grid;
+              grid-template-columns: repeat(3, minmax(0, 1fr));
+              gap: 12px;
+              margin-bottom: 20px;
+            }
+            .summary-box {
+              border: 1px solid #cbd5e1;
+              border-radius: 12px;
+              padding: 12px;
+            }
+            .summary-box span {
+              display: block;
+              font-size: 12px;
+              color: #64748b;
+              margin-bottom: 6px;
+            }
+            .summary-box strong { font-size: 18px; }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-top: 18px;
+            }
+            th, td {
+              border: 1px solid #cbd5e1;
+              padding: 10px;
+              text-align: left;
+              font-size: 13px;
+            }
+            th { background: #f8fafc; }
+          </style>
+        </head>
+        <body>
+          <h1>${title}</h1>
+          <p>Generated from Employees Attendance Mode.</p>
 
-  const handleRequestDeletePayment = (paymentId: string) => {
-    setConfirmDialog({
-      type: "delete",
-      paymentId,
-    });
-  };
+          <div class="summary">
+            <div class="summary-box">
+              <span>Gross Payroll</span>
+              <strong>$${payrollSummary.gross.toFixed(2)}</strong>
+            </div>
+            <div class="summary-box">
+              <span>Total Advances</span>
+              <strong>$${payrollSummary.advance.toFixed(2)}</strong>
+            </div>
+            <div class="summary-box">
+              <span>Net Payroll</span>
+              <strong>$${payrollSummary.net.toFixed(2)}</strong>
+            </div>
+          </div>
 
-  const handleConfirmDelete = () => {
-    if (confirmDialog?.type !== "delete") return;
+          <table>
+            <thead>
+              <tr>
+                <th>Employee</th>
+                <th>Finished</th>
+                <th>Working</th>
+                <th>Late</th>
+                <th>Absent</th>
+                <th>Total Hours</th>
+                <th>Gross</th>
+                <th>Advance</th>
+                <th>Net</th>
+              </tr>
+            </thead>
+            <tbody>${tableRows}</tbody>
+          </table>
+        </body>
+      </html>
+    `;
 
-    setPayments((prev) =>
-      prev.filter((payment) => payment.paymentId !== confirmDialog.paymentId)
-    );
+    const printWindow = window.open("", "_blank", "width=1200,height=800");
 
-    setConfirmDialog(null);
-    setToast({ type: "success", message: t.payments.deleteSuccess });
+    if (!printWindow) {
+      setToast({
+        type: "error",
+        message: "Unable to open print window.",
+      });
+      return;
+    }
+
+    printWindow.document.open();
+    printWindow.document.write(printHtml);
+    printWindow.document.close();
+    printWindow.focus();
+
+    setTimeout(() => {
+      printWindow.print();
+    }, 300);
   };
 
   return (
     <>
-      <style>{`
-        .payments-page {
-          display: flex;
-          flex-direction: column;
-          gap: 24px;
-        }
-
-        .payments-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-          gap: 16px;
-          flex-wrap: wrap;
-        }
-
-        .payments-toolbar {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-end;
-          gap: 16px;
-          flex-wrap: wrap;
-        }
-
-        .table-wrapper {
-          overflow-x: auto;
-        }
-
-        .dashboard-table {
-          width: 100%;
-          border-collapse: collapse;
-          min-width: 1080px;
-        }
-
-        .dashboard-table th,
-        .dashboard-table td {
-          padding: 14px 16px;
-          text-align: left;
-          vertical-align: middle;
-          border-bottom: 1px solid rgba(148, 163, 184, 0.14);
-        }
-
-        .dashboard-table th {
-          font-size: 13px;
-          font-weight: 700;
-          color: #64748b;
-          background: rgba(248, 250, 252, 0.9);
-          white-space: nowrap;
-        }
-
-        .dashboard-table td {
-          font-size: 14px;
-          color: #1e293b;
-        }
-
-        .status-badge {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          min-width: 88px;
-          padding: 6px 12px;
-          border-radius: 999px;
-          font-size: 12px;
-          font-weight: 700;
-        }
-
-        .status-completed {
-          background: rgba(34, 197, 94, 0.12);
-          color: #15803d;
-        }
-
-        .status-pending {
-          background: rgba(245, 158, 11, 0.14);
-          color: #b45309;
-        }
-
-        .table-actions {
-          display: flex;
-          gap: 8px;
-          flex-wrap: wrap;
-        }
-
-        .table-btn {
-          border: none;
-          border-radius: 10px;
-          padding: 8px 12px;
-          font-size: 13px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.2s ease;
-        }
-
-        .table-btn.edit {
-          background: #e2e8f0;
-          color: #0f172a;
-        }
-
-        .table-btn.edit:hover {
-          background: #cbd5e1;
-        }
-
-        .table-btn.delete {
-          background: #ef4444;
-          color: white;
-        }
-
-        .table-btn.delete:hover {
-          background: #dc2626;
-        }
-
-        .empty-state-cell {
-          text-align: center !important;
-          color: #94a3b8;
-          padding: 32px 16px;
-        }
-
-        .modal-overlay {
-          position: fixed;
-          inset: 0;
-          background: rgba(15, 23, 42, 0.5);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 20px;
-          z-index: 999;
-          backdrop-filter: blur(2px);
-        }
-
-        .modal-card {
-          width: 100%;
-          max-width: 680px;
-          background: #ffffff;
-          border-radius: 20px;
-          box-shadow: 0 24px 64px rgba(15, 23, 42, 0.18);
-          overflow: hidden;
-          animation: modalPop 0.18s ease;
-        }
-
-        .modal-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-          gap: 12px;
-          padding: 20px 22px 16px;
-          border-bottom: 1px solid rgba(148, 163, 184, 0.14);
-        }
-
-        .modal-header h2 {
-          margin: 0;
-          font-size: 20px;
-          font-weight: 700;
-          color: #0f172a;
-        }
-
-        .modal-header p {
-          margin: 6px 0 0;
-          color: #64748b;
-          font-size: 14px;
-        }
-
-        .modal-close-btn {
-          border: none;
-          background: transparent;
-          font-size: 28px;
-          line-height: 1;
-          cursor: pointer;
-          color: #64748b;
-          padding: 0;
-        }
-
-        .modal-form {
-          padding: 20px 22px 22px;
-        }
-
-        .modal-grid {
-          display: grid;
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-          gap: 16px;
-        }
-
-        .modal-grid-full {
-          grid-column: 1 / -1;
-        }
-
-        .modal-label {
-          display: block;
-          margin-bottom: 8px;
-          font-size: 13px;
-          font-weight: 700;
-          color: #475569;
-        }
-
-        .modal-input,
-        .modal-textarea {
-          width: 100%;
-          border: 1px solid #cbd5e1;
-          border-radius: 12px;
-          padding: 12px 14px;
-          font-size: 14px;
-          outline: none;
-          transition: all 0.2s ease;
-          background: white;
-        }
-
-        .modal-input:focus,
-        .modal-textarea:focus {
-          border-color: #3b82f6;
-          box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.12);
-        }
-
-        .modal-textarea {
-          resize: vertical;
-          min-height: 110px;
-        }
-
-        .field-error {
-          display: block;
-          margin-top: 6px;
-          color: #dc2626;
-          font-size: 12px;
-          font-weight: 600;
-        }
-
-        .modal-actions {
-          display: flex;
-          justify-content: flex-end;
-          gap: 10px;
-          flex-wrap: wrap;
-          margin-top: 24px;
-        }
-
-        .modal-primary-btn,
-        .modal-secondary-btn {
-          border: none;
-          border-radius: 12px;
-          padding: 11px 16px;
-          font-size: 14px;
-          font-weight: 700;
-          cursor: pointer;
-          transition: all 0.2s ease;
-        }
-
-        .modal-primary-btn {
-          background: #2563eb;
-          color: white;
-        }
-
-        .modal-primary-btn:hover:not(:disabled) {
-          background: #1d4ed8;
-        }
-
-        .modal-secondary-btn {
-          background: #e2e8f0;
-          color: #0f172a;
-        }
-
-        .modal-secondary-btn:hover:not(:disabled) {
-          background: #cbd5e1;
-        }
-
-        .confirm-dialog-text {
-          margin: 22px;
-          color: #475569;
-          line-height: 1.7;
-          font-size: 14px;
-        }
-
-        .toast-message {
-          position: fixed;
-          right: 24px;
-          bottom: 24px;
-          background: #16a34a;
-          color: white;
-          padding: 12px 16px;
-          border-radius: 12px;
-          box-shadow: 0 16px 34px rgba(15, 23, 42, 0.16);
-          font-size: 14px;
-          font-weight: 700;
-          z-index: 1200;
-        }
-
-        @keyframes modalPop {
-          from {
-            opacity: 0;
-            transform: translateY(8px) scale(0.98);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0) scale(1);
-          }
-        }
-
-        @media (max-width: 900px) {
-          .modal-grid {
-            grid-template-columns: 1fr;
-          }
-        }
-
-        @media (max-width: 768px) {
-          .table-actions {
-            flex-direction: column;
-            align-items: stretch;
-          }
-
-          .table-btn {
-            width: 100%;
-          }
-
-          .modal-actions {
-            flex-direction: column-reverse;
-          }
-
-          .modal-primary-btn,
-          .modal-secondary-btn {
-            width: 100%;
-          }
-        }
-      `}</style>
-
-      <div className="payments-page" dir={isArabic ? "rtl" : "ltr"}>
-        <div className="payments-header">
+      <div className="employees-page employees-lux-page">
+        <div className="employees-header employees-lux-header">
           <div>
-            <p className="dashboard-badge">{t.payments.badge}</p>
-            <h1 className="dashboard-title">{t.payments.pageTitle}</h1>
-            <p className="dashboard-subtitle">{t.payments.subtitle}</p>
+            <p className="dashboard-badge">Employee Management</p>
+            <h1 className="dashboard-title">Employees</h1>
+            <p className="dashboard-subtitle employees-hero-text">
+              Manage attendance, schedules, salaries, advances, and payroll in a
+              cleaner and simpler workspace.
+            </p>
           </div>
 
           <button
             type="button"
-            className="quick-action-btn"
-            onClick={() => setShowAddModal(true)}
+            className="quick-action-btn employees-add-btn"
+            onClick={openAddModal}
           >
-            + {t.payments.addPayment}
+            + Add Employee
           </button>
         </div>
 
-        <div className="dashboard-card">
-          <div className="payments-toolbar">
-            <div className="dashboard-search-box">
+        <div className="dashboard-card employees-main-card">
+          <div className="employees-view-switch">
+            <button
+              type="button"
+              className={`employees-view-toggle ${
+                viewMode === "overview" ? "active" : ""
+              }`}
+              onClick={() => setViewMode("overview")}
+            >
+              Overview
+            </button>
+
+            <button
+              type="button"
+              className={`employees-view-toggle ${
+                viewMode === "attendance" ? "active" : ""
+              }`}
+              onClick={() => setViewMode("attendance")}
+            >
+              Attendance Mode
+            </button>
+          </div>
+
+          <div className="employees-toolbar">
+            <div className="dashboard-search-box employees-search-box">
               <label className="dashboard-search-label">
-                {t.payments.searchLabel}
+                {viewMode === "attendance"
+                  ? "Search attendance"
+                  : "Search employees"}
               </label>
+
               <input
                 type="text"
                 className="dashboard-search-input"
-                placeholder={t.payments.searchPlaceholder}
+                placeholder={
+                  viewMode === "attendance"
+                    ? "Search by name, phone, employee ID..."
+                    : "Search by name, phone, or ID..."
+                }
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
+
               <span className="dashboard-search-meta">
                 {searchTerm.trim()
-                  ? `${filteredPayments.length} ${t.payments.results}`
-                  : t.payments.searchAll}
+                  ? `${
+                      viewMode === "attendance"
+                        ? attendanceEmployees.length
+                        : filteredEmployees.length
+                    } result(s)`
+                  : viewMode === "attendance"
+                  ? "Search attendance records"
+                  : "Search all employees"}
               </span>
             </div>
           </div>
 
-          <div className="table-wrapper">
-            <table className="dashboard-table">
-              <thead>
-                <tr>
-                  <th>{t.payments.paymentId}</th>
-                  <th>{t.payments.invoiceNumber}</th>
-                  <th>{t.common.customer}</th>
-                  <th>{t.common.amount}</th>
-                  <th>{t.common.method}</th>
-                  <th>{t.common.status}</th>
-                  <th>{t.common.date}</th>
-                  <th>{t.common.notes}</th>
-                  <th>{t.common.actions}</th>
-                </tr>
-              </thead>
+          {viewMode === "attendance" ? (
+            <>
+              <div className="employees-attendance-simple-card">
+                <div className="employees-attendance-simple-toolbar">
+                  <div className="employees-attendance-simple-search-info">
+                    <h3>Attendance Mode</h3>
+                    <p>
+                      Daily attendance management in a simpler and faster
+                      layout.
+                    </p>
+                  </div>
 
-              <tbody>
-                {filteredPayments.length > 0 ? (
-                  filteredPayments.map((payment) => (
-                    <tr key={payment.paymentId}>
-                      <td>{payment.paymentId}</td>
-                      <td>{payment.invoiceNumber}</td>
-                      <td>{payment.customerName}</td>
-                      <td>${payment.amount}</td>
-                      <td>{translatePaymentMethod(payment.method, t)}</td>
-                      <td>
-                        <span
-                          className={
-                            payment.status === "Completed"
-                              ? "status-badge status-completed"
-                              : "status-badge status-pending"
-                          }
-                        >
-                          {translatePaymentStatus(payment.status, t)}
-                        </span>
-                      </td>
-                      <td>{payment.date}</td>
-                      <td>{payment.notes || "—"}</td>
-                      <td>
-                        <div className="table-actions">
-                          <button
-                            type="button"
-                            className="table-btn edit"
-                            onClick={() => openEditModal(payment)}
-                          >
-                            {t.common.edit}
-                          </button>
-                          <button
-                            type="button"
-                            className="table-btn delete"
-                            onClick={() =>
-                              handleRequestDeletePayment(payment.paymentId)
-                            }
-                          >
-                            {t.common.delete}
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
+                  <div className="employees-attendance-simple-controls">
+                    <select
+                      className="modal-input employees-attendance-select"
+                      value={attendanceFilter}
+                      onChange={(e) =>
+                        setAttendanceFilter(e.target.value as AttendanceFilter)
+                      }
+                    >
+                      <option value="all">All Employees</option>
+                      <option value="not-started">Not Started</option>
+                      <option value="working">Working</option>
+                      <option value="finished">Finished</option>
+                      <option value="late">Late</option>
+                      <option value="absent">Absent</option>
+                    </select>
+
+                    <div className="employees-range-switch employees-range-switch-compact">
+                      <button
+                        type="button"
+                        className={`employees-range-chip ${
+                          attendanceRange === "today" ? "active" : ""
+                        }`}
+                        onClick={() => setAttendanceRange("today")}
+                      >
+                        Today
+                      </button>
+
+                      <button
+                        type="button"
+                        className={`employees-range-chip ${
+                          attendanceRange === "week" ? "active" : ""
+                        }`}
+                        onClick={() => setAttendanceRange("week")}
+                      >
+                        This Week
+                      </button>
+
+                      <button
+                        type="button"
+                        className={`employees-range-chip ${
+                          attendanceRange === "month" ? "active" : ""
+                        }`}
+                        onClick={() => setAttendanceRange("month")}
+                      >
+                        This Month
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="employees-attendance-mini-stats">
+                  <div className="employees-mini-stat">
+                    <span>Employees</span>
+                    <strong>{attendanceEmployees.length}</strong>
+                  </div>
+
+                  <div className="employees-mini-stat">
+                    <span>Finished</span>
+                    <strong>{rangeSummary.finished}</strong>
+                  </div>
+
+                  <div className="employees-mini-stat">
+                    <span>Working</span>
+                    <strong>{rangeSummary.working}</strong>
+                  </div>
+
+                  <div className="employees-mini-stat">
+                    <span>Late</span>
+                    <strong>{rangeSummary.late}</strong>
+                  </div>
+
+                  <div className="employees-mini-stat">
+                    <span>Absent</span>
+                    <strong>{rangeSummary.absent}</strong>
+                  </div>
+                </div>
+
+                {attendanceEmployees.length > 0 ? (
+                  <div className="employees-attendance-table-wrap">
+                    <table className="employees-attendance-table">
+                      <thead>
+                        <tr>
+                          <th>Employee</th>
+                          <th>ID</th>
+                          <th>Shift</th>
+                          <th>Status</th>
+                          <th>Check In</th>
+                          <th>Check Out</th>
+                          <th>Hours</th>
+                          <th>Action</th>
+                        </tr>
+                      </thead>
+
+                      <tbody>
+                        {attendanceEmployees.map((emp) => {
+                          const todayRecord = getTodayAttendanceRecord(emp);
+                          const status = getTodayStatus(emp);
+                          const actualHours = getTodayActualHours(emp);
+
+                          return (
+                            <tr key={emp.id}>
+                              <td>
+                                <div className="employees-attendance-user">
+                                  <div className="employees-attendance-avatar">
+                                    {emp.name.charAt(0).toUpperCase()}
+                                  </div>
+                                  <div>
+                                    <strong>{emp.name}</strong>
+                                    <span>{emp.phone}</span>
+                                  </div>
+                                </div>
+                              </td>
+
+                              <td>{emp.id}</td>
+                              <td>
+                                {emp.workStart} - {emp.workEnd}
+                              </td>
+
+                              <td>
+                                <span
+                                  className={`employees-attendance-status ${
+                                    status === "Not Started"
+                                      ? "not-started"
+                                      : status === "Working"
+                                      ? "working"
+                                      : status === "Late"
+                                      ? "late"
+                                      : status === "Absent"
+                                      ? "absent"
+                                      : "finished"
+                                  }`}
+                                >
+                                  {status}
+                                </span>
+                              </td>
+
+                              <td>{todayRecord?.checkIn || "--"}</td>
+                              <td>{todayRecord?.checkOut || "--"}</td>
+                              <td>{actualHours.toFixed(2)} h</td>
+
+                              <td>
+                                <div className="employees-attendance-actions employees-attendance-actions-compact">
+                                  {(status === "Not Started" ||
+                                    status === "Absent") && (
+                                    <button
+                                      type="button"
+                                      className="quick-action-btn employees-attendance-action"
+                                      onClick={() => markCheckIn(emp.id)}
+                                    >
+                                      Check In
+                                    </button>
+                                  )}
+
+                                  {(status === "Working" ||
+                                    status === "Late") && (
+                                    <button
+                                      type="button"
+                                      className="quick-action-btn secondary employees-attendance-action"
+                                      onClick={() => markCheckOut(emp.id)}
+                                    >
+                                      Check Out
+                                    </button>
+                                  )}
+
+                                  {status === "Finished" && (
+                                    <button
+                                      type="button"
+                                      className="quick-action-btn secondary employees-attendance-action"
+                                      disabled
+                                      style={{
+                                        opacity: 0.6,
+                                        cursor: "not-allowed",
+                                      }}
+                                    >
+                                      Completed
+                                    </button>
+                                  )}
+
+                                  {status === "Not Started" && (
+                                    <button
+                                      type="button"
+                                      className="quick-action-btn employees-attendance-absent-btn"
+                                      onClick={() => markAbsent(emp.id)}
+                                    >
+                                      Absent
+                                    </button>
+                                  )}
+
+                                  <button
+                                    type="button"
+                                    className="quick-action-btn secondary employees-attendance-action"
+                                    onClick={() =>
+                                      setAttendanceHistoryDialog({
+                                        employeeId: emp.id,
+                                        employeeName: emp.name,
+                                      })
+                                    }
+                                  >
+                                    History
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
                 ) : (
-                  <tr>
-                    <td colSpan={9} className="empty-state-cell">
-                      {t.payments.noPayments}
-                    </td>
-                  </tr>
+                  <div className="employees-empty-state employees-cards-empty-state">
+                    <strong>No attendance records found.</strong>
+                    <span>Try changing the search term or filter.</span>
+                  </div>
                 )}
-              </tbody>
-            </table>
-          </div>
+              </div>
+
+              <div className="employees-report-card employees-report-card-compact">
+                <div className="employees-report-head">
+                  <div>
+                    <h3>Attendance Report</h3>
+                    <p>
+                      Summary for <strong>{getRangeTitle(attendanceRange)}</strong>
+                    </p>
+                  </div>
+
+                  <div className="employees-report-actions">
+                    <button
+                      type="button"
+                      className="quick-action-btn secondary"
+                      onClick={handleExportReportCsv}
+                    >
+                      Export CSV
+                    </button>
+
+                    <button
+                      type="button"
+                      className="quick-action-btn"
+                      onClick={handlePrintReport}
+                    >
+                      Print Report
+                    </button>
+                  </div>
+                </div>
+
+                {attendanceReportRows.length > 0 ? (
+                  <div className="employees-report-table-wrap">
+                    <table className="employees-report-table">
+                      <thead>
+                        <tr>
+                          <th
+                            className="employees-sortable"
+                            onClick={() => toggleReportSort("name")}
+                          >
+                            Employee {getReportSortIndicator("name")}
+                          </th>
+                          <th
+                            className="employees-sortable"
+                            onClick={() => toggleReportSort("finished")}
+                          >
+                            Finished {getReportSortIndicator("finished")}
+                          </th>
+                          <th
+                            className="employees-sortable"
+                            onClick={() => toggleReportSort("working")}
+                          >
+                            Working {getReportSortIndicator("working")}
+                          </th>
+                          <th
+                            className="employees-sortable"
+                            onClick={() => toggleReportSort("late")}
+                          >
+                            Late {getReportSortIndicator("late")}
+                          </th>
+                          <th
+                            className="employees-sortable"
+                            onClick={() => toggleReportSort("absent")}
+                          >
+                            Absent {getReportSortIndicator("absent")}
+                          </th>
+                          <th
+                            className="employees-sortable"
+                            onClick={() => toggleReportSort("totalHours")}
+                          >
+                            Hours {getReportSortIndicator("totalHours")}
+                          </th>
+                          <th
+                            className="employees-sortable"
+                            onClick={() => toggleReportSort("gross")}
+                          >
+                            Gross {getReportSortIndicator("gross")}
+                          </th>
+                          <th
+                            className="employees-sortable"
+                            onClick={() => toggleReportSort("advance")}
+                          >
+                            Advance {getReportSortIndicator("advance")}
+                          </th>
+                          <th
+                            className="employees-sortable"
+                            onClick={() => toggleReportSort("net")}
+                          >
+                            Net {getReportSortIndicator("net")}
+                          </th>
+                        </tr>
+                      </thead>
+
+                      <tbody>
+                        {attendanceReportRows.map((row) => (
+                          <tr key={row.id}>
+                            <td>{row.name}</td>
+                            <td>{row.finished}</td>
+                            <td>{row.working}</td>
+                            <td>{row.late}</td>
+                            <td>{row.absent}</td>
+                            <td>{row.totalHours.toFixed(2)} h</td>
+                            <td>${row.gross.toFixed(2)}</td>
+                            <td>${row.advance.toFixed(2)}</td>
+                            <td>
+                              <strong
+                                className={
+                                  row.net >= 0
+                                    ? "employees-net-positive-text"
+                                    : "employees-net-negative-text"
+                                }
+                              >
+                                ${row.net.toFixed(2)}
+                              </strong>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="employees-empty-state employees-cards-empty-state">
+                    <strong>No report data found.</strong>
+                    <span>No attendance records are available for the selected period.</span>
+                  </div>
+                )}
+              </div>
+            </>
+          ) : filteredEmployees.length > 0 ? (
+            <div className="employees-cards-grid employees-cards-grid-lite">
+              {filteredEmployees.map((emp) => (
+                <OverviewCard
+                  key={emp.id}
+                  employee={emp}
+                  attendanceRange={attendanceRange}
+                  recentDays={recentDays}
+                  onAdvance={() =>
+                    setAdvanceDialog({
+                      employeeId: emp.id,
+                      employeeName: emp.name,
+                      amount: "",
+                    })
+                  }
+                  onEdit={() => openEditModal(emp)}
+                  onHistory={() =>
+                    setAttendanceHistoryDialog({
+                      employeeId: emp.id,
+                      employeeName: emp.name,
+                    })
+                  }
+                  onDelete={() =>
+                    setDeleteDialog({
+                      employeeId: emp.id,
+                      employeeName: emp.name,
+                      confirmText: "",
+                    })
+                  }
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="employees-empty-state employees-cards-empty-state">
+              <strong>No employees found yet.</strong>
+              <span>
+                Add your first employee to start tracking attendance, salaries,
+                and advances.
+              </span>
+            </div>
+          )}
         </div>
       </div>
 
-      {showAddModal && (
-        <PaymentFormModal
-          title={t.payments.addTitle}
-          description={t.payments.addDescription}
-          values={addForm}
-          errors={addErrors}
-          invoices={invoices}
-          customers={customers}
-          payments={payments}
-          onChange={setAddField}
-          onClose={closeAddModal}
-          onSubmit={handleRequestAddPayment}
-          submitLabel={t.payments.savePayment}
-          t={t}
-          isArabic={isArabic}
+      {showEmployeeModal && (
+        <EmployeeFormModal
+          title={editingEmployee ? "Edit Employee" : "Add Employee"}
+          description={
+            editingEmployee
+              ? "Update the selected employee information."
+              : "Enter the new employee information."
+          }
+          values={form}
+          errors={formErrors}
+          onChange={setField}
+          onClose={resetFormState}
+          onSubmit={handleSaveEmployee}
+          submitLabel={editingEmployee ? "Save Changes" : "Save Employee"}
         />
       )}
 
-      {editingPayment && (
-        <PaymentFormModal
-          title={t.payments.editTitle}
-          description={t.payments.editDescription}
-          values={editForm}
-          errors={editErrors}
-          invoices={invoices}
-          customers={customers}
-          payments={payments}
-          editingPaymentId={editingPayment.paymentId}
-          onChange={setEditField}
-          onClose={closeEditModal}
-          onSubmit={handleRequestEditPayment}
-          submitLabel={t.common.saveChanges}
-          t={t}
-          isArabic={isArabic}
+      {deleteDialog && (
+        <DeleteConfirmModal
+          state={deleteDialog}
+          onChange={(value) =>
+            setDeleteDialog((prev) =>
+              prev ? { ...prev, confirmText: value } : prev
+            )
+          }
+          onClose={() => setDeleteDialog(null)}
+          onConfirm={() => {
+            if (
+              !deleteDialog ||
+              deleteDialog.confirmText !== DELETE_CONFIRMATION_CODE
+            ) {
+              return;
+            }
+
+            setEmployees((prev) =>
+              prev.filter((emp) => emp.id !== deleteDialog.employeeId)
+            );
+            setDeleteDialog(null);
+            setToast({
+              type: "success",
+              message: "Employee deleted successfully.",
+            });
+          }}
         />
       )}
 
-      {confirmDialog?.type === "update" && (
-        <ConfirmDialog
-          title={t.common.confirmUpdate}
-          description={t.payments.confirmUpdateText}
-          confirmLabel={t.payments.updateLabel}
-          onConfirm={handleConfirmUpdate}
-          onClose={() => setConfirmDialog(null)}
-          t={t}
-          isArabic={isArabic}
+      {advanceDialog && (
+        <AdvanceModal
+          state={advanceDialog}
+          onChange={(value) =>
+            setAdvanceDialog((prev) =>
+              prev ? { ...prev, amount: value, error: undefined } : prev
+            )
+          }
+          onClose={() => setAdvanceDialog(null)}
+          onConfirm={() => {
+            if (!advanceDialog) return;
+
+            if (advanceDialog.amount === "") {
+              setAdvanceDialog((prev) =>
+                prev ? { ...prev, error: "Advance amount is required." } : prev
+              );
+              return;
+            }
+
+            const amount = Number(advanceDialog.amount);
+
+            if (Number.isNaN(amount) || amount < 0) {
+              setAdvanceDialog((prev) =>
+                prev
+                  ? { ...prev, error: "Enter a valid positive amount." }
+                  : prev
+              );
+              return;
+            }
+
+            setEmployees((prev) =>
+              prev.map((emp) =>
+                emp.id === advanceDialog.employeeId
+                  ? { ...emp, advance: emp.advance + amount }
+                  : emp
+              )
+            );
+
+            setAdvanceDialog(null);
+            setToast({
+              type: "success",
+              message: "Advance added successfully.",
+            });
+          }}
         />
       )}
 
-      {confirmDialog?.type === "delete" && (
-        <ConfirmDialog
-          title={t.common.confirmDelete}
-          description={t.payments.confirmDeleteText}
-          confirmLabel={t.payments.deleteLabel}
-          confirmClassName="modal-primary-btn"
-          onConfirm={handleConfirmDelete}
-          onClose={() => setConfirmDialog(null)}
-          t={t}
-          isArabic={isArabic}
+      {attendanceHistoryDialog && (
+        <AttendanceHistoryModal
+          employee={
+            employees.find(
+              (emp) => emp.id === attendanceHistoryDialog.employeeId
+            ) as Employee
+          }
+          onClose={() => setAttendanceHistoryDialog(null)}
         />
       )}
 
-      {toast && <div className="toast-message">{toast.message}</div>}
+      {toast && <div className={`toast toast-${toast.type}`}>{toast.message}</div>}
     </>
   );
 }
