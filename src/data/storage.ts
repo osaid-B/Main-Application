@@ -61,6 +61,32 @@ function deriveCategoriesFromProducts(products: Product[]): string[] {
   ).sort((a, b) => a.localeCompare(b));
 }
 
+function normalizeEmployees(employees: Employee[]): Employee[] {
+  return employees.map((employee) => ({
+    ...employee,
+    advance: Number(employee.advance || 0),
+    advances: Array.isArray(employee.advances)
+      ? employee.advances.map((item) => ({
+          ...item,
+          amount: Number(item.amount || 0),
+        }))
+      : [],
+    attendanceRecords: Array.isArray(employee.attendanceRecords)
+      ? employee.attendanceRecords.map((record) => ({
+          ...record,
+          actualHours: Number(record.actualHours || 0),
+        }))
+      : [],
+    dailyAttendance: Array.isArray(employee.dailyAttendance)
+      ? employee.dailyAttendance.map((entry) => ({
+          ...entry,
+          workedHours: Number(entry.workedHours || 0),
+          advanceAmount: Number(entry.advanceAmount || 0),
+        }))
+      : [],
+  }));
+}
+
 /* Customers */
 export function getCustomers(): Customer[] {
   return readStorage<Customer[]>(CUSTOMERS_KEY, customersData);
@@ -199,15 +225,16 @@ export function resetPayments() {
 
 /* Employees */
 export function getEmployees(): Employee[] {
-  return readStorage<Employee[]>(EMPLOYEES_KEY, employeesData);
+  const employees = readStorage<Employee[]>(EMPLOYEES_KEY, employeesData);
+  return normalizeEmployees(employees);
 }
 
 export function saveEmployees(employees: Employee[]) {
-  writeStorage(EMPLOYEES_KEY, employees);
+  writeStorage(EMPLOYEES_KEY, normalizeEmployees(employees));
 }
 
 export function resetEmployees() {
-  writeStorage(EMPLOYEES_KEY, employeesData);
+  writeStorage(EMPLOYEES_KEY, normalizeEmployees(employeesData));
 }
 
 /* Optional helper: reset everything */

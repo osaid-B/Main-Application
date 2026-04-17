@@ -102,12 +102,34 @@ export type AttendanceRecordStatus =
   | "late"
   | "absent";
 
+export type DailyAttendanceStatus =
+  | "present"
+  | "late"
+  | "absent"
+  | "half-day"
+  | "leave";
+
 export type AttendanceRecord = {
   date: string;
   checkIn?: string;
   checkOut?: string;
   status: AttendanceRecordStatus;
   actualHours: number;
+  notes?: string;
+};
+
+export type EmployeeAdvance = {
+  id: string;
+  amount: number;
+  date: string;
+  notes?: string;
+};
+
+export type DailyAttendanceEntry = {
+  date: string;
+  status: DailyAttendanceStatus;
+  workedHours: number;
+  advanceAmount: number;
   notes?: string;
 };
 
@@ -123,7 +145,9 @@ export type Employee = {
   hourlyRate?: number;
   fixedSalary?: number;
   advance: number;
+  advances?: EmployeeAdvance[];
   notes?: string;
   attendanceRecords?: AttendanceRecord[];
+  dailyAttendance?: DailyAttendanceEntry[];
   isDeleted?: boolean;
 };
