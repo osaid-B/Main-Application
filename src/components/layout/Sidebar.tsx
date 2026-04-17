@@ -45,6 +45,9 @@ export default function Sidebar() {
           <NavLink to="/settings" className={getLinkClass}>
             {t.sidebar.settings}
           </NavLink>
+          <NavLink to="/data-import" className={getLinkClass}>
+            {t.sidebar.dataImport}
+          </NavLink>
         </nav>
       </div>
 

@@ -23,6 +23,7 @@ import {
 const CUSTOMERS_KEY = "dashboard_customers";
 const SUPPLIERS_KEY = "dashboard_suppliers";
 const PRODUCTS_KEY = "dashboard_products";
+const PRODUCT_CATEGORIES_KEY = "dashboard_product_categories";
 const PURCHASES_KEY = "dashboard_purchases";
 const INVOICES_KEY = "dashboard_invoices";
 const INVOICE_ITEMS_KEY = "dashboard_invoice_items";
@@ -44,6 +45,46 @@ function readStorage<T>(key: string, fallback: T): T {
 
 function writeStorage<T>(key: string, value: T) {
   localStorage.setItem(key, JSON.stringify(value));
+}
+
+function normalizeCategoryName(value: string) {
+  return value.trim().replace(/\s+/g, " ");
+}
+
+function deriveCategoriesFromProducts(products: Product[]): string[] {
+  return Array.from(
+    new Set(
+      products
+        .map((product) => normalizeCategoryName(product.category || ""))
+        .filter(Boolean)
+    )
+  ).sort((a, b) => a.localeCompare(b));
+}
+
+function normalizeEmployees(employees: Employee[]): Employee[] {
+  return employees.map((employee) => ({
+    ...employee,
+    advance: Number(employee.advance || 0),
+    advances: Array.isArray(employee.advances)
+      ? employee.advances.map((item) => ({
+          ...item,
+          amount: Number(item.amount || 0),
+        }))
+      : [],
+    attendanceRecords: Array.isArray(employee.attendanceRecords)
+      ? employee.attendanceRecords.map((record) => ({
+          ...record,
+          actualHours: Number(record.actualHours || 0),
+        }))
+      : [],
+    dailyAttendance: Array.isArray(employee.dailyAttendance)
+      ? employee.dailyAttendance.map((entry) => ({
+          ...entry,
+          workedHours: Number(entry.workedHours || 0),
+          advanceAmount: Number(entry.advanceAmount || 0),
+        }))
+      : [],
+  }));
 }
 
 /* Customers */
@@ -79,10 +120,55 @@ export function getProducts(): Product[] {
 
 export function saveProducts(products: Product[]) {
   writeStorage(PRODUCTS_KEY, products);
+
+  const existingCategories = getProductCategories();
+  const derivedCategories = deriveCategoriesFromProducts(products);
+
+  const mergedCategories = Array.from(
+    new Set([...existingCategories, ...derivedCategories].map(normalizeCategoryName))
+  )
+    .filter(Boolean)
+    .sort((a, b) => a.localeCompare(b));
+
+  writeStorage(PRODUCT_CATEGORIES_KEY, mergedCategories);
 }
 
 export function resetProducts() {
   writeStorage(PRODUCTS_KEY, productsData);
+  writeStorage(
+    PRODUCT_CATEGORIES_KEY,
+    deriveCategoriesFromProducts(productsData)
+  );
+}
+
+/* Product Categories */
+export function getProductCategories(): string[] {
+  const stored = readStorage<string[]>(PRODUCT_CATEGORIES_KEY, []);
+
+  if (stored.length > 0) {
+    return Array.from(new Set(stored.map(normalizeCategoryName)))
+      .filter(Boolean)
+      .sort((a, b) => a.localeCompare(b));
+  }
+
+  const fallback = deriveCategoriesFromProducts(getProducts());
+  writeStorage(PRODUCT_CATEGORIES_KEY, fallback);
+  return fallback;
+}
+
+export function saveProductCategories(categories: string[]) {
+  const cleaned = Array.from(new Set(categories.map(normalizeCategoryName)))
+    .filter(Boolean)
+    .sort((a, b) => a.localeCompare(b));
+
+  writeStorage(PRODUCT_CATEGORIES_KEY, cleaned);
+}
+
+export function resetProductCategories() {
+  writeStorage(
+    PRODUCT_CATEGORIES_KEY,
+    deriveCategoriesFromProducts(getProducts())
+  );
 }
 
 /* Purchases */
@@ -139,15 +225,16 @@ export function resetPayments() {
 
 /* Employees */
 export function getEmployees(): Employee[] {
-  return readStorage<Employee[]>(EMPLOYEES_KEY, employeesData);
+  const employees = readStorage<Employee[]>(EMPLOYEES_KEY, employeesData);
+  return normalizeEmployees(employees);
 }
 
 export function saveEmployees(employees: Employee[]) {
-  writeStorage(EMPLOYEES_KEY, employees);
+  writeStorage(EMPLOYEES_KEY, normalizeEmployees(employees));
 }
 
 export function resetEmployees() {
-  writeStorage(EMPLOYEES_KEY, employeesData);
+  writeStorage(EMPLOYEES_KEY, normalizeEmployees(employeesData));
 }
 
 /* Optional helper: reset everything */
@@ -155,6 +242,7 @@ export function resetAllStorage() {
   resetCustomers();
   resetSuppliers();
   resetProducts();
+  resetProductCategories();
   resetPurchases();
   resetInvoices();
   resetInvoiceItems();

@@ -33,8 +33,9 @@ export type Product = {
   category: string;
   price: number;
   stock: number;
-  status: ProductStatus;
+  status?: ProductStatus;
   createdAt?: string;
+  addedAt?: string | number;
   isDeleted?: boolean;
 };
 
@@ -52,17 +53,7 @@ export type Purchase = {
   isDeleted?: boolean;
 };
 
-export type InvoiceStatus = "Paid" | "Partial" | "Debit";
-
-export type Invoice = {
-  id: string;
-  customerId: string;
-  amount: number;
-  remainingAmount?: number;
-  status: InvoiceStatus;
-  date: string;
-  notes?: string;
-};
+export type InvoiceStatus = "Paid" | "Partial" | "Debit" | "Pending";
 
 export type InvoiceItem = {
   id: string;
@@ -71,6 +62,18 @@ export type InvoiceItem = {
   quantity: number;
   unitPrice: number;
   total: number;
+};
+
+export type Invoice = {
+  id: string;
+  customerId: string;
+  amount?: number;
+  total?: number;
+  remainingAmount?: number;
+  status?: InvoiceStatus;
+  date: string;
+  notes?: string;
+  items?: InvoiceItem[];
 };
 
 export type PaymentMethod = "Cash" | "Card" | "Bank Transfer";
@@ -82,6 +85,7 @@ export type Payment = {
   paymentId?: string;
   invoiceId: string;
   customerId: string;
+  customerName?: string;
   method?: PaymentMethod;
   date: string;
   amount: number;
@@ -90,6 +94,44 @@ export type Payment = {
 };
 
 export type SalaryType = "hourly" | "fixed";
+
+export type AttendanceRecordStatus =
+  | "not-started"
+  | "working"
+  | "finished"
+  | "late"
+  | "absent";
+
+export type DailyAttendanceStatus =
+  | "present"
+  | "late"
+  | "absent"
+  | "half-day"
+  | "leave";
+
+export type AttendanceRecord = {
+  date: string;
+  checkIn?: string;
+  checkOut?: string;
+  status: AttendanceRecordStatus;
+  actualHours: number;
+  notes?: string;
+};
+
+export type EmployeeAdvance = {
+  id: string;
+  amount: number;
+  date: string;
+  notes?: string;
+};
+
+export type DailyAttendanceEntry = {
+  date: string;
+  status: DailyAttendanceStatus;
+  workedHours: number;
+  advanceAmount: number;
+  notes?: string;
+};
 
 export type Employee = {
   id: string;
@@ -103,6 +145,9 @@ export type Employee = {
   hourlyRate?: number;
   fixedSalary?: number;
   advance: number;
+  advances?: EmployeeAdvance[];
   notes?: string;
+  attendanceRecords?: AttendanceRecord[];
+  dailyAttendance?: DailyAttendanceEntry[];
   isDeleted?: boolean;
 };

@@ -49,6 +49,7 @@ export const translations = {
       payments: "Payments",
       employees: "Employees",
       settings: "Settings ⚙️",
+      dataImport: "Data Import",
       loggedInAs: "Logged in as",
     },
 
@@ -174,6 +175,7 @@ export const translations = {
       payments: "الدفعات",
       employees: "الموظفون",
       settings: "الإعدادات ⚙️",
+      dataImport: "استيراد البيانات",
       loggedInAs: "تم تسجيل الدخول باسم",
     },
 

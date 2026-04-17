@@ -1,33 +1,14 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import "./Invoices.css";
+import { useEffect, useMemo, useState } from "react";
 import {
   getCustomers,
-  getInvoiceItems,
   getInvoices,
-  getPayments,
   getProducts,
-  saveInvoiceItems,
   saveInvoices,
 } from "../data/storage";
-import {
-  buildInvoicesWithRelations,
-  getProductById,
-} from "../data/relations";
-import type {
-  Customer,
-  Invoice,
-  InvoiceItem,
-  Payment,
-  Product,
-} from "../data/types";
+import type { Customer, Invoice, InvoiceItem, Product } from "../data/types";
 
-type ExtendedInvoice = Invoice & {
-  customerName: string;
-  remainingAmount: number;
-  status: "Paid" | "Partial" | "Debit";
-};
-
-type InvoiceItemFormRow = {
-  id: string;
+type InvoiceLineForm = {
   productId: string;
   quantity: string;
   unitPrice: string;
@@ -37,225 +18,267 @@ type InvoiceForm = {
   customerId: string;
   date: string;
   notes: string;
-  items: InvoiceItemFormRow[];
+  items: InvoiceLineForm[];
 };
 
-type InvoiceFormErrors = {
+type FormErrors = {
   customerId?: string;
   date?: string;
   items?: string;
-  rowErrors?: Record<
-    string,
-    {
-      productId?: string;
-      quantity?: string;
-      unitPrice?: string;
-    }
-  >;
 };
 
-const createEmptyItemRow = (): InvoiceItemFormRow => ({
-  id: `row-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+type PendingCloseTarget = "add" | "edit" | null;
+
+type SortKey =
+  | "id"
+  | "customer"
+  | "date"
+  | "items"
+  | "total"
+  | "stillToPay"
+  | "status";
+
+type SortMode = "default" | "desc" | "asc";
+
+const TODAY_DATE = new Date().toISOString().split("T")[0];
+const MIN_INVOICE_DATE = "2020-01-01";
+
+const EMPTY_LINE: InvoiceLineForm = {
   productId: "",
   quantity: "",
   unitPrice: "",
-});
+};
 
 const EMPTY_FORM: InvoiceForm = {
   customerId: "",
-  date: new Date().toISOString().split("T")[0],
+  date: TODAY_DATE,
   notes: "",
-  items: [createEmptyItemRow()],
+  items: [{ ...EMPTY_LINE }],
 };
 
-function SearchableCustomerSelect({
-  value,
-  options,
-  onChange,
-}: {
-  value: string;
-  options: Customer[];
-  onChange: (value: string) => void;
-}) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [query, setQuery] = useState("");
-  const wrapperRef = useRef<HTMLDivElement | null>(null);
+const DELETE_CONFIRMATION_CODE = "123";
+const NOTE_PREVIEW_LIMIT = 220;
 
-  const selectedCustomer = options.find((customer) => customer.id === value);
+function buildInvoiceId(index: number) {
+  return `INV-${1000 + index + 1}`;
+}
 
-  const filteredOptions = useMemo(() => {
-    const normalized = query.trim().toLowerCase();
-    if (!normalized) return options;
+function buildInvoiceItemId(invoiceId: string, index: number) {
+  return `INVITEM-${invoiceId}-${index + 1}`;
+}
 
-    return options.filter((customer) =>
-      [customer.name, customer.phone, customer.email ?? "", customer.id]
-        .join(" ")
-        .toLowerCase()
-        .includes(normalized)
-    );
-  }, [options, query]);
+function roundMoney(value: number): number {
+  return Math.round((value + Number.EPSILON) * 100) / 100;
+}
 
-  useEffect(() => {
-    const handleOutsideClick = (event: MouseEvent) => {
-      if (!wrapperRef.current?.contains(event.target as Node)) {
-        setIsOpen(false);
-        setQuery("");
-      }
-    };
+function formatMoney(value: number, currency = "USD") {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(roundMoney(value));
+}
 
-    document.addEventListener("mousedown", handleOutsideClick);
-    return () => document.removeEventListener("mousedown", handleOutsideClick);
-  }, []);
+function normalizeDateInput(value: string): string {
+  const raw = String(value || "").trim();
+
+  if (!raw) return TODAY_DATE;
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+    return raw;
+  }
+
+  const slashMatch = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (slashMatch) {
+    const [, mm, dd, yyyy] = slashMatch;
+    return `${yyyy}-${mm.padStart(2, "0")}-${dd.padStart(2, "0")}`;
+  }
+
+  const parsed = new Date(raw);
+  if (!Number.isNaN(parsed.getTime())) {
+    const yyyy = parsed.getFullYear();
+    const mm = String(parsed.getMonth() + 1).padStart(2, "0");
+    const dd = String(parsed.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+  }
+
+  return TODAY_DATE;
+}
+
+function isValidDateString(value: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+
+  const [year, month, day] = value.split("-").map(Number);
+  const date = new Date(year, month - 1, day);
 
   return (
-    <div className="customer-select" ref={wrapperRef}>
-      <div className="customer-select-input-wrap">
-        <input
-          className="modal-input"
-          type="text"
-          placeholder="Search customer..."
-          value={isOpen ? query : selectedCustomer?.name ?? ""}
-          onFocus={() => setIsOpen(true)}
-          onChange={(e) => {
-            setQuery(e.target.value);
-            setIsOpen(true);
-          }}
-        />
-        <span className="customer-select-arrow">▾</span>
-      </div>
-
-      {isOpen && (
-        <div className="customer-select-menu">
-          {filteredOptions.length > 0 ? (
-            filteredOptions.map((customer) => (
-              <button
-                key={customer.id}
-                type="button"
-                className={`customer-option ${customer.id === value ? "active" : ""}`}
-                onClick={() => {
-                  onChange(customer.id);
-                  setQuery("");
-                  setIsOpen(false);
-                }}
-              >
-                <strong>{customer.name}</strong>
-                <div style={{ fontSize: "12px", color: "#64748b", marginTop: "4px" }}>
-                  {customer.phone} {customer.email ? `• ${customer.email}` : ""}
-                </div>
-              </button>
-            ))
-          ) : (
-            <div className="customer-empty">No customers found.</div>
-          )}
-        </div>
-      )}
-    </div>
+    date.getFullYear() === year &&
+    date.getMonth() === month - 1 &&
+    date.getDate() === day
   );
 }
 
-function getFormItemsTotal(items: InvoiceItemFormRow[]) {
-  return items.reduce((sum, item) => {
-    const quantity = Number(item.quantity || 0);
-    const unitPrice = Number(item.unitPrice || 0);
-    return sum + quantity * unitPrice;
-  }, 0);
+function validateInvoiceDate(value: string): string | undefined {
+  const normalized = normalizeDateInput(value);
+
+  if (!normalized.trim()) {
+    return "Invoice date is required.";
+  }
+
+  if (!isValidDateString(normalized)) {
+    return "Please enter a valid date.";
+  }
+
+  if (normalized > TODAY_DATE) {
+    return "Future dates are not allowed.";
+  }
+
+  if (normalized < MIN_INVOICE_DATE) {
+    return `Date must be on or after ${MIN_INVOICE_DATE}.`;
+  }
+
+  return undefined;
 }
 
-function ProductLineEditor({
-  row,
-  products,
-  onChange,
-  onRemove,
-  error,
-  disableRemove,
-}: {
-  row: InvoiceItemFormRow;
-  products: Product[];
-  onChange: (
-    rowId: string,
-    field: keyof Omit<InvoiceItemFormRow, "id">,
-    value: string
-  ) => void;
-  onRemove: (rowId: string) => void;
-  error?: {
-    productId?: string;
-    quantity?: string;
-    unitPrice?: string;
+function normalizeInvoices(invoices: Invoice[]): Invoice[] {
+  return invoices.map((invoice, index) => ({
+    ...invoice,
+    id: invoice.id || buildInvoiceId(index),
+    customerId: invoice.customerId || "",
+    date: normalizeDateInput(invoice.date || TODAY_DATE),
+    notes: invoice.notes || "",
+    total: roundMoney(Number(invoice.total || 0)),
+    items: Array.isArray(invoice.items)
+      ? invoice.items.map((item, itemIndex) => ({
+          ...item,
+          id:
+            item.id ||
+            buildInvoiceItemId(invoice.id || buildInvoiceId(index), itemIndex),
+          productId: item.productId || "",
+          quantity: Number(item.quantity || 0),
+          unitPrice: roundMoney(Number(item.unitPrice || 0)),
+          total: roundMoney(Number(item.total || 0)),
+        }))
+      : [],
+  }));
+}
+
+function toForm(invoice: Invoice): InvoiceForm {
+  return {
+    customerId: invoice.customerId || "",
+    date: normalizeDateInput(invoice.date || TODAY_DATE),
+    notes: invoice.notes || "",
+    items:
+      (invoice.items?.length ?? 0) > 0
+        ? (invoice.items ?? []).map((item) => ({
+            productId: item.productId || "",
+            quantity: String(item.quantity || ""),
+            unitPrice: String(item.unitPrice || ""),
+          }))
+        : [{ ...EMPTY_LINE }],
   };
-  disableRemove?: boolean;
+}
+
+function lineTotal(line: InvoiceLineForm) {
+  const quantity = Number(line.quantity || 0);
+  const unitPrice = Number(line.unitPrice || 0);
+  return roundMoney(quantity * unitPrice);
+}
+
+function invoiceTotal(lines: InvoiceLineForm[]) {
+  return roundMoney(lines.reduce((sum, line) => sum + lineTotal(line), 0));
+}
+
+function buildInvoiceItems(
+  invoiceId: string,
+  lines: InvoiceLineForm[]
+): InvoiceItem[] {
+  return lines
+    .filter(
+      (item) =>
+        item.productId.trim() &&
+        Number(item.quantity || 0) > 0 &&
+        Number(item.unitPrice || 0) >= 0
+    )
+    .map((item, index) => {
+      const quantity = Number(item.quantity);
+      const unitPrice = roundMoney(Number(item.unitPrice));
+      return {
+        id: buildInvoiceItemId(invoiceId, index),
+        invoiceId,
+        productId: item.productId,
+        quantity,
+        unitPrice,
+        total: roundMoney(quantity * unitPrice),
+      };
+    });
+}
+
+function ConfirmCloseModal({
+  open,
+  onKeepEditing,
+  onDiscard,
+  title,
+  description,
+}: {
+  open: boolean;
+  onKeepEditing: () => void;
+  onDiscard: () => void;
+  title: string;
+  description: string;
 }) {
-  const selectedProduct = products.find((product) => product.id === row.productId);
+  if (!open) return null;
 
   return (
-    <div className="invoice-item-row">
-      <div>
-        <label className="modal-label">Product</label>
-        <select
-          className="modal-input"
-          value={row.productId}
-          onChange={(e) => {
-            const nextProductId = e.target.value;
-            const product = products.find((p) => p.id === nextProductId);
-            onChange(row.id, "productId", nextProductId);
-            if (product) {
-              onChange(row.id, "unitPrice", String(product.price));
-            }
-          }}
-        >
-          <option value="">Select product</option>
-          {products.map((product) => (
-            <option key={product.id} value={product.id}>
-              {product.name} - ${product.price}
-            </option>
-          ))}
-        </select>
-        {error?.productId && <span className="field-error">{error.productId}</span>}
-      </div>
+    <div className="modal-overlay" onClick={onKeepEditing}>
+      <div
+        className="modal-card confirm-close-modal"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="modal-header">
+          <div>
+            <h2>{title}</h2>
+            <p>{description}</p>
+          </div>
 
-      <div>
-        <label className="modal-label">Quantity</label>
-        <input
-          className="modal-input"
-          type="number"
-          min="1"
-          step="1"
-          value={row.quantity}
-          onChange={(e) => onChange(row.id, "quantity", e.target.value)}
-          placeholder="Qty"
-        />
-        {selectedProduct ? (
-          <p className="mini-help-text">Available base stock: {selectedProduct.stock}</p>
-        ) : null}
-        {error?.quantity && <span className="field-error">{error.quantity}</span>}
-      </div>
-
-      <div>
-        <label className="modal-label">Unit Price</label>
-        <input
-          className="modal-input"
-          type="number"
-          min="0"
-          step="0.01"
-          value={row.unitPrice}
-          onChange={(e) => onChange(row.id, "unitPrice", e.target.value)}
-          placeholder="Price"
-        />
-        {error?.unitPrice && <span className="field-error">{error.unitPrice}</span>}
-      </div>
-
-      <div className="invoice-item-row-actions">
-        <label className="modal-label">Line Total</label>
-        <div className="invoice-line-total">
-          ${(Number(row.quantity || 0) * Number(row.unitPrice || 0)).toFixed(2)}
+          <button
+            type="button"
+            className="modal-close-btn"
+            onClick={onKeepEditing}
+          >
+            ×
+          </button>
         </div>
-        <button
-          type="button"
-          className="invoice-remove-line-btn"
-          onClick={() => onRemove(row.id)}
-          disabled={disableRemove}
-        >
-          Remove
-        </button>
+
+        <div className="confirm-close-box">
+          <div className="confirm-close-icon">!</div>
+          <div>
+            <h3>Unsaved changes detected</h3>
+            <p>
+              You have entered data that has not been saved yet. If you close
+              now, your changes will be lost.
+            </p>
+          </div>
+        </div>
+
+        <div className="modal-actions">
+          <button
+            type="button"
+            className="modal-secondary-btn"
+            onClick={onKeepEditing}
+          >
+            Continue Editing
+          </button>
+
+          <button
+            type="button"
+            className="modal-danger-btn"
+            onClick={onDiscard}
+          >
+            Discard Changes
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -263,1005 +286,654 @@ function ProductLineEditor({
 
 export default function Invoices() {
   const [customers] = useState<Customer[]>(() => getCustomers());
-  const [payments] = useState<Payment[]>(() => getPayments());
   const [products] = useState<Product[]>(() => getProducts());
-
-  const [invoices, setInvoices] = useState<ExtendedInvoice[]>(() =>
-    buildInvoicesWithRelations(getInvoices(), getCustomers(), getPayments())
-  );
-
-  const [invoiceItems, setInvoiceItems] = useState<InvoiceItem[]>(() =>
-    getInvoiceItems()
+  const [invoices, setInvoices] = useState<Invoice[]>(() =>
+    normalizeInvoices(getInvoices())
   );
 
   const [searchTerm, setSearchTerm] = useState("");
+  const [sortKey, setSortKey] = useState<SortKey | null>(null);
+  const [sortMode, setSortMode] = useState<SortMode>("default");
 
   const [showAddModal, setShowAddModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [showConfirmEditModal, setShowConfirmEditModal] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [showNoteModal, setShowNoteModal] = useState(false);
-
-  const [selectedInvoice, setSelectedInvoice] = useState<ExtendedInvoice | null>(null);
-
   const [form, setForm] = useState<InvoiceForm>(EMPTY_FORM);
-  const [errors, setErrors] = useState<InvoiceFormErrors>({});
-  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [formErrors, setFormErrors] = useState<FormErrors>({});
 
-  const [toast, setToast] = useState({
-    show: false,
-    message: "",
-  });
+  const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null);
+  const [editForm, setEditForm] = useState<InvoiceForm>(EMPTY_FORM);
+  const [editErrors, setEditErrors] = useState<FormErrors>({});
+  const [initialEditSnapshot, setInitialEditSnapshot] = useState<string>("");
+
+  const [deleteInvoice, setDeleteInvoice] = useState<Invoice | null>(null);
+  const [deleteCode, setDeleteCode] = useState("");
+  const [deleteError, setDeleteError] = useState("");
+
+  const [selectedNote, setSelectedNote] = useState<string | null>(null);
+  const [isNoteExpanded, setIsNoteExpanded] = useState(false);
+
+  const [pendingCloseTarget, setPendingCloseTarget] =
+    useState<PendingCloseTarget>(null);
 
   useEffect(() => {
-    if (!toast.show) return;
-    const timer = window.setTimeout(() => {
-      setToast({ show: false, message: "" });
-    }, 2500);
+    saveInvoices(invoices);
+  }, [invoices]);
 
-    return () => window.clearTimeout(timer);
-  }, [toast.show]);
+  const handleSort = (key: SortKey) => {
+    if (sortKey !== key) {
+      setSortKey(key);
+      setSortMode("desc");
+      return;
+    }
+
+    if (sortMode === "desc") {
+      setSortMode("asc");
+      return;
+    }
+
+    setSortKey(null);
+    setSortMode("default");
+  };
+
+  const getSortIndicator = (key: SortKey) => {
+    if (sortKey !== key) return "";
+    if (sortMode === "desc") return "↓";
+    if (sortMode === "asc") return "↑";
+    return "";
+  };
 
   const filteredInvoices = useMemo(() => {
     const value = searchTerm.trim().toLowerCase();
-    if (!value) return invoices;
 
-    return invoices.filter((invoice) => {
-      const items = invoiceItems.filter((item) => item.invoiceId === invoice.id);
-      const itemNames = items
-        .map((item) => getProductById(products, item.productId)?.name ?? "")
+    const filtered = invoices.filter((invoice) => {
+      if (!value) return true;
+
+      const customerName =
+        customers.find((customer) => customer.id === invoice.customerId)?.name ||
+        "Unknown Customer";
+
+      const productNames = (invoice.items ?? [])
+        .map((item) => {
+          const product = products.find((p) => p.id === item.productId);
+          return `${product?.name || "Unknown Product"} x ${item.quantity}`;
+        })
         .join(" ");
 
       return [
         invoice.id,
-        invoice.customerName,
-        invoice.customerId,
+        customerName,
         invoice.date,
-        invoice.amount,
-        invoice.remainingAmount,
-        invoice.status,
-        invoice.notes ?? "",
-        itemNames,
+        invoice.notes || "",
+        invoice.total,
+        productNames,
+        "Debit",
       ]
         .join(" ")
         .toLowerCase()
         .includes(value);
     });
-  }, [invoices, invoiceItems, products, searchTerm]);
 
-  const currentFormTotal = useMemo(() => getFormItemsTotal(form.items), [form.items]);
-
-  const getInvoiceItemDetails = (invoiceId: string) => {
-    return invoiceItems
-      .filter((item) => item.invoiceId === invoiceId)
-      .map((item) => {
-        const product = getProductById(products, item.productId);
-        return {
-          ...item,
-          productName: product?.name ?? "Unknown Product",
-        };
-      });
-  };
-
-  const validateForm = (data: InvoiceForm) => {
-    const nextErrors: InvoiceFormErrors = {
-      rowErrors: {},
-    };
-
-    if (!data.customerId.trim()) {
-      nextErrors.customerId = "Please select a customer.";
+    if (!sortKey || sortMode === "default") {
+      return filtered;
     }
 
-    if (!data.date) {
-      nextErrors.date = "Please select a valid invoice date.";
-    }
+    const sorted = [...filtered].sort((a, b) => {
+      const customerA =
+        customers.find((customer) => customer.id === a.customerId)?.name ||
+        "Unknown Customer";
 
-    if (data.items.length === 0) {
-      nextErrors.items = "At least one product is required.";
-    }
+      const customerB =
+        customers.find((customer) => customer.id === b.customerId)?.name ||
+        "Unknown Customer";
 
-    data.items.forEach((row) => {
-      const rowError: {
-        productId?: string;
-        quantity?: string;
-        unitPrice?: string;
-      } = {};
+      const itemsA = (a.items ?? []).length;
+      const itemsB = (b.items ?? []).length;
 
-      if (!row.productId.trim()) {
-        rowError.productId = "Please select a product.";
+      const statusA = "Debit";
+      const statusB = "Debit";
+
+      let aValue: string | number = "";
+      let bValue: string | number = "";
+
+      switch (sortKey) {
+        case "id":
+          aValue = a.id;
+          bValue = b.id;
+          break;
+        case "customer":
+          aValue = customerA;
+          bValue = customerB;
+          break;
+        case "date":
+          aValue = a.date;
+          bValue = b.date;
+          break;
+        case "items":
+          aValue = itemsA;
+          bValue = itemsB;
+          break;
+        case "total":
+          aValue = Number(a.total || 0);
+          bValue = Number(b.total || 0);
+          break;
+        case "stillToPay":
+          aValue = Number(a.total || 0);
+          bValue = Number(b.total || 0);
+          break;
+        case "status":
+          aValue = statusA;
+          bValue = statusB;
+          break;
       }
 
-      if (row.quantity.trim() === "") {
-        rowError.quantity = "Quantity is required.";
-      } else if (Number.isNaN(Number(row.quantity))) {
-        rowError.quantity = "Quantity must be a valid number.";
-      } else if (Number(row.quantity) <= 0) {
-        rowError.quantity = "Quantity must be greater than 0.";
-      } else {
-        const product = products.find((p) => p.id === row.productId);
-        if (product && Number(row.quantity) > Number(product.stock || 0)) {
-          rowError.quantity = `Quantity cannot exceed available base stock (${product.stock}).`;
-        }
+      if (typeof aValue === "number" && typeof bValue === "number") {
+        return sortMode === "desc" ? bValue - aValue : aValue - bValue;
       }
 
-      if (row.unitPrice.trim() === "") {
-        rowError.unitPrice = "Unit price is required.";
-      } else if (Number.isNaN(Number(row.unitPrice))) {
-        rowError.unitPrice = "Unit price must be a valid number.";
-      } else if (Number(row.unitPrice) < 0) {
-        rowError.unitPrice = "Unit price cannot be negative.";
-      }
-
-      if (Object.keys(rowError).length > 0) {
-        nextErrors.rowErrors![row.id] = rowError;
-      }
+      return sortMode === "desc"
+        ? String(bValue).localeCompare(String(aValue))
+        : String(aValue).localeCompare(String(bValue));
     });
 
-    if (Object.keys(nextErrors.rowErrors || {}).length === 0) {
-      delete nextErrors.rowErrors;
+    return sorted;
+  }, [invoices, customers, products, searchTerm, sortKey, sortMode]);
+
+  const hasAddUnsavedChanges = useMemo(() => {
+    return (
+      form.customerId.trim() !== "" ||
+      form.date !== EMPTY_FORM.date ||
+      form.notes.trim() !== "" ||
+      form.items.some(
+        (item) =>
+          item.productId.trim() !== "" ||
+          item.quantity.trim() !== "" ||
+          item.unitPrice.trim() !== ""
+      )
+    );
+  }, [form]);
+
+  const hasEditUnsavedChanges = useMemo(() => {
+    if (!editingInvoice) return false;
+    return JSON.stringify(editForm) !== initialEditSnapshot;
+  }, [editForm, editingInvoice, initialEditSnapshot]);
+
+  const validateForm = (values: InvoiceForm): FormErrors => {
+    const errors: FormErrors = {};
+
+    if (!values.customerId.trim()) {
+      errors.customerId = "Customer is required.";
     }
 
-    return nextErrors;
-  };
-
-  const refreshInvoices = (updatedInvoices: Invoice[], updatedItems?: InvoiceItem[]) => {
-    saveInvoices(updatedInvoices);
-    setInvoices(buildInvoicesWithRelations(updatedInvoices, customers, payments));
-
-    if (updatedItems) {
-      saveInvoiceItems(updatedItems);
-      setInvoiceItems(updatedItems);
+    const dateError = validateInvoiceDate(values.date);
+    if (dateError) {
+      errors.date = dateError;
     }
-  };
 
-  const showSuccessToast = (message: string) => {
-    setToast({
-      show: true,
-      message,
+    const validItems = values.items.filter(
+      (item) =>
+        item.productId.trim() !== "" ||
+        item.quantity.trim() !== "" ||
+        item.unitPrice.trim() !== ""
+    );
+
+    if (validItems.length === 0) {
+      errors.items = "At least one invoice item is required.";
+      return errors;
+    }
+
+    const hasInvalidItem = validItems.some((item) => {
+      const quantity = Number(item.quantity || 0);
+      const unitPrice = Number(item.unitPrice || 0);
+
+      return (
+        !item.productId.trim() ||
+        Number.isNaN(quantity) ||
+        quantity <= 0 ||
+        Number.isNaN(unitPrice) ||
+        unitPrice < 0
+      );
     });
+
+    if (hasInvalidItem) {
+      errors.items =
+        "Each line must have a product, quantity greater than 0, and valid price.";
+    }
+
+    return errors;
   };
 
   const closeAddModal = () => {
     setShowAddModal(false);
-    setForm({
-      ...EMPTY_FORM,
-      items: [createEmptyItemRow()],
-    });
-    setErrors({});
+    setForm(EMPTY_FORM);
+    setFormErrors({});
   };
 
   const closeEditModal = () => {
-    setShowEditModal(false);
-    setShowConfirmEditModal(false);
-    setSelectedInvoice(null);
-    setForm({
-      ...EMPTY_FORM,
-      items: [createEmptyItemRow()],
-    });
-    setErrors({});
+    setEditingInvoice(null);
+    setEditForm(EMPTY_FORM);
+    setEditErrors({});
+    setInitialEditSnapshot("");
   };
 
-  const closeDeleteModal = () => {
-    setShowDeleteModal(false);
-    setSelectedInvoice(null);
-    setDeleteConfirmText("");
+  const attemptCloseAddModal = () => {
+    if (hasAddUnsavedChanges) {
+      setPendingCloseTarget("add");
+      return;
+    }
+
+    closeAddModal();
   };
 
-  const closeNoteModal = () => {
-    setShowNoteModal(false);
-    setSelectedInvoice(null);
+  const attemptCloseEditModal = () => {
+    if (hasEditUnsavedChanges) {
+      setPendingCloseTarget("edit");
+      return;
+    }
+
+    closeEditModal();
   };
 
-  const handleFormFieldChange = (field: keyof Omit<InvoiceForm, "items">, value: string) => {
-    setForm((prev) => ({ ...prev, [field]: value }));
-
-    setErrors((prev) => {
-      const next = { ...prev };
-
-      if (field === "customerId") {
-        if (!value.trim()) next.customerId = "Please select a customer.";
-        else delete next.customerId;
-      }
-
-      if (field === "date") {
-        if (!value) next.date = "Please select a valid invoice date.";
-        else delete next.date;
-      }
-
-      return next;
-    });
+  const discardPendingChanges = () => {
+    if (pendingCloseTarget === "add") closeAddModal();
+    if (pendingCloseTarget === "edit") closeEditModal();
+    setPendingCloseTarget(null);
   };
 
-  const handleItemChange = (
-    rowId: string,
-    field: keyof Omit<InvoiceItemFormRow, "id">,
+  const openEditModal = (invoice: Invoice) => {
+    const mapped = toForm(invoice);
+    setEditingInvoice(invoice);
+    setEditForm(mapped);
+    setEditErrors({});
+    setInitialEditSnapshot(JSON.stringify(mapped));
+  };
+
+  const handleFormLineChange = (
+    mode: "add" | "edit",
+    index: number,
+    field: keyof InvoiceLineForm,
     value: string
   ) => {
-    setForm((prev) => ({
+    const setState = mode === "add" ? setForm : setEditForm;
+    const setErrors = mode === "add" ? setFormErrors : setEditErrors;
+
+    setState((prev) => ({
       ...prev,
-      items: prev.items.map((item) =>
-        item.id === rowId ? { ...item, [field]: value } : item
-      ),
-    }));
+      items: prev.items.map((item, i) => {
+        if (i !== index) return item;
 
-    setErrors((prev) => {
-      if (!prev.rowErrors?.[rowId]) return prev;
+        const nextItem = { ...item, [field]: value };
 
-      const next = { ...prev };
-      const rowErrors = { ...(next.rowErrors || {}) };
-
-      if (rowErrors[rowId]) {
-        delete rowErrors[rowId][field];
-        if (Object.keys(rowErrors[rowId]).length === 0) {
-          delete rowErrors[rowId];
+        if (field === "productId") {
+          const product = products.find((p) => p.id === value);
+          if (product && !item.unitPrice.trim()) {
+            nextItem.unitPrice = String(product.price ?? 0);
+          }
         }
-      }
 
-      next.rowErrors =
-        Object.keys(rowErrors).length > 0 ? rowErrors : undefined;
+        return nextItem;
+      }),
+    }));
 
-      return next;
-    });
+    setErrors((prev) => ({ ...prev, items: undefined }));
   };
 
-  const addItemRow = () => {
-    setForm((prev) => ({
+  const addInvoiceLine = (mode: "add" | "edit") => {
+    const setState = mode === "add" ? setForm : setEditForm;
+    setState((prev) => ({
       ...prev,
-      items: [...prev.items, createEmptyItemRow()],
+      items: [...prev.items, { ...EMPTY_LINE }],
     }));
   };
 
-  const removeItemRow = (rowId: string) => {
-    setForm((prev) => ({
+  const removeInvoiceLine = (mode: "add" | "edit", index: number) => {
+    const setState = mode === "add" ? setForm : setEditForm;
+    setState((prev) => ({
       ...prev,
       items:
-        prev.items.length > 1
-          ? prev.items.filter((item) => item.id !== rowId)
-          : prev.items,
+        prev.items.length === 1
+          ? [{ ...EMPTY_LINE }]
+          : prev.items.filter((_, i) => i !== index),
     }));
   };
 
   const handleAddInvoice = () => {
-    const validationErrors = validateForm(form);
-    setErrors(validationErrors);
+    const errors = validateForm(form);
+    setFormErrors(errors);
 
-    const hasRowErrors =
-      validationErrors.rowErrors &&
-      Object.keys(validationErrors.rowErrors).length > 0;
+    if (Object.keys(errors).length > 0) return;
 
-    if (
-      validationErrors.customerId ||
-      validationErrors.date ||
-      validationErrors.items ||
-      hasRowErrors
-    ) {
-      return;
-    }
-
-    const currentInvoices = getInvoices();
-    const currentInvoiceItems = getInvoiceItems();
-
-    const newInvoiceId = `INV-${1000 + currentInvoices.length + 1}`;
-    const amountNumber = getFormItemsTotal(form.items);
+    const invoiceId = buildInvoiceId(invoices.length);
+    const items = buildInvoiceItems(invoiceId, form.items);
+    const normalizedDate = normalizeDateInput(form.date);
 
     const newInvoice: Invoice = {
-      id: newInvoiceId,
+      id: invoiceId,
       customerId: form.customerId,
-      amount: amountNumber,
-      remainingAmount: amountNumber,
-      status: "Debit",
-      date: form.date,
+      date: normalizedDate,
       notes: form.notes.trim(),
+      items,
+      total: roundMoney(
+        items.reduce((sum, item) => sum + Number(item.total || 0), 0)
+      ),
     };
 
-    const newItems: InvoiceItem[] = form.items.map((item, index) => ({
-      id: `ITEM-${Date.now()}-${index + 1}`,
-      invoiceId: newInvoiceId,
-      productId: item.productId,
-      quantity: Number(item.quantity),
-      unitPrice: Number(item.unitPrice),
-      total: Number(item.quantity) * Number(item.unitPrice),
-    }));
-
-    const updatedInvoices = [newInvoice, ...currentInvoices];
-    const updatedItems = [...newItems, ...currentInvoiceItems];
-
-    refreshInvoices(updatedInvoices, updatedItems);
+    setInvoices((prev) => [newInvoice, ...prev]);
     closeAddModal();
-    showSuccessToast("Invoice added successfully.");
   };
 
-  const openEditModal = (invoice: ExtendedInvoice) => {
-    setSelectedInvoice(invoice);
+  const handleSaveEdit = () => {
+    if (!editingInvoice) return;
 
-    const items = invoiceItems
-      .filter((item) => item.invoiceId === invoice.id)
-      .map((item) => ({
-        id: item.id,
-        productId: item.productId,
-        quantity: String(item.quantity),
-        unitPrice: String(item.unitPrice),
-      }));
+    const errors = validateForm(editForm);
+    setEditErrors(errors);
 
-    setForm({
-      customerId: invoice.customerId,
-      date: invoice.date,
-      notes: invoice.notes ?? "",
-      items: items.length > 0 ? items : [createEmptyItemRow()],
-    });
+    if (Object.keys(errors).length > 0) return;
 
-    setErrors({});
-    setShowEditModal(true);
+    const items = buildInvoiceItems(editingInvoice.id, editForm.items);
+    const normalizedDate = normalizeDateInput(editForm.date);
+
+    setInvoices((prev) =>
+      prev.map((invoice) =>
+        invoice.id === editingInvoice.id
+          ? {
+              ...invoice,
+              customerId: editForm.customerId,
+              date: normalizedDate,
+              notes: editForm.notes.trim(),
+              items,
+              total: roundMoney(
+                items.reduce((sum, item) => sum + Number(item.total || 0), 0)
+              ),
+            }
+          : invoice
+      )
+    );
+
+    closeEditModal();
   };
 
-  const requestEditConfirmation = () => {
-    const validationErrors = validateForm(form);
-    setErrors(validationErrors);
+  const openDeleteModal = (invoice: Invoice) => {
+    setDeleteInvoice(invoice);
+    setDeleteCode("");
+    setDeleteError("");
+  };
 
-    const hasRowErrors =
-      validationErrors.rowErrors &&
-      Object.keys(validationErrors.rowErrors).length > 0;
+  const closeDeleteModal = () => {
+    setDeleteInvoice(null);
+    setDeleteCode("");
+    setDeleteError("");
+  };
 
-    if (
-      validationErrors.customerId ||
-      validationErrors.date ||
-      validationErrors.items ||
-      hasRowErrors
-    ) {
+  const confirmDeleteInvoice = () => {
+    if (deleteCode.trim() !== DELETE_CONFIRMATION_CODE) {
+      setDeleteError("Incorrect confirmation code. Please type 123.");
       return;
     }
 
-    setShowConfirmEditModal(true);
-  };
-
-  const handleConfirmEdit = () => {
-    if (!selectedInvoice) return;
-
-    const updatedInvoices = getInvoices().map((invoice) =>
-      invoice.id === selectedInvoice.id
-        ? {
-            ...invoice,
-            customerId: form.customerId,
-            amount: getFormItemsTotal(form.items),
-            date: form.date,
-            notes: form.notes.trim(),
-          }
-        : invoice
+    setInvoices((prev) =>
+      prev.filter((invoice) => invoice.id !== deleteInvoice?.id)
     );
 
-    const currentItems = getInvoiceItems().filter(
-      (item) => item.invoiceId !== selectedInvoice.id
-    );
-
-    const updatedInvoiceItems: InvoiceItem[] = [
-      ...currentItems,
-      ...form.items.map((item, index) => ({
-        id: item.id.startsWith("ITEM-") ? item.id : `ITEM-${Date.now()}-${index + 1}`,
-        invoiceId: selectedInvoice.id,
-        productId: item.productId,
-        quantity: Number(item.quantity),
-        unitPrice: Number(item.unitPrice),
-        total: Number(item.quantity) * Number(item.unitPrice),
-      })),
-    ];
-
-    refreshInvoices(updatedInvoices, updatedInvoiceItems);
-    closeEditModal();
-    showSuccessToast("Invoice updated successfully.");
-  };
-
-  const openDeleteModal = (invoice: ExtendedInvoice) => {
-    setSelectedInvoice(invoice);
-    setDeleteConfirmText("");
-    setShowDeleteModal(true);
-  };
-
-  const handleDeleteInvoice = () => {
-    if (!selectedInvoice || deleteConfirmText !== "DELETE") return;
-
-    const updatedInvoices = getInvoices().filter(
-      (invoice) => invoice.id !== selectedInvoice.id
-    );
-
-    const updatedItems = getInvoiceItems().filter(
-      (item) => item.invoiceId !== selectedInvoice.id
-    );
-
-    refreshInvoices(updatedInvoices, updatedItems);
     closeDeleteModal();
-    showSuccessToast("Invoice deleted successfully.");
   };
 
-  const openNoteModal = (invoice: ExtendedInvoice) => {
-    setSelectedInvoice(invoice);
-    setShowNoteModal(true);
+  const openNoteModal = (note?: string) => {
+    const cleanNote = note?.trim() || "No notes available.";
+    setSelectedNote(cleanNote);
+    setIsNoteExpanded(false);
   };
 
-  const deleteEnabled = deleteConfirmText === "DELETE";
+  const closeNoteModal = () => {
+    setSelectedNote(null);
+    setIsNoteExpanded(false);
+  };
+
+  const shouldShowReadMore =
+    !!selectedNote &&
+    selectedNote !== "No notes available." &&
+    selectedNote.length > NOTE_PREVIEW_LIMIT;
+
+  const displayedNote =
+    selectedNote && !isNoteExpanded && shouldShowReadMore
+      ? `${selectedNote.slice(0, NOTE_PREVIEW_LIMIT)}...`
+      : selectedNote;
+
+  const renderInvoiceModal = (
+    mode: "add" | "edit",
+    currentForm: InvoiceForm,
+    setCurrentForm: React.Dispatch<React.SetStateAction<InvoiceForm>>,
+    currentErrors: FormErrors,
+    onSave: () => void,
+    onClose: () => void,
+    title: string,
+    subtitle: string
+  ) => {
+    const total = invoiceTotal(currentForm.items);
+
+    return (
+      <div className="modal-overlay" onClick={onClose}>
+        <div
+          className="modal-card invoice-modal-card invoice-modal-card-compact"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="modal-header">
+            <div>
+              <h2>{title}</h2>
+              <p>{subtitle}</p>
+            </div>
+
+            <button type="button" className="modal-close-btn" onClick={onClose}>
+              ×
+            </button>
+          </div>
+
+          <form className="modal-form invoice-modal-form invoice-modal-form-compact">
+            <div className="invoice-top-grid invoice-top-grid-compact">
+              <div>
+                <label className="modal-label">Customer</label>
+                <select
+                  className="modal-select"
+                  value={currentForm.customerId}
+                  onChange={(e) => {
+                    setCurrentForm((prev) => ({
+                      ...prev,
+                      customerId: e.target.value,
+                    }));
+                  }}
+                >
+                  <option value="">Search customer...</option>
+                  {customers.map((customer) => (
+                    <option key={customer.id} value={customer.id}>
+                      {customer.name}
+                    </option>
+                  ))}
+                </select>
+                {currentErrors.customerId && (
+                  <p className="field-error">{currentErrors.customerId}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="modal-label">Invoice Date</label>
+                <input
+                  className="modal-input"
+                  type="date"
+                  value={normalizeDateInput(currentForm.date)}
+                  min={MIN_INVOICE_DATE}
+                  max={TODAY_DATE}
+                  onChange={(e) =>
+                    setCurrentForm((prev) => ({
+                      ...prev,
+                      date: e.target.value,
+                    }))
+                  }
+                />
+                <p className="date-helper-text">
+                  Allowed range: {MIN_INVOICE_DATE} to {TODAY_DATE}
+                </p>
+                {currentErrors.date && (
+                  <p className="field-error">{currentErrors.date}</p>
+                )}
+              </div>
+            </div>
+
+            <div className="invoice-notes-group invoice-notes-group-compact">
+              <label className="modal-label">Notes</label>
+              <textarea
+                className="modal-textarea invoice-notes-textarea invoice-notes-textarea-compact"
+                placeholder="Add invoice notes..."
+                rows={3}
+                value={currentForm.notes}
+                onChange={(e) =>
+                  setCurrentForm((prev) => ({
+                    ...prev,
+                    notes: e.target.value,
+                  }))
+                }
+              />
+            </div>
+
+            <div className="invoice-items-section invoice-items-section-compact">
+              <div className="invoice-items-header invoice-items-header-compact">
+                <div>
+                  <h3>Invoice Items</h3>
+                  <p>Add products, quantities, and prices for this invoice.</p>
+                </div>
+
+                <button
+                  type="button"
+                  className="add-line-btn"
+                  onClick={() => addInvoiceLine(mode)}
+                >
+                  + Add Product Line
+                </button>
+              </div>
+
+              {currentErrors.items && (
+                <p className="field-error invoice-items-error">
+                  {currentErrors.items}
+                </p>
+              )}
+
+              <div className="invoice-lines-wrapper invoice-lines-wrapper-compact">
+                {currentForm.items.map((item, index) => (
+                  <div key={index} className="invoice-line-card invoice-line-card-compact">
+                    <div className="invoice-line-grid invoice-line-grid-compact">
+                      <div className="invoice-col invoice-col-product">
+                        <label className="modal-label">Product</label>
+                        <select
+                          className="modal-select"
+                          value={item.productId}
+                          onChange={(e) =>
+                            handleFormLineChange(
+                              mode,
+                              index,
+                              "productId",
+                              e.target.value
+                            )
+                          }
+                        >
+                          <option value="">Select product</option>
+                          {products.map((product) => (
+                            <option key={product.id} value={product.id}>
+                              {product.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="invoice-col invoice-col-qty">
+                        <label className="modal-label">Quantity</label>
+                        <input
+                          className="modal-input"
+                          type="number"
+                          min="1"
+                          step="1"
+                          placeholder="Qty"
+                          value={item.quantity}
+                          onChange={(e) =>
+                            handleFormLineChange(
+                              mode,
+                              index,
+                              "quantity",
+                              e.target.value
+                            )
+                          }
+                        />
+                      </div>
+
+                      <div className="invoice-col invoice-col-price">
+                        <label className="modal-label">Unit Price</label>
+                        <input
+                          className="modal-input"
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          placeholder="Price"
+                          value={item.unitPrice}
+                          onChange={(e) =>
+                            handleFormLineChange(
+                              mode,
+                              index,
+                              "unitPrice",
+                              e.target.value
+                            )
+                          }
+                        />
+                      </div>
+
+                      <div className="invoice-col invoice-col-total">
+                        <label className="modal-label">Total</label>
+                        <div className="invoice-line-total invoice-line-total-compact">
+                          {formatMoney(lineTotal(item))}
+                        </div>
+                      </div>
+
+                      <div className="invoice-col invoice-col-remove">
+                        <label className="modal-label modal-label-hidden">Action</label>
+                        <button
+                          type="button"
+                          className="remove-line-btn remove-line-btn-compact"
+                          onClick={() => removeInvoiceLine(mode, index)}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="invoice-total-bar invoice-total-bar-compact">
+                <span>Current Invoice Total</span>
+                <strong>{formatMoney(total)}</strong>
+              </div>
+            </div>
+
+            <div className="modal-actions invoice-modal-actions">
+              <button
+                type="button"
+                className="modal-secondary-btn"
+                onClick={onClose}
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                className="modal-primary-btn"
+                onClick={onSave}
+              >
+                {mode === "add" ? "Save Invoice" : "Save Changes"}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <>
-      <style>{`
-        .invoices-page {
-          display: flex;
-          flex-direction: column;
-          gap: 24px;
-        }
-
-        .invoices-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-          gap: 16px;
-          flex-wrap: wrap;
-        }
-
-        .invoices-toolbar {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-end;
-          gap: 16px;
-          flex-wrap: wrap;
-        }
-
-        .invoices-search-box {
-          flex: 1;
-          min-width: 260px;
-        }
-
-        .table-wrapper {
-          overflow-x: auto;
-        }
-
-        .dashboard-table {
-          width: 100%;
-          border-collapse: collapse;
-          min-width: 1180px;
-        }
-
-        .dashboard-table th,
-        .dashboard-table td {
-          padding: 14px 16px;
-          text-align: left;
-          vertical-align: middle;
-          border-bottom: 1px solid rgba(148, 163, 184, 0.14);
-        }
-
-        .dashboard-table th {
-          font-size: 13px;
-          font-weight: 700;
-          color: #64748b;
-          background: rgba(248, 250, 252, 0.9);
-          white-space: nowrap;
-        }
-
-        .dashboard-table td {
-          font-size: 14px;
-          color: #1e293b;
-        }
-
-        .empty-state-cell {
-          text-align: center;
-          color: #94a3b8;
-          padding: 32px 16px;
-        }
-
-        .status-badge {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          min-width: 86px;
-          padding: 6px 12px;
-          border-radius: 999px;
-          font-size: 12px;
-          font-weight: 700;
-        }
-
-        .status-paid {
-          background: rgba(34, 197, 94, 0.12);
-          color: #15803d;
-        }
-
-        .status-partial {
-          background: rgba(245, 158, 11, 0.14);
-          color: #b45309;
-        }
-
-        .status-debit {
-          background: rgba(239, 68, 68, 0.12);
-          color: #b91c1c;
-        }
-
-        .remaining-paid {
-          color: #15803d;
-          font-weight: 700;
-        }
-
-        .remaining-partial {
-          color: #b45309;
-          font-weight: 700;
-        }
-
-        .remaining-debit {
-          color: #b91c1c;
-          font-weight: 700;
-        }
-
-        .table-actions {
-          display: flex;
-          gap: 8px;
-          flex-wrap: wrap;
-        }
-
-        .table-btn {
-          border: none;
-          border-radius: 10px;
-          padding: 8px 12px;
-          font-size: 13px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.2s ease;
-        }
-
-        .table-btn.edit {
-          background: #e2e8f0;
-          color: #0f172a;
-        }
-
-        .table-btn.edit:hover {
-          background: #cbd5e1;
-        }
-
-        .table-btn.delete {
-          background: #ef4444;
-          color: white;
-        }
-
-        .table-btn.delete:hover {
-          background: #dc2626;
-        }
-
-        .note-link-btn,
-        .items-link-btn {
-          border: none;
-          background: transparent;
-          color: #2563eb;
-          font-weight: 600;
-          cursor: pointer;
-          padding: 0;
-        }
-
-        .note-link-btn:hover,
-        .items-link-btn:hover {
-          text-decoration: underline;
-        }
-
-        .invoice-items-preview {
-          display: flex;
-          flex-direction: column;
-          gap: 6px;
-        }
-
-        .invoice-item-chip {
-          display: inline-flex;
-          align-items: center;
-          padding: 4px 10px;
-          background: #eff6ff;
-          color: #1d4ed8;
-          border-radius: 999px;
-          font-size: 12px;
-          font-weight: 700;
-          width: fit-content;
-        }
-
-        .modal-overlay {
-          position: fixed;
-          inset: 0;
-          background: rgba(15, 23, 42, 0.5);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 20px;
-          z-index: 999;
-          backdrop-filter: blur(2px);
-        }
-
-        .modal-card {
-          width: 100%;
-          max-width: 980px;
-          background: #ffffff;
-          border-radius: 20px;
-          box-shadow: 0 24px 64px rgba(15, 23, 42, 0.18);
-          overflow: hidden;
-          animation: modalPop 0.18s ease;
-        }
-
-        .modal-card.small {
-          max-width: 480px;
-        }
-
-        .modal-card.note {
-          max-width: 640px;
-        }
-
-        .modal-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-          gap: 12px;
-          padding: 20px 22px 16px;
-          border-bottom: 1px solid rgba(148, 163, 184, 0.14);
-        }
-
-        .modal-header h2 {
-          margin: 0;
-          font-size: 20px;
-          font-weight: 700;
-          color: #0f172a;
-        }
-
-        .modal-header p {
-          margin: 6px 0 0;
-          color: #64748b;
-          font-size: 14px;
-        }
-
-        .modal-close-btn {
-          border: none;
-          background: transparent;
-          font-size: 28px;
-          line-height: 1;
-          cursor: pointer;
-          color: #64748b;
-          padding: 0;
-        }
-
-        .modal-form,
-        .modal-content {
-          padding: 20px 22px 22px;
-        }
-
-        .modal-grid {
-          display: grid;
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-          gap: 16px;
-        }
-
-        .modal-grid-full {
-          grid-column: 1 / -1;
-        }
-
-        .modal-label {
-          display: block;
-          margin-bottom: 8px;
-          font-size: 13px;
-          font-weight: 700;
-          color: #475569;
-        }
-
-        .modal-input,
-        .modal-textarea {
-          width: 100%;
-          border: 1px solid #cbd5e1;
-          border-radius: 12px;
-          padding: 12px 14px;
-          font-size: 14px;
-          outline: none;
-          transition: all 0.2s ease;
-          background: white;
-        }
-
-        .modal-input:focus,
-        .modal-textarea:focus {
-          border-color: #3b82f6;
-          box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.12);
-        }
-
-        .modal-textarea {
-          resize: vertical;
-          min-height: 100px;
-        }
-
-        .field-error {
-          display: block;
-          margin-top: 6px;
-          color: #dc2626;
-          font-size: 12px;
-          font-weight: 600;
-        }
-
-        .modal-actions {
-          display: flex;
-          justify-content: flex-end;
-          gap: 10px;
-          flex-wrap: wrap;
-          margin-top: 24px;
-        }
-
-        .modal-primary-btn,
-        .modal-secondary-btn,
-        .modal-danger-btn {
-          border: none;
-          border-radius: 12px;
-          padding: 11px 16px;
-          font-size: 14px;
-          font-weight: 700;
-          cursor: pointer;
-          transition: all 0.2s ease;
-        }
-
-        .modal-primary-btn {
-          background: #2563eb;
-          color: white;
-        }
-
-        .modal-primary-btn:hover:not(:disabled) {
-          background: #1d4ed8;
-        }
-
-        .modal-secondary-btn {
-          background: #e2e8f0;
-          color: #0f172a;
-        }
-
-        .modal-secondary-btn:hover:not(:disabled) {
-          background: #cbd5e1;
-        }
-
-        .modal-danger-btn {
-          background: #dc2626;
-          color: white;
-        }
-
-        .modal-danger-btn:hover:not(:disabled) {
-          background: #b91c1c;
-        }
-
-        .modal-primary-btn:disabled,
-        .modal-danger-btn:disabled,
-        .modal-secondary-btn:disabled {
-          opacity: 0.55;
-          cursor: not-allowed;
-        }
-
-        .confirm-text {
-          margin: 0;
-          color: #475569;
-          line-height: 1.7;
-          font-size: 14px;
-        }
-
-        .danger-text {
-          margin: 0 0 10px;
-          color: #b91c1c;
-          font-weight: 700;
-        }
-
-        .note-content {
-          margin: 0;
-          color: #334155;
-          line-height: 1.8;
-          white-space: pre-wrap;
-          word-break: break-word;
-        }
-
-        .toast-message {
-          position: fixed;
-          right: 24px;
-          bottom: 24px;
-          background: #16a34a;
-          color: white;
-          padding: 12px 16px;
-          border-radius: 12px;
-          box-shadow: 0 16px 34px rgba(15, 23, 42, 0.16);
-          font-size: 14px;
-          font-weight: 700;
-          z-index: 1200;
-        }
-
-        .customer-select {
-          position: relative;
-        }
-
-        .customer-select-input-wrap {
-          position: relative;
-        }
-
-        .customer-select-arrow {
-          position: absolute;
-          right: 14px;
-          top: 50%;
-          transform: translateY(-50%);
-          pointer-events: none;
-          color: #64748b;
-          font-size: 12px;
-        }
-
-        .customer-select-menu {
-          position: absolute;
-          top: calc(100% + 8px);
-          left: 0;
-          right: 0;
-          max-height: 220px;
-          overflow-y: auto;
-          background: white;
-          border: 1px solid #cbd5e1;
-          border-radius: 14px;
-          box-shadow: 0 16px 36px rgba(15, 23, 42, 0.12);
-          z-index: 30;
-        }
-
-        .customer-option {
-          width: 100%;
-          text-align: left;
-          border: none;
-          background: white;
-          padding: 12px 14px;
-          font-size: 14px;
-          color: #1e293b;
-          cursor: pointer;
-          transition: background 0.15s ease;
-        }
-
-        .customer-option:hover,
-        .customer-option.active {
-          background: #eff6ff;
-        }
-
-        .customer-empty {
-          padding: 12px 14px;
-          color: #94a3b8;
-          font-size: 14px;
-        }
-
-        .invoice-items-block {
-          margin-top: 24px;
-          border-top: 1px solid rgba(148, 163, 184, 0.14);
-          padding-top: 20px;
-        }
-
-        .invoice-item-row {
-          display: grid;
-          grid-template-columns: 2fr 1fr 1fr auto;
-          gap: 12px;
-          align-items: start;
-          margin-bottom: 14px;
-          padding: 14px;
-          border: 1px solid #e2e8f0;
-          border-radius: 16px;
-          background: #fafcff;
-        }
-
-        .invoice-item-row-actions {
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-        }
-
-        .invoice-line-total {
-          min-height: 46px;
-          display: flex;
-          align-items: center;
-          padding: 0 12px;
-          border-radius: 12px;
-          background: #eff6ff;
-          color: #1d4ed8;
-          font-weight: 700;
-        }
-
-        .invoice-remove-line-btn {
-          border: none;
-          border-radius: 12px;
-          padding: 10px 12px;
-          background: #fee2e2;
-          color: #b91c1c;
-          font-weight: 700;
-          cursor: pointer;
-        }
-
-        .invoice-remove-line-btn:disabled {
-          opacity: 0.5;
-          cursor: not-allowed;
-        }
-
-        .invoice-add-line-btn {
-          border: none;
-          border-radius: 12px;
-          padding: 10px 14px;
-          background: #dbeafe;
-          color: #1d4ed8;
-          font-weight: 700;
-          cursor: pointer;
-        }
-
-        .invoice-total-box {
-          margin-top: 16px;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          gap: 12px;
-          padding: 14px 16px;
-          background: #eff6ff;
-          border: 1px solid #bfdbfe;
-          border-radius: 16px;
-        }
-
-        .invoice-total-box strong {
-          font-size: 20px;
-          color: #1d4ed8;
-        }
-
-        .mini-help-text {
-          margin-top: 6px;
-          font-size: 12px;
-          color: #64748b;
-          font-weight: 600;
-        }
-
-        .invoice-items-list {
-          display: flex;
-          flex-direction: column;
-          gap: 10px;
-        }
-
-        .invoice-items-list-row {
-          display: flex;
-          justify-content: space-between;
-          gap: 12px;
-          padding: 12px 14px;
-          border-radius: 14px;
-          background: #f8fafc;
-          border: 1px solid #e2e8f0;
-        }
-
-        @keyframes modalPop {
-          from {
-            opacity: 0;
-            transform: translateY(8px) scale(0.98);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0) scale(1);
-          }
-        }
-
-        @media (max-width: 980px) {
-          .modal-grid {
-            grid-template-columns: 1fr;
-          }
-
-          .invoice-item-row {
-            grid-template-columns: 1fr;
-          }
-        }
-
-        @media (max-width: 768px) {
-          .table-actions {
-            flex-direction: column;
-            align-items: stretch;
-          }
-
-          .table-btn {
-            width: 100%;
-          }
-
-          .modal-actions {
-            flex-direction: column-reverse;
-          }
-
-          .modal-primary-btn,
-          .modal-secondary-btn,
-          .modal-danger-btn {
-            width: 100%;
-          }
-
-          .invoice-total-box {
-            flex-direction: column;
-            align-items: flex-start;
-          }
-        }
-      `}</style>
-
       <div className="invoices-page">
         <div className="invoices-header">
           <div>
@@ -1272,14 +944,18 @@ export default function Invoices() {
             </p>
           </div>
 
-          <button className="quick-action-btn" onClick={() => setShowAddModal(true)}>
+          <button
+            type="button"
+            className="quick-action-btn"
+            onClick={() => setShowAddModal(true)}
+          >
             + Add Invoice
           </button>
         </div>
 
         <div className="dashboard-card">
           <div className="invoices-toolbar">
-            <div className="dashboard-search-box invoices-search-box">
+            <div className="dashboard-search-box">
               <label className="dashboard-search-label">Search invoices</label>
               <input
                 type="text"
@@ -1300,13 +976,36 @@ export default function Invoices() {
             <table className="dashboard-table">
               <thead>
                 <tr>
-                  <th>ID</th>
-                  <th>Customer</th>
-                  <th>Date</th>
-                  <th>Items</th>
-                  <th>Total</th>
-                  <th>Still to Pay</th>
-                  <th>Status</th>
+                  <th className="sortable" onClick={() => handleSort("id")}>
+                    <span className="sort-label">ID {getSortIndicator("id")}</span>
+                  </th>
+                  <th className="sortable" onClick={() => handleSort("customer")}>
+                    <span className="sort-label">
+                      Customer {getSortIndicator("customer")}
+                    </span>
+                  </th>
+                  <th className="sortable" onClick={() => handleSort("date")}>
+                    <span className="sort-label">Date {getSortIndicator("date")}</span>
+                  </th>
+                  <th className="sortable" onClick={() => handleSort("items")}>
+                    <span className="sort-label">Items {getSortIndicator("items")}</span>
+                  </th>
+                  <th className="sortable" onClick={() => handleSort("total")}>
+                    <span className="sort-label">Total {getSortIndicator("total")}</span>
+                  </th>
+                  <th
+                    className="sortable"
+                    onClick={() => handleSort("stillToPay")}
+                  >
+                    <span className="sort-label">
+                      Still to Pay {getSortIndicator("stillToPay")}
+                    </span>
+                  </th>
+                  <th className="sortable" onClick={() => handleSort("status")}>
+                    <span className="sort-label">
+                      Status {getSortIndicator("status")}
+                    </span>
+                  </th>
                   <th>Notes</th>
                   <th>Actions</th>
                 </tr>
@@ -1315,65 +1014,53 @@ export default function Invoices() {
               <tbody>
                 {filteredInvoices.length > 0 ? (
                   filteredInvoices.map((invoice) => {
-                    const itemDetails = getInvoiceItemDetails(invoice.id);
+                    const customerName =
+                      customers.find(
+                        (customer) => customer.id === invoice.customerId
+                      )?.name || "Unknown Customer";
+
+                    const itemsLabel =
+                      (invoice.items?.length ?? 0) > 0
+                        ? (invoice.items ?? [])
+                            .map((item) => {
+                              const productName =
+                                products.find((p) => p.id === item.productId)
+                                  ?.name || "Unknown Product";
+                              return `${productName} × ${item.quantity}`;
+                            })
+                            .join(", ")
+                        : "—";
 
                     return (
                       <tr key={invoice.id}>
                         <td>{invoice.id}</td>
-                        <td>{invoice.customerName}</td>
-                        <td>{invoice.date}</td>
+                        <td>{customerName}</td>
+                        <td>{normalizeDateInput(invoice.date)}</td>
                         <td>
-                          <div className="invoice-items-preview">
-                            {itemDetails.slice(0, 2).map((item) => (
-                              <span key={item.id} className="invoice-item-chip">
-                                {item.productName} × {item.quantity}
-                              </span>
-                            ))}
-                            {itemDetails.length > 2 ? (
-                              <span style={{ fontSize: "12px", color: "#64748b" }}>
-                                +{itemDetails.length - 2} more
-                              </span>
-                            ) : null}
-                          </div>
+                          {(invoice.items?.length ?? 0) > 0 ? (
+                            <span className="item-badge">{itemsLabel}</span>
+                          ) : (
+                            "—"
+                          )}
                         </td>
-                        <td>${invoice.amount}</td>
-                        <td>
-                          <span
-                            className={
-                              invoice.status === "Paid"
-                                ? "remaining-paid"
-                                : invoice.status === "Partial"
-                                ? "remaining-partial"
-                                : "remaining-debit"
-                            }
-                          >
-                            ${invoice.remainingAmount}
-                          </span>
+                        <td>{formatMoney(Number(invoice.total || 0))}</td>
+                        <td className="still-pay">
+                          {formatMoney(Number(invoice.total || 0))}
                         </td>
                         <td>
-                          <span
-                            className={
-                              invoice.status === "Paid"
-                                ? "status-badge status-paid"
-                                : invoice.status === "Partial"
-                                ? "status-badge status-partial"
-                                : "status-badge status-debit"
-                            }
-                          >
-                            {invoice.status}
-                          </span>
+                          <span className="status-badge debit">Debit</span>
                         </td>
                         <td>
-                          {invoice.notes ? (
+                          {invoice.notes?.trim() ? (
                             <button
                               type="button"
-                              className="note-link-btn"
-                              onClick={() => openNoteModal(invoice)}
+                              className="table-btn edit"
+                              onClick={() => openNoteModal(invoice.notes)}
                             >
-                              View Note
+                              Note
                             </button>
                           ) : (
-                            <span style={{ color: "#94a3b8" }}>—</span>
+                            "—"
                           )}
                         </td>
                         <td>
@@ -1410,229 +1097,83 @@ export default function Invoices() {
         </div>
       </div>
 
-      {(showAddModal || showEditModal) && (
-        <div
-          className="modal-overlay"
-          onClick={showAddModal ? closeAddModal : closeEditModal}
-        >
-          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <div>
-                <h2>{showAddModal ? "Add Invoice" : "Edit Invoice"}</h2>
-                <p>
-                  {showAddModal
-                    ? "Create an invoice using real product lines."
-                    : "Update invoice details and product lines."}
-                </p>
-              </div>
-              <button
-                className="modal-close-btn"
-                onClick={showAddModal ? closeAddModal : closeEditModal}
-              >
-                ×
-              </button>
-            </div>
+      {showAddModal &&
+        renderInvoiceModal(
+          "add",
+          form,
+          setForm,
+          formErrors,
+          handleAddInvoice,
+          attemptCloseAddModal,
+          "Add Invoice",
+          "Create an invoice using real product lines."
+        )}
 
-            <form className="modal-form" onSubmit={(e) => e.preventDefault()}>
-              <div className="modal-grid">
-                <div>
-                  <label className="modal-label">Customer</label>
-                  <SearchableCustomerSelect
-                    value={form.customerId}
-                    options={customers}
-                    onChange={(value) => handleFormFieldChange("customerId", value)}
-                  />
-                  {errors.customerId && (
-                    <span className="field-error">{errors.customerId}</span>
-                  )}
-                </div>
+      {editingInvoice &&
+        renderInvoiceModal(
+          "edit",
+          editForm,
+          setEditForm,
+          editErrors,
+          handleSaveEdit,
+          attemptCloseEditModal,
+          "Edit Invoice",
+          "Update the selected invoice."
+        )}
 
-                <div>
-                  <label className="modal-label">Invoice Date</label>
-                  <input
-                    className="modal-input"
-                    type="date"
-                    value={form.date}
-                    onChange={(e) => handleFormFieldChange("date", e.target.value)}
-                  />
-                  {errors.date && <span className="field-error">{errors.date}</span>}
-                </div>
-
-                <div className="modal-grid-full">
-                  <label className="modal-label">Notes</label>
-                  <textarea
-                    className="modal-textarea"
-                    placeholder="Add invoice notes..."
-                    value={form.notes}
-                    onChange={(e) => handleFormFieldChange("notes", e.target.value)}
-                  />
-                </div>
-              </div>
-
-              <div className="invoice-items-block">
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    gap: "12px",
-                    marginBottom: "16px",
-                    flexWrap: "wrap",
-                  }}
-                >
-                  <div>
-                    <h3 style={{ margin: 0, color: "#0f172a" }}>Invoice Items</h3>
-                    <p style={{ margin: "6px 0 0", color: "#64748b", fontSize: "14px" }}>
-                      Add products, quantities, and prices for this invoice.
-                    </p>
-                  </div>
-
-                  <button
-                    type="button"
-                    className="invoice-add-line-btn"
-                    onClick={addItemRow}
-                  >
-                    + Add Product Line
-                  </button>
-                </div>
-
-                {errors.items && <span className="field-error">{errors.items}</span>}
-
-                {form.items.map((row) => (
-                  <ProductLineEditor
-                    key={row.id}
-                    row={row}
-                    products={products}
-                    onChange={handleItemChange}
-                    onRemove={removeItemRow}
-                    error={errors.rowErrors?.[row.id]}
-                    disableRemove={form.items.length === 1}
-                  />
-                ))}
-
-                <div className="invoice-total-box">
-                  <span style={{ color: "#1e3a8a", fontWeight: 700 }}>
-                    Current Invoice Total
-                  </span>
-                  <strong>${currentFormTotal.toFixed(2)}</strong>
-                </div>
-              </div>
-
-              <div className="modal-actions">
-                <button
-                  type="button"
-                  className="modal-secondary-btn"
-                  onClick={showAddModal ? closeAddModal : closeEditModal}
-                >
-                  Cancel
-                </button>
-
-                {showAddModal ? (
-                  <button
-                    type="button"
-                    className="modal-primary-btn"
-                    onClick={handleAddInvoice}
-                    disabled={currentFormTotal <= 0}
-                  >
-                    Save Invoice
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    className="modal-primary-btn"
-                    onClick={requestEditConfirmation}
-                    disabled={currentFormTotal <= 0}
-                  >
-                    Save Changes
-                  </button>
-                )}
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {showConfirmEditModal && (
-        <div className="modal-overlay" onClick={() => setShowConfirmEditModal(false)}>
-          <div className="modal-card small" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <div>
-                <h2>Confirm Changes</h2>
-                <p>Please confirm before applying invoice updates.</p>
-              </div>
-              <button
-                className="modal-close-btn"
-                onClick={() => setShowConfirmEditModal(false)}
-              >
-                ×
-              </button>
-            </div>
-
-            <div className="modal-content">
-              <p className="confirm-text">
-                Are you sure you want to save these changes to the invoice?
-              </p>
-
-              <div className="modal-actions">
-                <button
-                  type="button"
-                  className="modal-secondary-btn"
-                  onClick={() => setShowConfirmEditModal(false)}
-                >
-                  Back
-                </button>
-                <button
-                  type="button"
-                  className="modal-primary-btn"
-                  onClick={handleConfirmEdit}
-                >
-                  Confirm Update
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showDeleteModal && (
+      {deleteInvoice && (
         <div className="modal-overlay" onClick={closeDeleteModal}>
-          <div className="modal-card small" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <div>
                 <h2>Delete Invoice</h2>
                 <p>This action cannot be undone.</p>
               </div>
-              <button className="modal-close-btn" onClick={closeDeleteModal}>
+
+              <button
+                type="button"
+                className="modal-close-btn"
+                onClick={closeDeleteModal}
+              >
                 ×
               </button>
             </div>
 
-            <div className="modal-content">
-              <p className="danger-text">
-                You are about to permanently delete invoice {selectedInvoice?.id}.
+            <div className="modal-form">
+              <p className="delete-warning">
+                You are about to permanently delete invoice {deleteInvoice.id}
+              </p>
+              <p className="delete-help">
+                To confirm deletion, type exactly <strong>123</strong> below.
               </p>
 
-              <p className="confirm-text" style={{ marginBottom: 14 }}>
-                To confirm deletion, type exactly <strong>DELETE</strong> below.
-              </p>
+              <div style={{ marginTop: "16px" }}>
+                <input
+                  className="modal-input"
+                  type="text"
+                  placeholder="Type 123"
+                  value={deleteCode}
+                  onChange={(e) => {
+                    setDeleteCode(e.target.value);
+                    setDeleteError("");
+                  }}
+                />
+                {deleteError && <p className="field-error">{deleteError}</p>}
+              </div>
 
-              <input
-                className="modal-input"
-                type="text"
-                placeholder="Type DELETE"
-                value={deleteConfirmText}
-                onChange={(e) => setDeleteConfirmText(e.target.value)}
-              />
-
-              <div className="modal-actions">
-                <button type="button" className="modal-secondary-btn" onClick={closeDeleteModal}>
+              <div className="modal-actions" style={{ marginTop: "20px" }}>
+                <button
+                  type="button"
+                  className="modal-secondary-btn"
+                  onClick={closeDeleteModal}
+                >
                   Cancel
                 </button>
+
                 <button
                   type="button"
                   className="modal-danger-btn"
-                  onClick={handleDeleteInvoice}
-                  disabled={!deleteEnabled}
+                  onClick={confirmDeleteInvoice}
                 >
                   Delete
                 </button>
@@ -1642,53 +1183,64 @@ export default function Invoices() {
         </div>
       )}
 
-      {showNoteModal && (
+      {selectedNote !== null && (
         <div className="modal-overlay" onClick={closeNoteModal}>
-          <div className="modal-card note" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <div>
-                <h2>Invoice Details</h2>
-                <p>Review the note and product lines attached to this invoice.</p>
+                <h2>Invoice Note</h2>
+                <p>Invoice note details.</p>
               </div>
-              <button className="modal-close-btn" onClick={closeNoteModal}>
+
+              <button
+                type="button"
+                className="modal-close-btn"
+                onClick={closeNoteModal}
+              >
                 ×
               </button>
             </div>
 
-            <div className="modal-content">
-              <div style={{ marginBottom: "18px" }}>
-                <h4 style={{ margin: "0 0 10px", color: "#0f172a" }}>Notes</h4>
-                <p className="note-content">
-                  {selectedInvoice?.notes || "No note available."}
-                </p>
-              </div>
+            <div className="note-modal-body">
+              <p
+                className={`note-content ${
+                  isNoteExpanded ? "expanded" : "collapsed"
+                }`}
+              >
+                {displayedNote}
+              </p>
 
-              <div>
-                <h4 style={{ margin: "0 0 10px", color: "#0f172a" }}>Products</h4>
-                <div className="invoice-items-list">
-                  {selectedInvoice &&
-                    getInvoiceItemDetails(selectedInvoice.id).map((item) => (
-                      <div key={item.id} className="invoice-items-list-row">
-                        <span>
-                          {item.productName} × {item.quantity}
-                        </span>
-                        <strong>${item.total}</strong>
-                      </div>
-                    ))}
-                </div>
-              </div>
-
-              <div className="modal-actions">
-                <button type="button" className="modal-primary-btn" onClick={closeNoteModal}>
-                  Close
+              {shouldShowReadMore && (
+                <button
+                  type="button"
+                  className="read-more-btn"
+                  onClick={() => setIsNoteExpanded((prev) => !prev)}
+                >
+                  {isNoteExpanded ? "Read Less" : "Read More"}
                 </button>
-              </div>
+              )}
+            </div>
+
+            <div className="modal-actions">
+              <button
+                type="button"
+                className="modal-primary-btn"
+                onClick={closeNoteModal}
+              >
+                Close
+              </button>
             </div>
           </div>
         </div>
       )}
 
-      {toast.show && <div className="toast-message">{toast.message}</div>}
+      <ConfirmCloseModal
+        open={pendingCloseTarget !== null}
+        title="Unsaved Changes"
+        description="Please confirm before closing this form."
+        onKeepEditing={() => setPendingCloseTarget(null)}
+        onDiscard={discardPendingChanges}
+      />
     </>
   );
 }

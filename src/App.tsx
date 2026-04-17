@@ -13,6 +13,7 @@ import Invoices from "./pages/Invoices";
 import Payments from "./pages/Payments";
 import Employees from "./pages/Employees";
 import Settings from "./pages/Settings";
+import DataImport from "./pages/DataImport";
 
 function AppRoutes() {
   const { isAuthenticated } = useAuth();
@@ -39,6 +40,8 @@ function AppRoutes() {
           <Route path="/payments" element={<Payments />} />
           <Route path="/employees" element={<Employees />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/data-import" element={<DataImport />} />
+
         </Route>
       </Route>
 
