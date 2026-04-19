@@ -12,6 +12,10 @@ export function isSuccessfulPaymentStatus(status?: string) {
   return status === "Completed" || status === "Paid";
 }
 
+export function roundMoney(value: number) {
+  return Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;
+}
+
 export function getCustomerById(customers: Customer[], customerId: string) {
   return customers.find((customer) => customer.id === customerId);
 }
@@ -42,35 +46,45 @@ export function getSuccessfulPaymentsByInvoiceId(
   );
 }
 
+export function getInvoiceTotal(invoice: Invoice) {
+  return roundMoney(Number(invoice?.total ?? 0));
+}
+
 export function calculateInvoicePaidAmount(
   invoiceId: string,
   payments: Payment[]
 ) {
-  return getSuccessfulPaymentsByInvoiceId(payments, invoiceId).reduce(
+  const paid = getSuccessfulPaymentsByInvoiceId(payments, invoiceId).reduce(
     (sum, payment) => sum + Number(payment.amount || 0),
     0
   );
+
+  return roundMoney(paid);
 }
 
 export function calculateInvoiceRemainingAmount(
   invoice: Invoice,
   payments: Payment[]
 ) {
+  const total = getInvoiceTotal(invoice);
   const paid = calculateInvoicePaidAmount(invoice.id, payments);
-  return Math.max(Number(invoice.amount || 0) - paid, 0);
+  const remaining = total - paid;
+
+  return roundMoney(Math.max(remaining, 0));
 }
 
 export function calculateInvoiceStatus(
   invoice: Invoice,
   payments: Payment[]
 ): "Paid" | "Partial" | "Debit" {
-  const total = Number(invoice.amount || 0);
+  const total = getInvoiceTotal(invoice);
   const paid = calculateInvoicePaidAmount(invoice.id, payments);
-  const remaining = Math.max(total - paid, 0);
+  const remaining = calculateInvoiceRemainingAmount(invoice, payments);
 
-  if (remaining === 0) return "Paid";
-  if (paid > 0 && remaining > 0) return "Partial";
-  return "Debit";
+  if (total <= 0) return "Debit";
+  if (paid <= 0) return "Debit";
+  if (remaining <= 0) return "Paid";
+  return "Partial";
 }
 
 export function buildInvoicesWithRelations(
@@ -80,12 +94,19 @@ export function buildInvoicesWithRelations(
 ) {
   return invoices.map((invoice) => {
     const customer = getCustomerById(customers, invoice.customerId);
+    const total = getInvoiceTotal(invoice);
+    const paidAmount = Math.min(
+      calculateInvoicePaidAmount(invoice.id, payments),
+      total
+    );
     const remainingAmount = calculateInvoiceRemainingAmount(invoice, payments);
     const status = calculateInvoiceStatus(invoice, payments);
 
     return {
       ...invoice,
       customerName: customer?.name ?? "Unknown Customer",
+      total,
+      paidAmount,
       remainingAmount,
       status,
     };
@@ -139,7 +160,9 @@ export function calculateInvoiceTotalFromItems(
   invoiceId: string,
   invoiceItems: InvoiceItem[]
 ) {
-  return invoiceItems
-    .filter((item) => item.invoiceId === invoiceId)
-    .reduce((sum, item) => sum + Number(item.total || 0), 0);
+  return roundMoney(
+    invoiceItems
+      .filter((item) => item.invoiceId === invoiceId)
+      .reduce((sum, item) => sum + Number(item.total || 0), 0)
+  );
 }

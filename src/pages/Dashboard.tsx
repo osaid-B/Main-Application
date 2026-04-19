@@ -1,3 +1,6 @@
+import AISmartBrief from "../components/ai/AISmartBrief";
+import AIActionTrigger from "../components/ai/AIActionTrigger";
+import { useAI } from "../context/AIContext";
 import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
@@ -68,7 +71,7 @@ function MiniPageFrame({
 }: {
   title: string;
   badge: string;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <div className="mini-page-frame">
@@ -85,10 +88,12 @@ function MiniPageFrame({
       <div className="mini-page-header">
         <div>
           <h3>{title}</h3>
-          <p>Mini live interface preview</p>
+          <p>Live interface snapshot</p>
         </div>
 
-        <div className="mini-page-search" />
+        <div className="mini-page-search">
+          <span />
+        </div>
       </div>
 
       <div className="mini-page-content">{children}</div>
@@ -111,8 +116,27 @@ function MiniStat({
   );
 }
 
+function InsightCard({
+  label,
+  value,
+  meta,
+}: {
+  label: string;
+  value: string | number;
+  meta: string;
+}) {
+  return (
+    <div className="dashboard-summary-card">
+      <div className="dashboard-summary-label">{label}</div>
+      <div className="dashboard-summary-value">{value}</div>
+      <div className="dashboard-summary-meta">{meta}</div>
+    </div>
+  );
+}
+
 export default function Dashboard() {
   const navigate = useNavigate();
+  const { openAI } = useAI();
 
   const [customers] = useState<Customer[]>(() => getCustomers());
   const [products] = useState<Product[]>(() => getProducts());
@@ -127,6 +151,7 @@ export default function Dashboard() {
   const [activeNotification, setActiveNotification] =
     useState<DashboardNotification | null>(null);
   const [notificationCursor, setNotificationCursor] = useState(0);
+  const [isToastVisible, setIsToastVisible] = useState(false);
 
   const invoices = useMemo<ExtendedInvoice[]>(
     () => buildInvoicesWithRelations(invoicesRaw, customers, payments),
@@ -220,13 +245,13 @@ export default function Dashboard() {
         key: "customers",
         label: "Customers",
         path: "/customers",
-        description: "Mini preview of the customers page",
+        description: "Recent additions and customer activity snapshot.",
         render: () => (
-          <MiniPageFrame title="Customers" badge="Customers Page">
+          <MiniPageFrame title="Customers" badge="Customers">
             <div className="mini-stats-grid">
               <MiniStat label="Total" value={customers.length} />
-              <MiniStat label="Recent" value={recentCustomers.length} />
-              <MiniStat label="Employees" value={employees.length} />
+              <MiniStat label="New" value={recentCustomers.length} />
+              <MiniStat label="Team" value={employees.length} />
             </div>
 
             <div className="mini-table">
@@ -251,9 +276,9 @@ export default function Dashboard() {
         key: "invoices",
         label: "Invoices",
         path: "/invoices",
-        description: "Mini preview of the invoices page",
+        description: "Outstanding balances and current invoice status.",
         render: () => (
-          <MiniPageFrame title="Invoices" badge="Invoices Page">
+          <MiniPageFrame title="Invoices" badge="Invoices">
             <div className="mini-stats-grid">
               <MiniStat label="Total" value={invoices.length} />
               <MiniStat label="Debit" value={debitInvoices.length} />
@@ -282,19 +307,13 @@ export default function Dashboard() {
         key: "payments",
         label: "Payments",
         path: "/payments",
-        description: "Mini preview of the payments page",
+        description: "Revenue movement and recent payment records.",
         render: () => (
-          <MiniPageFrame title="Payments" badge="Payments Page">
+          <MiniPageFrame title="Payments" badge="Payments">
             <div className="mini-stats-grid">
               <MiniStat label="Total" value={payments.length} />
-              <MiniStat
-                label="Revenue"
-                value={formatMoney(completedPaymentsTotal)}
-              />
-              <MiniStat
-                label="Recent"
-                value={recentPayments.length}
-              />
+              <MiniStat label="Revenue" value={formatMoney(completedPaymentsTotal)} />
+              <MiniStat label="Recent" value={recentPayments.length} />
             </div>
 
             <div className="mini-table">
@@ -319,9 +338,9 @@ export default function Dashboard() {
         key: "products",
         label: "Products",
         path: "/products",
-        description: "Mini preview of the products page",
+        description: "Stock visibility and quick product health check.",
         render: () => (
-          <MiniPageFrame title="Products" badge="Products Page">
+          <MiniPageFrame title="Products" badge="Products">
             <div className="mini-stats-grid">
               <MiniStat label="Products" value={products.length} />
               <MiniStat label="Low Stock" value={lowStockProducts.length} />
@@ -356,11 +375,11 @@ export default function Dashboard() {
         key: "purchases",
         label: "Purchases",
         path: "/purchases",
-        description: "Mini preview of the purchases page",
+        description: "Purchase flow, received records, and cost snapshot.",
         render: () => (
-          <MiniPageFrame title="Purchases" badge="Purchases Page">
+          <MiniPageFrame title="Purchases" badge="Purchases">
             <div className="mini-stats-grid">
-              <MiniStat label="Purchases" value={purchases.length} />
+              <MiniStat label="Total" value={purchases.length} />
               <MiniStat label="Cost" value={formatMoney(purchasesTotal)} />
               <MiniStat
                 label="Received"
@@ -411,7 +430,7 @@ export default function Dashboard() {
 
     const interval = window.setInterval(() => {
       setPreviewIndex((prev) => (prev + 1) % previewSections.length);
-    }, 3500);
+    }, 4200);
 
     return () => window.clearInterval(interval);
   }, [previewSections.length]);
@@ -419,64 +438,62 @@ export default function Dashboard() {
   const notifications = useMemo<DashboardNotification[]>(() => {
     const items: DashboardNotification[] = [];
 
-    lowStockProducts.forEach((product) => {
+    lowStockProducts.slice(0, 2).forEach((product) => {
       items.push({
         id: `low-${product.id}`,
-        title: "Low stock warning",
-        description: `${product.name} is running low and may need a refill soon.`,
+        title: "Low stock",
+        description: `${product.name} is close to the warning level.`,
         path: "/products",
         tone: "warning",
       });
     });
 
-    outOfStockProducts.forEach((product) => {
+    outOfStockProducts.slice(0, 1).forEach((product) => {
       items.push({
         id: `out-${product.id}`,
         title: "Out of stock",
-        description: `${product.name} is currently out of stock.`,
+        description: `${product.name} is unavailable right now.`,
         path: "/products",
         tone: "danger",
       });
     });
 
-    recentCustomers.forEach((customer) => {
-      items.push({
-        id: `customer-${customer.id}`,
-        title: "New customer added",
-        description: `${customer.name} was recently added to the customer list.`,
-        path: "/customers",
-        tone: "success",
-      });
-    });
-
-    recentInvoices.slice(0, 3).forEach((invoice) => {
+    recentInvoices.slice(0, 2).forEach((invoice) => {
       items.push({
         id: `invoice-${invoice.id}`,
-        title: "Recent invoice activity",
-        description: `${invoice.id} for ${invoice.customerName} is currently ${invoice.status}.`,
+        title: "Invoice update",
+        description: `${invoice.id} is currently ${invoice.status}.`,
         path: "/invoices",
         tone: invoice.status === "Debit" ? "danger" : "info",
       });
     });
 
     return items;
-  }, [lowStockProducts, outOfStockProducts, recentCustomers, recentInvoices]);
+  }, [lowStockProducts, outOfStockProducts, recentInvoices]);
 
   useEffect(() => {
     if (notificationsPaused || notifications.length === 0) {
       setActiveNotification(null);
+      setIsToastVisible(false);
       return;
     }
 
-    setActiveNotification(
-      notifications[notificationCursor % notifications.length]
-    );
+    const current = notifications[notificationCursor % notifications.length];
+    setActiveNotification(current);
+    setIsToastVisible(true);
 
-    const interval = window.setInterval(() => {
+    const hideTimer = window.setTimeout(() => {
+      setIsToastVisible(false);
+    }, 3200);
+
+    const nextTimer = window.setTimeout(() => {
       setNotificationCursor((prev) => prev + 1);
-    }, 4500);
+    }, 4700);
 
-    return () => window.clearInterval(interval);
+    return () => {
+      window.clearTimeout(hideTimer);
+      window.clearTimeout(nextTimer);
+    };
   }, [notificationCursor, notifications, notificationsPaused]);
 
   useEffect(() => {
@@ -490,33 +507,73 @@ export default function Dashboard() {
   const dashboardSummary = useMemo(
     () => [
       {
-        label: "Current Revenue",
+        label: "Revenue",
         value: formatMoney(completedPaymentsTotal),
-        meta: "Based on completed payments",
+        meta: "Completed payment records",
       },
       {
-        label: "Purchase Cost",
-        value: formatMoney(purchasesTotal),
-        meta: "Received purchase records only",
-      },
-      {
-        label: "Pending Collections",
+        label: "Collections",
         value: debitInvoices.length + partialInvoices.length,
-        meta: "Debit and partial invoices",
+        meta: "Pending customer follow-up",
       },
       {
-        label: "Employees",
-        value: employees.length,
-        meta: "Registered staff members",
+        label: "Stock Alerts",
+        value: lowStockProducts.length + outOfStockProducts.length,
+        meta: "Low and out-of-stock products",
       },
     ],
     [
       completedPaymentsTotal,
-      purchasesTotal,
       debitInvoices.length,
       partialInvoices.length,
-      employees.length,
+      lowStockProducts.length,
+      outOfStockProducts.length,
     ]
+  );
+
+  const quickInsights = useMemo(
+    () => [
+      {
+        title: "Invoices to review",
+        value: debitInvoices.length,
+        hint: "Debit invoices still unpaid",
+      },
+      {
+        title: "New customers",
+        value: recentCustomers.length,
+        hint: "Added in the last 14 days",
+      },
+      {
+        title: "Team size",
+        value: employees.length,
+        hint: "Registered active staff",
+      },
+    ],
+    [debitInvoices.length, recentCustomers.length, employees.length]
+  );
+
+  const smartBriefItems = useMemo(
+    () => [
+      {
+        id: "attention",
+        label: "Attention",
+        value: `${debitInvoices.length} invoices need review`,
+        prompt: "حلل الفواتير التي تحتاج مراجعة الآن واعطني أهم الأولويات",
+      },
+      {
+        id: "opportunity",
+        label: "Opportunity",
+        value: `${recentCustomers.length} new customers joined recently`,
+        prompt: "حلل العملاء الجدد مؤخرًا وما الفرص المحتملة معهم",
+      },
+      {
+        id: "action",
+        label: "Recommended Action",
+        value: "Open AI Copilot for a deeper operational summary",
+        prompt: "اعطني ملخصًا تشغيليًا ذكيًا للوحة التحكم الحالية",
+      },
+    ],
+    [debitInvoices.length, recentCustomers.length]
   );
 
   return (
@@ -532,13 +589,13 @@ export default function Dashboard() {
           position: relative;
           overflow: hidden;
           border-radius: 28px;
-          padding: 32px;
+          padding: 34px;
           background:
-            linear-gradient(135deg, rgba(15, 23, 42, 0.82), rgba(37, 99, 235, 0.68)),
+            linear-gradient(135deg, rgba(15, 23, 42, 0.78), rgba(37, 99, 235, 0.68)),
             url("https://images.unsplash.com/photo-1556740749-887f6717d7e4?auto=format&fit=crop&w=1600&q=80")
               center/cover no-repeat;
           color: white;
-          box-shadow: 0 24px 60px rgba(15, 23, 42, 0.18);
+          box-shadow: 0 24px 60px rgba(15, 23, 42, 0.16);
         }
 
         .dashboard-hero::after {
@@ -560,7 +617,7 @@ export default function Dashboard() {
         }
 
         .dashboard-hero-text {
-          max-width: 700px;
+          max-width: 760px;
         }
 
         .dashboard-hero-badge {
@@ -578,24 +635,25 @@ export default function Dashboard() {
 
         .dashboard-hero-title {
           margin: 0;
-          font-size: 44px;
-          line-height: 1.05;
+          font-size: 46px;
+          line-height: 1.04;
           font-weight: 800;
+          letter-spacing: -0.03em;
         }
 
         .dashboard-hero-subtitle {
           margin: 14px 0 0;
           font-size: 16px;
           line-height: 1.8;
-          color: rgba(255,255,255,0.9);
-          max-width: 620px;
+          color: rgba(255,255,255,0.92);
+          max-width: 660px;
         }
 
         .dashboard-hero-actions {
           display: flex;
           gap: 12px;
           flex-wrap: wrap;
-          margin-top: 22px;
+          margin-top: 24px;
         }
 
         .dashboard-hero-btn {
@@ -629,7 +687,7 @@ export default function Dashboard() {
 
         .dashboard-main-grid {
           display: grid;
-          grid-template-columns: 1.5fr 0.9fr;
+          grid-template-columns: 1.45fr 0.82fr;
           gap: 24px;
         }
 
@@ -646,6 +704,7 @@ export default function Dashboard() {
           font-size: 26px;
           font-weight: 800;
           color: #0f172a;
+          letter-spacing: -0.02em;
         }
 
         .dashboard-panel-subtitle {
@@ -678,10 +737,20 @@ export default function Dashboard() {
         .dashboard-preview-body {
           border: 1px solid #dbeafe;
           background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
-          border-radius: 20px;
+          border-radius: 22px;
           padding: 18px;
-          min-height: 340px;
+          min-height: 350px;
           transition: all 0.28s ease;
+          position: relative;
+          overflow: hidden;
+        }
+
+        .dashboard-preview-body::before {
+          content: "";
+          position: absolute;
+          inset: 0;
+          background: radial-gradient(circle at top right, rgba(37,99,235,0.06), transparent 32%);
+          pointer-events: none;
         }
 
         .dashboard-preview-footer {
@@ -701,6 +770,12 @@ export default function Dashboard() {
           border-radius: 12px;
           font-weight: 700;
           cursor: pointer;
+          transition: all 0.2s ease;
+        }
+
+        .dashboard-link-btn:hover {
+          transform: translateY(-1px);
+          background: #bfdbfe;
         }
 
         .dashboard-preview-dots {
@@ -749,7 +824,7 @@ export default function Dashboard() {
         .dashboard-summary-value {
           margin-top: 10px;
           color: #0f172a;
-          font-size: 28px;
+          font-size: 30px;
           font-weight: 800;
         }
 
@@ -759,41 +834,90 @@ export default function Dashboard() {
           font-size: 13px;
         }
 
-        .dashboard-empty-inline {
-          color: #94a3b8;
+        .dashboard-insights-list {
+          margin-top: 16px;
+          display: grid;
+          gap: 10px;
+        }
+
+        .dashboard-insight-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 12px;
+          border: 1px solid #e2e8f0;
+          border-radius: 16px;
+          padding: 12px 14px;
+          background: #fbfdff;
+        }
+
+        .dashboard-insight-title {
+          color: #0f172a;
           font-size: 14px;
-          padding: 10px 0;
+          font-weight: 700;
+        }
+
+        .dashboard-insight-hint {
+          margin-top: 4px;
+          color: #94a3b8;
+          font-size: 12px;
+        }
+
+        .dashboard-insight-value {
+          color: #1d4ed8;
+          font-size: 22px;
+          font-weight: 800;
+          flex-shrink: 0;
+        }
+
+        .dashboard-ai-actions {
+          display: flex;
+          gap: 10px;
+          flex-wrap: wrap;
+          margin-top: 16px;
         }
 
         .dashboard-notification {
           position: fixed;
           right: 22px;
-          top: 22px;
-          width: min(380px, calc(100vw - 32px));
-          background: white;
+          bottom: 20px;
+          width: min(340px, calc(100vw - 28px));
+          background: rgba(255,255,255,0.95);
+          backdrop-filter: blur(14px);
           border: 1px solid #e2e8f0;
           border-radius: 18px;
-          box-shadow: 0 22px 42px rgba(15, 23, 42, 0.16);
-          padding: 16px;
+          box-shadow: 0 22px 42px rgba(15, 23, 42, 0.12);
+          padding: 14px 14px 13px;
           z-index: 1200;
-          animation: dashboardSlideIn 0.35s ease;
-          cursor: pointer;
+          transition: transform 0.35s ease, opacity 0.35s ease;
+        }
+
+        .dashboard-notification.visible {
+          opacity: 1;
+          transform: translateY(0);
+          pointer-events: auto;
+        }
+
+        .dashboard-notification.hidden {
+          opacity: 0;
+          transform: translateY(18px);
+          pointer-events: none;
         }
 
         .dashboard-notification.info {
-          border-left: 5px solid #3b82f6;
+          border-left: 4px solid #3b82f6;
         }
 
         .dashboard-notification.warning {
-          border-left: 5px solid #f59e0b;
+          border-left: 4px solid #f59e0b;
         }
 
         .dashboard-notification.success {
-          border-left: 5px solid #22c55e;
+          border-left: 4px solid #22c55e;
         }
 
         .dashboard-notification.danger {
-          border-left: 5px solid #ef4444;
+          border-left: 4px solid #ef4444;
         }
 
         .dashboard-notification-head {
@@ -805,64 +929,64 @@ export default function Dashboard() {
 
         .dashboard-notification-title {
           margin: 0;
-          font-size: 15px;
+          font-size: 14px;
           font-weight: 800;
           color: #0f172a;
         }
 
         .dashboard-notification-text {
-          margin: 8px 0 0;
+          margin: 6px 0 0;
           color: #64748b;
-          font-size: 14px;
-          line-height: 1.7;
+          font-size: 13px;
+          line-height: 1.65;
         }
 
-        .dashboard-notification-actions {
-          display: flex;
-          justify-content: space-between;
-          gap: 10px;
-          align-items: center;
-          margin-top: 14px;
-        }
-
-        .dashboard-mini-btn {
+        .dashboard-notification-link {
+          margin-top: 10px;
           border: none;
-          border-radius: 10px;
-          padding: 9px 12px;
-          font-size: 12px;
+          background: transparent;
+          padding: 0;
+          color: #2563eb;
+          font-size: 13px;
           font-weight: 700;
           cursor: pointer;
         }
 
-        .dashboard-mini-btn.primary {
-          background: #dbeafe;
-          color: #1d4ed8;
-        }
-
-        .dashboard-mini-btn.secondary {
+        .dashboard-toast-close {
+          border: none;
           background: #f1f5f9;
           color: #475569;
-        }
-
-        .dashboard-notification-toggle {
-          border: none;
-          border-radius: 12px;
-          padding: 10px 14px;
-          background: #eff6ff;
-          color: #1d4ed8;
-          font-weight: 700;
+          width: 34px;
+          height: 34px;
+          border-radius: 10px;
           cursor: pointer;
+          flex-shrink: 0;
+          font-weight: 800;
         }
 
         .mini-page-frame {
           height: 100%;
           border: 1px solid #dbeafe;
-          border-radius: 20px;
+          border-radius: 22px;
           background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
           padding: 16px;
           display: flex;
           flex-direction: column;
           gap: 14px;
+          position: relative;
+          overflow: hidden;
+        }
+
+        .mini-page-frame::after {
+          content: "";
+          position: absolute;
+          right: -40px;
+          top: -40px;
+          width: 130px;
+          height: 130px;
+          border-radius: 999px;
+          background: rgba(37,99,235,0.05);
+          pointer-events: none;
         }
 
         .mini-page-topbar {
@@ -915,18 +1039,31 @@ export default function Dashboard() {
         }
 
         .mini-page-search {
-          width: 120px;
-          height: 34px;
-          border-radius: 12px;
+          width: 126px;
+          height: 38px;
+          border-radius: 14px;
           border: 1px solid #dbeafe;
           background: #f8fafc;
           flex-shrink: 0;
+          display: flex;
+          align-items: center;
+          padding: 0 12px;
+        }
+
+        .mini-page-search span {
+          display: block;
+          width: 58px;
+          height: 8px;
+          border-radius: 999px;
+          background: #dbeafe;
         }
 
         .mini-page-content {
           display: flex;
           flex-direction: column;
           gap: 12px;
+          position: relative;
+          z-index: 1;
         }
 
         .mini-stats-grid {
@@ -938,12 +1075,13 @@ export default function Dashboard() {
         .mini-stat {
           border: 1px solid #e2e8f0;
           background: white;
-          border-radius: 14px;
+          border-radius: 15px;
           padding: 10px;
           display: flex;
           flex-direction: column;
           gap: 6px;
-          min-height: 72px;
+          min-height: 74px;
+          box-shadow: 0 8px 16px rgba(15, 23, 42, 0.03);
         }
 
         .mini-stat span {
@@ -988,6 +1126,11 @@ export default function Dashboard() {
 
         .mini-table-row {
           border-bottom: 1px solid #f1f5f9;
+          transition: background 0.18s ease;
+        }
+
+        .mini-table-row:hover {
+          background: #fbfdff;
         }
 
         .mini-table-row:last-child {
@@ -1000,17 +1143,6 @@ export default function Dashboard() {
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
-        }
-
-        @keyframes dashboardSlideIn {
-          from {
-            opacity: 0;
-            transform: translateX(24px);
-          }
-          to {
-            opacity: 1;
-            transform: translateX(0);
-          }
         }
 
         @media (max-width: 1100px) {
@@ -1034,18 +1166,15 @@ export default function Dashboard() {
           }
 
           .dashboard-hero-btn,
-          .dashboard-link-btn,
-          .dashboard-notification-toggle {
+          .dashboard-link-btn {
             width: 100%;
           }
 
-          .dashboard-notification-actions {
-            flex-direction: column;
-            align-items: stretch;
-          }
-
-          .dashboard-mini-btn {
-            width: 100%;
+          .dashboard-notification {
+            right: 14px;
+            left: 14px;
+            width: auto;
+            bottom: 14px;
           }
 
           .mini-page-header {
@@ -1070,8 +1199,8 @@ export default function Dashboard() {
               <span className="dashboard-hero-badge">Business Control Center</span>
               <h1 className="dashboard-hero-title">Dashboard Overview</h1>
               <p className="dashboard-hero-subtitle">
-                A focused executive dashboard with live page previews, current revenue,
-                purchase cost, invoice collection status, and smart visual alerts.
+                A cleaner executive dashboard with live previews, better signal-focused
+                alerts, and a faster snapshot of revenue, invoices, stock, and team activity.
               </p>
 
               <div className="dashboard-hero-actions">
@@ -1098,13 +1227,16 @@ export default function Dashboard() {
           </div>
         </section>
 
+        <AISmartBrief
+          items={smartBriefItems}
+          onOpenCopilot={(prompt) => openAI({ prompt })}
+        />
+
         <section className="dashboard-main-grid">
           <div className="dashboard-panel">
             <div className="dashboard-preview-head">
               <div>
-                <span className="dashboard-preview-chip">
-                  Live Page Preview
-                </span>
+                <span className="dashboard-preview-chip">Live Page Preview</span>
                 <h2 className="dashboard-panel-title">{currentPreview.label}</h2>
                 <p className="dashboard-panel-subtitle">
                   {currentPreview.description}
@@ -1138,38 +1270,60 @@ export default function Dashboard() {
           </div>
 
           <div className="dashboard-panel">
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                gap: "12px",
-                flexWrap: "wrap",
-                marginBottom: "18px",
-              }}
-            >
-              <div>
-                <span className="dashboard-preview-chip">Financial Snapshot</span>
-                <h2 className="dashboard-panel-title">Key Totals</h2>
-                <p className="dashboard-panel-subtitle">
-                  Current revenue, cost, collections, and team snapshot.
-                </p>
-              </div>
-
-              <button
-                className="dashboard-notification-toggle"
-                onClick={() => setNotificationsPaused((prev) => !prev)}
-              >
-                {notificationsPaused ? "Alerts Off" : "Alerts On"}
-              </button>
+            <div style={{ marginBottom: "18px" }}>
+              <span className="dashboard-preview-chip">Business Snapshot</span>
+              <h2 className="dashboard-panel-title">Key Totals</h2>
+              <p className="dashboard-panel-subtitle">
+                A lighter summary with the most important numbers only.
+              </p>
             </div>
 
             <div className="dashboard-summary-grid">
               {dashboardSummary.map((item) => (
-                <div key={item.label} className="dashboard-summary-card">
-                  <div className="dashboard-summary-label">{item.label}</div>
-                  <div className="dashboard-summary-value">{item.value}</div>
-                  <div className="dashboard-summary-meta">{item.meta}</div>
+                <InsightCard
+                  key={item.label}
+                  label={item.label}
+                  value={item.value}
+                  meta={item.meta}
+                />
+              ))}
+            </div>
+
+            <div className="dashboard-ai-actions">
+              <AIActionTrigger
+                label="Explain Revenue"
+                onClick={() =>
+                  openAI({
+                    prompt: "اشرح لي رقم الإيرادات الحالي وما الذي يؤثر عليه",
+                  })
+                }
+              />
+              <AIActionTrigger
+                label="Review Collections"
+                onClick={() =>
+                  openAI({
+                    prompt: "حلل التحصيلات الحالية وما الفواتير التي تحتاج متابعة",
+                  })
+                }
+              />
+              <AIActionTrigger
+                label="Check Stock Alerts"
+                onClick={() =>
+                  openAI({
+                    prompt: "حلل تنبيهات المخزون الحالية وما الإجراء المقترح",
+                  })
+                }
+              />
+            </div>
+
+            <div className="dashboard-insights-list">
+              {quickInsights.map((item) => (
+                <div key={item.title} className="dashboard-insight-row">
+                  <div>
+                    <div className="dashboard-insight-title">{item.title}</div>
+                    <div className="dashboard-insight-hint">{item.hint}</div>
+                  </div>
+                  <div className="dashboard-insight-value">{item.value}</div>
                 </div>
               ))}
             </div>
@@ -1179,8 +1333,9 @@ export default function Dashboard() {
 
       {activeNotification && !notificationsPaused && (
         <div
-          className={`dashboard-notification ${activeNotification.tone}`}
-          onClick={() => navigate(activeNotification.path)}
+          className={`dashboard-notification ${activeNotification.tone} ${
+            isToastVisible ? "visible" : "hidden"
+          }`}
         >
           <div className="dashboard-notification-head">
             <div>
@@ -1190,42 +1345,24 @@ export default function Dashboard() {
               <p className="dashboard-notification-text">
                 {activeNotification.description}
               </p>
+              <button
+                type="button"
+                className="dashboard-notification-link"
+                onClick={() => navigate(activeNotification.path)}
+              >
+                Open page
+              </button>
             </div>
 
             <button
               type="button"
-              className="dashboard-mini-btn secondary"
-              onClick={(e) => {
-                e.stopPropagation();
+              className="dashboard-toast-close"
+              onClick={() => {
+                setIsToastVisible(false);
                 setActiveNotification(null);
               }}
             >
-              Close
-            </button>
-          </div>
-
-          <div className="dashboard-notification-actions">
-            <button
-              type="button"
-              className="dashboard-mini-btn primary"
-              onClick={(e) => {
-                e.stopPropagation();
-                navigate(activeNotification.path);
-              }}
-            >
-              Open Page
-            </button>
-
-            <button
-              type="button"
-              className="dashboard-mini-btn secondary"
-              onClick={(e) => {
-                e.stopPropagation();
-                setNotificationsPaused(true);
-                setActiveNotification(null);
-              }}
-            >
-              Stop Alerts
+              ×
             </button>
           </div>
         </div>

@@ -14,7 +14,18 @@ import {
 import type { Customer, Invoice, Payment, PaymentMethod } from "../data/types";
 import { useSettings } from "../context/SettingsContext";
 
-type LocalPaymentStatus = "Completed" | "Pending";
+type LocalPaymentStatus = "Completed";
+
+type SortKey =
+  | "paymentId"
+  | "invoiceNumber"
+  | "customerName"
+  | "amount"
+  | "method"
+  | "status"
+  | "date";
+
+type SortDirection = "asc" | "desc";
 
 type ExtendedPayment = Payment & {
   paymentId: string;
@@ -28,22 +39,18 @@ type ExtendedPayment = Payment & {
 };
 
 type PaymentForm = {
-  paymentId: string;
   invoiceId: string;
   customerId: string;
   amount: string;
-  status: LocalPaymentStatus;
   method: PaymentMethod;
   date: string;
   notes: string;
 };
 
 type PaymentFormErrors = {
-  paymentId?: string;
   invoiceId?: string;
   customerId?: string;
   amount?: string;
-  status?: string;
   method?: string;
   date?: string;
 };
@@ -65,15 +72,21 @@ type ConfirmDialogState =
   | null;
 
 const EMPTY_FORM: PaymentForm = {
-  paymentId: "",
   invoiceId: "",
   customerId: "",
   amount: "",
-  status: "Completed",
   method: "Cash",
   date: new Date().toISOString().split("T")[0],
   notes: "",
 };
+
+function buildPaymentId(index: number) {
+  return `PAY-${1000 + index + 1}`;
+}
+
+function roundMoney(value: number) {
+  return Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;
+}
 
 function normalizePayment(
   payment: Payment,
@@ -87,11 +100,11 @@ function normalizePayment(
 
   return {
     ...payment,
-    paymentId: payment.paymentId ?? payment.id ?? `PAY-${1000 + index + 1}`,
+    paymentId: payment.paymentId ?? payment.id ?? buildPaymentId(index),
     invoiceNumber: invoice?.id ?? payment.invoiceId,
     customerName: customer?.name ?? unknownCustomer,
-    amount: Number(payment.amount ?? 0),
-    status: payment.status === "Pending" ? "Pending" : "Completed",
+    amount: roundMoney(Number(payment.amount ?? 0)),
+    status: "Completed",
     method:
       payment.method === "Card" || payment.method === "Bank Transfer"
         ? payment.method
@@ -122,7 +135,7 @@ function calculateRemainingForEditing(
       payment.id !== editingPaymentId && payment.paymentId !== editingPaymentId
   );
 
-  return calculateInvoiceRemainingAmount(invoice, filteredPayments);
+  return roundMoney(calculateInvoiceRemainingAmount(invoice, filteredPayments));
 }
 
 function translatePaymentStatus(status: string, t: any) {
@@ -131,8 +144,6 @@ function translatePaymentStatus(status: string, t: any) {
       return t.status.paid;
     case "Completed":
       return t.status.completed;
-    case "Pending":
-      return t.status.pending;
     default:
       return status;
   }
@@ -160,10 +171,6 @@ function validatePaymentForm(
 ): PaymentFormErrors {
   const errors: PaymentFormErrors = {};
 
-  if (!values.paymentId.trim()) {
-    errors.paymentId = t.payments.paymentIdRequired;
-  }
-
   if (!values.invoiceId.trim()) {
     errors.invoiceId = t.payments.invoiceRequired;
   }
@@ -174,6 +181,7 @@ function validatePaymentForm(
 
   if (!selectedInvoice) {
     errors.invoiceId = t.payments.invoiceInvalid;
+    return errors;
   }
 
   if (!values.customerId.trim()) {
@@ -196,22 +204,17 @@ function validatePaymentForm(
     errors.method = t.payments.methodRequired;
   }
 
-  if (
-    selectedInvoice &&
-    values.amount !== "" &&
-    !Number.isNaN(Number(values.amount))
-  ) {
+  if (values.amount !== "" && !Number.isNaN(Number(values.amount))) {
     const remainingAmount = calculateRemainingForEditing(
       selectedInvoice,
       payments,
       editingPaymentId
     );
 
-    if (
-      values.status === "Completed" &&
-      Number(values.amount) > remainingAmount
-    ) {
-      errors.amount = `${t.payments.remainingBalance}: ${remainingAmount}`;
+    if (remainingAmount <= 0) {
+      errors.amount = "This invoice is already fully paid.";
+    } else if (Number(values.amount) > remainingAmount) {
+      errors.amount = `Remaining invoice balance: ${remainingAmount}`;
     }
   }
 
@@ -261,6 +264,8 @@ function PaymentFormModal({
     ? calculateRemainingForEditing(selectedInvoice, payments, editingPaymentId)
     : 0;
 
+  const isInvoiceFullyPaid = !!selectedInvoice && remainingAmount <= 0;
+
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div
@@ -283,24 +288,10 @@ function PaymentFormModal({
           className="modal-form"
           onSubmit={(e) => {
             e.preventDefault();
-            onSubmit();
+            if (!isInvoiceFullyPaid) onSubmit();
           }}
         >
           <div className="modal-grid">
-            <div>
-              <label className="modal-label">{t.payments.paymentId}</label>
-              <input
-                className="modal-input"
-                type="text"
-                value={values.paymentId}
-                onChange={(e) => onChange("paymentId", e.target.value)}
-                placeholder={t.payments.enterPaymentId}
-              />
-              {errors.paymentId && (
-                <p className="field-error">{errors.paymentId}</p>
-              )}
-            </div>
-
             <div>
               <label className="modal-label">{t.common.invoice}</label>
               <select
@@ -310,6 +301,7 @@ function PaymentFormModal({
                   const invoice = invoices.find((inv) => inv.id === e.target.value);
                   onChange("invoiceId", e.target.value);
                   onChange("customerId", invoice?.customerId ?? "");
+                  onChange("amount", "");
                 }}
               >
                 <option value="">{t.payments.selectInvoice}</option>
@@ -349,37 +341,33 @@ function PaymentFormModal({
                 type="number"
                 min="0.01"
                 step="0.01"
+                max={remainingAmount > 0 ? remainingAmount : undefined}
                 value={values.amount}
                 onChange={(e) => onChange("amount", e.target.value)}
                 placeholder={t.payments.enterAmount}
+                disabled={isInvoiceFullyPaid}
               />
+
               {selectedInvoice ? (
                 <p
                   style={{
                     marginTop: "6px",
                     fontSize: "12px",
-                    color: "#64748b",
+                    color: remainingAmount <= 0 ? "#dc2626" : "#64748b",
                     fontWeight: 600,
                   }}
                 >
-                  {t.payments.remainingBalance}: ${remainingAmount}
+                  Remaining invoice balance: ${remainingAmount}
                 </p>
               ) : null}
-              {errors.amount && <p className="field-error">{errors.amount}</p>}
-            </div>
 
-            <div>
-              <label className="modal-label">{t.common.status}</label>
-              <select
-                className="modal-input"
-                value={values.status}
-                onChange={(e) =>
-                  onChange("status", e.target.value as LocalPaymentStatus)
-                }
-              >
-                <option value="Completed">{t.payments.completed}</option>
-                <option value="Pending">{t.payments.pending}</option>
-              </select>
+              {isInvoiceFullyPaid && (
+                <p className="field-error">
+                  This invoice is already fully paid. Choose another invoice.
+                </p>
+              )}
+
+              {errors.amount && <p className="field-error">{errors.amount}</p>}
             </div>
 
             <div>
@@ -396,6 +384,16 @@ function PaymentFormModal({
                 <option value="Bank Transfer">{t.payments.bankTransfer}</option>
               </select>
               {errors.method && <p className="field-error">{errors.method}</p>}
+            </div>
+
+            <div>
+              <label className="modal-label">Payment Status</label>
+              <input
+                className="modal-input"
+                type="text"
+                value="Completed"
+                readOnly
+              />
             </div>
 
             <div>
@@ -430,7 +428,11 @@ function PaymentFormModal({
               {t.common.cancel}
             </button>
 
-            <button type="submit" className="modal-primary-btn">
+            <button
+              type="submit"
+              className="modal-primary-btn"
+              disabled={isInvoiceFullyPaid}
+            >
               {submitLabel}
             </button>
           </div>
@@ -505,7 +507,7 @@ export default function Payments() {
   const { t, isArabic } = useSettings();
 
   const [customers] = useState<Customer[]>(() => getCustomers());
-  const [invoices] = useState<Invoice[]>(() => getInvoices());
+  const [invoices, setInvoices] = useState<Invoice[]>(() => getInvoices());
   const [payments, setPayments] = useState<ExtendedPayment[]>(() =>
     normalizePaymentList(
       getPayments(),
@@ -516,6 +518,13 @@ export default function Payments() {
   );
 
   const [searchTerm, setSearchTerm] = useState("");
+  const [sortConfig, setSortConfig] = useState<{
+    key: SortKey;
+    direction: SortDirection;
+  }>({
+    key: "date",
+    direction: "desc",
+  });
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [addForm, setAddForm] = useState<PaymentForm>(EMPTY_FORM);
@@ -529,14 +538,30 @@ export default function Payments() {
   const [toast, setToast] = useState<ToastState>(null);
 
   useEffect(() => {
-    setPayments(
-      normalizePaymentList(
-        getPayments(),
-        getInvoices(),
-        getCustomers(),
-        t.payments.unknownCustomer
-      )
-    );
+    const syncData = () => {
+      const latestInvoices = getInvoices();
+      const latestCustomers = getCustomers();
+      const latestPayments = getPayments();
+
+      setInvoices(latestInvoices);
+      setPayments(
+        normalizePaymentList(
+          latestPayments,
+          latestInvoices,
+          latestCustomers,
+          t.payments.unknownCustomer
+        )
+      );
+    };
+
+    syncData();
+    window.addEventListener("focus", syncData);
+    window.addEventListener("storage", syncData);
+
+    return () => {
+      window.removeEventListener("focus", syncData);
+      window.removeEventListener("storage", syncData);
+    };
   }, [t.payments.unknownCustomer]);
 
   useEffect(() => {
@@ -549,10 +574,31 @@ export default function Payments() {
     return () => window.clearTimeout(timer);
   }, [toast]);
 
+  const requestSort = (key: SortKey) => {
+    setSortConfig((prev) => {
+      if (prev.key === key) {
+        return {
+          key,
+          direction: prev.direction === "asc" ? "desc" : "asc",
+        };
+      }
+
+      return {
+        key,
+        direction: key === "date" ? "desc" : "asc",
+      };
+    });
+  };
+
+  const getSortIndicator = (key: SortKey) => {
+    if (sortConfig.key !== key) return "↕";
+    return sortConfig.direction === "asc" ? "↑" : "↓";
+  };
+
   const filteredPayments = useMemo(() => {
     const value = searchTerm.trim().toLowerCase();
 
-    return payments.filter((payment) =>
+    const filtered = payments.filter((payment) =>
       [
         payment.paymentId,
         payment.invoiceNumber,
@@ -567,7 +613,43 @@ export default function Payments() {
         .toLowerCase()
         .includes(value)
     );
-  }, [payments, searchTerm]);
+
+    return [...filtered].sort((a, b) => {
+      const getValue = (payment: ExtendedPayment) => {
+        switch (sortConfig.key) {
+          case "paymentId":
+            return payment.paymentId;
+          case "invoiceNumber":
+            return payment.invoiceNumber;
+          case "customerName":
+            return payment.customerName;
+          case "amount":
+            return payment.amount;
+          case "method":
+            return payment.method;
+          case "status":
+            return payment.status;
+          case "date":
+            return payment.date;
+          default:
+            return "";
+        }
+      };
+
+      const aValue = getValue(a);
+      const bValue = getValue(b);
+
+      if (typeof aValue === "number" && typeof bValue === "number") {
+        return sortConfig.direction === "asc"
+          ? aValue - bValue
+          : bValue - aValue;
+      }
+
+      return sortConfig.direction === "asc"
+        ? String(aValue).localeCompare(String(bValue))
+        : String(bValue).localeCompare(String(aValue));
+    });
+  }, [payments, searchTerm, sortConfig]);
 
   const setAddField = (field: keyof PaymentForm, value: string) => {
     setAddForm((prev) => ({ ...prev, [field]: value }));
@@ -594,11 +676,9 @@ export default function Payments() {
   const openEditModal = (payment: ExtendedPayment) => {
     setEditingPayment(payment);
     setEditForm({
-      paymentId: payment.paymentId,
       invoiceId: payment.invoiceId,
       customerId: payment.customerId,
       amount: String(payment.amount),
-      status: payment.status,
       method: payment.method ?? "Cash",
       date: payment.date,
       notes: payment.notes ?? "",
@@ -612,14 +692,16 @@ export default function Payments() {
 
     if (Object.keys(errors).length > 0) return;
 
+    const newPaymentId = buildPaymentId(payments.length);
+
     const newPayment: ExtendedPayment = normalizePayment(
       {
-        id: addForm.paymentId.trim(),
-        paymentId: addForm.paymentId.trim(),
+        id: newPaymentId,
+        paymentId: newPaymentId,
         invoiceId: addForm.invoiceId.trim(),
         customerId: addForm.customerId.trim(),
-        amount: Number(addForm.amount),
-        status: addForm.status,
+        amount: roundMoney(Number(addForm.amount)),
+        status: "Completed",
         method: addForm.method,
         date: addForm.date,
         notes: addForm.notes.trim(),
@@ -664,12 +746,12 @@ export default function Payments() {
           ? normalizePayment(
               {
                 ...payment,
-                id: editForm.paymentId.trim(),
-                paymentId: editForm.paymentId.trim(),
+                id: payment.paymentId,
+                paymentId: payment.paymentId,
                 invoiceId: editForm.invoiceId.trim(),
                 customerId: editForm.customerId.trim(),
-                amount: Number(editForm.amount),
-                status: editForm.status,
+                amount: roundMoney(Number(editForm.amount)),
+                status: "Completed",
                 method: editForm.method,
                 date: editForm.date,
                 notes: editForm.notes.trim(),
@@ -750,13 +832,48 @@ export default function Payments() {
             <table className="dashboard-table">
               <thead>
                 <tr>
-                  <th>{t.payments.paymentId}</th>
-                  <th>{t.payments.invoiceNumber}</th>
-                  <th>{t.common.customer}</th>
-                  <th>{t.common.amount}</th>
-                  <th>{t.common.method}</th>
-                  <th>{t.common.status}</th>
-                  <th>{t.common.date}</th>
+                  <th onClick={() => requestSort("paymentId")} style={{ cursor: "pointer" }}>
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}>
+                      {t.payments.paymentId}
+                      <span>{getSortIndicator("paymentId")}</span>
+                    </span>
+                  </th>
+                  <th onClick={() => requestSort("invoiceNumber")} style={{ cursor: "pointer" }}>
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}>
+                      {t.payments.invoiceNumber}
+                      <span>{getSortIndicator("invoiceNumber")}</span>
+                    </span>
+                  </th>
+                  <th onClick={() => requestSort("customerName")} style={{ cursor: "pointer" }}>
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}>
+                      {t.common.customer}
+                      <span>{getSortIndicator("customerName")}</span>
+                    </span>
+                  </th>
+                  <th onClick={() => requestSort("amount")} style={{ cursor: "pointer" }}>
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}>
+                      {t.common.amount}
+                      <span>{getSortIndicator("amount")}</span>
+                    </span>
+                  </th>
+                  <th onClick={() => requestSort("method")} style={{ cursor: "pointer" }}>
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}>
+                      {t.common.method}
+                      <span>{getSortIndicator("method")}</span>
+                    </span>
+                  </th>
+                  <th onClick={() => requestSort("status")} style={{ cursor: "pointer" }}>
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}>
+                      {t.common.status}
+                      <span>{getSortIndicator("status")}</span>
+                    </span>
+                  </th>
+                  <th onClick={() => requestSort("date")} style={{ cursor: "pointer" }}>
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}>
+                      {t.common.date}
+                      <span>{getSortIndicator("date")}</span>
+                    </span>
+                  </th>
                   <th>{t.common.notes}</th>
                   <th>{t.common.actions}</th>
                 </tr>
@@ -772,13 +889,7 @@ export default function Payments() {
                       <td>${payment.amount}</td>
                       <td>{translatePaymentMethod(payment.method, t)}</td>
                       <td>
-                        <span
-                          className={
-                            payment.status === "Completed"
-                              ? "status-badge status-completed"
-                              : "status-badge status-pending"
-                          }
-                        >
+                        <span className="status-badge status-completed">
                           {translatePaymentStatus(payment.status, t)}
                         </span>
                       </td>

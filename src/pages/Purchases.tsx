@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   getProducts,
   getPurchases,
   getSuppliers,
   savePurchases,
+  saveSuppliers,
 } from "../data/storage";
 import type { Product, Purchase, Supplier } from "../data/types";
 
@@ -23,7 +24,16 @@ type FormErrors = {
   totalCost?: string;
   date?: string;
 };
+
 type PendingCloseTarget = "add" | "edit" | null;
+type SortKey =
+  | "id"
+  | "supplier"
+  | "product"
+  | "quantity"
+  | "totalCost"
+  | "date";
+type SortDirection = "asc" | "desc";
 
 const EMPTY_FORM: PurchaseForm = {
   supplierId: "",
@@ -41,6 +51,10 @@ const TODAY_DATE = new Date().toISOString().split("T")[0];
 
 function buildPurchaseId(index: number) {
   return `PUR-${1000 + index + 1}`;
+}
+
+function buildSupplierId(index: number) {
+  return `SUP-${1000 + index + 1}`;
 }
 
 function normalizePurchases(purchases: Purchase[]): Purchase[] {
@@ -77,6 +91,10 @@ function normalizeDate(value: string, fallback = TODAY_DATE) {
   return trimmed;
 }
 
+function normalizeName(value: string) {
+  return value.trim().replace(/\s+/g, " ");
+}
+
 function validatePurchaseDate(value: string): string | undefined {
   const raw = (value || "").trim();
 
@@ -94,7 +112,160 @@ function validatePurchaseDate(value: string): string | undefined {
 function formatDisplayDate(value: string) {
   if (!isValidCalendarDate(value)) return "Invalid date";
   const [year, month, day] = value.split("-").map(Number);
-  return new Intl.DateTimeFormat("en-GB").format(new Date(year, month - 1, day));
+  return new Intl.DateTimeFormat("en-GB").format(
+    new Date(year, month - 1, day)
+  );
+}
+
+function SearchableSelect({
+  value,
+  options,
+  placeholder,
+  searchPlaceholder,
+  onChange,
+  allowCreate = false,
+  onCreate,
+  createLabel,
+  error,
+  allowDelete = false,
+  onDelete,
+}: {
+  value: string;
+  options: Array<{ value: string; label: string }>;
+  placeholder: string;
+  searchPlaceholder: string;
+  onChange: (value: string) => void;
+  allowCreate?: boolean;
+  onCreate?: (name: string) => void;
+  createLabel?: string;
+  error?: string;
+  allowDelete?: boolean;
+  onDelete?: (value: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const wrapperRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const handleOutsideClick = (event: MouseEvent) => {
+      if (!wrapperRef.current) return;
+      if (!wrapperRef.current.contains(event.target as Node)) {
+        setOpen(false);
+        setSearch("");
+      }
+    };
+
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, []);
+
+  const filteredOptions = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    if (!term) return options;
+
+    return options.filter((option) =>
+      option.label.toLowerCase().includes(term)
+    );
+  }, [options, search]);
+
+  const selectedLabel =
+    options.find((option) => option.value === value)?.label || "";
+
+  const canCreate =
+    allowCreate &&
+    !!onCreate &&
+    !!search.trim() &&
+    !options.some(
+      (option) => option.label.toLowerCase() === search.trim().toLowerCase()
+    );
+
+  return (
+    <div ref={wrapperRef} style={{ position: "relative" }}>
+      <button
+        type="button"
+        className="modal-select searchable-trigger"
+        onClick={() => setOpen((prev) => !prev)}
+      >
+        <span style={{ color: value ? "#0f172a" : "#7b8794" }}>
+          {selectedLabel || placeholder}
+        </span>
+        <span className={`searchable-caret ${open ? "open" : ""}`}>▼</span>
+      </button>
+
+      {open && (
+        <div className="searchable-menu">
+          <div className="searchable-menu-head">
+            <input
+              className="modal-input"
+              type="text"
+              placeholder={searchPlaceholder}
+              value={search}
+              autoFocus
+              onChange={(e) => setSearch(e.target.value)}
+              style={{ margin: 0 }}
+            />
+          </div>
+
+          <div className="searchable-menu-list">
+            {filteredOptions.length > 0 ? (
+              filteredOptions.map((option) => (
+                <div
+                  key={option.value}
+                  className={`searchable-option-row ${
+                    value === option.value ? "selected" : ""
+                  }`}
+                >
+                  <button
+                    type="button"
+                    className="searchable-option"
+                    onClick={() => {
+                      onChange(option.value);
+                      setOpen(false);
+                      setSearch("");
+                    }}
+                  >
+                    {option.label}
+                  </button>
+
+                  {allowDelete && onDelete && (
+                    <button
+                      type="button"
+                      className="searchable-delete-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDelete(option.value);
+                      }}
+                      title={`Delete ${option.label}`}
+                    >
+                      Delete
+                    </button>
+                  )}
+                </div>
+              ))
+            ) : (
+              <div className="searchable-empty">No matching results found.</div>
+            )}
+
+            {canCreate && (
+              <button
+                type="button"
+                className="searchable-create-btn"
+                onClick={() => {
+                  onCreate?.(search.trim());
+                  setOpen(false);
+                  setSearch("");
+                }}
+              >
+                + {createLabel || `Add "${search.trim()}"`}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {error && <p className="field-error">{error}</p>}
+    </div>
+  );
 }
 
 function ConfirmCloseModal({
@@ -110,14 +281,21 @@ function ConfirmCloseModal({
 
   return (
     <div className="modal-overlay" onClick={onKeepEditing}>
-      <div className="modal-card confirm-close-modal" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="modal-card confirm-close-modal"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="modal-header">
           <div>
             <h2>Unsaved Changes</h2>
             <p>Please confirm before closing this form.</p>
           </div>
 
-          <button type="button" className="modal-close-btn" onClick={onKeepEditing}>
+          <button
+            type="button"
+            className="modal-close-btn"
+            onClick={onKeepEditing}
+          >
             ×
           </button>
         </div>
@@ -127,17 +305,25 @@ function ConfirmCloseModal({
           <div>
             <h3>You have unsaved edits</h3>
             <p>
-              Your recent changes have not been saved yet. If you close now, these edits
-              will be lost.
+              Your recent changes have not been saved yet. If you close now,
+              these edits will be lost.
             </p>
           </div>
         </div>
 
         <div className="modal-actions">
-          <button type="button" className="modal-secondary-btn" onClick={onKeepEditing}>
+          <button
+            type="button"
+            className="modal-secondary-btn"
+            onClick={onKeepEditing}
+          >
             Continue Editing
           </button>
-          <button type="button" className="modal-danger-btn" onClick={onDiscard}>
+          <button
+            type="button"
+            className="modal-danger-btn"
+            onClick={onDiscard}
+          >
             Discard Changes
           </button>
         </div>
@@ -148,12 +334,19 @@ function ConfirmCloseModal({
 
 export default function Purchases() {
   const [products] = useState<Product[]>(() => getProducts());
-  const [suppliers] = useState<Supplier[]>(() => getSuppliers());
+  const [suppliers, setSuppliers] = useState<Supplier[]>(() => getSuppliers());
   const [purchases, setPurchases] = useState<Purchase[]>(() =>
     normalizePurchases(getPurchases())
   );
 
   const [searchTerm, setSearchTerm] = useState("");
+  const [sortConfig, setSortConfig] = useState<{
+    key: SortKey;
+    direction: SortDirection;
+  }>({
+    key: "date",
+    direction: "desc",
+  });
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -178,29 +371,110 @@ export default function Purchases() {
     savePurchases(purchases);
   }, [purchases]);
 
+  useEffect(() => {
+    saveSuppliers?.(suppliers);
+  }, [suppliers]);
+
   const supplierOptions = useMemo(() => {
     return suppliers
       .filter((supplier) => !supplier.isDeleted)
-      .sort((a, b) => a.name.localeCompare(b.name));
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map((supplier) => ({
+        value: supplier.id,
+        label: supplier.name,
+      }));
   }, [suppliers]);
+
+  const productOptions = useMemo(() => {
+    return [...products]
+      .sort((a, b) => (a.name || "").localeCompare(b.name || ""))
+      .map((product) => ({
+        value: product.id,
+        label: product.name || "Unnamed Product",
+      }));
+  }, [products]);
 
   const supplierMap = useMemo(
     () => new Map(suppliers.map((supplier) => [supplier.id, supplier.name])),
     [suppliers]
   );
 
+  const productMap = useMemo(
+    () => new Map(products.map((product) => [product.id, product.name || ""])),
+    [products]
+  );
+
+  const createSupplier = (name: string) => {
+    const normalized = normalizeName(name);
+    if (!normalized) return;
+
+    const existing = suppliers.find(
+      (supplier) =>
+        normalizeName(supplier.name).toLowerCase() === normalized.toLowerCase()
+    );
+
+    if (existing) {
+      if (showEditModal) {
+        handleEditFormChange("supplierId", existing.id);
+      } else {
+        handleAddFormChange("supplierId", existing.id);
+      }
+      return;
+    }
+
+    const newSupplier: Supplier = {
+      id: buildSupplierId(suppliers.length),
+      name: normalized,
+      isDeleted: false,
+    } as Supplier;
+
+    setSuppliers((prev) => [newSupplier, ...prev]);
+
+    if (showEditModal) {
+      handleEditFormChange("supplierId", newSupplier.id);
+    } else {
+      handleAddFormChange("supplierId", newSupplier.id);
+    }
+  };
+
+  const deleteSupplier = (supplierId: string) => {
+    const supplierName = supplierMap.get(supplierId) || "";
+    const isUsedInPurchases = purchases.some(
+      (purchase) => purchase.supplierId === supplierId
+    );
+
+    if (isUsedInPurchases) {
+      alert(
+        `Cannot delete "${supplierName}" because it is linked to existing purchases.`
+      );
+      return;
+    }
+
+    setSuppliers((prev) =>
+      prev.filter((supplier) => supplier.id !== supplierId)
+    );
+
+    if (form.supplierId === supplierId) {
+      setForm((prev) => ({ ...prev, supplierId: "" }));
+    }
+
+    if (editForm.supplierId === supplierId) {
+      setEditForm((prev) => ({ ...prev, supplierId: "" }));
+    }
+  };
+
   const filteredPurchases = useMemo(() => {
     const value = searchTerm.trim().toLowerCase();
 
-    return purchases.filter((purchase) => {
+    const filtered = purchases.filter((purchase) => {
       if (!value) return true;
 
-      const productName =
-        products.find((product) => product.id === purchase.productId)?.name || "";
+      const productName = productMap.get(purchase.productId) || "";
+      const supplierName = supplierMap.get(purchase.supplierId) || "";
 
       return [
         purchase.id,
-        supplierMap.get(purchase.supplierId) || "",
+        supplierName,
         purchase.productId,
         productName,
         purchase.quantity,
@@ -212,7 +486,41 @@ export default function Purchases() {
         .toLowerCase()
         .includes(value);
     });
-  }, [purchases, products, searchTerm, supplierMap]);
+
+    return [...filtered].sort((a, b) => {
+      const getValue = (purchase: Purchase) => {
+        switch (sortConfig.key) {
+          case "id":
+            return purchase.id || "";
+          case "supplier":
+            return supplierMap.get(purchase.supplierId) || "";
+          case "product":
+            return productMap.get(purchase.productId) || "";
+          case "quantity":
+            return Number(purchase.quantity || 0);
+          case "totalCost":
+            return Number(purchase.totalCost || 0);
+          case "date":
+            return purchase.date || "";
+          default:
+            return "";
+        }
+      };
+
+      const aValue = getValue(a);
+      const bValue = getValue(b);
+
+      if (typeof aValue === "number" && typeof bValue === "number") {
+        return sortConfig.direction === "asc"
+          ? aValue - bValue
+          : bValue - aValue;
+      }
+
+      return sortConfig.direction === "asc"
+        ? String(aValue).localeCompare(String(bValue))
+        : String(bValue).localeCompare(String(aValue));
+    });
+  }, [purchases, productMap, searchTerm, sortConfig, supplierMap]);
 
   const hasAddUnsavedChanges = useMemo(() => {
     return (
@@ -343,6 +651,27 @@ export default function Purchases() {
     if (pendingCloseTarget === "add") closeAddModal();
     if (pendingCloseTarget === "edit") closeEditModal();
     setPendingCloseTarget(null);
+  };
+
+  const requestSort = (key: SortKey) => {
+    setSortConfig((prev) => {
+      if (prev.key === key) {
+        return {
+          key,
+          direction: prev.direction === "asc" ? "desc" : "asc",
+        };
+      }
+
+      return {
+        key,
+        direction: key === "date" ? "desc" : "asc",
+      };
+    });
+  };
+
+  const getSortIndicator = (key: SortKey) => {
+    if (sortConfig.key !== key) return "↕";
+    return sortConfig.direction === "asc" ? "↑" : "↓";
   };
 
   const handleAddPurchase = () => {
@@ -491,17 +820,18 @@ export default function Purchases() {
 
         .table-wrapper {
           overflow-x: auto;
+          border-radius: 18px;
         }
 
         .dashboard-table {
           width: 100%;
           border-collapse: collapse;
-          min-width: 980px;
+          min-width: 1040px;
         }
 
         .dashboard-table th,
         .dashboard-table td {
-          padding: 14px 16px;
+          padding: 16px 18px;
           text-align: left;
           vertical-align: middle;
           border-bottom: 1px solid rgba(148, 163, 184, 0.14);
@@ -509,15 +839,32 @@ export default function Purchases() {
 
         .dashboard-table th {
           font-size: 13px;
-          font-weight: 700;
+          font-weight: 800;
           color: #64748b;
-          background: rgba(248, 250, 252, 0.9);
+          background: rgba(248, 250, 252, 0.96);
           white-space: nowrap;
+          user-select: none;
         }
 
         .dashboard-table td {
           font-size: 14px;
-          color: #1e293b;
+          color: #0f172a;
+        }
+
+        .sortable-th {
+          cursor: pointer;
+          transition: color 0.2s ease, background 0.2s ease;
+        }
+
+        .sortable-th:hover {
+          color: #1d4ed8;
+          background: #f8fbff;
+        }
+
+        .sort-head {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
         }
 
         .table-actions {
@@ -528,10 +875,10 @@ export default function Purchases() {
 
         .table-btn {
           border: none;
-          border-radius: 10px;
-          padding: 8px 12px;
+          border-radius: 12px;
+          padding: 9px 14px;
           font-size: 13px;
-          font-weight: 600;
+          font-weight: 700;
           cursor: pointer;
           transition: all 0.2s ease;
         }
@@ -557,13 +904,13 @@ export default function Purchases() {
         .empty-state-cell {
           text-align: center;
           color: #94a3b8;
-          padding: 32px 16px;
+          padding: 36px 16px;
         }
 
         .modal-overlay {
           position: fixed;
           inset: 0;
-          background: rgba(15, 23, 42, 0.5);
+          background: rgba(15, 23, 42, 0.52);
           display: flex;
           align-items: center;
           justify-content: center;
@@ -574,12 +921,29 @@ export default function Purchases() {
 
         .modal-card {
           width: 100%;
-          max-width: 760px;
+          max-width: 860px;
           background: #ffffff;
-          border-radius: 20px;
-          box-shadow: 0 24px 64px rgba(15, 23, 42, 0.18);
+          border-radius: 24px;
+          box-shadow: 0 28px 70px rgba(15, 23, 42, 0.18);
           overflow: hidden;
           animation: modalPop 0.18s ease;
+        }
+
+        .purchase-modal-card {
+          max-height: calc(100vh - 36px);
+          display: flex;
+          flex-direction: column;
+        }
+
+        .purchase-modal-scroll {
+          overflow-y: auto;
+          padding: 0 24px 24px;
+        }
+
+        .purchase-modal-top {
+          padding: 24px 24px 18px;
+          border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+          background: linear-gradient(180deg, rgba(248,251,255,0.95) 0%, #ffffff 100%);
         }
 
         .modal-header {
@@ -587,14 +951,12 @@ export default function Purchases() {
           justify-content: space-between;
           align-items: flex-start;
           gap: 12px;
-          padding: 20px 22px 16px;
-          border-bottom: 1px solid rgba(148, 163, 184, 0.14);
         }
 
         .modal-header h2 {
           margin: 0;
           font-size: 20px;
-          font-weight: 700;
+          font-weight: 800;
           color: #0f172a;
         }
 
@@ -602,37 +964,49 @@ export default function Purchases() {
           margin: 6px 0 0;
           color: #64748b;
           font-size: 14px;
+          line-height: 1.7;
         }
 
         .modal-close-btn {
           border: none;
-          background: transparent;
+          background: #f1f5f9;
+          width: 44px;
+          height: 44px;
+          border-radius: 14px;
           font-size: 28px;
           line-height: 1;
           cursor: pointer;
           color: #64748b;
           padding: 0;
+          flex-shrink: 0;
         }
 
         .modal-form {
-          padding: 20px 22px 22px;
+          padding: 22px 0 0;
         }
 
         .modal-grid {
           display: grid;
           grid-template-columns: repeat(2, minmax(0, 1fr));
-          gap: 16px;
+          gap: 18px;
         }
 
         .modal-grid-full {
           grid-column: 1 / -1;
         }
 
+        .field-card {
+          background: #fbfdff;
+          border: 1px solid #e2eaf3;
+          border-radius: 18px;
+          padding: 16px;
+        }
+
         .modal-label {
           display: block;
           margin-bottom: 8px;
           font-size: 13px;
-          font-weight: 700;
+          font-weight: 800;
           color: #475569;
         }
 
@@ -641,8 +1015,8 @@ export default function Purchases() {
         .modal-textarea {
           width: 100%;
           border: 1px solid #cbd5e1;
-          border-radius: 12px;
-          padding: 12px 14px;
+          border-radius: 14px;
+          padding: 13px 14px;
           font-size: 14px;
           outline: none;
           transition: all 0.2s ease;
@@ -652,14 +1026,15 @@ export default function Purchases() {
 
         .modal-input:focus,
         .modal-select:focus,
-        .modal-textarea:focus {
+        .modal-textarea:focus,
+        .searchable-trigger:focus {
           border-color: #3b82f6;
           box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.12);
         }
 
         .modal-textarea {
           resize: vertical;
-          min-height: 120px;
+          min-height: 140px;
         }
 
         .field-error {
@@ -667,7 +1042,7 @@ export default function Purchases() {
           margin-top: 6px;
           color: #dc2626;
           font-size: 12px;
-          font-weight: 600;
+          font-weight: 700;
         }
 
         .modal-actions {
@@ -682,21 +1057,22 @@ export default function Purchases() {
         .modal-secondary-btn,
         .modal-danger-btn {
           border: none;
-          border-radius: 12px;
-          padding: 11px 16px;
+          border-radius: 14px;
+          padding: 12px 18px;
           font-size: 14px;
-          font-weight: 700;
+          font-weight: 800;
           cursor: pointer;
           transition: all 0.2s ease;
         }
 
         .modal-primary-btn {
-          background: #2563eb;
+          background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
           color: white;
         }
 
         .modal-primary-btn:hover:not(:disabled) {
-          background: #1d4ed8;
+          transform: translateY(-1px);
+          box-shadow: 0 10px 24px rgba(37, 99, 235, 0.22);
         }
 
         .modal-secondary-btn {
@@ -721,14 +1097,14 @@ export default function Purchases() {
           margin: 0;
           color: #dc2626;
           font-size: 16px;
-          font-weight: 700;
+          font-weight: 800;
           line-height: 1.7;
         }
 
         .delete-help {
           margin-top: 12px;
           color: #475569;
-          line-height: 1.7;
+          line-height: 1.8;
           font-size: 14px;
         }
 
@@ -740,6 +1116,137 @@ export default function Purchases() {
 
         .no-number-spinner {
           -moz-appearance: textfield;
+        }
+
+        .searchable-trigger {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          cursor: pointer;
+          text-align: left;
+        }
+
+        .searchable-caret {
+          font-size: 13px;
+          color: #64748b;
+          transition: transform 0.2s ease;
+          flex-shrink: 0;
+          margin-left: 10px;
+        }
+
+        .searchable-caret.open {
+          transform: rotate(180deg);
+        }
+
+        .searchable-menu {
+          position: absolute;
+          top: calc(100% + 8px);
+          left: 0;
+          right: 0;
+          z-index: 100;
+          background: #fff;
+          border: 1px solid #dbe7f3;
+          border-radius: 18px;
+          box-shadow: 0 22px 48px rgba(15, 23, 42, 0.14);
+          overflow: hidden;
+        }
+
+        .searchable-menu-head {
+          padding: 12px;
+          background: #f8fbff;
+          border-bottom: 1px solid #edf2f7;
+        }
+
+        .searchable-menu-list {
+          max-height: 260px;
+          overflow-y: auto;
+          padding: 8px;
+        }
+
+        .searchable-option-row {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          border-radius: 12px;
+          margin-bottom: 4px;
+        }
+
+        .searchable-option-row.selected {
+          background: #eff6ff;
+        }
+
+        .searchable-option,
+        .searchable-create-btn {
+          border: none;
+          background: transparent;
+          padding: 12px 14px;
+          border-radius: 12px;
+          cursor: pointer;
+          color: #1e293b;
+          font-size: 14px;
+          font-weight: 600;
+          text-align: left;
+        }
+
+        .searchable-option {
+          flex: 1;
+          margin-bottom: 0;
+        }
+
+        .searchable-option:hover,
+        .searchable-create-btn:hover {
+          background: #f8fbff;
+        }
+
+        .searchable-option-row.selected .searchable-option {
+          color: #1d4ed8;
+          font-weight: 800;
+        }
+
+        .searchable-delete-btn {
+          border: none;
+          background: #fee2e2;
+          color: #b91c1c;
+          padding: 10px 12px;
+          border-radius: 10px;
+          font-size: 12px;
+          font-weight: 800;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          flex-shrink: 0;
+        }
+
+        .searchable-delete-btn:hover {
+          background: #fecaca;
+        }
+
+        .searchable-create-btn {
+          width: 100%;
+          background: #f0f9ff;
+          color: #0369a1;
+          font-weight: 800;
+          margin-top: 4px;
+        }
+
+        .searchable-empty {
+          padding: 14px;
+          color: #64748b;
+          font-size: 14px;
+          font-weight: 600;
+        }
+
+        .helper-chip {
+          margin-top: 10px;
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          background: #eff6ff;
+          border: 1px solid #dbeafe;
+          color: #1d4ed8;
+          padding: 8px 12px;
+          border-radius: 999px;
+          font-size: 12px;
+          font-weight: 800;
         }
 
         .note-modal-body {
@@ -775,7 +1282,7 @@ export default function Purchases() {
           background: transparent;
           color: #2563eb;
           font-size: 14px;
-          font-weight: 700;
+          font-weight: 800;
           cursor: pointer;
           padding: 0;
         }
@@ -799,6 +1306,14 @@ export default function Purchases() {
           .modal-grid {
             grid-template-columns: 1fr;
           }
+
+          .purchase-modal-scroll {
+            padding: 0 16px 16px;
+          }
+
+          .purchase-modal-top {
+            padding: 18px 16px 14px;
+          }
         }
 
         @media (max-width: 768px) {
@@ -819,6 +1334,10 @@ export default function Purchases() {
           .modal-secondary-btn,
           .modal-danger-btn {
             width: 100%;
+          }
+
+          .modal-card {
+            max-width: 100%;
           }
         }
 
@@ -908,12 +1427,51 @@ export default function Purchases() {
             <table className="dashboard-table">
               <thead>
                 <tr>
-                  <th>ID</th>
-                  <th>Supplier</th>
-                  <th>Product</th>
-                  <th>Quantity</th>
-                  <th>Total Cost</th>
-                  <th>Date</th>
+                  <th className="sortable-th" onClick={() => requestSort("id")}>
+                    <span className="sort-head">
+                      ID {getSortIndicator("id")}
+                    </span>
+                  </th>
+                  <th
+                    className="sortable-th"
+                    onClick={() => requestSort("supplier")}
+                  >
+                    <span className="sort-head">
+                      Supplier {getSortIndicator("supplier")}
+                    </span>
+                  </th>
+                  <th
+                    className="sortable-th"
+                    onClick={() => requestSort("product")}
+                  >
+                    <span className="sort-head">
+                      Product {getSortIndicator("product")}
+                    </span>
+                  </th>
+                  <th
+                    className="sortable-th"
+                    onClick={() => requestSort("quantity")}
+                  >
+                    <span className="sort-head">
+                      Quantity {getSortIndicator("quantity")}
+                    </span>
+                  </th>
+                  <th
+                    className="sortable-th"
+                    onClick={() => requestSort("totalCost")}
+                  >
+                    <span className="sort-head">
+                      Total Cost {getSortIndicator("totalCost")}
+                    </span>
+                  </th>
+                  <th
+                    className="sortable-th"
+                    onClick={() => requestSort("date")}
+                  >
+                    <span className="sort-head">
+                      Date {getSortIndicator("date")}
+                    </span>
+                  </th>
                   <th>Notes</th>
                   <th>Actions</th>
                 </tr>
@@ -923,8 +1481,7 @@ export default function Purchases() {
                 {filteredPurchases.length > 0 ? (
                   filteredPurchases.map((purchase) => {
                     const productName =
-                      products.find((product) => product.id === purchase.productId)
-                        ?.name || "Unknown Product";
+                      productMap.get(purchase.productId) || "Unknown Product";
 
                     return (
                       <tr key={purchase.id}>
@@ -986,294 +1543,314 @@ export default function Purchases() {
 
       {showAddModal && (
         <div className="modal-overlay" onClick={attemptCloseAddModal}>
-          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <div>
-                <h2>Add Purchase</h2>
-                <p>Enter the new purchase information.</p>
-              </div>
-
-              <button
-                type="button"
-                className="modal-close-btn"
-                onClick={attemptCloseAddModal}
-              >
-                ×
-              </button>
-            </div>
-
-            <form className="modal-form">
-              <div className="modal-grid">
+          <div
+            className="modal-card purchase-modal-card"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="purchase-modal-top">
+              <div className="modal-header">
                 <div>
-                  <label className="modal-label">Supplier</label>
-                  <select
-                    className="modal-select"
-                    value={form.supplierId}
-                    onChange={(e) =>
-                      handleAddFormChange("supplierId", e.target.value)
-                    }
-                  >
-                    <option value="">Search supplier...</option>
-                    {supplierOptions.map((supplier) => (
-                      <option key={supplier.id} value={supplier.id}>
-                        {supplier.name}
-                      </option>
-                    ))}
-                  </select>
-                  {formErrors.supplierId && (
-                    <p className="field-error">{formErrors.supplierId}</p>
-                  )}
+                  <h2>Add Purchase</h2>
+                  <p>Enter the new purchase information.</p>
                 </div>
 
-                <div>
-                  <label className="modal-label">Product</label>
-                  <select
-                    className="modal-select"
-                    value={form.productId}
-                    onChange={(e) =>
-                      handleAddFormChange("productId", e.target.value)
-                    }
-                  >
-                    <option value="">Search product...</option>
-                    {products.map((product) => (
-                      <option key={product.id} value={product.id}>
-                        {product.name}
-                      </option>
-                    ))}
-                  </select>
-                  {formErrors.productId && (
-                    <p className="field-error">{formErrors.productId}</p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="modal-label">Quantity</label>
-                  <input
-                    className="modal-input no-number-spinner"
-                    type="number"
-                    min="1"
-                    step="1"
-                    placeholder="Enter quantity"
-                    value={form.quantity}
-                    onChange={(e) =>
-                      handleAddFormChange("quantity", e.target.value)
-                    }
-                  />
-                  {formErrors.quantity && (
-                    <p className="field-error">{formErrors.quantity}</p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="modal-label">Total Cost</label>
-                  <input
-                    className="modal-input no-number-spinner"
-                    type="number"
-                    value={form.totalCost}
-                    readOnly
-                    placeholder="Calculated automatically"
-                  />
-                  {formErrors.totalCost && (
-                    <p className="field-error">{formErrors.totalCost}</p>
-                  )}
-                </div>
-
-                <div className="modal-grid-full">
-                  <label className="modal-label">Date</label>
-                  <input
-                    className="modal-input"
-                    type="date"
-                    value={form.date}
-                    min={BUSINESS_MIN_DATE}
-                    max={TODAY_DATE}
-                    onChange={(e) => handleAddFormChange("date", e.target.value)}
-                  />
-                  <p className="dashboard-search-meta">
-                    Allowed range: {BUSINESS_MIN_DATE} to {TODAY_DATE}
-                  </p>
-                  {formErrors.date && (
-                    <p className="field-error">{formErrors.date}</p>
-                  )}
-                </div>
-
-                <div className="modal-grid-full">
-                  <label className="modal-label">Notes</label>
-                  <textarea
-                    className="modal-textarea"
-                    placeholder="Add purchase notes..."
-                    rows={4}
-                    value={form.notes}
-                    onChange={(e) => handleAddFormChange("notes", e.target.value)}
-                  />
-                </div>
-              </div>
-
-              <div className="modal-actions">
                 <button
                   type="button"
-                  className="modal-secondary-btn"
+                  className="modal-close-btn"
                   onClick={attemptCloseAddModal}
                 >
-                  Cancel
-                </button>
-
-                <button
-                  type="button"
-                  className="modal-primary-btn"
-                  onClick={handleAddPurchase}
-                >
-                  Save Purchase
+                  ×
                 </button>
               </div>
-            </form>
+            </div>
+
+            <div className="purchase-modal-scroll">
+              <form className="modal-form">
+                <div className="modal-grid">
+                  <div className="field-card">
+                    <label className="modal-label">Supplier</label>
+                    <SearchableSelect
+                      value={form.supplierId}
+                      options={supplierOptions}
+                      placeholder="Search, add, or delete supplier..."
+                      searchPlaceholder="Search supplier..."
+                      allowCreate
+                      allowDelete
+                      onCreate={createSupplier}
+                      onDelete={deleteSupplier}
+                      onChange={(value) =>
+                        handleAddFormChange("supplierId", value)
+                      }
+                      error={formErrors.supplierId}
+                    />
+                    {form.supplierId && (
+                      <div className="helper-chip">
+                        Selected: {supplierMap.get(form.supplierId)}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="field-card">
+                    <label className="modal-label">Product</label>
+                    <SearchableSelect
+                      value={form.productId}
+                      options={productOptions}
+                      placeholder="Search product..."
+                      searchPlaceholder="Search product..."
+                      onChange={(value) =>
+                        handleAddFormChange("productId", value)
+                      }
+                      error={formErrors.productId}
+                    />
+                    {form.productId && (
+                      <div className="helper-chip">
+                        Product: {productMap.get(form.productId)}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="field-card">
+                    <label className="modal-label">Quantity</label>
+                    <input
+                      className="modal-input no-number-spinner"
+                      type="number"
+                      min="1"
+                      step="1"
+                      placeholder="Enter quantity"
+                      value={form.quantity}
+                      onChange={(e) =>
+                        handleAddFormChange("quantity", e.target.value)
+                      }
+                    />
+                    {formErrors.quantity && (
+                      <p className="field-error">{formErrors.quantity}</p>
+                    )}
+                  </div>
+
+                  <div className="field-card">
+                    <label className="modal-label">Total Cost</label>
+                    <input
+                      className="modal-input no-number-spinner"
+                      type="number"
+                      value={form.totalCost}
+                      readOnly
+                      placeholder="Calculated automatically"
+                    />
+                    {formErrors.totalCost && (
+                      <p className="field-error">{formErrors.totalCost}</p>
+                    )}
+                  </div>
+
+                  <div className="modal-grid-full field-card">
+                    <label className="modal-label">Date</label>
+                    <input
+                      className="modal-input"
+                      type="date"
+                      value={form.date}
+                      min={BUSINESS_MIN_DATE}
+                      max={TODAY_DATE}
+                      onChange={(e) =>
+                        handleAddFormChange("date", e.target.value)
+                      }
+                    />
+                    <p className="dashboard-search-meta">
+                      Allowed range: {BUSINESS_MIN_DATE} to {TODAY_DATE}
+                    </p>
+                    {formErrors.date && (
+                      <p className="field-error">{formErrors.date}</p>
+                    )}
+                  </div>
+
+                  <div className="modal-grid-full field-card">
+                    <label className="modal-label">Notes</label>
+                    <textarea
+                      className="modal-textarea"
+                      placeholder="Add purchase notes..."
+                      rows={4}
+                      value={form.notes}
+                      onChange={(e) =>
+                        handleAddFormChange("notes", e.target.value)
+                      }
+                    />
+                  </div>
+                </div>
+
+                <div className="modal-actions">
+                  <button
+                    type="button"
+                    className="modal-secondary-btn"
+                    onClick={attemptCloseAddModal}
+                  >
+                    Cancel
+                  </button>
+
+                  <button
+                    type="button"
+                    className="modal-primary-btn"
+                    onClick={handleAddPurchase}
+                  >
+                    Save Purchase
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       )}
 
       {showEditModal && editingPurchase && (
         <div className="modal-overlay" onClick={attemptCloseEditModal}>
-          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <div>
-                <h2>Edit Purchase</h2>
-                <p>Update purchase information.</p>
-              </div>
-
-              <button
-                type="button"
-                className="modal-close-btn"
-                onClick={attemptCloseEditModal}
-              >
-                ×
-              </button>
-            </div>
-
-            <form className="modal-form">
-              <div className="modal-grid">
+          <div
+            className="modal-card purchase-modal-card"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="purchase-modal-top">
+              <div className="modal-header">
                 <div>
-                  <label className="modal-label">Supplier</label>
-                  <select
-                    className="modal-select"
-                    value={editForm.supplierId}
-                    onChange={(e) =>
-                      handleEditFormChange("supplierId", e.target.value)
-                    }
-                  >
-                    <option value="">Search supplier...</option>
-                    {supplierOptions.map((supplier) => (
-                      <option key={supplier.id} value={supplier.id}>
-                        {supplier.name}
-                      </option>
-                    ))}
-                  </select>
-                  {editErrors.supplierId && (
-                    <p className="field-error">{editErrors.supplierId}</p>
-                  )}
+                  <h2>Edit Purchase</h2>
+                  <p>Update purchase information.</p>
                 </div>
 
-                <div>
-                  <label className="modal-label">Product</label>
-                  <select
-                    className="modal-select"
-                    value={editForm.productId}
-                    onChange={(e) =>
-                      handleEditFormChange("productId", e.target.value)
-                    }
-                  >
-                    <option value="">Search product...</option>
-                    {products.map((product) => (
-                      <option key={product.id} value={product.id}>
-                        {product.name}
-                      </option>
-                    ))}
-                  </select>
-                  {editErrors.productId && (
-                    <p className="field-error">{editErrors.productId}</p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="modal-label">Quantity</label>
-                  <input
-                    className="modal-input no-number-spinner"
-                    type="number"
-                    min="1"
-                    step="1"
-                    placeholder="Enter quantity"
-                    value={editForm.quantity}
-                    onChange={(e) =>
-                      handleEditFormChange("quantity", e.target.value)
-                    }
-                  />
-                  {editErrors.quantity && (
-                    <p className="field-error">{editErrors.quantity}</p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="modal-label">Total Cost</label>
-                  <input
-                    className="modal-input no-number-spinner"
-                    type="number"
-                    value={editForm.totalCost}
-                    readOnly
-                    placeholder="Calculated automatically"
-                  />
-                  {editErrors.totalCost && (
-                    <p className="field-error">{editErrors.totalCost}</p>
-                  )}
-                </div>
-
-                <div className="modal-grid-full">
-                  <label className="modal-label">Date</label>
-                  <input
-                    className="modal-input"
-                    type="date"
-                    value={editForm.date}
-                    min={BUSINESS_MIN_DATE}
-                    max={TODAY_DATE}
-                    onChange={(e) => handleEditFormChange("date", e.target.value)}
-                  />
-                  <p className="dashboard-search-meta">
-                    Allowed range: {BUSINESS_MIN_DATE} to {TODAY_DATE}
-                  </p>
-                  {editErrors.date && (
-                    <p className="field-error">{editErrors.date}</p>
-                  )}
-                </div>
-
-                <div className="modal-grid-full">
-                  <label className="modal-label">Notes</label>
-                  <textarea
-                    className="modal-textarea"
-                    placeholder="Add purchase notes..."
-                    rows={4}
-                    value={editForm.notes}
-                    onChange={(e) =>
-                      handleEditFormChange("notes", e.target.value)
-                    }
-                  />
-                </div>
-              </div>
-
-              <div className="modal-actions">
                 <button
                   type="button"
-                  className="modal-secondary-btn"
+                  className="modal-close-btn"
                   onClick={attemptCloseEditModal}
                 >
-                  Cancel
-                </button>
-
-                <button
-                  type="button"
-                  className="modal-primary-btn"
-                  onClick={handleSaveEdit}
-                >
-                  Save Changes
+                  ×
                 </button>
               </div>
-            </form>
+            </div>
+
+            <div className="purchase-modal-scroll">
+              <form className="modal-form">
+                <div className="modal-grid">
+                  <div className="field-card">
+                    <label className="modal-label">Supplier</label>
+                    <SearchableSelect
+                      value={editForm.supplierId}
+                      options={supplierOptions}
+                      placeholder="Search, add, or delete supplier..."
+                      searchPlaceholder="Search supplier..."
+                      allowCreate
+                      allowDelete
+                      onCreate={createSupplier}
+                      onDelete={deleteSupplier}
+                      onChange={(value) =>
+                        handleEditFormChange("supplierId", value)
+                      }
+                      error={editErrors.supplierId}
+                    />
+                    {editForm.supplierId && (
+                      <div className="helper-chip">
+                        Selected: {supplierMap.get(editForm.supplierId)}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="field-card">
+                    <label className="modal-label">Product</label>
+                    <SearchableSelect
+                      value={editForm.productId}
+                      options={productOptions}
+                      placeholder="Search product..."
+                      searchPlaceholder="Search product..."
+                      onChange={(value) =>
+                        handleEditFormChange("productId", value)
+                      }
+                      error={editErrors.productId}
+                    />
+                    {editForm.productId && (
+                      <div className="helper-chip">
+                        Product: {productMap.get(editForm.productId)}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="field-card">
+                    <label className="modal-label">Quantity</label>
+                    <input
+                      className="modal-input no-number-spinner"
+                      type="number"
+                      min="1"
+                      step="1"
+                      placeholder="Enter quantity"
+                      value={editForm.quantity}
+                      onChange={(e) =>
+                        handleEditFormChange("quantity", e.target.value)
+                      }
+                    />
+                    {editErrors.quantity && (
+                      <p className="field-error">{editErrors.quantity}</p>
+                    )}
+                  </div>
+
+                  <div className="field-card">
+                    <label className="modal-label">Total Cost</label>
+                    <input
+                      className="modal-input no-number-spinner"
+                      type="number"
+                      value={editForm.totalCost}
+                      readOnly
+                      placeholder="Calculated automatically"
+                    />
+                    {editErrors.totalCost && (
+                      <p className="field-error">{editErrors.totalCost}</p>
+                    )}
+                  </div>
+
+                  <div className="modal-grid-full field-card">
+                    <label className="modal-label">Date</label>
+                    <input
+                      className="modal-input"
+                      type="date"
+                      value={editForm.date}
+                      min={BUSINESS_MIN_DATE}
+                      max={TODAY_DATE}
+                      onChange={(e) =>
+                        handleEditFormChange("date", e.target.value)
+                      }
+                    />
+                    <p className="dashboard-search-meta">
+                      Allowed range: {BUSINESS_MIN_DATE} to {TODAY_DATE}
+                    </p>
+                    {editErrors.date && (
+                      <p className="field-error">{editErrors.date}</p>
+                    )}
+                  </div>
+
+                  <div className="modal-grid-full field-card">
+                    <label className="modal-label">Notes</label>
+                    <textarea
+                      className="modal-textarea"
+                      placeholder="Add purchase notes..."
+                      rows={4}
+                      value={editForm.notes}
+                      onChange={(e) =>
+                        handleEditFormChange("notes", e.target.value)
+                      }
+                    />
+                  </div>
+                </div>
+
+                <div className="modal-actions">
+                  <button
+                    type="button"
+                    className="modal-secondary-btn"
+                    onClick={attemptCloseEditModal}
+                  >
+                    Cancel
+                  </button>
+
+                  <button
+                    type="button"
+                    className="modal-primary-btn"
+                    onClick={handleSaveEdit}
+                  >
+                    Save Changes
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       )}
@@ -1281,58 +1858,62 @@ export default function Purchases() {
       {deletePurchase && (
         <div className="modal-overlay" onClick={closeDeleteModal}>
           <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <div>
-                <h2>Delete Purchase</h2>
-                <p>This action cannot be undone.</p>
+            <div className="purchase-modal-top">
+              <div className="modal-header">
+                <div>
+                  <h2>Delete Purchase</h2>
+                  <p>This action cannot be undone.</p>
+                </div>
+
+                <button
+                  type="button"
+                  className="modal-close-btn"
+                  onClick={closeDeleteModal}
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+
+            <div className="purchase-modal-scroll" style={{ paddingTop: "20px" }}>
+              <p className="delete-warning">
+                You are about to permanently delete this purchase.
+              </p>
+              <p className="delete-help">
+                To confirm deletion, type exactly <strong>123</strong> below.
+              </p>
+
+              <div style={{ marginTop: "16px" }}>
+                <input
+                  className="modal-input"
+                  type="text"
+                  placeholder="Type 123"
+                  value={deleteCode}
+                  onChange={(e) => {
+                    setDeleteCode(e.target.value);
+                    setDeleteError("");
+                  }}
+                />
+                {deleteError && <p className="field-error">{deleteError}</p>}
               </div>
 
-              <button
-                type="button"
-                className="modal-close-btn"
-                onClick={closeDeleteModal}
-              >
-                ×
-              </button>
-            </div>
+              <div className="modal-actions" style={{ marginTop: "20px" }}>
+                <button
+                  type="button"
+                  className="modal-secondary-btn"
+                  onClick={closeDeleteModal}
+                >
+                  Cancel
+                </button>
 
-            <p className="delete-warning">
-              You are about to permanently delete this purchase.
-            </p>
-            <p className="delete-help">
-              To confirm deletion, type exactly <strong>123</strong> below.
-            </p>
-
-            <div style={{ marginTop: "16px" }}>
-              <input
-                className="modal-input"
-                type="text"
-                placeholder="Type 123"
-                value={deleteCode}
-                onChange={(e) => {
-                  setDeleteCode(e.target.value);
-                  setDeleteError("");
-                }}
-              />
-              {deleteError && <p className="field-error">{deleteError}</p>}
-            </div>
-
-            <div className="modal-actions" style={{ marginTop: "20px" }}>
-              <button
-                type="button"
-                className="modal-secondary-btn"
-                onClick={closeDeleteModal}
-              >
-                Cancel
-              </button>
-
-              <button
-                type="button"
-                className="modal-danger-btn"
-                onClick={handleConfirmDelete}
-              >
-                Delete
-              </button>
+                <button
+                  type="button"
+                  className="modal-danger-btn"
+                  onClick={handleConfirmDelete}
+                >
+                  Delete
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -1341,19 +1922,21 @@ export default function Purchases() {
       {selectedNote !== null && (
         <div className="modal-overlay" onClick={closeNoteModal}>
           <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <div>
-                <h2>Purchase Note</h2>
-                <p>Purchase note details.</p>
-              </div>
+            <div className="purchase-modal-top">
+              <div className="modal-header">
+                <div>
+                  <h2>Purchase Note</h2>
+                  <p>Purchase note details.</p>
+                </div>
 
-              <button
-                type="button"
-                className="modal-close-btn"
-                onClick={closeNoteModal}
-              >
-                ×
-              </button>
+                <button
+                  type="button"
+                  className="modal-close-btn"
+                  onClick={closeNoteModal}
+                >
+                  ×
+                </button>
+              </div>
             </div>
 
             <div className="note-modal-body">
@@ -1376,14 +1959,16 @@ export default function Purchases() {
               )}
             </div>
 
-            <div className="modal-actions">
-              <button
-                type="button"
-                className="modal-primary-btn"
-                onClick={closeNoteModal}
-              >
-                Close
-              </button>
+            <div className="purchase-modal-scroll" style={{ paddingTop: 0 }}>
+              <div className="modal-actions">
+                <button
+                  type="button"
+                  className="modal-primary-btn"
+                  onClick={closeNoteModal}
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
         </div>

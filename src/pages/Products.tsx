@@ -1,5 +1,5 @@
 import "./Products.css";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   getInvoiceItems,
   getProductCategories,
@@ -149,6 +149,196 @@ function ConfirmCloseModal({
   );
 }
 
+function SearchableCategoryDropdown({
+  value,
+  options,
+  placeholder,
+  onChange,
+  emptyText = "No matching categories found.",
+}: {
+  value: string;
+  options: string[];
+  placeholder: string;
+  onChange: (value: string) => void;
+  emptyText?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const [menuStyle, setMenuStyle] = useState<React.CSSProperties>({});
+  const wrapperRef = useRef<HTMLDivElement | null>(null);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+
+  useEffect(() => {
+    if (!open || !triggerRef.current) return;
+
+    const updatePosition = () => {
+      if (!triggerRef.current) return;
+
+      const rect = triggerRef.current.getBoundingClientRect();
+      const viewportHeight = window.innerHeight;
+      const menuHeight = Math.min(320, viewportHeight - rect.bottom - 20);
+      const fallbackUpHeight = Math.min(320, rect.top - 20);
+
+      const shouldOpenUp =
+        rect.bottom + 320 > viewportHeight && fallbackUpHeight > 180;
+
+      setMenuStyle({
+        position: "fixed",
+        left: rect.left,
+        width: rect.width,
+        top: shouldOpenUp ? undefined : rect.bottom + 8,
+        bottom: shouldOpenUp ? viewportHeight - rect.top + 8 : undefined,
+        zIndex: 9999,
+        maxHeight: shouldOpenUp ? fallbackUpHeight : menuHeight,
+      });
+    };
+
+    updatePosition();
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+
+    return () => {
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+    };
+  }, [open]);
+
+  useEffect(() => {
+    const handleOutsideClick = (event: MouseEvent) => {
+      const target = event.target as Node;
+
+      if (
+        wrapperRef.current &&
+        !wrapperRef.current.contains(target) &&
+        !(target instanceof HTMLElement && target.closest(".floating-category-menu"))
+      ) {
+        setOpen(false);
+        setSearch("");
+      }
+    };
+
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+    };
+  }, []);
+
+  const filteredOptions = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    if (!term) return options;
+    return options.filter((option) => option.toLowerCase().includes(term));
+  }, [options, search]);
+
+  return (
+    <>
+      <div ref={wrapperRef} style={{ position: "relative" }}>
+        <button
+          ref={triggerRef}
+          type="button"
+          className="modal-select"
+          onClick={() => setOpen((prev) => !prev)}
+          style={{
+            width: "100%",
+            textAlign: "left",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            cursor: "pointer",
+            background: "#fff",
+          }}
+        >
+          <span style={{ color: value ? "#0f172a" : "#7b8794" }}>
+            {value || placeholder}
+          </span>
+          <span style={{ marginLeft: "10px", color: "#64748b", fontSize: "13px" }}>
+            ▼
+          </span>
+        </button>
+      </div>
+
+      {open && (
+        <div
+          className="floating-category-menu"
+          style={{
+            ...menuStyle,
+            background: "#fff",
+            border: "1px solid #dbe7f3",
+            borderRadius: "18px",
+            boxShadow: "0 24px 48px rgba(15, 23, 42, 0.18)",
+            overflow: "hidden",
+          }}
+        >
+          <div
+            style={{
+              padding: "12px",
+              borderBottom: "1px solid #edf2f7",
+              background: "#f8fbff",
+            }}
+          >
+            <input
+              className="modal-input"
+              type="text"
+              placeholder="Search category..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              style={{ margin: 0 }}
+              autoFocus
+            />
+          </div>
+
+          <div
+            style={{
+              maxHeight: "inherit",
+              overflowY: "auto",
+              padding: "8px",
+            }}
+          >
+            {filteredOptions.length > 0 ? (
+              filteredOptions.map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => {
+                    onChange(option);
+                    setOpen(false);
+                    setSearch("");
+                  }}
+                  style={{
+                    width: "100%",
+                    textAlign: "left",
+                    border: "none",
+                    background: value === option ? "#eff6ff" : "transparent",
+                    padding: "12px 14px",
+                    borderRadius: "12px",
+                    cursor: "pointer",
+                    color: "#1e293b",
+                    fontSize: "14px",
+                    fontWeight: value === option ? 700 : 600,
+                    marginBottom: "4px",
+                  }}
+                >
+                  {option}
+                </button>
+              ))
+            ) : (
+              <div
+                style={{
+                  padding: "14px",
+                  color: "#64748b",
+                  fontSize: "14px",
+                  fontWeight: 600,
+                }}
+              >
+                {emptyText}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
 function CategoryManagerModal({
   open,
   categories,
@@ -173,7 +363,7 @@ function CategoryManagerModal({
   const [newCategory, setNewCategory] = useState("");
   const [renameTarget, setRenameTarget] = useState("");
   const [renameValue, setRenameValue] = useState("");
-  const [search, setSearch] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState("");
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -181,19 +371,10 @@ function CategoryManagerModal({
       setNewCategory("");
       setRenameTarget("");
       setRenameValue("");
-      setSearch("");
+      setDeleteTarget("");
       setError("");
     }
   }, [open]);
-
-  const filteredCategories = useMemo(() => {
-    const value = search.trim().toLowerCase();
-    if (!value) return categories;
-
-    return categories.filter((category) =>
-      category.toLowerCase().includes(value)
-    );
-  }, [categories, search]);
 
   const getCategoryUsageCount = (category: string) => {
     return products.filter(
@@ -202,6 +383,16 @@ function CategoryManagerModal({
         normalizeCategoryName(category).toLowerCase()
     ).length;
   };
+
+  const renameTargetUsage = useMemo(() => {
+    if (!renameTarget) return 0;
+    return getCategoryUsageCount(renameTarget);
+  }, [renameTarget, products]);
+
+  const deleteTargetUsage = useMemo(() => {
+    if (!deleteTarget) return 0;
+    return getCategoryUsageCount(deleteTarget);
+  }, [deleteTarget, products]);
 
   if (!open) return null;
 
@@ -260,16 +451,63 @@ function CategoryManagerModal({
     setError("");
   };
 
+  const handleDeleteRequest = () => {
+    const value = normalizeCategoryName(deleteTarget);
+
+    if (!value) {
+      setError("Please select a category to delete.");
+      return;
+    }
+
+    onRequestDeleteCategory(value);
+    setDeleteTarget("");
+    setError("");
+  };
+
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div
         className="modal-card category-manager-modal"
         onClick={(e) => e.stopPropagation()}
+        style={{
+          width: "min(900px, calc(100vw - 28px))",
+          maxHeight: "calc(100vh - 28px)",
+          padding: 0,
+          overflow: "hidden",
+          borderRadius: "28px",
+        }}
       >
-        <div className="modal-header">
+        <div
+          className="modal-header"
+          style={{
+            padding: "28px 28px 20px",
+            borderBottom: "1px solid #e8eef5",
+            background:
+              "linear-gradient(180deg, rgba(246,250,255,0.95) 0%, rgba(255,255,255,0.98) 100%)",
+          }}
+        >
           <div>
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "8px",
+                padding: "8px 12px",
+                borderRadius: "999px",
+                background: "#eff6ff",
+                color: "#2563eb",
+                fontSize: "12px",
+                fontWeight: 800,
+                marginBottom: "12px",
+              }}
+            >
+              Category Control
+            </div>
             <h2>Manage Categories</h2>
-            <p>Organize your product categories in one compact workspace.</p>
+            <p>
+              Add, rename, and delete categories from one cleaner and more
+              compact workspace.
+            </p>
           </div>
 
           <button type="button" className="modal-close-btn" onClick={onClose}>
@@ -277,56 +515,49 @@ function CategoryManagerModal({
           </button>
         </div>
 
-        <div className="category-manager-scroll">
-          <div className="modal-form category-manager-form">
-            <div className="category-manager-layout">
-              <div className="category-panel">
-                <label className="modal-label">Available Categories</label>
-
-                <input
-                  className="modal-input"
-                  type="text"
-                  placeholder="Search categories"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                />
-
-                <div className="category-list">
-                  {filteredCategories.length > 0 ? (
-                    filteredCategories.map((category) => {
-                      const usedBy = getCategoryUsageCount(category);
-
-                      return (
-                        <button
-                          key={category}
-                          type="button"
-                          className={`category-item ${
-                            selectedCategory === category ? "active" : ""
-                          }`}
-                          onClick={() => onSelectCategory(category)}
-                        >
-                          <div className="category-item-main">
-                            <span>{category}</span>
-                            <small>{usedBy} product(s)</small>
-                          </div>
-
-                          {selectedCategory === category && (
-                            <span className="category-item-badge">Selected</span>
-                          )}
-                        </button>
-                      );
-                    })
-                  ) : (
-                    <div className="category-empty-state">
-                      No matching categories found.
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="category-panel">
+        <div
+          className="category-manager-scroll"
+          style={{
+            maxHeight: "calc(100vh - 180px)",
+            overflowY: "auto",
+            padding: "24px 28px 28px",
+          }}
+        >
+          <div
+            className="modal-form category-manager-form"
+            style={{ gap: "18px" }}
+          >
+            <div
+              className="category-manager-layout"
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+                gap: "18px",
+              }}
+            >
+              <div
+                className="category-panel"
+                style={{
+                  background: "#fbfdff",
+                  border: "1px solid #dfeaf5",
+                  borderRadius: "22px",
+                  padding: "20px",
+                }}
+              >
                 <div className="category-section">
                   <label className="modal-label">Add New Category</label>
+                  <p
+                    style={{
+                      margin: "0 0 14px",
+                      color: "#6b7f95",
+                      fontSize: "14px",
+                      lineHeight: 1.7,
+                    }}
+                  >
+                    Create a new category and make it available immediately in
+                    your product forms.
+                  </p>
+
                   <input
                     className="modal-input"
                     type="text"
@@ -337,6 +568,7 @@ function CategoryManagerModal({
                       setError("");
                     }}
                   />
+
                   <button
                     type="button"
                     className="modal-primary-btn full-width-btn"
@@ -345,26 +577,58 @@ function CategoryManagerModal({
                     Add Category
                   </button>
                 </div>
+              </div>
 
+              <div
+                className="category-panel"
+                style={{
+                  background: "#fbfdff",
+                  border: "1px solid #dfeaf5",
+                  borderRadius: "22px",
+                  padding: "20px",
+                }}
+              >
                 <div className="category-section">
-                  <label className="modal-label">Edit Existing Category</label>
-                  <select
-                    className="modal-select"
+                  <label className="modal-label">Rename Category</label>
+                  <p
+                    style={{
+                      margin: "0 0 14px",
+                      color: "#6b7f95",
+                      fontSize: "14px",
+                      lineHeight: 1.7,
+                    }}
+                  >
+                    Pick a category, edit its name, and update all linked
+                    products automatically.
+                  </p>
+
+                  <SearchableCategoryDropdown
                     value={renameTarget}
-                    onChange={(e) => {
-                      const value = e.target.value;
+                    options={categories}
+                    placeholder="Select category to rename"
+                    onChange={(value) => {
                       setRenameTarget(value);
                       setRenameValue(value);
                       setError("");
                     }}
-                  >
-                    <option value="">Select category to edit</option>
-                    {categories.map((category) => (
-                      <option key={category} value={category}>
-                        {category}
-                      </option>
-                    ))}
-                  </select>
+                  />
+
+                  {renameTarget && (
+                    <div
+                      style={{
+                        marginTop: "10px",
+                        padding: "10px 12px",
+                        borderRadius: "14px",
+                        background: "#f8fbff",
+                        border: "1px solid #dbe7f3",
+                        color: "#4b6580",
+                        fontSize: "13px",
+                        fontWeight: 600,
+                      }}
+                    >
+                      Linked products: {renameTargetUsage}
+                    </div>
+                  )}
 
                   <input
                     className="modal-input"
@@ -385,35 +649,106 @@ function CategoryManagerModal({
                     Save Category Changes
                   </button>
                 </div>
+              </div>
 
+              <div
+                className="category-panel"
+                style={{
+                  background: "#fffaf9",
+                  border: "1px solid #f3d5cf",
+                  borderRadius: "22px",
+                  padding: "20px",
+                  gridColumn: "1 / -1",
+                }}
+              >
                 <div className="category-section">
-                  <label className="modal-label">Delete Category</label>
-                  <p className="category-helper-text">
-                    Delete with confirmation. Linked categories will show a warning first.
+                  <label className="modal-label" style={{ color: "#9f1239" }}>
+                    Delete Category
+                  </label>
+                  <p
+                    className="category-helper-text"
+                    style={{
+                      margin: "0 0 14px",
+                      color: "#7c5e57",
+                      fontSize: "14px",
+                      lineHeight: 1.7,
+                    }}
+                  >
+                    Select the category you want to remove. If it is linked to
+                    products, a warning and confirmation step will appear before
+                    deletion.
                   </p>
 
-                  <div className="category-delete-list">
-                    {categories.map((category) => (
-                      <button
-                        key={category}
-                        type="button"
-                        className="category-delete-btn"
-                        onClick={() => onRequestDeleteCategory(category)}
-                      >
-                        <span>{category}</span>
-                        <span>Delete</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
+                  <SearchableCategoryDropdown
+                    value={deleteTarget}
+                    options={categories}
+                    placeholder="Select category to delete"
+                    onChange={(value) => {
+                      setDeleteTarget(value);
+                      setError("");
+                    }}
+                    emptyText="No categories available."
+                  />
 
-                {error && <p className="field-error">{error}</p>}
+                  {deleteTarget && (
+                    <div
+                      style={{
+                        marginTop: "10px",
+                        padding: "10px 12px",
+                        borderRadius: "14px",
+                        background: "#fff1f2",
+                        border: "1px solid #fecdd3",
+                        color: "#9f1239",
+                        fontSize: "13px",
+                        fontWeight: 700,
+                      }}
+                    >
+                      This category is linked to {deleteTargetUsage} product(s).
+                    </div>
+                  )}
+
+                  <button
+                    type="button"
+                    className="modal-danger-btn full-width-btn"
+                    onClick={handleDeleteRequest}
+                    style={{ marginTop: "14px" }}
+                  >
+                    Continue to Delete
+                  </button>
+                </div>
               </div>
             </div>
+
+            {selectedCategory && (
+              <div
+                style={{
+                  background: "#f8fbff",
+                  border: "1px solid #dbe7f3",
+                  borderRadius: "18px",
+                  padding: "14px 16px",
+                  color: "#4b6580",
+                  fontSize: "14px",
+                  fontWeight: 600,
+                }}
+              >
+                Active form category: <strong>{selectedCategory}</strong>
+              </div>
+            )}
+
+            {error && <p className="field-error">{error}</p>}
           </div>
         </div>
 
-        <div className="category-manager-footer">
+        <div
+          className="category-manager-footer"
+          style={{
+            padding: "18px 28px 24px",
+            borderTop: "1px solid #e8eef5",
+            background: "#fff",
+            display: "flex",
+            justifyContent: "flex-end",
+          }}
+        >
           <button
             type="button"
             className="modal-secondary-btn"

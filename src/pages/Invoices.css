@@ -1565,4 +1565,122 @@
     flex-direction: column;
     align-items: flex-start;
   }
+}/* Status column */
+.dashboard-table td:nth-child(8),
+.dashboard-table th:nth-child(8) {
+  text-align: center;
+  vertical-align: middle;
+}
+
+/* Status badge */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 124px;
+  height: 34px;
+  padding: 0 16px;
+  margin: 0 auto;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1;
+  text-align: center;
+  white-space: nowrap;
+  box-sizing: border-box;
+}
+
+.status-badge.paid {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.status-badge.partial {
+  background: #fef3c7;
+  color: #a16207;
+}
+
+.status-badge.debit {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+/* Better alignment for money columns */
+.dashboard-table td:nth-child(5),
+.dashboard-table td:nth-child(6),
+.dashboard-table td:nth-child(7) {
+  font-weight: 700;
+}
+.status-badge.paid {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.status-badge.partial {
+  background: #fef3c7;
+  color: #a16207;
+}
+
+.status-badge.debit {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.item-badge {
+  display: inline-flex;
+  align-items: center;
+  max-width: 280px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.still-pay {
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.sortable {
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.sortable:hover {
+  background: #f8fbff;
+  color: #2563eb;
+}
+
+.sort-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dashboard-table td:nth-child(8),
+.dashboard-table th:nth-child(8) {
+  text-align: center;
+  vertical-align: middle;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 124px;
+  height: 34px;
+  padding: 0 16px;
+  margin: 0 auto;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1;
+  text-align: center;
+  white-space: nowrap;
+  box-sizing: border-box;
 }

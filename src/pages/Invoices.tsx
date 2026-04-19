@@ -3,10 +3,22 @@ import { useEffect, useMemo, useState } from "react";
 import {
   getCustomers,
   getInvoices,
+  getPayments,
   getProducts,
   saveInvoices,
 } from "../data/storage";
-import type { Customer, Invoice, InvoiceItem, Product } from "../data/types";
+import {
+  calculateInvoicePaidAmount,
+  calculateInvoiceRemainingAmount,
+  calculateInvoiceStatus,
+} from "../data/relations";
+import type {
+  Customer,
+  Invoice,
+  InvoiceItem,
+  Payment,
+  Product,
+} from "../data/types";
 
 type InvoiceLineForm = {
   productId: string;
@@ -35,10 +47,19 @@ type SortKey =
   | "date"
   | "items"
   | "total"
+  | "paid"
   | "stillToPay"
   | "status";
 
 type SortMode = "default" | "desc" | "asc";
+
+type DerivedInvoiceRow = Invoice & {
+  customerName: string;
+  paidAmount: number;
+  remainingAmount: number;
+  statusLabel: "Paid" | "Partial" | "Debit";
+  itemsCount: number;
+};
 
 const TODAY_DATE = new Date().toISOString().split("T")[0];
 const MIN_INVOICE_DATE = "2020-01-01";
@@ -85,9 +106,7 @@ function normalizeDateInput(value: string): string {
 
   if (!raw) return TODAY_DATE;
 
-  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
-    return raw;
-  }
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
 
   const slashMatch = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
   if (slashMatch) {
@@ -122,18 +141,9 @@ function isValidDateString(value: string) {
 function validateInvoiceDate(value: string): string | undefined {
   const normalized = normalizeDateInput(value);
 
-  if (!normalized.trim()) {
-    return "Invoice date is required.";
-  }
-
-  if (!isValidDateString(normalized)) {
-    return "Please enter a valid date.";
-  }
-
-  if (normalized > TODAY_DATE) {
-    return "Future dates are not allowed.";
-  }
-
+  if (!normalized.trim()) return "Invoice date is required.";
+  if (!isValidDateString(normalized)) return "Please enter a valid date.";
+  if (normalized > TODAY_DATE) return "Future dates are not allowed.";
   if (normalized < MIN_INVOICE_DATE) {
     return `Date must be on or after ${MIN_INVOICE_DATE}.`;
   }
@@ -290,6 +300,7 @@ export default function Invoices() {
   const [invoices, setInvoices] = useState<Invoice[]>(() =>
     normalizeInvoices(getInvoices())
   );
+  const [payments, setPayments] = useState<Payment[]>(() => getPayments());
 
   const [searchTerm, setSearchTerm] = useState("");
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
@@ -318,6 +329,40 @@ export default function Invoices() {
     saveInvoices(invoices);
   }, [invoices]);
 
+  useEffect(() => {
+    const syncPayments = () => setPayments(getPayments());
+
+    syncPayments();
+    window.addEventListener("focus", syncPayments);
+    window.addEventListener("storage", syncPayments);
+
+    return () => {
+      window.removeEventListener("focus", syncPayments);
+      window.removeEventListener("storage", syncPayments);
+    };
+  }, []);
+
+  const invoiceRows = useMemo<DerivedInvoiceRow[]>(() => {
+    return invoices.map((invoice) => {
+      const customerName =
+        customers.find((customer) => customer.id === invoice.customerId)?.name ||
+        "Unknown Customer";
+
+      const paidAmount = calculateInvoicePaidAmount(invoice.id, payments);
+      const remainingAmount = calculateInvoiceRemainingAmount(invoice, payments);
+      const statusLabel = calculateInvoiceStatus(invoice, payments);
+
+      return {
+        ...invoice,
+        customerName,
+        paidAmount,
+        remainingAmount,
+        statusLabel,
+        itemsCount: invoice.items?.length ?? 0,
+      };
+    });
+  }, [customers, invoices, payments]);
+
   const handleSort = (key: SortKey) => {
     if (sortKey !== key) {
       setSortKey(key);
@@ -344,12 +389,8 @@ export default function Invoices() {
   const filteredInvoices = useMemo(() => {
     const value = searchTerm.trim().toLowerCase();
 
-    const filtered = invoices.filter((invoice) => {
+    const filtered = invoiceRows.filter((invoice) => {
       if (!value) return true;
-
-      const customerName =
-        customers.find((customer) => customer.id === invoice.customerId)?.name ||
-        "Unknown Customer";
 
       const productNames = (invoice.items ?? [])
         .map((item) => {
@@ -360,37 +401,23 @@ export default function Invoices() {
 
       return [
         invoice.id,
-        customerName,
+        invoice.customerName,
         invoice.date,
         invoice.notes || "",
         invoice.total,
+        invoice.paidAmount,
+        invoice.remainingAmount,
         productNames,
-        "Debit",
+        invoice.statusLabel,
       ]
         .join(" ")
         .toLowerCase()
         .includes(value);
     });
 
-    if (!sortKey || sortMode === "default") {
-      return filtered;
-    }
+    if (!sortKey || sortMode === "default") return filtered;
 
-    const sorted = [...filtered].sort((a, b) => {
-      const customerA =
-        customers.find((customer) => customer.id === a.customerId)?.name ||
-        "Unknown Customer";
-
-      const customerB =
-        customers.find((customer) => customer.id === b.customerId)?.name ||
-        "Unknown Customer";
-
-      const itemsA = (a.items ?? []).length;
-      const itemsB = (b.items ?? []).length;
-
-      const statusA = "Debit";
-      const statusB = "Debit";
-
+    return [...filtered].sort((a, b) => {
       let aValue: string | number = "";
       let bValue: string | number = "";
 
@@ -400,28 +427,32 @@ export default function Invoices() {
           bValue = b.id;
           break;
         case "customer":
-          aValue = customerA;
-          bValue = customerB;
+          aValue = a.customerName;
+          bValue = b.customerName;
           break;
         case "date":
           aValue = a.date;
           bValue = b.date;
           break;
         case "items":
-          aValue = itemsA;
-          bValue = itemsB;
+          aValue = a.itemsCount;
+          bValue = b.itemsCount;
           break;
         case "total":
           aValue = Number(a.total || 0);
           bValue = Number(b.total || 0);
           break;
+        case "paid":
+          aValue = a.paidAmount;
+          bValue = b.paidAmount;
+          break;
         case "stillToPay":
-          aValue = Number(a.total || 0);
-          bValue = Number(b.total || 0);
+          aValue = a.remainingAmount;
+          bValue = b.remainingAmount;
           break;
         case "status":
-          aValue = statusA;
-          bValue = statusB;
+          aValue = a.statusLabel;
+          bValue = b.statusLabel;
           break;
       }
 
@@ -433,9 +464,7 @@ export default function Invoices() {
         ? String(bValue).localeCompare(String(aValue))
         : String(aValue).localeCompare(String(bValue));
     });
-
-    return sorted;
-  }, [invoices, customers, products, searchTerm, sortKey, sortMode]);
+  }, [invoiceRows, products, searchTerm, sortKey, sortMode]);
 
   const hasAddUnsavedChanges = useMemo(() => {
     return (
@@ -459,14 +488,10 @@ export default function Invoices() {
   const validateForm = (values: InvoiceForm): FormErrors => {
     const errors: FormErrors = {};
 
-    if (!values.customerId.trim()) {
-      errors.customerId = "Customer is required.";
-    }
+    if (!values.customerId.trim()) errors.customerId = "Customer is required.";
 
     const dateError = validateInvoiceDate(values.date);
-    if (dateError) {
-      errors.date = dateError;
-    }
+    if (dateError) errors.date = dateError;
 
     const validItems = values.items.filter(
       (item) =>
@@ -519,7 +544,6 @@ export default function Invoices() {
       setPendingCloseTarget("add");
       return;
     }
-
     closeAddModal();
   };
 
@@ -528,7 +552,6 @@ export default function Invoices() {
       setPendingCloseTarget("edit");
       return;
     }
-
     closeEditModal();
   };
 
@@ -598,7 +621,6 @@ export default function Invoices() {
   const handleAddInvoice = () => {
     const errors = validateForm(form);
     setFormErrors(errors);
-
     if (Object.keys(errors).length > 0) return;
 
     const invoiceId = buildInvoiceId(invoices.length);
@@ -625,7 +647,6 @@ export default function Invoices() {
 
     const errors = validateForm(editForm);
     setEditErrors(errors);
-
     if (Object.keys(errors).length > 0) return;
 
     const items = buildInvoiceItems(editingInvoice.id, editForm.items);
@@ -733,12 +754,12 @@ export default function Invoices() {
                 <select
                   className="modal-select"
                   value={currentForm.customerId}
-                  onChange={(e) => {
+                  onChange={(e) =>
                     setCurrentForm((prev) => ({
                       ...prev,
                       customerId: e.target.value,
-                    }));
-                  }}
+                    }))
+                  }
                 >
                   <option value="">Search customer...</option>
                   {customers.map((customer) => (
@@ -993,6 +1014,9 @@ export default function Invoices() {
                   <th className="sortable" onClick={() => handleSort("total")}>
                     <span className="sort-label">Total {getSortIndicator("total")}</span>
                   </th>
+                  <th className="sortable" onClick={() => handleSort("paid")}>
+                    <span className="sort-label">Paid {getSortIndicator("paid")}</span>
+                  </th>
                   <th
                     className="sortable"
                     onClick={() => handleSort("stillToPay")}
@@ -1014,13 +1038,8 @@ export default function Invoices() {
               <tbody>
                 {filteredInvoices.length > 0 ? (
                   filteredInvoices.map((invoice) => {
-                    const customerName =
-                      customers.find(
-                        (customer) => customer.id === invoice.customerId
-                      )?.name || "Unknown Customer";
-
                     const itemsLabel =
-                      (invoice.items?.length ?? 0) > 0
+                      invoice.itemsCount > 0
                         ? (invoice.items ?? [])
                             .map((item) => {
                               const productName =
@@ -1034,21 +1053,32 @@ export default function Invoices() {
                     return (
                       <tr key={invoice.id}>
                         <td>{invoice.id}</td>
-                        <td>{customerName}</td>
+                        <td>{invoice.customerName}</td>
                         <td>{normalizeDateInput(invoice.date)}</td>
                         <td>
-                          {(invoice.items?.length ?? 0) > 0 ? (
+                          {invoice.itemsCount > 0 ? (
                             <span className="item-badge">{itemsLabel}</span>
                           ) : (
                             "—"
                           )}
                         </td>
                         <td>{formatMoney(Number(invoice.total || 0))}</td>
+                        <td>{formatMoney(invoice.paidAmount)}</td>
                         <td className="still-pay">
-                          {formatMoney(Number(invoice.total || 0))}
+                          {formatMoney(invoice.remainingAmount)}
                         </td>
                         <td>
-                          <span className="status-badge debit">Debit</span>
+                          <span
+                            className={`status-badge ${
+                              invoice.statusLabel === "Paid"
+                                ? "paid"
+                                : invoice.statusLabel === "Partial"
+                                ? "partial"
+                                : "debit"
+                            }`}
+                          >
+                            {invoice.statusLabel}
+                          </span>
                         </td>
                         <td>
                           {invoice.notes?.trim() ? (
@@ -1086,7 +1116,7 @@ export default function Invoices() {
                   })
                 ) : (
                   <tr>
-                    <td colSpan={9} className="empty-state-cell">
+                    <td colSpan={10} className="empty-state-cell">
                       No matching invoices found.
                     </td>
                   </tr>
