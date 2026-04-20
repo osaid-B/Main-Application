@@ -1,5 +1,11 @@
 import "./Products.css";
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
 import {
   getInvoiceItems,
   getProductCategories,
@@ -12,70 +18,141 @@ import { calculateProductSoldQuantity } from "../data/relations";
 import type { InvoiceItem, Product, Purchase } from "../data/types";
 
 type ProductForm = {
+  code: string;
   name: string;
   category: string;
-  price: string;
+  image: string;
+  purchasePrice: string;
+  salePrice: string;
   stock: string;
+  minStock: string;
+  description: string;
+  barcode: string;
+  barcodeImage: string;
 };
 
 type FormErrors = {
+  code?: string;
   name?: string;
   category?: string;
-  price?: string;
+  purchasePrice?: string;
+  salePrice?: string;
   stock?: string;
+  minStock?: string;
 };
 
-type SortKey =
-  | "id"
-  | "name"
-  | "category"
-  | "price"
-  | "stock"
-  | "sold"
-  | "available"
-  | "status";
-
-type SortMode = "added" | "desc" | "asc";
 type PendingCloseTarget = "add" | "edit" | null;
 
 type ProductRow = Product & {
+  code: string;
+  image: string;
+  purchasePrice: number;
+  salePrice: number;
   price: number;
   stock: number;
   sold: number;
   available: number;
+  minStock: number;
+  description: string;
+  barcode: string;
+  barcodeImage: string;
   statusLabel: "Out of Stock" | "Low Stock" | "In Stock";
   addedAt: number;
 };
 
 const emptyForm: ProductForm = {
+  code: "",
   name: "",
   category: "",
-  price: "",
+  image: "",
+  purchasePrice: "",
+  salePrice: "",
   stock: "",
+  minStock: "5",
+  description: "",
+  barcode: "",
+  barcodeImage: "",
 };
 
 const DELETE_CONFIRMATION_CODE = "123";
-
-function normalizeProducts(products: Product[]): Product[] {
-  return products.map((product, index) => ({
-    ...product,
-    id: product.id || `PROD-${1000 + index + 1}`,
-    name: product.name || "",
-    category: product.category || "",
-    price: Number(product.price || 0),
-    stock: Number(product.stock || 0),
-    addedAt: Number((product as Product & { addedAt?: number }).addedAt || 0),
-  }));
-}
-
-function getStatusLabel(available: number): ProductRow["statusLabel"] {
-  if (available <= 0) return "Out of Stock";
-  if (available <= 5) return "Low Stock";
-  return "In Stock";
-}
+const PLACEHOLDER_IMAGE =
+  "https://images.unsplash.com/photo-1560393464-5c69a73c5770?auto=format&fit=crop&w=900&q=80";
 
 function normalizeCategoryName(value: string) {
   return value.trim().replace(/\s+/g, " ");
+}
+
+function readFileAsDataURL(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+function formatMoney(value: number) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 2,
+  }).format(Number(value || 0));
+}
+
+function normalizeProducts(products: Product[]): Product[] {
+  return products.map((product, index) => {
+    const extended = product as Product & {
+      addedAt?: number;
+      code?: string;
+      image?: string;
+      purchasePrice?: number;
+      salePrice?: number;
+      minStock?: number;
+      description?: string;
+      barcode?: string;
+      barcodeImage?: string;
+    };
+
+    const salePrice = Number(
+      extended.salePrice ?? extended.price ?? product.price ?? 0
+    );
+    const purchasePrice = Number(
+      extended.purchasePrice ?? Math.max(salePrice * 0.7, 0)
+    );
+
+    return {
+      ...product,
+      id: product.id || `PROD-${1000 + index + 1}`,
+      name: product.name || "",
+      category: product.category || "",
+      price: salePrice,
+      stock: Number(product.stock || 0),
+      addedAt: Number(extended.addedAt || 0),
+      code: extended.code || product.id || `SKU-${1000 + index + 1}`,
+      image: extended.image || "",
+      purchasePrice,
+      salePrice,
+      minStock: Number(extended.minStock ?? 5),
+      description: extended.description || "",
+      barcode: extended.barcode || "",
+      barcodeImage: extended.barcodeImage || "",
+    } as Product;
+  });
+}
+
+function getStatusLabel(
+  available: number,
+  minStock: number
+): ProductRow["statusLabel"] {
+  if (available <= 0) return "Out of Stock";
+  if (available <= minStock) return "Low Stock";
+  return "In Stock";
+}
+
+function statusClassName(status: ProductRow["statusLabel"]) {
+  if (status === "Out of Stock") return "product-status out";
+  if (status === "Low Stock") return "product-status low";
+  return "product-status in";
 }
 
 function ConfirmCloseModal({
@@ -164,7 +241,7 @@ function SearchableCategoryDropdown({
 }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
-  const [menuStyle, setMenuStyle] = useState<React.CSSProperties>({});
+  const [menuStyle, setMenuStyle] = useState<CSSProperties>({});
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
 
@@ -210,7 +287,8 @@ function SearchableCategoryDropdown({
       if (
         wrapperRef.current &&
         !wrapperRef.current.contains(target) &&
-        !(target instanceof HTMLElement && target.closest(".floating-category-menu"))
+        !(target instanceof HTMLElement &&
+          target.closest(".floating-category-menu"))
       ) {
         setOpen(false);
         setSearch("");
@@ -218,9 +296,7 @@ function SearchableCategoryDropdown({
     };
 
     document.addEventListener("mousedown", handleOutsideClick);
-    return () => {
-      document.removeEventListener("mousedown", handleOutsideClick);
-    };
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
   }, []);
 
   const filteredOptions = useMemo(() => {
@@ -376,13 +452,12 @@ function CategoryManagerModal({
     }
   }, [open]);
 
-  const getCategoryUsageCount = (category: string) => {
-    return products.filter(
+  const getCategoryUsageCount = (category: string) =>
+    products.filter(
       (product) =>
         normalizeCategoryName(product.category || "").toLowerCase() ===
         normalizeCategoryName(category).toLowerCase()
     ).length;
-  };
 
   const renameTargetUsage = useMemo(() => {
     if (!renameTarget) return 0;
@@ -404,11 +479,7 @@ function CategoryManagerModal({
       return;
     }
 
-    if (
-      categories.some(
-        (category) => category.toLowerCase() === value.toLowerCase()
-      )
-    ) {
+    if (categories.some((category) => category.toLowerCase() === value.toLowerCase())) {
       setError("This category already exists.");
       return;
     }
@@ -469,40 +540,10 @@ function CategoryManagerModal({
       <div
         className="modal-card category-manager-modal"
         onClick={(e) => e.stopPropagation()}
-        style={{
-          width: "min(900px, calc(100vw - 28px))",
-          maxHeight: "calc(100vh - 28px)",
-          padding: 0,
-          overflow: "hidden",
-          borderRadius: "28px",
-        }}
       >
-        <div
-          className="modal-header"
-          style={{
-            padding: "28px 28px 20px",
-            borderBottom: "1px solid #e8eef5",
-            background:
-              "linear-gradient(180deg, rgba(246,250,255,0.95) 0%, rgba(255,255,255,0.98) 100%)",
-          }}
-        >
+        <div className="modal-header">
           <div>
-            <div
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "8px",
-                padding: "8px 12px",
-                borderRadius: "999px",
-                background: "#eff6ff",
-                color: "#2563eb",
-                fontSize: "12px",
-                fontWeight: 800,
-                marginBottom: "12px",
-              }}
-            >
-              Category Control
-            </div>
+            <div className="mini-badge">Category Control</div>
             <h2>Manage Categories</h2>
             <p>
               Add, rename, and delete categories from one cleaner and more
@@ -515,45 +556,13 @@ function CategoryManagerModal({
           </button>
         </div>
 
-        <div
-          className="category-manager-scroll"
-          style={{
-            maxHeight: "calc(100vh - 180px)",
-            overflowY: "auto",
-            padding: "24px 28px 28px",
-          }}
-        >
-          <div
-            className="modal-form category-manager-form"
-            style={{ gap: "18px" }}
-          >
-            <div
-              className="category-manager-layout"
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-                gap: "18px",
-              }}
-            >
-              <div
-                className="category-panel"
-                style={{
-                  background: "#fbfdff",
-                  border: "1px solid #dfeaf5",
-                  borderRadius: "22px",
-                  padding: "20px",
-                }}
-              >
+        <div className="category-manager-scroll">
+          <div className="modal-form category-manager-form">
+            <div className="category-manager-layout">
+              <div className="category-panel">
                 <div className="category-section">
                   <label className="modal-label">Add New Category</label>
-                  <p
-                    style={{
-                      margin: "0 0 14px",
-                      color: "#6b7f95",
-                      fontSize: "14px",
-                      lineHeight: 1.7,
-                    }}
-                  >
+                  <p className="category-helper-text">
                     Create a new category and make it available immediately in
                     your product forms.
                   </p>
@@ -579,25 +588,10 @@ function CategoryManagerModal({
                 </div>
               </div>
 
-              <div
-                className="category-panel"
-                style={{
-                  background: "#fbfdff",
-                  border: "1px solid #dfeaf5",
-                  borderRadius: "22px",
-                  padding: "20px",
-                }}
-              >
+              <div className="category-panel">
                 <div className="category-section">
                   <label className="modal-label">Rename Category</label>
-                  <p
-                    style={{
-                      margin: "0 0 14px",
-                      color: "#6b7f95",
-                      fontSize: "14px",
-                      lineHeight: 1.7,
-                    }}
-                  >
+                  <p className="category-helper-text">
                     Pick a category, edit its name, and update all linked
                     products automatically.
                   </p>
@@ -614,18 +608,7 @@ function CategoryManagerModal({
                   />
 
                   {renameTarget && (
-                    <div
-                      style={{
-                        marginTop: "10px",
-                        padding: "10px 12px",
-                        borderRadius: "14px",
-                        background: "#f8fbff",
-                        border: "1px solid #dbe7f3",
-                        color: "#4b6580",
-                        fontSize: "13px",
-                        fontWeight: 600,
-                      }}
-                    >
+                    <div className="info-chip-box">
                       Linked products: {renameTargetUsage}
                     </div>
                   )}
@@ -651,29 +634,10 @@ function CategoryManagerModal({
                 </div>
               </div>
 
-              <div
-                className="category-panel"
-                style={{
-                  background: "#fffaf9",
-                  border: "1px solid #f3d5cf",
-                  borderRadius: "22px",
-                  padding: "20px",
-                  gridColumn: "1 / -1",
-                }}
-              >
+              <div className="category-panel danger-panel">
                 <div className="category-section">
-                  <label className="modal-label" style={{ color: "#9f1239" }}>
-                    Delete Category
-                  </label>
-                  <p
-                    className="category-helper-text"
-                    style={{
-                      margin: "0 0 14px",
-                      color: "#7c5e57",
-                      fontSize: "14px",
-                      lineHeight: 1.7,
-                    }}
-                  >
+                  <label className="modal-label danger-text">Delete Category</label>
+                  <p className="category-helper-text danger-help">
                     Select the category you want to remove. If it is linked to
                     products, a warning and confirmation step will appear before
                     deletion.
@@ -691,18 +655,7 @@ function CategoryManagerModal({
                   />
 
                   {deleteTarget && (
-                    <div
-                      style={{
-                        marginTop: "10px",
-                        padding: "10px 12px",
-                        borderRadius: "14px",
-                        background: "#fff1f2",
-                        border: "1px solid #fecdd3",
-                        color: "#9f1239",
-                        fontSize: "13px",
-                        fontWeight: 700,
-                      }}
-                    >
+                    <div className="delete-usage-chip">
                       This category is linked to {deleteTargetUsage} product(s).
                     </div>
                   )}
@@ -711,7 +664,6 @@ function CategoryManagerModal({
                     type="button"
                     className="modal-danger-btn full-width-btn"
                     onClick={handleDeleteRequest}
-                    style={{ marginTop: "14px" }}
                   >
                     Continue to Delete
                   </button>
@@ -720,17 +672,7 @@ function CategoryManagerModal({
             </div>
 
             {selectedCategory && (
-              <div
-                style={{
-                  background: "#f8fbff",
-                  border: "1px solid #dbe7f3",
-                  borderRadius: "18px",
-                  padding: "14px 16px",
-                  color: "#4b6580",
-                  fontSize: "14px",
-                  fontWeight: 600,
-                }}
-              >
+              <div className="active-category-box">
                 Active form category: <strong>{selectedCategory}</strong>
               </div>
             )}
@@ -739,16 +681,7 @@ function CategoryManagerModal({
           </div>
         </div>
 
-        <div
-          className="category-manager-footer"
-          style={{
-            padding: "18px 28px 24px",
-            borderTop: "1px solid #e8eef5",
-            background: "#fff",
-            display: "flex",
-            justifyContent: "flex-end",
-          }}
-        >
+        <div className="category-manager-footer">
           <button
             type="button"
             className="modal-secondary-btn"
@@ -850,6 +783,551 @@ function DeleteCategoryModal({
   );
 }
 
+function ImagePreviewModal({
+  image,
+  onClose,
+}: {
+  image: string | null;
+  onClose: () => void;
+}) {
+  if (!image) return null;
+
+  return (
+    <div className="image-lightbox-overlay" onClick={onClose}>
+      <div
+        className="image-lightbox-card"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button
+          type="button"
+          className="image-lightbox-close"
+          onClick={onClose}
+          aria-label="Close image preview"
+        >
+          ×
+        </button>
+
+        <img
+          src={image}
+          alt="Product preview"
+          className="image-lightbox-full"
+        />
+      </div>
+    </div>
+  );
+}
+
+function ProductDetailsModal({
+  product,
+  onClose,
+  onPreviewImage,
+}: {
+  product: ProductRow | null;
+  onClose: () => void;
+  onPreviewImage: (image: string) => void;
+}) {
+  if (!product) return null;
+
+  const profit = Math.max(product.salePrice - product.purchasePrice, 0);
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div
+        className="modal-card product-view-modal"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="modal-header">
+          <div>
+            <h2>{product.name}</h2>
+            <p>Detailed product overview with pricing and stock information.</p>
+          </div>
+
+          <button type="button" className="modal-close-btn" onClick={onClose}>
+            ×
+          </button>
+        </div>
+
+        <div className="product-view-body">
+          <div className="product-view-image-wrap">
+            <img
+              src={product.image || PLACEHOLDER_IMAGE}
+              alt={product.name}
+              className="product-view-image clickable-product-image"
+              onClick={() => onPreviewImage(product.image || PLACEHOLDER_IMAGE)}
+            />
+          </div>
+
+          <div className="product-view-content">
+            <div className="product-view-grid">
+              <div className="view-stat-card">
+                <span>Product ID</span>
+                <strong>{product.id}</strong>
+              </div>
+              <div className="view-stat-card">
+                <span>Product Code</span>
+                <strong>{product.code}</strong>
+              </div>
+              <div className="view-stat-card">
+                <span>Category</span>
+                <strong>{product.category || "Unassigned"}</strong>
+              </div>
+              <div className="view-stat-card">
+                <span>Status</span>
+                <strong>{product.statusLabel}</strong>
+              </div>
+              <div className="view-stat-card">
+                <span>Purchase Price</span>
+                <strong>{formatMoney(product.purchasePrice)}</strong>
+              </div>
+              <div className="view-stat-card">
+                <span>Sale Price</span>
+                <strong>{formatMoney(product.salePrice)}</strong>
+              </div>
+              <div className="view-stat-card">
+                <span>Profit / Unit</span>
+                <strong>{formatMoney(profit)}</strong>
+              </div>
+              <div className="view-stat-card">
+                <span>Available Stock</span>
+                <strong>{product.available}</strong>
+              </div>
+            </div>
+
+            {product.barcode || product.barcodeImage ? (
+              <div className="view-description-box">
+                <h4>Barcode</h4>
+
+                {product.barcodeImage ? (
+                  <img
+                    src={product.barcodeImage}
+                    alt={product.barcode || "Barcode"}
+                    className="barcode-preview-image"
+                  />
+                ) : null}
+
+                {product.barcode ? (
+                  <p className="barcode-value">{product.barcode}</p>
+                ) : (
+                  <p className="barcode-value muted">No barcode number added.</p>
+                )}
+              </div>
+            ) : null}
+
+            <div className="view-description-box">
+              <h4>Description</h4>
+              <p>{product.description || "No description added yet."}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ProductFormModal({
+  title,
+  description,
+  form,
+  errors,
+  categoryOptions,
+  selectedCategory,
+  onClose,
+  onOpenCategoryManager,
+  onSubmit,
+  onFieldChange,
+  onImageChange,
+  onBarcodeImageChange,
+  onPreviewImage,
+}: {
+  title: string;
+  description: string;
+  form: ProductForm;
+  errors: FormErrors;
+  categoryOptions: string[];
+  selectedCategory: string;
+  onClose: () => void;
+  onOpenCategoryManager: () => void;
+  onSubmit: () => void;
+  onFieldChange: (field: keyof ProductForm, value: string) => void;
+  onImageChange: (file: File | null) => void;
+  onBarcodeImageChange: (file: File | null) => void;
+  onPreviewImage: (image: string) => void;
+}) {
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div
+        className="modal-card product-form-modal modal-scroll-card"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="modal-header modal-sticky-header">
+          <div>
+            <h2>{title}</h2>
+            <p>{description}</p>
+          </div>
+
+          <button type="button" className="modal-close-btn" onClick={onClose}>
+            ×
+          </button>
+        </div>
+
+        <form
+          className="modal-form modal-form-scroll"
+          onSubmit={(e) => {
+            e.preventDefault();
+            onSubmit();
+          }}
+        >
+          <div className="product-form-layout">
+            <div className="image-upload-panel">
+              <div className="image-preview-card">
+                <img
+                  src={form.image || PLACEHOLDER_IMAGE}
+                  alt={form.name || "Preview"}
+                  className="image-preview clickable-product-image"
+                  onClick={() => onPreviewImage(form.image || PLACEHOLDER_IMAGE)}
+                />
+              </div>
+
+              <label className="upload-image-btn">
+                Upload Product Image
+                <input
+                  hidden
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => onImageChange(e.target.files?.[0] || null)}
+                />
+              </label>
+
+              <button
+                type="button"
+                className="remove-image-btn"
+                onClick={() => onFieldChange("image", "")}
+              >
+                Remove Product Image
+              </button>
+            </div>
+
+            <div className="modal-grid">
+              <div>
+                <label className="modal-label">Product Code</label>
+                <input
+                  className="modal-input"
+                  type="text"
+                  placeholder="Enter product code"
+                  value={form.code}
+                  onChange={(e) => onFieldChange("code", e.target.value)}
+                />
+                {errors.code && <p className="field-error">{errors.code}</p>}
+              </div>
+
+              <div>
+                <label className="modal-label">Name</label>
+                <input
+                  className="modal-input"
+                  type="text"
+                  placeholder="Enter product name"
+                  value={form.name}
+                  onChange={(e) => onFieldChange("name", e.target.value)}
+                />
+                {errors.name && <p className="field-error">{errors.name}</p>}
+              </div>
+
+              <div className="category-field">
+                <label className="modal-label">Category</label>
+
+                <div className="category-select-row">
+                  <select
+                    className="modal-select"
+                    value={form.category}
+                    onChange={(e) => onFieldChange("category", e.target.value)}
+                  >
+                    <option value="">Select category</option>
+                    {categoryOptions.map((category) => (
+                      <option key={category} value={category}>
+                        {category}
+                      </option>
+                    ))}
+                  </select>
+
+                  <button
+                    type="button"
+                    className="category-manage-btn"
+                    onClick={onOpenCategoryManager}
+                  >
+                    Manage
+                  </button>
+                </div>
+
+                {selectedCategory && (
+                  <div className="selected-category-chip">
+                    Selected: {selectedCategory}
+                  </div>
+                )}
+
+                {errors.category && (
+                  <p className="field-error">{errors.category}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="modal-label">Minimum Stock Alert</label>
+                <input
+                  className="modal-input"
+                  type="number"
+                  min="0"
+                  step="1"
+                  placeholder="5"
+                  value={form.minStock}
+                  onChange={(e) => onFieldChange("minStock", e.target.value)}
+                />
+                {errors.minStock && (
+                  <p className="field-error">{errors.minStock}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="modal-label">Purchase Price</label>
+                <input
+                  className="modal-input"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="Enter purchase price"
+                  value={form.purchasePrice}
+                  onChange={(e) => onFieldChange("purchasePrice", e.target.value)}
+                />
+                {errors.purchasePrice && (
+                  <p className="field-error">{errors.purchasePrice}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="modal-label">Sale Price</label>
+                <input
+                  className="modal-input"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="Enter sale price"
+                  value={form.salePrice}
+                  onChange={(e) => onFieldChange("salePrice", e.target.value)}
+                />
+                {errors.salePrice && (
+                  <p className="field-error">{errors.salePrice}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="modal-label">Base Stock</label>
+                <input
+                  className="modal-input"
+                  type="number"
+                  min="0"
+                  step="1"
+                  placeholder="Enter initial stock"
+                  value={form.stock}
+                  onChange={(e) => onFieldChange("stock", e.target.value)}
+                />
+                {errors.stock && <p className="field-error">{errors.stock}</p>}
+              </div>
+
+              <div>
+                <label className="modal-label">Barcode Number (Optional)</label>
+                <input
+                  className="modal-input"
+                  type="text"
+                  placeholder="Enter barcode number"
+                  value={form.barcode}
+                  onChange={(e) => onFieldChange("barcode", e.target.value)}
+                />
+              </div>
+
+              <div>
+                <label className="modal-label">Barcode Image (Optional)</label>
+                <div className="barcode-upload-row">
+                  <label className="barcode-upload-btn">
+                    Upload Barcode
+                    <input
+                      hidden
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) =>
+                        onBarcodeImageChange(e.target.files?.[0] || null)
+                      }
+                    />
+                  </label>
+
+                  <button
+                    type="button"
+                    className="barcode-clear-btn"
+                    onClick={() => onFieldChange("barcodeImage", "")}
+                  >
+                    Clear
+                  </button>
+                </div>
+              </div>
+
+              {(form.barcodeImage || form.barcode) && (
+                <div className="modal-grid-full">
+                  <div className="barcode-preview-box">
+                    <h4>Barcode Preview</h4>
+
+                    {form.barcodeImage ? (
+                      <img
+                        src={form.barcodeImage}
+                        alt={form.barcode || "Barcode Preview"}
+                        className="barcode-preview-image"
+                      />
+                    ) : null}
+
+                    <p className="barcode-value">
+                      {form.barcode || "No barcode number entered"}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              <div className="modal-grid-full">
+                <label className="modal-label">Description</label>
+                <textarea
+                  className="modal-input product-textarea"
+                  rows={4}
+                  placeholder="Enter product description"
+                  value={form.description}
+                  onChange={(e) => onFieldChange("description", e.target.value)}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="modal-actions modal-sticky-actions">
+            <button
+              type="button"
+              className="modal-secondary-btn"
+              onClick={onClose}
+            >
+              Cancel
+            </button>
+            <button type="submit" className="modal-primary-btn">
+              Save Product
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function ProductCard({
+  product,
+  menuOpenId,
+  onToggleMenu,
+  onView,
+  onEdit,
+  onDelete,
+  onPreviewImage,
+}: {
+  product: ProductRow;
+  menuOpenId: string | null;
+  onToggleMenu: (productId: string) => void;
+  onView: (product: ProductRow) => void;
+  onEdit: (product: ProductRow) => void;
+  onDelete: (product: ProductRow) => void;
+  onPreviewImage: (image: string) => void;
+}) {
+  const menuOpen = menuOpenId === product.id;
+  const profit = Math.max(product.salePrice - product.purchasePrice, 0);
+
+  return (
+    <div className="product-card">
+      <div className="product-card-media">
+        <img
+          src={product.image || PLACEHOLDER_IMAGE}
+          alt={product.name}
+          className="product-card-image clickable-product-image"
+          onClick={(e) => {
+            e.stopPropagation();
+            onPreviewImage(product.image || PLACEHOLDER_IMAGE);
+          }}
+        />
+
+        <div className="product-card-topbar">
+          <div className="product-icon-badge">◫</div>
+
+          <div className="product-menu-wrap">
+            <button
+              type="button"
+              className="product-menu-btn settings-emoji-btn"
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleMenu(product.id);
+              }}
+              aria-label="Product settings"
+              title="Product settings"
+            >
+              ⚙️
+            </button>
+
+            {menuOpen && (
+              <div
+                className="product-menu-dropdown"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <button type="button" onClick={() => onView(product)}>
+                  View
+                </button>
+                <button type="button" onClick={() => onEdit(product)}>
+                  Edit
+                </button>
+                <button type="button" className="danger" onClick={() => onDelete(product)}>
+                  Delete
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="product-card-body">
+        <div className="product-card-title">
+          <h3>{product.name}</h3>
+          <p>{product.code}</p>
+        </div>
+
+        <div className="product-card-price">{formatMoney(product.salePrice)}</div>
+
+        <div className="product-mini-meta">
+          <span>{product.category || "Unassigned"}</span>
+          <span className={statusClassName(product.statusLabel)}>{product.statusLabel}</span>
+        </div>
+
+        <div className="product-inline-stats">
+          <div>
+            <small>Buy</small>
+            <strong>{formatMoney(product.purchasePrice)}</strong>
+          </div>
+          <div>
+            <small>Sell</small>
+            <strong>{formatMoney(product.salePrice)}</strong>
+          </div>
+          <div>
+            <small>Profit</small>
+            <strong>{formatMoney(profit)}</strong>
+          </div>
+          <div>
+            <small>Stock</small>
+            <strong>{product.available}</strong>
+          </div>
+        </div>
+
+        {product.barcode ? (
+          <div className="product-barcode-chip">Barcode: {product.barcode}</div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 export default function Products() {
   const [products, setProducts] = useState<Product[]>(() => {
     const normalized = normalizeProducts(getProducts());
@@ -870,6 +1348,8 @@ export default function Products() {
   const [invoiceItems] = useState<InvoiceItem[]>(() => getInvoiceItems());
 
   const [searchTerm, setSearchTerm] = useState("");
+  const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [addForm, setAddForm] = useState<ProductForm>(emptyForm);
@@ -879,12 +1359,11 @@ export default function Products() {
   const [editForm, setEditForm] = useState<ProductForm>(emptyForm);
   const [editErrors, setEditErrors] = useState<FormErrors>({});
 
+  const [viewProduct, setViewProduct] = useState<ProductRow | null>(null);
+
   const [deleteProduct, setDeleteProduct] = useState<Product | null>(null);
   const [deleteCode, setDeleteCode] = useState("");
   const [deleteError, setDeleteError] = useState("");
-
-  const [sortKey, setSortKey] = useState<SortKey | null>(null);
-  const [sortMode, setSortMode] = useState<SortMode>("added");
 
   const [pendingCloseTarget, setPendingCloseTarget] =
     useState<PendingCloseTarget>(null);
@@ -918,6 +1397,12 @@ export default function Products() {
     saveProductCategories(categories);
   }, [categories]);
 
+  useEffect(() => {
+    const closeMenu = () => setMenuOpenId(null);
+    window.addEventListener("click", closeMenu);
+    return () => window.removeEventListener("click", closeMenu);
+  }, []);
+
   const categoryOptions = useMemo(() => {
     return categories
       .map((category) => normalizeCategoryName(category))
@@ -926,22 +1411,35 @@ export default function Products() {
   }, [categories]);
 
   const hasAddUnsavedChanges = useMemo(() => {
-    return (
-      addForm.name.trim() !== "" ||
-      addForm.category.trim() !== "" ||
-      addForm.price.trim() !== "" ||
-      addForm.stock.trim() !== ""
-    );
+    return Object.values(addForm).some((value) => value.trim() !== "");
   }, [addForm]);
 
   const hasEditUnsavedChanges = useMemo(() => {
     if (!editingProduct) return false;
 
+    const extended = editingProduct as Product & {
+      code?: string;
+      image?: string;
+      purchasePrice?: number;
+      salePrice?: number;
+      minStock?: number;
+      description?: string;
+      barcode?: string;
+      barcodeImage?: string;
+    };
+
     return (
+      editForm.code.trim() !== String(extended.code || "") ||
       editForm.name.trim() !== (editingProduct.name || "") ||
       editForm.category.trim() !== (editingProduct.category || "") ||
-      editForm.price.trim() !== String(editingProduct.price ?? "") ||
-      editForm.stock.trim() !== String(editingProduct.stock ?? "")
+      editForm.image.trim() !== String(extended.image || "") ||
+      editForm.purchasePrice.trim() !== String(extended.purchasePrice ?? "") ||
+      editForm.salePrice.trim() !== String(extended.salePrice ?? editingProduct.price ?? "") ||
+      editForm.stock.trim() !== String(editingProduct.stock ?? "") ||
+      editForm.minStock.trim() !== String(extended.minStock ?? 5) ||
+      editForm.description.trim() !== String(extended.description || "") ||
+      editForm.barcode.trim() !== String(extended.barcode || "") ||
+      editForm.barcodeImage.trim() !== String(extended.barcodeImage || "")
     );
   }, [editForm, editingProduct]);
 
@@ -949,6 +1447,18 @@ export default function Products() {
     return products
       .filter((product) => product.name?.trim() !== "")
       .map((product) => {
+        const extended = product as Product & {
+          code?: string;
+          image?: string;
+          purchasePrice?: number;
+          salePrice?: number;
+          minStock?: number;
+          description?: string;
+          barcode?: string;
+          barcodeImage?: string;
+          addedAt?: number;
+        };
+
         const receivedQty = purchases
           .filter(
             (purchase) =>
@@ -963,111 +1473,80 @@ export default function Products() {
           0
         );
 
+        const salePrice = Number(extended.salePrice ?? product.price ?? 0);
+        const purchasePrice = Number(
+          extended.purchasePrice ?? Math.max(salePrice * 0.7, 0)
+        );
+        const minStock = Number(extended.minStock ?? 5);
+
         return {
           ...product,
-          price: Number(product.price || 0),
+          code: extended.code || product.id || "",
+          image: extended.image || "",
+          purchasePrice,
+          salePrice,
+          price: salePrice,
           stock: Number(product.stock || 0),
           sold: soldQty,
           available,
-          statusLabel: getStatusLabel(available),
-          addedAt: Number((product as Product & { addedAt?: number }).addedAt || 0),
+          minStock,
+          description: extended.description || "",
+          barcode: extended.barcode || "",
+          barcodeImage: extended.barcodeImage || "",
+          statusLabel: getStatusLabel(available, minStock),
+          addedAt: Number(extended.addedAt || 0),
         };
       });
   }, [products, purchases, invoiceItems]);
 
-  const filteredAndSortedProducts = useMemo(() => {
+  const filteredProducts = useMemo(() => {
     const value = searchTerm.trim().toLowerCase();
 
-    const filtered = productRows.filter((product) => {
-      if (!value) return true;
+    return [...productRows]
+      .filter((product) => {
+        if (!value) return true;
 
-      return [
-        product.id,
-        product.name,
-        product.category,
-        product.price,
-        product.stock,
-        product.sold,
-        product.available,
-        product.statusLabel,
-      ]
-        .join(" ")
-        .toLowerCase()
-        .includes(value);
-    });
-
-    if (!sortKey || sortMode === "added") {
-      return [...filtered].sort((a, b) => b.addedAt - a.addedAt);
-    }
-
-    const sorted = [...filtered].sort((a, b) => {
-      let aValue: string | number = "";
-      let bValue: string | number = "";
-
-      switch (sortKey) {
-        case "id":
-          aValue = a.id;
-          bValue = b.id;
-          break;
-        case "name":
-          aValue = a.name;
-          bValue = b.name;
-          break;
-        case "category":
-          aValue = a.category;
-          bValue = b.category;
-          break;
-        case "price":
-          aValue = a.price;
-          bValue = b.price;
-          break;
-        case "stock":
-          aValue = a.stock;
-          bValue = b.stock;
-          break;
-        case "sold":
-          aValue = a.sold;
-          bValue = b.sold;
-          break;
-        case "available":
-          aValue = a.available;
-          bValue = b.available;
-          break;
-        case "status":
-          aValue = a.statusLabel;
-          bValue = b.statusLabel;
-          break;
-      }
-
-      if (typeof aValue === "number" && typeof bValue === "number") {
-        return sortMode === "desc" ? bValue - aValue : aValue - bValue;
-      }
-
-      return sortMode === "desc"
-        ? String(bValue).localeCompare(String(aValue))
-        : String(aValue).localeCompare(String(bValue));
-    });
-
-    return sorted;
-  }, [productRows, searchTerm, sortKey, sortMode]);
+        return [
+          product.id,
+          product.code,
+          product.name,
+          product.category,
+          product.salePrice,
+          product.purchasePrice,
+          product.stock,
+          product.available,
+          product.statusLabel,
+          product.description,
+          product.barcode,
+        ]
+          .join(" ")
+          .toLowerCase()
+          .includes(value);
+      })
+      .sort((a, b) => b.addedAt - a.addedAt);
+  }, [productRows, searchTerm]);
 
   const validateForm = (form: ProductForm): FormErrors => {
     const errors: FormErrors = {};
 
-    if (!form.name.trim()) {
-      errors.name = "Product name is required.";
+    if (!form.code.trim()) errors.code = "Product code is required.";
+    if (!form.name.trim()) errors.name = "Product name is required.";
+    if (!form.category.trim()) errors.category = "Category is required.";
+
+    if (!form.purchasePrice.trim()) {
+      errors.purchasePrice = "Purchase price is required.";
+    } else if (Number.isNaN(Number(form.purchasePrice))) {
+      errors.purchasePrice = "Purchase price must be a valid number.";
+    } else if (Number(form.purchasePrice) < 0) {
+      errors.purchasePrice = "Purchase price cannot be negative.";
     }
 
-    if (!form.category.trim()) {
-      errors.category = "Category is required.";
-    }
-
-    if (!form.price.trim()) {
-      errors.price = "Price is required.";
-    } else if (Number.isNaN(Number(form.price))) {
-      errors.price = "Price must be a valid number.";
-    } else if (Number(form.price) < 0) {
-      errors.price = "Price cannot be negative.";
+    if (!form.salePrice.trim()) {
+      errors.salePrice = "Sale price is required.";
+    } else if (Number.isNaN(Number(form.salePrice))) {
+      errors.salePrice = "Sale price must be a valid number.";
+    } else if (Number(form.salePrice) < 0) {
+      errors.salePrice = "Sale price cannot be negative.";
     }
 
     if (!form.stock.trim()) {
@@ -1078,7 +1557,25 @@ export default function Products() {
       errors.stock = "Base stock cannot be negative.";
     }
 
+    if (!form.minStock.trim()) {
+      errors.minStock = "Minimum stock is required.";
+    } else if (Number.isNaN(Number(form.minStock))) {
+      errors.minStock = "Minimum stock must be a valid number.";
+    } else if (Number(form.minStock) < 0) {
+      errors.minStock = "Minimum stock cannot be negative.";
+    }
+
     return errors;
+  };
+
+  const setAddField = (field: keyof ProductForm, value: string) => {
+    setAddForm((prev) => ({ ...prev, [field]: value }));
+    setAddErrors((prev) => ({ ...prev, [field]: undefined }));
+  };
+
+  const setEditField = (field: keyof ProductForm, value: string) => {
+    setEditForm((prev) => ({ ...prev, [field]: value }));
+    setEditErrors((prev) => ({ ...prev, [field]: undefined }));
   };
 
   const closeAddModal = () => {
@@ -1098,7 +1595,6 @@ export default function Products() {
       setPendingCloseTarget("add");
       return;
     }
-
     closeAddModal();
   };
 
@@ -1107,7 +1603,6 @@ export default function Products() {
       setPendingCloseTarget("edit");
       return;
     }
-
     closeEditModal();
   };
 
@@ -1117,13 +1612,20 @@ export default function Products() {
     setPendingCloseTarget(null);
   };
 
-  const openEditModal = (product: Product) => {
+  const openEditModal = (product: ProductRow) => {
     setEditingProduct(product);
     setEditForm({
+      code: product.code || "",
       name: product.name || "",
       category: product.category || "",
-      price: String(product.price ?? ""),
+      image: product.image || "",
+      purchasePrice: String(product.purchasePrice ?? ""),
+      salePrice: String(product.salePrice ?? ""),
       stock: String(product.stock ?? ""),
+      minStock: String(product.minStock ?? 5),
+      description: product.description || "",
+      barcode: product.barcode || "",
+      barcodeImage: product.barcodeImage || "",
     });
     setEditErrors({});
   };
@@ -1140,29 +1642,6 @@ export default function Products() {
     setDeleteError("");
   };
 
-  const handleSort = (key: SortKey) => {
-    if (sortKey !== key) {
-      setSortKey(key);
-      setSortMode("desc");
-      return;
-    }
-
-    if (sortMode === "desc") {
-      setSortMode("asc");
-      return;
-    }
-
-    setSortKey(null);
-    setSortMode("added");
-  };
-
-  const getSortIndicator = (key: SortKey) => {
-    if (sortKey !== key) return "";
-    if (sortMode === "desc") return "↓";
-    if (sortMode === "asc") return "↑";
-    return "";
-  };
-
   const handleAddProduct = () => {
     const errors = validateForm(addForm);
     setAddErrors(errors);
@@ -1171,10 +1650,18 @@ export default function Products() {
 
     const newProduct: Product = {
       id: `PROD-${1000 + products.length + 1}`,
+      code: addForm.code.trim(),
       name: addForm.name.trim(),
       category: normalizeCategoryName(addForm.category),
-      price: Number(addForm.price),
+      image: addForm.image.trim(),
+      purchasePrice: Number(addForm.purchasePrice),
+      salePrice: Number(addForm.salePrice),
+      price: Number(addForm.salePrice),
       stock: Number(addForm.stock),
+      minStock: Number(addForm.minStock),
+      description: addForm.description.trim(),
+      barcode: addForm.barcode.trim(),
+      barcodeImage: addForm.barcodeImage.trim(),
       addedAt: Date.now(),
     } as Product;
 
@@ -1198,13 +1685,21 @@ export default function Products() {
     setProducts((prev) =>
       prev.map((product) =>
         product.id === editingProduct.id
-          ? {
+          ? ({
               ...product,
+              code: editForm.code.trim(),
               name: editForm.name.trim(),
               category: normalizeCategoryName(editForm.category),
-              price: Number(editForm.price),
+              image: editForm.image.trim(),
+              purchasePrice: Number(editForm.purchasePrice),
+              salePrice: Number(editForm.salePrice),
+              price: Number(editForm.salePrice),
               stock: Number(editForm.stock),
-            }
+              minStock: Number(editForm.minStock),
+              description: editForm.description.trim(),
+              barcode: editForm.barcode.trim(),
+              barcodeImage: editForm.barcodeImage.trim(),
+            } as Product)
           : product
       )
     );
@@ -1266,7 +1761,7 @@ export default function Products() {
       prev.map((product) =>
         normalizeCategoryName(product.category || "").toLowerCase() ===
         oldValue.toLowerCase()
-          ? { ...product, category: newValue }
+          ? ({ ...product, category: newValue } as Product)
           : product
       )
     );
@@ -1328,7 +1823,7 @@ export default function Products() {
       prev.map((product) =>
         normalizeCategoryName(product.category || "").toLowerCase() ===
         target.toLowerCase()
-          ? { ...product, category: "" }
+          ? ({ ...product, category: "" } as Product)
           : product
       )
     );
@@ -1353,8 +1848,8 @@ export default function Products() {
   return (
     <>
       <div className="products-page">
-        <div className="products-header">
-          <div>
+        <div className="products-header customers-like-header">
+          <div className="products-header-copy">
             <p className="dashboard-badge">Product Management</p>
             <h1 className="dashboard-title">Products</h1>
             <p className="dashboard-subtitle">
@@ -1362,395 +1857,131 @@ export default function Products() {
             </p>
           </div>
 
-          <button
-            type="button"
-            className="quick-action-btn"
-            onClick={() => setShowAddModal(true)}
-          >
-            + Add Product
-          </button>
-        </div>
-
-        <div className="dashboard-card">
-          <div className="products-toolbar">
-            <div className="dashboard-search-box">
-              <label className="dashboard-search-label">Search products</label>
+          <div className="products-header-actions">
+            <div className="customers-search-shell">
+              <span className="customers-search-icon">⌕</span>
               <input
                 type="text"
-                className="dashboard-search-input"
-                placeholder="Search by product name, category, price, stock, or status."
+                className="customers-search-input"
+                placeholder="Search products..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
-              <span className="dashboard-search-meta">
-                {searchTerm.trim()
-                  ? `${filteredAndSortedProducts.length} result(s)`
-                  : "Search all products"}
-              </span>
             </div>
+
+            <button
+              type="button"
+              className="quick-action-btn"
+              onClick={() => setShowAddModal(true)}
+            >
+              + Add Product
+            </button>
+          </div>
+        </div>
+
+        <div className="dashboard-card products-results-card">
+          <div className="products-results-meta">
+            {searchTerm.trim()
+              ? `${filteredProducts.length} result(s)`
+              : `${filteredProducts.length} product(s)`}
           </div>
 
-          <div className="table-wrapper">
-            <table className="dashboard-table">
-              <thead>
-                <tr>
-                  <th className="sortable" onClick={() => handleSort("id")}>
-                    <span className="sort-label">ID {getSortIndicator("id")}</span>
-                  </th>
-                  <th className="sortable" onClick={() => handleSort("name")}>
-                    <span className="sort-label">Name {getSortIndicator("name")}</span>
-                  </th>
-                  <th className="sortable" onClick={() => handleSort("category")}>
-                    <span className="sort-label">Category {getSortIndicator("category")}</span>
-                  </th>
-                  <th className="sortable" onClick={() => handleSort("price")}>
-                    <span className="sort-label">Price {getSortIndicator("price")}</span>
-                  </th>
-                  <th className="sortable" onClick={() => handleSort("stock")}>
-                    <span className="sort-label">Base Stock {getSortIndicator("stock")}</span>
-                  </th>
-                  <th className="sortable" onClick={() => handleSort("sold")}>
-                    <span className="sort-label">Sold {getSortIndicator("sold")}</span>
-                  </th>
-                  <th className="sortable" onClick={() => handleSort("available")}>
-                    <span className="sort-label">Available {getSortIndicator("available")}</span>
-                  </th>
-                  <th className="sortable" onClick={() => handleSort("status")}>
-                    <span className="sort-label">Status {getSortIndicator("status")}</span>
-                  </th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {filteredAndSortedProducts.length > 0 ? (
-                  filteredAndSortedProducts.map((product) => (
-                    <tr key={`${product.id}-${product.addedAt}`}>
-                      <td>{product.id}</td>
-                      <td>{product.name}</td>
-                      <td>{product.category || "Unassigned"}</td>
-                      <td>${product.price}</td>
-                      <td>{product.stock}</td>
-                      <td>{product.sold}</td>
-                      <td>{product.available}</td>
-                      <td>
-                        <span
-                          className={
-                            product.statusLabel === "Out of Stock"
-                              ? "status-badge status-out-of-stock"
-                              : product.statusLabel === "Low Stock"
-                              ? "status-badge status-low-stock"
-                              : "status-badge status-in-stock"
-                          }
-                        >
-                          {product.statusLabel}
-                        </span>
-                      </td>
-                      <td>
-                        <div className="table-actions">
-                          <button
-                            type="button"
-                            className="table-btn edit"
-                            onClick={() => openEditModal(product)}
-                          >
-                            Edit
-                          </button>
-                          <button
-                            type="button"
-                            className="table-btn delete"
-                            onClick={() => requestDeleteProduct(product)}
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={9} className="empty-state-cell">
-                      No matching products found.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+          <div className="products-grid">
+            {filteredProducts.length > 0 ? (
+              filteredProducts.map((product) => (
+                <ProductCard
+                  key={`${product.id}-${product.addedAt}`}
+                  product={product}
+                  menuOpenId={menuOpenId}
+                  onToggleMenu={(productId) =>
+                    setMenuOpenId((prev) => (prev === productId ? null : productId))
+                  }
+                  onView={(item) => {
+                    setMenuOpenId(null);
+                    setViewProduct(item);
+                  }}
+                  onEdit={(item) => {
+                    setMenuOpenId(null);
+                    openEditModal(item);
+                  }}
+                  onDelete={(item) => {
+                    setMenuOpenId(null);
+                    requestDeleteProduct(item);
+                  }}
+                  onPreviewImage={(image) => {
+                    setMenuOpenId(null);
+                    setPreviewImage(image);
+                  }}
+                />
+              ))
+            ) : (
+              <div className="empty-products-state">
+                <h3>No matching products found.</h3>
+                <p>Try another search term or add a new product.</p>
+              </div>
+            )}
           </div>
         </div>
       </div>
 
       {showAddModal && (
-        <div className="modal-overlay" onClick={attemptCloseAddModal}>
-          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <div>
-                <h2>Add Product</h2>
-                <p>Enter the new product information.</p>
-              </div>
-
-              <button
-                type="button"
-                className="modal-close-btn"
-                onClick={attemptCloseAddModal}
-              >
-                ×
-              </button>
-            </div>
-
-            <form className="modal-form">
-              <div className="modal-grid">
-                <div>
-                  <label className="modal-label">Name</label>
-                  <input
-                    className="modal-input"
-                    type="text"
-                    placeholder="Enter product name"
-                    value={addForm.name}
-                    onChange={(e) => {
-                      setAddForm((prev) => ({ ...prev, name: e.target.value }));
-                      setAddErrors((prev) => ({ ...prev, name: undefined }));
-                    }}
-                  />
-                  {addErrors.name && <p className="field-error">{addErrors.name}</p>}
-                </div>
-
-                <div className="category-field">
-                  <label className="modal-label">Category</label>
-
-                  <div className="category-select-row">
-                    <select
-                      className="modal-select"
-                      value={addForm.category}
-                      onChange={(e) => {
-                        setAddForm((prev) => ({
-                          ...prev,
-                          category: e.target.value,
-                        }));
-                        setAddErrors((prev) => ({
-                          ...prev,
-                          category: undefined,
-                        }));
-                      }}
-                    >
-                      <option value="">Select category</option>
-                      {categoryOptions.map((category) => (
-                        <option key={category} value={category}>
-                          {category}
-                        </option>
-                      ))}
-                    </select>
-
-                    <button
-                      type="button"
-                      className="category-manage-btn"
-                      onClick={() => setShowCategoryManager(true)}
-                    >
-                      Manage
-                    </button>
-                  </div>
-
-                  {addForm.category && (
-                    <div className="selected-category-chip">
-                      Selected: {addForm.category}
-                    </div>
-                  )}
-
-                  {addErrors.category && (
-                    <p className="field-error">{addErrors.category}</p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="modal-label">Price</label>
-                  <input
-                    className="modal-input"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    placeholder="Enter price"
-                    value={addForm.price}
-                    onChange={(e) => {
-                      setAddForm((prev) => ({ ...prev, price: e.target.value }));
-                      setAddErrors((prev) => ({ ...prev, price: undefined }));
-                    }}
-                  />
-                  {addErrors.price && <p className="field-error">{addErrors.price}</p>}
-                </div>
-
-                <div>
-                  <label className="modal-label">Base Stock</label>
-                  <input
-                    className="modal-input"
-                    type="number"
-                    min="0"
-                    step="1"
-                    placeholder="Enter initial stock"
-                    value={addForm.stock}
-                    onChange={(e) => {
-                      setAddForm((prev) => ({ ...prev, stock: e.target.value }));
-                      setAddErrors((prev) => ({ ...prev, stock: undefined }));
-                    }}
-                  />
-                  {addErrors.stock && <p className="field-error">{addErrors.stock}</p>}
-                </div>
-              </div>
-
-              <div className="modal-actions">
-                <button
-                  type="button"
-                  className="modal-secondary-btn"
-                  onClick={attemptCloseAddModal}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  className="modal-primary-btn"
-                  onClick={handleAddProduct}
-                >
-                  Save Product
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+        <ProductFormModal
+          title="Add Product"
+          description="Enter the new product information."
+          form={addForm}
+          errors={addErrors}
+          categoryOptions={categoryOptions}
+          selectedCategory={addForm.category}
+          onClose={attemptCloseAddModal}
+          onOpenCategoryManager={() => setShowCategoryManager(true)}
+          onSubmit={handleAddProduct}
+          onFieldChange={setAddField}
+          onImageChange={async (file) => {
+            if (!file) return;
+            const image = await readFileAsDataURL(file);
+            setAddField("image", image);
+          }}
+          onBarcodeImageChange={async (file) => {
+            if (!file) return;
+            const image = await readFileAsDataURL(file);
+            setAddField("barcodeImage", image);
+          }}
+          onPreviewImage={(image) => setPreviewImage(image)}
+        />
       )}
 
       {editingProduct && (
-        <div className="modal-overlay" onClick={attemptCloseEditModal}>
-          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <div>
-                <h2>Edit Product</h2>
-                <p>Update the selected product information.</p>
-              </div>
+        <ProductFormModal
+          title="Edit Product"
+          description="Update the selected product information."
+          form={editForm}
+          errors={editErrors}
+          categoryOptions={categoryOptions}
+          selectedCategory={editForm.category}
+          onClose={attemptCloseEditModal}
+          onOpenCategoryManager={() => setShowCategoryManager(true)}
+          onSubmit={handleEditProduct}
+          onFieldChange={setEditField}
+          onImageChange={async (file) => {
+            if (!file) return;
+            const image = await readFileAsDataURL(file);
+            setEditField("image", image);
+          }}
+          onBarcodeImageChange={async (file) => {
+            if (!file) return;
+            const image = await readFileAsDataURL(file);
+            setEditField("barcodeImage", image);
+          }}
+          onPreviewImage={(image) => setPreviewImage(image)}
+        />
+      )}
 
-              <button
-                type="button"
-                className="modal-close-btn"
-                onClick={attemptCloseEditModal}
-              >
-                ×
-              </button>
-            </div>
-
-            <form className="modal-form">
-              <div className="modal-grid">
-                <div>
-                  <label className="modal-label">Name</label>
-                  <input
-                    className="modal-input"
-                    type="text"
-                    placeholder="Enter product name"
-                    value={editForm.name}
-                    onChange={(e) => {
-                      setEditForm((prev) => ({ ...prev, name: e.target.value }));
-                      setEditErrors((prev) => ({ ...prev, name: undefined }));
-                    }}
-                  />
-                  {editErrors.name && <p className="field-error">{editErrors.name}</p>}
-                </div>
-
-                <div className="category-field">
-                  <label className="modal-label">Category</label>
-
-                  <div className="category-select-row">
-                    <select
-                      className="modal-select"
-                      value={editForm.category}
-                      onChange={(e) => {
-                        setEditForm((prev) => ({
-                          ...prev,
-                          category: e.target.value,
-                        }));
-                        setEditErrors((prev) => ({
-                          ...prev,
-                          category: undefined,
-                        }));
-                      }}
-                    >
-                      <option value="">Select category</option>
-                      {categoryOptions.map((category) => (
-                        <option key={category} value={category}>
-                          {category}
-                        </option>
-                      ))}
-                    </select>
-
-                    <button
-                      type="button"
-                      className="category-manage-btn"
-                      onClick={() => setShowCategoryManager(true)}
-                    >
-                      Manage
-                    </button>
-                  </div>
-
-                  {editForm.category && (
-                    <div className="selected-category-chip">
-                      Selected: {editForm.category}
-                    </div>
-                  )}
-
-                  {editErrors.category && (
-                    <p className="field-error">{editErrors.category}</p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="modal-label">Price</label>
-                  <input
-                    className="modal-input"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    placeholder="Enter price"
-                    value={editForm.price}
-                    onChange={(e) => {
-                      setEditForm((prev) => ({ ...prev, price: e.target.value }));
-                      setEditErrors((prev) => ({ ...prev, price: undefined }));
-                    }}
-                  />
-                  {editErrors.price && <p className="field-error">{editErrors.price}</p>}
-                </div>
-
-                <div>
-                  <label className="modal-label">Base Stock</label>
-                  <input
-                    className="modal-input"
-                    type="number"
-                    min="0"
-                    step="1"
-                    placeholder="Enter initial stock"
-                    value={editForm.stock}
-                    onChange={(e) => {
-                      setEditForm((prev) => ({ ...prev, stock: e.target.value }));
-                      setEditErrors((prev) => ({ ...prev, stock: undefined }));
-                    }}
-                  />
-                  {editErrors.stock && <p className="field-error">{editErrors.stock}</p>}
-                </div>
-              </div>
-
-              <div className="modal-actions">
-                <button
-                  type="button"
-                  className="modal-secondary-btn"
-                  onClick={attemptCloseEditModal}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  className="modal-primary-btn"
-                  onClick={handleEditProduct}
-                >
-                  Save Changes
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+      {viewProduct && (
+        <ProductDetailsModal
+          product={viewProduct}
+          onClose={() => setViewProduct(null)}
+          onPreviewImage={(image) => setPreviewImage(image)}
+        />
       )}
 
       {deleteProduct && (
@@ -1822,11 +2053,9 @@ export default function Products() {
         onClose={() => setShowCategoryManager(false)}
         onSelectCategory={(value) => {
           if (editingProduct) {
-            setEditForm((prev) => ({ ...prev, category: value }));
-            setEditErrors((prev) => ({ ...prev, category: undefined }));
+            setEditField("category", value);
           } else {
-            setAddForm((prev) => ({ ...prev, category: value }));
-            setAddErrors((prev) => ({ ...prev, category: undefined }));
+            setAddField("category", value);
           }
         }}
         onAddCategory={handleAddCategory}
@@ -1854,6 +2083,11 @@ export default function Products() {
         description="Please confirm before closing this form."
         onKeepEditing={() => setPendingCloseTarget(null)}
         onDiscard={discardPendingChanges}
+      />
+
+      <ImagePreviewModal
+        image={previewImage}
+        onClose={() => setPreviewImage(null)}
       />
     </>
   );

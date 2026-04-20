@@ -9510,3 +9510,210 @@ html[dir="rtl"] select {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
+/* =========================
+   Professional modal scroll fix
+========================= */
+
+.customer-details-modal {
+  width: min(1180px, calc(100vw - 32px));
+  height: min(860px, calc(100vh - 32px));
+  max-height: calc(100vh - 32px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0;
+  border-radius: 28px;
+  background: linear-gradient(180deg, rgba(248, 251, 255, 0.98) 0%, #ffffff 100%);
+  box-sizing: border-box;
+}
+
+/* Header ثابت */
+.customer-profile-header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 24px 24px 18px;
+  border-bottom: 1px solid #e8f0f8;
+  background: linear-gradient(180deg, rgba(240, 247, 255, 0.95) 0%, rgba(255,255,255,0.98) 100%);
+  box-sizing: border-box;
+}
+
+/* KPI ثابت */
+.customer-kpi-grid {
+  flex-shrink: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  padding: 20px 24px 0;
+  box-sizing: border-box;
+}
+
+/* Tabs ثابتة */
+.customer-tabs {
+  flex-shrink: 0;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 18px 24px 16px;
+  box-sizing: border-box;
+  border-bottom: 1px solid #edf3f8;
+  background: #ffffff;
+}
+
+/* هذه أهم نقطة:
+   منطقة المحتوى فقط هي التي تسكرول */
+.customer-tab-content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 18px 24px 24px;
+  box-sizing: border-box;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-gutter: stable;
+}
+
+/* حتى لا يخرج أي كارد عن الإطار */
+.customer-details-grid,
+.customer-section-card,
+.details-table,
+.table-wrapper {
+  box-sizing: border-box;
+}
+
+.customer-details-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  width: 100%;
+}
+
+.customer-section-card {
+  width: 100%;
+  min-width: 0;
+  background: #ffffff;
+  border: 1px solid #dbe7f3;
+  border-radius: 22px;
+  padding: 18px;
+  box-shadow: 0 8px 26px rgba(15, 23, 42, 0.03);
+  overflow: hidden;
+}
+
+.table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  border-radius: 16px;
+}
+
+/* scrollbar أنظف وداخلي */
+.customer-tab-content::-webkit-scrollbar,
+.table-wrapper::-webkit-scrollbar,
+.field-dropdown::-webkit-scrollbar,
+.modal-card::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.customer-tab-content::-webkit-scrollbar-track,
+.table-wrapper::-webkit-scrollbar-track,
+.field-dropdown::-webkit-scrollbar-track,
+.modal-card::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 999px;
+  margin: 10px 6px 10px 0;
+}
+
+.customer-tab-content::-webkit-scrollbar-thumb,
+.table-wrapper::-webkit-scrollbar-thumb,
+.field-dropdown::-webkit-scrollbar-thumb,
+.modal-card::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #cbd8e6 0%, #a8bdd3 100%);
+  border-radius: 999px;
+  border: 2px solid rgba(255, 255, 255, 0.88);
+}
+
+.customer-tab-content::-webkit-scrollbar-thumb:hover,
+.table-wrapper::-webkit-scrollbar-thumb:hover,
+.field-dropdown::-webkit-scrollbar-thumb:hover,
+.modal-card::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #afc4da 0%, #88a7c4 100%);
+}
+
+/* Firefox */
+.customer-tab-content,
+.table-wrapper,
+.field-dropdown,
+.modal-card {
+  scrollbar-width: thin;
+  scrollbar-color: #aac0d5 transparent;
+}
+
+/* حتى ما يصير تزاحم يمين المحتوى مع السكروول */
+.customer-tab-content > *:last-child {
+  margin-bottom: 0;
+}
+
+/* تحسين الكروت العلوية */
+.customer-kpi-card {
+  background: #fbfdff;
+  border: 1px solid #dbe7f3;
+  border-radius: 20px;
+  padding: 18px;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+/* Responsive */
+@media (max-width: 1100px) {
+  .customer-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .customer-details-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .customer-details-modal {
+    width: 100%;
+    height: min(94vh, 900px);
+    max-height: 94vh;
+    border-radius: 20px;
+  }
+
+  .customer-profile-header {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 18px;
+  }
+
+  .customer-profile-main {
+    flex-direction: column;
+  }
+
+  .customer-profile-actions {
+    width: 100%;
+  }
+
+  .customer-profile-actions .quick-action-btn.secondary {
+    width: 100%;
+  }
+
+  .customer-kpi-grid {
+    grid-template-columns: 1fr;
+    padding: 16px 18px 0;
+  }
+
+  .customer-tabs {
+    padding: 16px 18px 14px;
+  }
+
+  .customer-tab-content {
+    padding: 16px 18px 18px;
+  }
+}

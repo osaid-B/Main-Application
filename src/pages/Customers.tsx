@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import "./Customers.css";
 import type { Customer } from "../data/types";
 import { getCustomers, saveCustomers } from "../data/storage";
 
@@ -20,6 +21,51 @@ type FormErrors = {
 type PendingCloseTarget = "add" | "edit" | null;
 type SortKey = "id" | "name" | "email" | "phone" | "joinedAt";
 type SortDirection = "asc" | "desc";
+type DetailsTab =
+  | "overview"
+  | "purchases"
+  | "payments"
+  | "notes"
+  | "activity";
+
+type PurchaseStatus = "Paid" | "Partial" | "Unpaid" | "Cancelled";
+type PaymentMethod = "Cash" | "Bank Transfer" | "Card" | "Wallet";
+
+type CustomerPurchase = {
+  id: string;
+  customerId: string;
+  invoiceNo: string;
+  date: string;
+  products: string[];
+  quantity: number;
+  total: number;
+  status: PurchaseStatus;
+};
+
+type CustomerPayment = {
+  id: string;
+  customerId: string;
+  date: string;
+  amount: number;
+  method: PaymentMethod;
+  reference: string;
+  recordedBy: string;
+};
+
+type CustomerNoteItem = {
+  id: string;
+  text: string;
+  author: string;
+  createdAt: string;
+};
+
+type CustomerActivity = {
+  id: string;
+  type: "created" | "updated" | "purchase" | "payment" | "note";
+  title: string;
+  description: string;
+  date: string;
+};
 
 const emptyForm: CustomerForm = {
   name: "",
@@ -71,44 +117,12 @@ const PALESTINIAN_LOCATIONS = [
       { en: "Lod", ar: "اللد" },
       { en: "Ramla", ar: "الرملة" },
       { en: "Acre", ar: "عكا" },
-      { en: "Shefa-'Amr", ar: "شفا عمرو" },
-      { en: "Tamra", ar: "طمرة" },
       { en: "Sakhnin", ar: "سخنين" },
-      { en: "Arraba", ar: "عرابة" },
-      { en: "Deir Hanna", ar: "دير حنا" },
-      { en: "Kafr Kanna", ar: "كفر كنا" },
-      { en: "Kafr Manda", ar: "كفر مندا" },
-      { en: "Kafr Qara", ar: "كفر قرع" },
-      { en: "Ar'ara", ar: "عرعرة" },
-      { en: "Baqa al-Gharbiyye", ar: "باقة الغربية" },
-      { en: "Jatt", ar: "جت" },
-      { en: "Tayibe", ar: "الطيبة" },
       { en: "Tira", ar: "الطيرة" },
-      { en: "Qalansawe", ar: "قلنسوة" },
+      { en: "Tayibe", ar: "الطيبة" },
       { en: "Kafr Qasim", ar: "كفر قاسم" },
       { en: "Rahat", ar: "رهط" },
-      { en: "Kuseife", ar: "كسيفة" },
-      { en: "Ar'arat an-Naqab", ar: "عرعرة النقب" },
-      { en: "Tel as-Sabi", ar: "تل السبع" },
-      { en: "Hura", ar: "حورة" },
-      { en: "Shaqib al-Salam", ar: "شقيب السلام" },
-      { en: "Lakiya", ar: "اللقية" },
-      { en: "Daliyat al-Karmel", ar: "دالية الكرمل" },
-      { en: "Iksal", ar: "إكسال" },
-      { en: "al-Makr", ar: "المكر" },
-      { en: "Julis", ar: "جولس" },
-      { en: "Yarka", ar: "يركا" },
-      { en: "Abu Snan", ar: "أبو سنان" },
-      { en: "Maghar", ar: "المغار" },
-      { en: "Reineh", ar: "الرينة" },
-      { en: "Mashhad", ar: "المشهد" },
-      { en: "Nein", ar: "نين" },
-      { en: "Kabul", ar: "كابول" },
-      { en: "Bi'ina", ar: "البعنة" },
-      { en: "Deir al-Asad", ar: "دير الأسد" },
-      { en: "Majd al-Krum", ar: "مجد الكروم" },
-      { en: "Jisr az-Zarqa", ar: "جسر الزرقاء" },
-      { en: "Fureidis", ar: "الفريديس" },
+      { en: "Tamra", ar: "طمرة" },
     ],
   },
   {
@@ -124,39 +138,8 @@ const PALESTINIAN_LOCATIONS = [
       { en: "Salfit", ar: "سلفيت" },
       { en: "Jericho", ar: "أريحا" },
       { en: "Bethlehem", ar: "بيت لحم" },
-      { en: "Beit Jala", ar: "بيت جالا" },
-      { en: "Beit Sahour", ar: "بيت ساحور" },
       { en: "Hebron", ar: "الخليل" },
-      { en: "Dura", ar: "دورا" },
-      { en: "Yatta", ar: "يطا" },
-      { en: "Halhul", ar: "حلحول" },
-      { en: "al-Dhahiriya", ar: "الظاهرية" },
       { en: "Tubas", ar: "طوباس" },
-      { en: "Qabatiya", ar: "قباطية" },
-      { en: "Anabta", ar: "عنبتا" },
-      { en: "Birzeit", ar: "بيرزيت" },
-      { en: "Biddya", ar: "بديا" },
-      { en: "Beita", ar: "بيتا" },
-      { en: "Huwara", ar: "حوارة" },
-      { en: "Sa'ir", ar: "سعير" },
-      { en: "Idhna", ar: "إذنا" },
-      { en: "Surif", ar: "صوريف" },
-      { en: "Tarqumiya", ar: "ترقوميا" },
-      { en: "al-Khader", ar: "الخضر" },
-      { en: "Ya'bad", ar: "يعبد" },
-      { en: "Yamun", ar: "يامون" },
-      { en: "Arraba", ar: "عرابة" },
-      { en: "Meithalun", ar: "ميثلون" },
-      { en: "Jaba'", ar: "جبع" },
-      { en: "Tammun", ar: "طمون" },
-      { en: "Aqqaba", ar: "عقابا" },
-      { en: "Qaffin", ar: "قفين" },
-      { en: "Deir al-Ghusun", ar: "دير الغصون" },
-      { en: "Habla", ar: "حبلة" },
-      { en: "Azzun", ar: "عزون" },
-      { en: "as-Samu'", ar: "السموع" },
-      { en: "Bani Na'im", ar: "بني نعيم" },
-      { en: "Beit Ummar", ar: "بيت أمر" },
     ],
   },
   {
@@ -167,14 +150,7 @@ const PALESTINIAN_LOCATIONS = [
       { en: "Beit Lahia", ar: "بيت لاهيا" },
       { en: "Beit Hanoun", ar: "بيت حانون" },
       { en: "Deir al-Balah", ar: "دير البلح" },
-      { en: "az-Zawayda", ar: "الزوايدة" },
-      { en: "al-Maghazi", ar: "المغازي" },
-      { en: "an-Nuseirat", ar: "النصيرات" },
-      { en: "al-Bureij", ar: "البريج" },
       { en: "Khan Younis", ar: "خان يونس" },
-      { en: "Bani Suheila", ar: "بني سهيلا" },
-      { en: "Abasan al-Kabira", ar: "عبسان الكبيرة" },
-      { en: "Abasan al-Jadida", ar: "عبسان الجديدة" },
       { en: "Rafah", ar: "رفح" },
     ],
   },
@@ -208,6 +184,234 @@ function buildEmailSuggestions(input: string) {
   return COMMON_EMAIL_DOMAINS.filter((domain) => domain.startsWith(domainPart))
     .slice(0, 10)
     .map((domain) => `${localPart}@${domain}`);
+}
+
+function formatCurrency(value: number) {
+  return `₪${Number(value || 0).toLocaleString()}`;
+}
+
+function getCustomerSeed(customer: Customer) {
+  const raw = String(customer?.id || customer?.name || "0");
+  return raw.split("").reduce((sum, char) => sum + char.charCodeAt(0), 0);
+}
+
+function generateCustomerPurchases(customer: Customer): CustomerPurchase[] {
+  const seed = getCustomerSeed(customer);
+  const statuses: PurchaseStatus[] = ["Paid", "Partial", "Unpaid", "Cancelled"];
+  const productSets = [
+    ["Water Tank", "Filter Set"],
+    ["PVC Pipes", "Valve"],
+    ["Solar Heater", "Pressure Kit"],
+    ["Cement Bags", "Paint Buckets"],
+    ["Electrical Wires", "Switches"],
+  ];
+
+  const count = (seed % 4) + 3;
+
+  return Array.from({ length: count }, (_, index) => {
+    const quantity = ((seed + index) % 8) + 1;
+    const price = 120 + ((seed + index * 37) % 450);
+    const total = quantity * price;
+    const status = statuses[(seed + index) % statuses.length];
+    const products = productSets[(seed + index) % productSets.length];
+
+    return {
+      id: `PUR-${customer.id}-${index + 1}`,
+      customerId: customer.id,
+      invoiceNo: `INV-${2000 + index + (seed % 500)}`,
+      date: new Date(
+        Date.now() - (index + 1) * 1000 * 60 * 60 * 24 * 9
+      )
+        .toISOString()
+        .split("T")[0],
+      products,
+      quantity,
+      total,
+      status,
+    };
+  });
+}
+
+function generateCustomerPayments(
+  customer: Customer,
+  purchases: CustomerPurchase[]
+): CustomerPayment[] {
+  const seed = getCustomerSeed(customer);
+  const methods: PaymentMethod[] = ["Cash", "Bank Transfer", "Card", "Wallet"];
+
+  return purchases
+    .slice(0, Math.max(2, purchases.length - 1))
+    .map((purchase, index) => {
+      const ratio =
+        purchase.status === "Paid"
+          ? 1
+          : purchase.status === "Partial"
+          ? 0.55
+          : purchase.status === "Cancelled"
+          ? 0
+          : 0.25;
+
+      const amount = Math.round(purchase.total * ratio);
+
+      return {
+        id: `PAY-${customer.id}-${index + 1}`,
+        customerId: customer.id,
+        date: new Date(
+          new Date(purchase.date).getTime() + 1000 * 60 * 60 * 24 * 2
+        )
+          .toISOString()
+          .split("T")[0],
+        amount,
+        method: methods[(seed + index) % methods.length],
+        reference: `REF-${7000 + seed + index}`,
+        recordedBy: index % 2 === 0 ? "Admin User" : "Sales Employee",
+      };
+    });
+}
+
+function generateCustomerNotes(customer: Customer): CustomerNoteItem[] {
+  const baseNote = customer.notes?.trim();
+  const notes: CustomerNoteItem[] = [];
+
+  if (baseNote) {
+    notes.push({
+      id: `NOTE-${customer.id}-1`,
+      text: baseNote,
+      author: "System Import",
+      createdAt: customer.joinedAt || new Date().toISOString().split("T")[0],
+    });
+  }
+
+  notes.push(
+    {
+      id: `NOTE-${customer.id}-2`,
+      text: "Customer prefers quick phone follow-up before confirming the order.",
+      author: "Sales Team",
+      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 12)
+        .toISOString()
+        .split("T")[0],
+    },
+    {
+      id: `NOTE-${customer.id}-3`,
+      text: "Requested invoice copy and product warranty details.",
+      author: "Accounts",
+      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5)
+        .toISOString()
+        .split("T")[0],
+    }
+  );
+
+  return notes;
+}
+
+function generateCustomerActivity(
+  customer: Customer,
+  purchases: CustomerPurchase[],
+  payments: CustomerPayment[],
+  notes: CustomerNoteItem[]
+): CustomerActivity[] {
+  const activity: CustomerActivity[] = [
+    {
+      id: `ACT-${customer.id}-created`,
+      type: "created",
+      title: "Customer created",
+      description: `Customer profile for ${customer.name} was created.`,
+      date: customer.joinedAt || new Date().toISOString().split("T")[0],
+    },
+    {
+      id: `ACT-${customer.id}-updated`,
+      type: "updated",
+      title: "Customer profile updated",
+      description: "Basic contact details were updated.",
+      date: new Date(Date.now() - 1000 * 60 * 60 * 24 * 8)
+        .toISOString()
+        .split("T")[0],
+    },
+  ];
+
+  purchases.forEach((purchase) => {
+    activity.push({
+      id: `ACT-${purchase.id}`,
+      type: "purchase",
+      title: `Invoice ${purchase.invoiceNo} created`,
+      description: `${purchase.quantity} item(s) • ${formatCurrency(
+        purchase.total
+      )} • ${purchase.status}`,
+      date: purchase.date,
+    });
+  });
+
+  payments.forEach((payment) => {
+    activity.push({
+      id: `ACT-${payment.id}`,
+      type: "payment",
+      title: "Payment recorded",
+      description: `${formatCurrency(payment.amount)} via ${payment.method}`,
+      date: payment.date,
+    });
+  });
+
+  notes.forEach((note) => {
+    activity.push({
+      id: `ACT-${note.id}`,
+      type: "note",
+      title: `Note added by ${note.author}`,
+      description: note.text,
+      date: note.createdAt,
+    });
+  });
+
+  return activity.sort(
+    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+  );
+}
+
+function getCustomerDetailsData(customer: Customer) {
+  const purchases = generateCustomerPurchases(customer);
+  const payments = generateCustomerPayments(customer, purchases);
+  const notes = generateCustomerNotes(customer);
+  const activity = generateCustomerActivity(customer, purchases, payments, notes);
+
+  const totalInvoices = purchases.length;
+  const totalOrders = purchases.length;
+  const totalPurchases = purchases
+    .filter((purchase) => purchase.status !== "Cancelled")
+    .reduce((sum, purchase) => sum + purchase.total, 0);
+
+  const totalPaid = payments.reduce((sum, payment) => sum + payment.amount, 0);
+  const balanceDue = Math.max(totalPurchases - totalPaid, 0);
+  const averageOrderValue = totalOrders ? totalPurchases / totalOrders : 0;
+  const lastPurchase = purchases[0] || null;
+  const lastNote = notes[notes.length - 1] || notes[0] || null;
+
+  return {
+    purchases,
+    payments,
+    notes,
+    activity,
+    overview: {
+      totalInvoices,
+      totalOrders,
+      totalPurchases,
+      totalPaid,
+      balanceDue,
+      averageOrderValue,
+      lastPurchase,
+      lastNote,
+    },
+  };
+}
+
+function getStatusBadge(balanceDue: number, totalPurchases: number) {
+  if (balanceDue > 0) {
+    return { label: "Debtor", className: "status-badge warning" };
+  }
+
+  if (totalPurchases > 3000) {
+    return { label: "VIP", className: "status-badge success" };
+  }
+
+  return { label: "Active", className: "status-badge info" };
 }
 
 function EmailInput({
@@ -244,53 +448,18 @@ function EmailInput({
       />
 
       {shouldShowSuggestions && (
-        <div
-          style={{
-            position: "absolute",
-            top: "calc(100% + 8px)",
-            left: 0,
-            right: 0,
-            zIndex: 30,
-            background: "#ffffff",
-            border: "1px solid #dbe7f3",
-            borderRadius: "16px",
-            boxShadow: "0 18px 40px rgba(15, 23, 42, 0.10)",
-            padding: "8px",
-            maxHeight: "240px",
-            overflowY: "auto",
-          }}
-        >
-          <div
-            style={{
-              padding: "8px 10px 10px",
-              fontSize: "12px",
-              fontWeight: 700,
-              color: "#7b97b0",
-            }}
-          >
-            Suggested email addresses
-          </div>
+        <div className="field-dropdown">
+          <div className="dropdown-title">Suggested email addresses</div>
 
           {suggestions.map((suggestion) => (
             <button
               key={suggestion}
               type="button"
+              className="dropdown-option"
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => {
                 onChange(suggestion);
                 setIsOpen(false);
-              }}
-              style={{
-                width: "100%",
-                textAlign: "left",
-                border: "none",
-                background: "transparent",
-                padding: "12px 14px",
-                borderRadius: "12px",
-                cursor: "pointer",
-                color: "#1e293b",
-                fontSize: "14px",
-                fontWeight: 600,
               }}
             >
               {suggestion}
@@ -334,7 +503,6 @@ function LocationSelect({
 
   const filteredGroups = useMemo(() => {
     const term = search.trim().toLowerCase();
-
     if (!term) return PALESTINIAN_LOCATIONS;
 
     return PALESTINIAN_LOCATIONS.map((group) => ({
@@ -347,8 +515,6 @@ function LocationSelect({
       ),
     })).filter((group) => group.items.length > 0);
   }, [search]);
-
-  const selectedLabel = value || "Select city / area";
 
   return (
     <div ref={wrapperRef} style={{ position: "relative" }}>
@@ -367,36 +533,16 @@ function LocationSelect({
         }}
       >
         <span style={{ color: value ? "#1e293b" : "#94a3b8" }}>
-          {selectedLabel}
+          {value || "Select city / area"}
         </span>
 
-        <span
-          style={{
-            fontSize: "14px",
-            color: "#64748b",
-            marginLeft: "12px",
-            flexShrink: 0,
-          }}
-        >
+        <span style={{ fontSize: "14px", color: "#64748b", marginLeft: "12px" }}>
           ▼
         </span>
       </button>
 
       {isOpen && (
-        <div
-          style={{
-            position: "absolute",
-            top: "calc(100% + 8px)",
-            left: 0,
-            right: 0,
-            zIndex: 60,
-            background: "#ffffff",
-            border: "1px solid #dbe7f3",
-            borderRadius: "18px",
-            boxShadow: "0 22px 48px rgba(15, 23, 42, 0.14)",
-            overflow: "hidden",
-          }}
-        >
+        <div className="field-dropdown" style={{ zIndex: 60 }}>
           <div
             style={{
               padding: "12px",
@@ -414,13 +560,7 @@ function LocationSelect({
             />
           </div>
 
-          <div
-            style={{
-              maxHeight: "280px",
-              overflowY: "auto",
-              padding: "8px",
-            }}
-          >
+          <div style={{ maxHeight: "280px", overflowY: "auto", padding: "8px" }}>
             {filteredGroups.length > 0 ? (
               filteredGroups.map((group) => (
                 <div key={group.group} style={{ marginBottom: "8px" }}>
@@ -442,24 +582,15 @@ function LocationSelect({
                       <button
                         key={`${group.group}-${item.en}-${item.ar}`}
                         type="button"
+                        className="dropdown-option"
                         onClick={() => {
                           onChange(fullLabel);
                           setIsOpen(false);
                           setSearch("");
                         }}
                         style={{
-                          width: "100%",
-                          textAlign: "left",
-                          border: "none",
-                          background:
-                            value === fullLabel ? "#eff6ff" : "transparent",
-                          padding: "12px 14px",
-                          borderRadius: "12px",
-                          cursor: "pointer",
-                          color: "#1e293b",
-                          fontSize: "14px",
+                          background: value === fullLabel ? "#eff6ff" : "transparent",
                           fontWeight: value === fullLabel ? 700 : 600,
-                          marginBottom: "4px",
                         }}
                       >
                         {fullLabel}
@@ -522,19 +653,7 @@ function ConfirmCloseModal({
           </button>
         </div>
 
-        <div
-          style={{
-            marginTop: "6px",
-            background: "#f8fbff",
-            border: "1px solid #dbe7f3",
-            borderRadius: "16px",
-            padding: "16px 18px",
-            color: "#4b6580",
-            lineHeight: 1.8,
-            fontSize: "14px",
-            fontWeight: 500,
-          }}
-        >
+        <div className="unsaved-warning-box">
           You have unsaved changes. If you close now, the entered data will be
           lost.
         </div>
@@ -550,18 +669,338 @@ function ConfirmCloseModal({
 
           <button
             type="button"
-            className="quick-action-btn delete-btn"
+            className="quick-action-btn discard-btn"
             onClick={onDiscard}
-            style={{
-              minWidth: "170px",
-              background:
-                "linear-gradient(135deg, #f97316 0%, #ef4444 100%)",
-              border: "none",
-              color: "#fff",
-            }}
           >
             Discard Changes
           </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CustomerDetailsModal({
+  customer,
+  onClose,
+  onEdit,
+}: {
+  customer: Customer | null;
+  onClose: () => void;
+  onEdit: () => void;
+}) {
+  const [activeTab, setActiveTab] = useState<DetailsTab>("overview");
+
+  const details = useMemo(() => {
+    if (!customer) return null;
+    return getCustomerDetailsData(customer);
+  }, [customer]);
+
+  useEffect(() => {
+    setActiveTab("overview");
+  }, [customer]);
+
+  if (!customer || !details) return null;
+
+  const { purchases, payments, notes, activity, overview } = details;
+  const status = getStatusBadge(overview.balanceDue, overview.totalPurchases);
+
+  const tabs: { key: DetailsTab; label: string }[] = [
+    { key: "overview", label: "Overview" },
+    { key: "purchases", label: "Purchases History" },
+    { key: "payments", label: "Payments" },
+    { key: "notes", label: "Notes" },
+    { key: "activity", label: "Activity Timeline" },
+  ];
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div
+        className="modal-card customer-details-modal"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="customer-profile-header">
+          <div className="customer-profile-main">
+            <div className="customer-avatar">
+              {(customer.name || "C").charAt(0).toUpperCase()}
+            </div>
+
+            <div>
+              <div className="customer-profile-topline">
+                <h2>{customer.name}</h2>
+                <span className={status.className}>{status.label}</span>
+              </div>
+
+              <p className="customer-profile-subtitle">
+                {customer.id} • Joined {customer.joinedAt || "-"}
+              </p>
+
+              <div className="customer-contact-inline">
+                <span>{customer.phone}</span>
+                <span>{customer.email || "No email"}</span>
+                <span>{customer.location || "No location"}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="customer-profile-actions">
+            <button className="quick-action-btn secondary" onClick={onEdit}>
+              Edit
+            </button>
+
+            <button className="modal-close-btn" onClick={onClose}>
+              ×
+            </button>
+          </div>
+        </div>
+
+        <div className="customer-kpi-grid">
+          <div className="customer-kpi-card">
+            <span>Total Purchases</span>
+            <strong>{formatCurrency(overview.totalPurchases)}</strong>
+          </div>
+
+          <div className="customer-kpi-card">
+            <span>Total Paid</span>
+            <strong>{formatCurrency(overview.totalPaid)}</strong>
+          </div>
+
+          <div className="customer-kpi-card">
+            <span>Balance Due</span>
+            <strong>{formatCurrency(overview.balanceDue)}</strong>
+          </div>
+
+          <div className="customer-kpi-card">
+            <span>Average Order</span>
+            <strong>{formatCurrency(overview.averageOrderValue)}</strong>
+          </div>
+        </div>
+
+        <div className="customer-tabs">
+          {tabs.map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              className={`customer-tab-btn ${
+                activeTab === tab.key ? "active" : ""
+              }`}
+              onClick={() => setActiveTab(tab.key)}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="customer-tab-content">
+          {activeTab === "overview" && (
+            <div className="customer-details-grid">
+              <div className="customer-section-card">
+                <h3>General Summary</h3>
+                <div className="summary-list">
+                  <div>
+                    <span>Total Invoices</span>
+                    <strong>{overview.totalInvoices}</strong>
+                  </div>
+                  <div>
+                    <span>Total Orders</span>
+                    <strong>{overview.totalOrders}</strong>
+                  </div>
+                  <div>
+                    <span>Average Order Value</span>
+                    <strong>{formatCurrency(overview.averageOrderValue)}</strong>
+                  </div>
+                  <div>
+                    <span>Joined Date</span>
+                    <strong>{customer.joinedAt || "-"}</strong>
+                  </div>
+                </div>
+              </div>
+
+              <div className="customer-section-card">
+                <h3>Latest Activity</h3>
+                {activity.slice(0, 4).map((item) => (
+                  <div key={item.id} className="timeline-item compact">
+                    <div className="timeline-dot" />
+                    <div>
+                      <strong>{item.title}</strong>
+                      <p>{item.description}</p>
+                      <span>{item.date}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="customer-section-card">
+                <h3>Last Note</h3>
+                {overview.lastNote ? (
+                  <div className="note-card">
+                    <p>{overview.lastNote.text}</p>
+                    <span>
+                      {overview.lastNote.author} • {overview.lastNote.createdAt}
+                    </span>
+                  </div>
+                ) : (
+                  <p className="muted-empty">No notes available.</p>
+                )}
+              </div>
+
+              <div className="customer-section-card">
+                <h3>Last Purchase</h3>
+                {overview.lastPurchase ? (
+                  <div className="summary-list">
+                    <div>
+                      <span>Invoice</span>
+                      <strong>{overview.lastPurchase.invoiceNo}</strong>
+                    </div>
+                    <div>
+                      <span>Date</span>
+                      <strong>{overview.lastPurchase.date}</strong>
+                    </div>
+                    <div>
+                      <span>Quantity</span>
+                      <strong>{overview.lastPurchase.quantity}</strong>
+                    </div>
+                    <div>
+                      <span>Total</span>
+                      <strong>{formatCurrency(overview.lastPurchase.total)}</strong>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="muted-empty">No purchases available.</p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {activeTab === "purchases" && (
+            <div className="customer-section-card">
+              <h3>Purchases History</h3>
+
+              <div className="table-wrapper" style={{ marginTop: "14px" }}>
+                <table className="dashboard-table details-table">
+                  <thead>
+                    <tr>
+                      <th>Invoice / Order</th>
+                      <th>Date</th>
+                      <th>Products</th>
+                      <th>Qty</th>
+                      <th>Total</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    {purchases.map((purchase) => (
+                      <tr key={purchase.id}>
+                        <td>{purchase.invoiceNo}</td>
+                        <td>{purchase.date}</td>
+                        <td>
+                          <div className="stack-cell">
+                            {purchase.products.map((product) => (
+                              <span key={product}>{product}</span>
+                            ))}
+                          </div>
+                        </td>
+                        <td>{purchase.quantity}</td>
+                        <td>{formatCurrency(purchase.total)}</td>
+                        <td>
+                          <span
+                            className={`status-pill ${
+                              purchase.status === "Paid"
+                                ? "paid"
+                                : purchase.status === "Partial"
+                                ? "partial"
+                                : purchase.status === "Unpaid"
+                                ? "unpaid"
+                                : "cancelled"
+                            }`}
+                          >
+                            {purchase.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {activeTab === "payments" && (
+            <div className="customer-section-card">
+              <h3>Payments</h3>
+
+              <div className="table-wrapper" style={{ marginTop: "14px" }}>
+                <table className="dashboard-table details-table">
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Amount</th>
+                      <th>Method</th>
+                      <th>Reference</th>
+                      <th>Recorded By</th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    {payments.length > 0 ? (
+                      payments.map((payment) => (
+                        <tr key={payment.id}>
+                          <td>{payment.date}</td>
+                          <td>{formatCurrency(payment.amount)}</td>
+                          <td>{payment.method}</td>
+                          <td>{payment.reference}</td>
+                          <td>{payment.recordedBy}</td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={5} className="empty-state-cell">
+                          No payments available.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {activeTab === "notes" && (
+            <div className="customer-section-card">
+              <h3>Internal Notes</h3>
+
+              <div className="notes-list">
+                {notes.map((note) => (
+                  <div key={note.id} className="note-card">
+                    <p>{note.text}</p>
+                    <span>
+                      {note.author} • {note.createdAt}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {activeTab === "activity" && (
+            <div className="customer-section-card">
+              <h3>Activity Timeline</h3>
+
+              <div className="timeline-list">
+                {activity.map((item) => (
+                  <div key={item.id} className="timeline-item">
+                    <div className="timeline-dot" />
+                    <div>
+                      <strong>{item.title}</strong>
+                      <p>{item.description}</p>
+                      <span>{item.date}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -600,6 +1039,11 @@ export default function Customers() {
   const [pendingCloseTarget, setPendingCloseTarget] =
     useState<PendingCloseTarget>(null);
 
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [openActionMenuId, setOpenActionMenuId] = useState<string | null>(null);
+
+  const actionMenuRef = useRef<HTMLDivElement | null>(null);
+
   const [sortConfig, setSortConfig] = useState<{
     key: SortKey;
     direction: SortDirection;
@@ -611,6 +1055,20 @@ export default function Customers() {
   useEffect(() => {
     saveCustomers(customers);
   }, [customers]);
+
+  useEffect(() => {
+    const handleOutsideClick = (event: MouseEvent) => {
+      if (!actionMenuRef.current) return;
+      if (!actionMenuRef.current.contains(event.target as Node)) {
+        setOpenActionMenuId(null);
+      }
+    };
+
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+    };
+  }, []);
 
   const requestSort = (key: SortKey) => {
     setSortConfig((prev) => {
@@ -672,8 +1130,8 @@ export default function Customers() {
         }
       };
 
-      const first = getValue(a).toString().toLowerCase();
-      const second = getValue(b).toString().toLowerCase();
+      const first = String(getValue(a)).toLowerCase();
+      const second = String(getValue(b)).toLowerCase();
 
       if (first < second) return sortConfig.direction === "asc" ? -1 : 1;
       if (first > second) return sortConfig.direction === "asc" ? 1 : -1;
@@ -773,10 +1231,7 @@ export default function Customers() {
     setPendingCloseTarget(null);
   };
 
-  const handlePhoneChange = (
-    value: string,
-    mode: "add" | "edit" = "add"
-  ) => {
+  const handlePhoneChange = (value: string, mode: "add" | "edit" = "add") => {
     const cleanedValue = value.replace(/\D/g, "").slice(0, 10);
 
     let phoneError: string | undefined;
@@ -903,6 +1358,24 @@ export default function Customers() {
     setIsNoteExpanded(false);
   };
 
+  const openCustomerDetails = (customer: Customer) => {
+    setSelectedCustomer(customer);
+  };
+
+  const closeCustomerDetails = () => {
+    setSelectedCustomer(null);
+  };
+
+  const openEditFromDetails = () => {
+    if (!selectedCustomer) return;
+    openEditModal(selectedCustomer);
+    closeCustomerDetails();
+  };
+
+  const toggleActionMenu = (customerId: string) => {
+    setOpenActionMenuId((prev) => (prev === customerId ? null : customerId));
+  };
+
   const shouldShowReadMore =
     !!selectedNote &&
     selectedNote !== "No notes available." &&
@@ -954,47 +1427,55 @@ export default function Customers() {
   return (
     <>
       <div className="customers-page">
-        <div className="customers-header">
-          <div>
-            <p className="dashboard-badge">Customer Management</p>
-            <h1 className="dashboard-title">Customers</h1>
-            <p className="dashboard-subtitle">
-              Manage customer records, contact details, and notes from one clean
-              and professional workspace.
-            </p>
-          </div>
+       <div className="customers-header refined">
+  <div className="customers-title-wrap">
+    <h1 className="dashboard-title customers-page-title">Customers</h1>
+    <p className="dashboard-subtitle customers-page-subtitle">
+      Manage your customer database.
+    </p>
+  </div>
 
-          <button
-            className="quick-action-btn"
-            onClick={() => setShowAddModal(true)}
-          >
-            + Add Customer
-          </button>
-        </div>
+  <div className="customers-header-tools">
+    <div className="customers-inline-search">
+      <span className="customers-inline-search-icon">
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          aria-hidden="true"
+        >
+          <path
+            d="M21 21L16.65 16.65M18 10.5C18 14.6421 14.6421 18 10.5 18C6.35786 18 3 14.6421 3 10.5C3 6.35786 6.35786 3 10.5 3C14.6421 3 18 6.35786 18 10.5Z"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </span>
 
-        <div className="dashboard-card">
-          <div className="customers-toolbar">
-            <div className="dashboard-search-box customers-search-box">
-              <label className="dashboard-search-label">Search Customers</label>
+      <input
+        type="text"
+        className="customers-inline-search-input"
+        placeholder="Search customers..."
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+      />
+    </div>
 
-              <input
-                type="text"
-                className="dashboard-search-input"
-                placeholder="Search by ID, name, email, phone, location, or date..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
+    <button
+      className="quick-action-btn customers-add-btn"
+      onClick={() => setShowAddModal(true)}
+    >
+      + Add Customer
+    </button>
+  </div>
+</div>
 
-              <span className="dashboard-search-meta">
-                {searchTerm.trim()
-                  ? `${filteredCustomers.length} result(s)`
-                  : "Search all customers"}
-              </span>
-            </div>
-          </div>
-
-          <div className="table-wrapper">
-            <table className="dashboard-table">
+        <div className="dashboard-card customers-table-card">
+  <div className="table-wrapper customers-table-wrapper">
+    <table className="dashboard-table customers-table">
               <thead>
                 <tr>
                   <th>
@@ -1042,7 +1523,7 @@ export default function Customers() {
                       Joined <span>{getSortIndicator("joinedAt")}</span>
                     </button>
                   </th>
-                  <th>Actions</th>
+                  <th className="actions-header-cell">Actions</th>
                 </tr>
               </thead>
 
@@ -1051,42 +1532,94 @@ export default function Customers() {
                   filteredCustomers.map((customer) => (
                     <tr key={customer.id}>
                       <td>{customer.id}</td>
-                      <td>{customer.name}</td>
+
+                      <td>
+                        <button
+                          type="button"
+                          className="name-link-btn"
+                          onClick={() => openCustomerDetails(customer)}
+                        >
+                          {customer.name}
+                        </button>
+                      </td>
+
                       <td>
                         {customer.email?.trim()
                           ? customer.email
                           : "Not provided"}
                       </td>
+
                       <td>{customer.phone}</td>
                       <td>{customer.joinedAt}</td>
-                      <td>
+
+                      <td className="actions-cell">
                         <div
-                          style={{
-                            display: "flex",
-                            gap: "8px",
-                            flexWrap: "wrap",
-                          }}
+                          className="table-actions-menu"
+                          ref={openActionMenuId === customer.id ? actionMenuRef : null}
                         >
                           <button
-                            className="quick-action-btn secondary"
-                            onClick={() => openEditModal(customer)}
+                            type="button"
+                            className={`action-trigger-btn ${
+                              openActionMenuId === customer.id ? "active" : ""
+                            }`}
+                            onClick={() => toggleActionMenu(customer.id)}
+                            aria-label="Customer actions"
+                            aria-expanded={openActionMenuId === customer.id}
                           >
-                            Edit
+                            <span className="action-dots">⋮</span>
                           </button>
 
-                          <button
-                            className="quick-action-btn secondary"
-                            onClick={() => openNoteModal(customer.notes)}
-                          >
-                            Note
-                          </button>
+                          {openActionMenuId === customer.id && (
+                            <div className="action-dropdown-menu">
+                              <button
+                                type="button"
+                                className="action-dropdown-item"
+                                onClick={() => {
+                                  openCustomerDetails(customer);
+                                  setOpenActionMenuId(null);
+                                }}
+                              >
+                                <span className="action-icon">◉</span>
+                                <span>View</span>
+                              </button>
 
-                          <button
-                            className="quick-action-btn delete-btn"
-                            onClick={() => openDeleteModal(customer.id)}
-                          >
-                            Delete
-                          </button>
+                              <button
+                                type="button"
+                                className="action-dropdown-item"
+                                onClick={() => {
+                                  openEditModal(customer);
+                                  setOpenActionMenuId(null);
+                                }}
+                              >
+                                <span className="action-icon">✎</span>
+                                <span>Edit</span>
+                              </button>
+
+                              <button
+                                type="button"
+                                className="action-dropdown-item"
+                                onClick={() => {
+                                  openNoteModal(customer.notes);
+                                  setOpenActionMenuId(null);
+                                }}
+                              >
+                                <span className="action-icon">⌘</span>
+                                <span>Note</span>
+                              </button>
+
+                              <button
+                                type="button"
+                                className="action-dropdown-item delete"
+                                onClick={() => {
+                                  openDeleteModal(customer.id);
+                                  setOpenActionMenuId(null);
+                                }}
+                              >
+                                <span className="action-icon">✕</span>
+                                <span>Delete</span>
+                              </button>
+                            </div>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -1177,10 +1710,7 @@ export default function Customers() {
 
                   <div style={sectionCardStyle}>
                     <label className="modal-label">
-                      Email{" "}
-                      <span style={{ color: "#7b97b0", fontWeight: 500 }}>
-                        (Optional)
-                      </span>
+                      Email <span className="optional-label">(Optional)</span>
                     </label>
 
                     <EmailInput
@@ -1237,10 +1767,7 @@ export default function Customers() {
                     onChange={(e) =>
                       setForm((prev) => ({ ...prev, notes: e.target.value }))
                     }
-                    style={{
-                      minHeight: "160px",
-                      resize: "vertical",
-                    }}
+                    style={{ minHeight: "160px", resize: "vertical" }}
                   />
                 </div>
 
@@ -1278,10 +1805,7 @@ export default function Customers() {
       )}
 
       {showAddConfirmModal && (
-        <div
-          className="modal-overlay"
-          onClick={() => setShowAddConfirmModal(false)}
-        >
+        <div className="modal-overlay" onClick={() => setShowAddConfirmModal(false)}>
           <div className="modal-card" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <div>
@@ -1297,9 +1821,7 @@ export default function Customers() {
               </button>
             </div>
 
-            <p style={{ margin: 0, lineHeight: "1.8", color: "#567895" }}>
-              Are you sure you want to add this customer?
-            </p>
+            <p className="confirm-text">Are you sure you want to add this customer?</p>
 
             <div className="modal-actions" style={{ marginTop: "20px" }}>
               <button
@@ -1390,10 +1912,7 @@ export default function Customers() {
 
                   <div style={sectionCardStyle}>
                     <label className="modal-label">
-                      Email{" "}
-                      <span style={{ color: "#7b97b0", fontWeight: 500 }}>
-                        (Optional)
-                      </span>
+                      Email <span className="optional-label">(Optional)</span>
                     </label>
 
                     <EmailInput
@@ -1452,10 +1971,7 @@ export default function Customers() {
                     onChange={(e) =>
                       setEditForm((prev) => ({ ...prev, notes: e.target.value }))
                     }
-                    style={{
-                      minHeight: "160px",
-                      resize: "vertical",
-                    }}
+                    style={{ minHeight: "160px", resize: "vertical" }}
                   />
                 </div>
 
@@ -1506,11 +2022,11 @@ export default function Customers() {
               </button>
             </div>
 
-            <p style={{ margin: 0, lineHeight: "1.8", color: "#567895" }}>
+            <p className="confirm-text">
               To confirm deletion, type <strong>123</strong>
             </p>
 
-            <div style={{ marginTop: "16px" }}>
+            <div className="modal-spacing-top">
               <input
                 className="modal-input"
                 type="text"
@@ -1559,21 +2075,11 @@ export default function Customers() {
               </button>
             </div>
 
-            <div style={{ padding: "8px 0 0" }}>
+            <div className="note-content-wrapper">
               <p
-                style={{
-                  whiteSpace: "pre-wrap",
-                  lineHeight: "1.9",
-                  margin: 0,
-                  color: "#334155",
-                  fontSize: "15px",
-                  fontWeight: 500,
-                  wordBreak: "break-word",
-                  overflowWrap: "anywhere",
-                  userSelect: "text",
-                  maxHeight: isNoteExpanded ? "320px" : "unset",
-                  overflowY: isNoteExpanded ? "auto" : "visible",
-                }}
+                className={`note-content ${
+                  isNoteExpanded ? "note-content-expanded" : ""
+                }`}
               >
                 {displayedNote}
               </p>
@@ -1581,17 +2087,8 @@ export default function Customers() {
               {shouldShowReadMore && (
                 <button
                   type="button"
+                  className="note-toggle-btn"
                   onClick={() => setIsNoteExpanded((prev) => !prev)}
-                  style={{
-                    marginTop: "14px",
-                    border: "none",
-                    background: "transparent",
-                    color: "#2563eb",
-                    fontSize: "14px",
-                    fontWeight: 700,
-                    cursor: "pointer",
-                    padding: 0,
-                  }}
                 >
                   {isNoteExpanded ? "Read Less" : "Read More"}
                 </button>
@@ -1606,6 +2103,12 @@ export default function Customers() {
           </div>
         </div>
       )}
+
+      <CustomerDetailsModal
+        customer={selectedCustomer}
+        onClose={closeCustomerDetails}
+        onEdit={openEditFromDetails}
+      />
 
       <ConfirmCloseModal
         open={pendingCloseTarget !== null}
