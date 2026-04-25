@@ -10,6 +10,7 @@ import {
   saveProductCategories,
 } from "../data/storage";
 import type { Product, Purchase, InvoiceItem, Supplier } from "../data/types";
+import { useSettings } from "../context/SettingsContext";
 
 function normalizeCategoryName(value: string) {
   return String(value || "").trim().replace(/\s+/g, " ");
@@ -30,6 +31,8 @@ function getStatusLabel(available: number, minStock: number) {
 }
 
 export default function Products() {
+  const { t, isArabic } = useSettings();
+
   // Data sources
   const [rawProducts, setRawProducts] = useState<Product[]>(() => getProducts());
   const [categories, setCategories] = useState<string[]>(() => getProductCategories());
@@ -141,7 +144,7 @@ export default function Products() {
 
     if (errors.length) {
       // simple alert behavior for now
-      alert("Please fill required fields (code, name, category, sale price)");
+      alert(t.common?.save || "Please fill required fields (code, name, category, sale price)");
       return;
     }
 
@@ -172,20 +175,24 @@ export default function Products() {
 
   // Basic delete
   function handleDeleteProduct(id: string) {
-    if (!confirm("Delete product?")) return;
+    if (!confirm(t.common?.confirmDelete || "Delete product?")) return;
     setRawProducts((prev) => prev.filter((p) => p.id !== id));
   }
+
+  const productTitle = t.products?.pageTitle || t.common?.product || "Products";
+  const addProductLabel = t.products?.addProduct || "Add Product";
+  const searchPlaceholder = t.products?.searchPlaceholder || "Search products, SKU, category...";
 
   return (
     <div className="products-page compact-products-page">
       {/* Header */}
       <div className="products-header compact-header">
         <div className="header-left">
-          <h1 className="page-title">Products</h1>
+          <h1 className="page-title">{productTitle}</h1>
           <div className="inline-summary" aria-hidden>
-            <span className="summary-item">Total: {productRows.length}</span>
-            <span className="summary-item muted">In: {productRows.filter(p=>p.available>0).length}</span>
-            <span className="summary-item muted">Low: {productRows.filter(p=>p.statusLabel==='Low Stock').length}</span>
+            <span className="summary-item">{t.common?.total || "Total"}: {productRows.length}</span>
+            <span className="summary-item muted">{t.products?.inStock || "In"}: {productRows.filter(p=>p.available>0).length}</span>
+            <span className="summary-item muted">{t.products?.low || "Low"}: {productRows.filter(p=>p.statusLabel==='Low Stock').length}</span>
           </div>
         </div>
 
@@ -193,21 +200,21 @@ export default function Products() {
           <div className="search-filter-row">
             <input
               className="compact-search"
-              placeholder="Search products, SKU, category..."
+              placeholder={searchPlaceholder}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
 
             <button className="filter-btn" onClick={() => setShowFilters((s) => !s)} aria-expanded={showFilters}>
-              Filters
+              {t.products?.filters || "Filters"}
             </button>
 
             <button className="add-product-btn primary" onClick={() => setShowAddModal(true)}>
-              + Add Product
+              + {addProductLabel}
             </button>
 
             <button className="view-toggle-btn" onClick={() => setViewMode((v) => (v === "table" ? "cards" : "table"))}>
-              {viewMode === "table" ? "Cards" : "Table"}
+              {viewMode === "table" ? (t.products?.viewToggleCards || "Cards") : (t.products?.viewToggleTable || "Table")}
             </button>
           </div>
         </div>
@@ -218,9 +225,9 @@ export default function Products() {
         <div className="filters-popover" role="dialog">
           <div className="filters-grid">
             <div className="field">
-              <label>Category</label>
+              <label>{t.products?.category || "Category"}</label>
               <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)}>
-                <option value="">All</option>
+                <option value="">{t.common?.all || "All"}</option>
                 {categories.map((c) => (
                   <option key={c} value={c}>{c}</option>
                 ))}
@@ -228,19 +235,19 @@ export default function Products() {
             </div>
 
             <div className="field">
-              <label>Stock</label>
+              <label>{t.products?.stock || "Stock"}</label>
               <select value={filterStock} onChange={(e) => setFilterStock(e.target.value as any)}>
-                <option value="">Any</option>
-                <option value="in">In stock</option>
-                <option value="low">Low stock</option>
-                <option value="out">Out</option>
+                <option value="">{t.common?.all || "Any"}</option>
+                <option value="in">{t.products?.inStock || "In stock"}</option>
+                <option value="low">{t.products?.low || "Low stock"}</option>
+                <option value="out">{t.products?.out || "Out"}</option>
               </select>
             </div>
 
             <div className="field">
-              <label>Supplier</label>
+              <label>{t.products?.supplier || "Supplier"}</label>
               <select value={filterSupplier} onChange={(e) => setFilterSupplier(e.target.value)}>
-                <option value="">Any</option>
+                <option value="">{t.common?.all || "Any"}</option>
                 {suppliers.map((s) => (
                   <option key={s.id} value={s.id}>{s.name}</option>
                 ))}
@@ -248,8 +255,8 @@ export default function Products() {
             </div>
 
             <div className="filters-actions">
-              <button onClick={() => { setFilterCategory(""); setFilterStock(""); setFilterSupplier(""); }}>Reset</button>
-              <button className="apply" onClick={() => setShowFilters(false)}>Apply</button>
+              <button onClick={() => { setFilterCategory(""); setFilterStock(""); setFilterSupplier(""); }}>{t.common?.cancel || "Reset"}</button>
+              <button className="apply" onClick={() => setShowFilters(false)}>{t.common?.save || "Apply"}</button>
             </div>
           </div>
         </div>
@@ -258,7 +265,7 @@ export default function Products() {
       {/* Results meta */}
       <div className="dashboard-card products-results-card compact-results">
         <div className="products-results-meta">
-          {searchTerm.trim() ? `${filteredProducts.length} result(s)` : `${filteredProducts.length} product(s)`}
+          {searchTerm.trim() ? `${filteredProducts.length} ${t.common?.results || "result(s)"}` : `${filteredProducts.length} ${t.products?.noProducts ? t.products.noProducts : t.common?.product || "product(s)"}`}
         </div>
 
         {/* Main list */}
@@ -267,15 +274,15 @@ export default function Products() {
             <table className="dashboard-table compact-dashboard-table" role="grid" aria-label="Products table">
               <thead>
                 <tr>
-                  <th className="col-product">Product</th>
-                  <th className="col-category">Category</th>
-                  <th className="col-supplier">Supplier</th>
-                  <th className="col-stock">Stock</th>
-                  <th className="col-purchase">Purchase</th>
-                  <th className="col-sale">Sale</th>
-                  <th className="col-margin">Margin</th>
-                  <th className="col-status">Status</th>
-                  <th className="col-actions">Actions</th>
+                  <th className="col-product">{t.common?.product || "Product"}</th>
+                  <th className="col-category">{t.products?.category || "Category"}</th>
+                  <th className="col-supplier">{t.products?.supplier || "Supplier"}</th>
+                  <th className="col-stock">{t.products?.stock || "Stock"}</th>
+                  <th className="col-purchase">{t.products?.purchasePrice || "Purchase"}</th>
+                  <th className="col-sale">{t.products?.salePrice || "Sale"}</th>
+                  <th className="col-margin">{t.products?.margin || "Margin"}</th>
+                  <th className="col-status">{t.products?.status || "Status"}</th>
+                  <th className="col-actions">{t.products?.actions || t.common?.actions || "Actions"}</th>
                 </tr>
               </thead>
 
@@ -300,9 +307,9 @@ export default function Products() {
                         <div className="stock-cell">
                           <strong>{(p as any).available}</strong>
                           {(p as any).available <= (p as any).minStock && (p as any).available > 0 ? (
-                            <span className="badge low">Low</span>
+                            <span className="badge low">{t.products?.low || "Low"}</span>
                           ) : (p as any).available <= 0 ? (
-                            <span className="badge out">Out</span>
+                            <span className="badge out">{t.products?.out || "Out"}</span>
                           ) : null}
                         </div>
                       </td>
@@ -318,15 +325,15 @@ export default function Products() {
                       </td>
 
                       <td className="actions-cell">
-                        <button className="table-btn" onClick={() => setViewProduct(p)}>View</button>
-                        <button className="table-btn edit" onClick={() => { setAddForm({ ...addForm, code: (p as any).code || p.id, name: p.name, category: p.category, salePrice: String((p as any).salePrice || p.price || 0), purchasePrice: String((p as any).purchasePrice || 0), stock: String(p.stock || 0) }); setShowAddModal(true); }}>Edit</button>
-                        <button className="table-btn delete" onClick={() => handleDeleteProduct(p.id)}>Delete</button>
+                        <button className="table-btn" onClick={() => setViewProduct(p)}>{t.common?.add ? t.common.add : 'View'}</button>
+                        <button className="table-btn edit" onClick={() => { setAddForm({ ...addForm, code: (p as any).code || p.id, name: p.name, category: p.category, salePrice: String((p as any).salePrice || p.price || 0), purchasePrice: String((p as any).purchasePrice || 0), stock: String(p.stock || 0) }); setShowAddModal(true); }}>{t.common?.edit || 'Edit'}</button>
+                        <button className="table-btn delete" onClick={() => handleDeleteProduct(p.id)}>{t.common?.delete || 'Delete'}</button>
                       </td>
                     </tr>
                   );
                 }) : (
                   <tr>
-                    <td colSpan={9} className="empty-state-cell">No matching products found.</td>
+                    <td colSpan={9} className="empty-state-cell">{t.products?.noProducts || 'No matching products found.'}</td>
                   </tr>
                 )}
               </tbody>
@@ -341,7 +348,7 @@ export default function Products() {
                 <div className="mini-meta">{product.category || '—'}</div>
                 <div className="mini-stock">{(product as any).available} • <span className={`pill ${(product as any).statusLabel === 'In Stock' ? 'in' : (product as any).statusLabel === 'Low Stock' ? 'low' : 'out'}`}>{(product as any).statusLabel}</span></div>
                 <div className="mini-actions">
-                  <button onClick={() => setViewProduct(product)}>View</button>
+                  <button onClick={() => setViewProduct(product)}>{t.common?.actions || 'View'}</button>
                 </div>
               </div>
             ))}
@@ -355,8 +362,8 @@ export default function Products() {
           <div className="modal-card" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 640 }}>
             <div className="modal-header">
               <div>
-                <h2>{addForm.name ? "Edit Product" : "Add Product"}</h2>
-                <p>Enter product details.</p>
+                <h2>{addForm.name ? (t.common?.edit || 'Edit Product') : addProductLabel}</h2>
+                <p>{t.products?.addProduct ? t.products.addProduct : 'Enter product details.'}</p>
               </div>
 
               <button className="modal-close-btn" onClick={() => setShowAddModal(false)}>×</button>
@@ -365,40 +372,40 @@ export default function Products() {
             <div className="modal-form">
               <div style={{ display: 'grid', gap: 12 }}>
                 <div>
-                  <label className="modal-label">Product Code</label>
+                  <label className="modal-label">{t.common?.product || 'Product Code'}</label>
                   <input className="modal-input" value={addForm.code} onChange={(e)=>setAddForm({...addForm, code: e.target.value})} />
                 </div>
 
                 <div>
-                  <label className="modal-label">Name</label>
+                  <label className="modal-label">{t.common?.name || 'Name'}</label>
                   <input className="modal-input" value={addForm.name} onChange={(e)=>setAddForm({...addForm, name: e.target.value})} />
                 </div>
 
                 <div>
-                  <label className="modal-label">Category</label>
+                  <label className="modal-label">{t.products?.category || 'Category'}</label>
                   <input className="modal-input" value={addForm.category} onChange={(e)=>setAddForm({...addForm, category: e.target.value})} />
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                   <div>
-                    <label className="modal-label">Purchase Price</label>
+                    <label className="modal-label">{t.products?.purchasePrice || 'Purchase Price'}</label>
                     <input className="modal-input" value={addForm.purchasePrice} onChange={(e)=>setAddForm({...addForm, purchasePrice: e.target.value})} />
                   </div>
 
                   <div>
-                    <label className="modal-label">Sale Price</label>
+                    <label className="modal-label">{t.products?.salePrice || 'Sale Price'}</label>
                     <input className="modal-input" value={addForm.salePrice} onChange={(e)=>setAddForm({...addForm, salePrice: e.target.value})} />
                   </div>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                   <div>
-                    <label className="modal-label">Stock</label>
+                    <label className="modal-label">{t.products?.stock || 'Stock'}</label>
                     <input className="modal-input" value={addForm.stock} onChange={(e)=>setAddForm({...addForm, stock: e.target.value})} />
                   </div>
 
                   <div>
-                    <label className="modal-label">Min Stock</label>
+                    <label className="modal-label">{t.products?.low || 'Min Stock'}</label>
                     <input className="modal-input" value={addForm.minStock} onChange={(e)=>setAddForm({...addForm, minStock: e.target.value})} />
                   </div>
                 </div>
@@ -406,8 +413,8 @@ export default function Products() {
               </div>
 
               <div className="modal-actions" style={{ marginTop: 12 }}>
-                <button className="modal-secondary-btn" onClick={()=>setShowAddModal(false)}>Cancel</button>
-                <button className="modal-primary-btn" onClick={handleAddProduct}>Save Product</button>
+                <button className="modal-secondary-btn" onClick={()=>setShowAddModal(false)}>{t.common?.cancel || 'Cancel'}</button>
+                <button className="modal-primary-btn" onClick={handleAddProduct}>{t.common?.save || 'Save Product'}</button>
               </div>
             </div>
           </div>
@@ -421,7 +428,7 @@ export default function Products() {
             <div className="modal-header">
               <div>
                 <h2>{viewProduct.name}</h2>
-                <p>Product details</p>
+                <p>{t.products?.viewToggleTable || 'Product details'}</p>
               </div>
               <button className="modal-close-btn" onClick={()=>setViewProduct(null)}>×</button>
             </div>
@@ -429,36 +436,36 @@ export default function Products() {
             <div className="modal-form">
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div>
-                  <label className="modal-label">Code</label>
+                  <label className="modal-label">{t.common?.product || 'Code'}</label>
                   <div>{(viewProduct as any).code || viewProduct.id}</div>
                 </div>
                 <div>
-                  <label className="modal-label">Category</label>
+                  <label className="modal-label">{t.products?.category || 'Category'}</label>
                   <div>{viewProduct.category || '—'}</div>
                 </div>
 
                 <div>
-                  <label className="modal-label">Purchase</label>
+                  <label className="modal-label">{t.products?.purchasePrice || 'Purchase'}</label>
                   <div>{formatMoney((viewProduct as any).purchasePrice || 0)}</div>
                 </div>
                 <div>
-                  <label className="modal-label">Sale</label>
+                  <label className="modal-label">{t.products?.salePrice || 'Sale'}</label>
                   <div>{formatMoney((viewProduct as any).salePrice || viewProduct.price || 0)}</div>
                 </div>
 
                 <div>
-                  <label className="modal-label">Available</label>
+                  <label className="modal-label">{t.products?.stock || 'Available'}</label>
                   <div>{(viewProduct as any).available}</div>
                 </div>
                 <div>
-                  <label className="modal-label">Status</label>
+                  <label className="modal-label">{t.products?.status || 'Status'}</label>
                   <div>{getStatusLabel((viewProduct as any).available || 0, (viewProduct as any).minStock || 5)}</div>
                 </div>
 
               </div>
 
               <div style={{ marginTop: 12 }}>
-                <button className="modal-primary-btn" onClick={() => setViewProduct(null)}>Close</button>
+                <button className="modal-primary-btn" onClick={() => setViewProduct(null)}>{t.common?.close || 'Close'}</button>
               </div>
             </div>
           </div>
