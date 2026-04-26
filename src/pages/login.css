@@ -76,6 +76,30 @@
   box-shadow: 0 30px 80px rgba(15, 23, 42, 0.08);
 }
 
+.auth-language-row {
+  justify-content: flex-end;
+  margin-bottom: 16px;
+}
+
+.auth-lang-chip {
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid #d8e2ef;
+  background: #ffffff;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 0.18s ease;
+}
+
+.auth-lang-chip.active {
+  background: #0f172a;
+  border-color: #0f172a;
+  color: #ffffff;
+}
+
 .auth-badge {
   display: inline-flex;
   align-items: center;
@@ -169,6 +193,14 @@
 
 .auth-input::placeholder {
   color: #94a3b8;
+}
+
+html[dir="rtl"] .auth-input,
+html[dir="rtl"] .auth-subheading,
+html[dir="rtl"] .auth-feature-text,
+html[dir="rtl"] .auth-hero-text,
+html[dir="rtl"] .auth-footer-note {
+  text-align: right;
 }
 
 .auth-row {

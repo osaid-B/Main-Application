@@ -1,169 +1,144 @@
+import { Globe2, MoonStar, Palette, ShieldCheck } from "lucide-react";
 import { useSettings } from "../context/SettingsContext";
+import "./Settings.css";
 
 export default function Settings() {
   const { language, theme, setLanguage, setTheme, isArabic, t } = useSettings();
 
+  const languageOptions = [
+    { value: "en", label: t.common.english, helper: t.settings.ltrHelper },
+    { value: "ar", label: t.common.arabic, helper: t.settings.rtlHelper },
+  ] as const;
+
+  const themeOptions = [
+    { value: "light", label: t.common.light, helper: isArabic ? "كثافة متوازنة مناسبة للعمل اليومي" : "Default balanced surface density" },
+    { value: "dark", label: t.common.dark, helper: isArabic ? "تباين أعلى للتركيز والعمل المطول" : "Higher contrast for focused work" },
+  ] as const;
+
   return (
-    <>
-      <style>{`
-        .settings-page {
-          display: flex;
-          flex-direction: column;
-          gap: 24px;
-        }
-
-        .settings-header h1 {
-          margin: 0;
-          font-size: 32px;
-          font-weight: 800;
-          color: var(--text-color, #0f172a);
-        }
-
-        .settings-header p {
-          margin: 8px 0 0;
-          color: var(--muted-color, #64748b);
-          font-size: 15px;
-        }
-
-        .settings-grid {
-          display: grid;
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-          gap: 20px;
-        }
-
-        .settings-card {
-          background: var(--card-bg, #ffffff);
-          border: 1px solid var(--border-color, #e2e8f0);
-          border-radius: 20px;
-          padding: 22px;
-          box-shadow: 0 12px 24px rgba(15, 23, 42, 0.05);
-        }
-
-        .settings-card h2 {
-          margin: 0 0 10px;
-          font-size: 22px;
-          color: var(--text-color, #0f172a);
-        }
-
-        .settings-card p {
-          margin: 0 0 18px;
-          color: var(--muted-color, #64748b);
-          line-height: 1.7;
-        }
-
-        .settings-options {
-          display: flex;
-          gap: 12px;
-          flex-wrap: wrap;
-        }
-
-        .settings-btn {
-          border: 1px solid var(--border-color, #cbd5e1);
-          background: var(--btn-bg, #f8fafc);
-          color: var(--text-color, #0f172a);
-          padding: 12px 18px;
-          border-radius: 14px;
-          font-size: 14px;
-          font-weight: 700;
-          cursor: pointer;
-          transition: all 0.2s ease;
-        }
-
-        .settings-btn.active {
-          background: #2563eb;
-          color: white;
-          border-color: #2563eb;
-        }
-
-        .settings-preview {
-          margin-top: 18px;
-          border: 1px dashed var(--border-color, #cbd5e1);
-          border-radius: 16px;
-          padding: 16px;
-          background: var(--preview-bg, #f8fafc);
-        }
-
-        .settings-preview strong {
-          display: block;
-          margin-bottom: 8px;
-          color: var(--text-color, #0f172a);
-        }
-
-        .settings-preview span {
-          color: var(--muted-color, #64748b);
-          font-size: 14px;
-        }
-
-        @media (max-width: 768px) {
-          .settings-grid {
-            grid-template-columns: 1fr;
-          }
-        }
-      `}</style>
-
-      <div className="settings-page" dir={isArabic ? "rtl" : "ltr"}>
-        <div className="settings-header">
-          <p className="dashboard-badge">
-            {isArabic ? "⚙️ الإعدادات" : "⚙️ Settings"}
-          </p>
+    <div className="settings-page" dir={isArabic ? "rtl" : "ltr"}>
+      <section className="settings-header">
+        <div>
+          <p className="dashboard-badge">{t.settings.systemSettings}</p>
           <h1>{t.settings.pageTitle}</h1>
           <p>{t.settings.subtitle}</p>
         </div>
+      </section>
 
-        <div className="settings-grid">
-          <div className="settings-card">
-            <h2>{t.settings.languageTitle}</h2>
-            <p>{t.settings.languageDescription}</p>
+      <section className="settings-overview-grid">
+        <article className="settings-overview-tile app-subtle-card">
+          <div className="settings-overview-icon">
+            <Globe2 size={18} />
+          </div>
+          <div>
+            <span>{t.common.language}</span>
+            <strong>{language === "ar" ? t.common.arabic : t.common.english}</strong>
+          </div>
+        </article>
 
-            <div className="settings-options">
-              <button
-                className={`settings-btn ${language === "en" ? "active" : ""}`}
-                onClick={() => setLanguage("en")}
-              >
-                English 🇺🇸
-              </button>
+        <article className="settings-overview-tile app-subtle-card">
+          <div className="settings-overview-icon">
+            <Palette size={18} />
+          </div>
+          <div>
+            <span>{t.common.theme}</span>
+            <strong>{theme === "dark" ? t.common.dark : t.common.light}</strong>
+          </div>
+        </article>
 
-              <button
-                className={`settings-btn ${language === "ar" ? "active" : ""}`}
-                onClick={() => setLanguage("ar")}
-              >
-                العربية 🇵🇸
-              </button>
-            </div>
+        <article className="settings-overview-tile app-subtle-card">
+          <div className="settings-overview-icon">
+            <ShieldCheck size={18} />
+          </div>
+          <div>
+            <span>{t.settings.configurationStatus}</span>
+            <strong>{t.settings.corePreferences}</strong>
+          </div>
+        </article>
+      </section>
 
-            <div className="settings-preview">
-              <strong>{t.settings.currentLanguage}</strong>
-              <span>{language === "ar" ? "العربية" : "English"}</span>
+      <section className="settings-main-grid">
+        <article className="settings-panel app-subtle-card">
+          <div className="settings-panel-header">
+            <div>
+              <span className="settings-panel-chip">{t.settings.workspace}</span>
+              <h2>{t.settings.languageTitle}</h2>
+              <p>{t.settings.languageDescription}</p>
             </div>
           </div>
 
-          <div className="settings-card">
-            <h2>{t.settings.themeTitle}</h2>
-            <p>{t.settings.themeDescription}</p>
-
-            <div className="settings-options">
+          <div className="settings-option-list">
+            {languageOptions.map((option) => (
               <button
-                className={`settings-btn ${theme === "light" ? "active" : ""}`}
-                onClick={() => setTheme("light")}
+                key={option.value}
+                type="button"
+                className={`settings-option-card ${language === option.value ? "active" : ""}`}
+                onClick={() => setLanguage(option.value)}
               >
-                ☀️ {t.common.light}
+                <div className="settings-option-copy">
+                  <strong>{option.label}</strong>
+                  <span>{option.helper}</span>
+                </div>
+                <span className="settings-option-state">
+                  {language === option.value ? t.common.selected : t.common.use}
+                </span>
               </button>
+            ))}
+          </div>
+        </article>
 
-              <button
-                className={`settings-btn ${theme === "dark" ? "active" : ""}`}
-                onClick={() => setTheme("dark")}
-              >
-                🌙 {t.common.dark}
-              </button>
+        <article className="settings-panel app-subtle-card">
+          <div className="settings-panel-header">
+            <div>
+              <span className="settings-panel-chip">{t.settings.appearance}</span>
+              <h2>{t.settings.themeTitle}</h2>
+              <p>{t.settings.themeDescription}</p>
             </div>
-
-            <div className="settings-preview">
-              <strong>{t.settings.currentMode}</strong>
-              <span>{theme === "dark" ? t.common.dark : t.common.light}</span>
+            <div className="settings-panel-icon">
+              <MoonStar size={18} />
             </div>
           </div>
-        </div>
-      </div>
-    </>
+
+          <div className="settings-option-list">
+            {themeOptions.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                className={`settings-option-card ${theme === option.value ? "active" : ""}`}
+                onClick={() => setTheme(option.value)}
+              >
+                <div className="settings-option-copy">
+                  <strong>{option.label}</strong>
+                  <span>{option.helper}</span>
+                </div>
+                <span className="settings-option-state">
+                  {theme === option.value ? t.common.selected : t.common.use}
+                </span>
+              </button>
+            ))}
+          </div>
+        </article>
+      </section>
+
+      <section className="settings-support-grid">
+        <article className="settings-support-card app-subtle-card">
+          <h3>{t.settings.currentLanguage}</h3>
+          <p>{t.settings.currentLanguage}</p>
+          <strong>{language === "ar" ? t.common.arabic : t.common.english}</strong>
+        </article>
+
+        <article className="settings-support-card app-subtle-card">
+          <h3>{t.settings.currentMode}</h3>
+          <p>{t.settings.currentMode}</p>
+          <strong>{theme === "dark" ? t.common.dark : t.common.light}</strong>
+        </article>
+
+        <article className="settings-support-card app-subtle-card">
+          <h3>{t.settings.nextExpansion}</h3>
+          <p>{t.settings.nextExpansionDescription}</p>
+          <strong>{t.settings.foundationReady}</strong>
+        </article>
+      </section>
+    </div>
   );
 }

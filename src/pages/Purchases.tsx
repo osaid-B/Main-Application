@@ -1,1984 +1,1607 @@
+import "./Purchases.css";
+import { createPortal } from "react-dom";
 import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  AlertCircle,
+  ArrowDownToLine,
+  Building2,
+  CalendarDays,
+  CheckCircle2,
+  ChevronDown,
+  Eye,
+  Filter,
+  LayoutGrid,
+  List,
+  MoreHorizontal,
+  PackageCheck,
+  Pencil,
+  Plus,
+  Receipt,
+  Search,
+  ShoppingCart,
+  Trash2,
+  Truck,
+  X,
+} from "lucide-react";
+import OverflowContent from "../components/ui/OverflowContent";
+import TableFooter from "../components/ui/TableFooter";
 import {
   getProducts,
   getPurchases,
   getSuppliers,
   savePurchases,
-  saveSuppliers,
 } from "../data/storage";
 import type { Product, Purchase, Supplier } from "../data/types";
 
-type PurchaseForm = {
+type PurchaseFormState = {
   supplierId: string;
   productId: string;
   quantity: string;
+  unitPrice: string;
   totalCost: string;
   date: string;
+  paymentTerms: string;
+  currency: string;
+  taxRate: string;
+  warehouse: string;
+  supplierReference: string;
+  internalReference: string;
+  attachmentName: string;
   notes: string;
 };
 
-type FormErrors = {
-  supplierId?: string;
-  productId?: string;
-  quantity?: string;
-  totalCost?: string;
-  date?: string;
+type ViewMode = "table" | "grid";
+type PurchaseStatusView =
+  | "Draft"
+  | "Pending"
+  | "Partially Received"
+  | "Received"
+  | "Cancelled";
+type PaymentStatusView = "Paid" | "Partial" | "Unpaid";
+type QuickStatus = "All" | PurchaseStatusView;
+
+type PurchaseRow = {
+  id: string;
+  poNumber: string;
+  purchaseId: string;
+  supplierId: string;
+  supplierName: string;
+  supplierPhone: string;
+  supplierEmail: string;
+  supplierAddress: string;
+  productId: string;
+  productName: string;
+  description: string;
+  orderDate: string;
+  deliveryDate: string;
+  totalAmount: number;
+  receivedAmount: number;
+  receivedPercent: number;
+  status: PurchaseStatusView;
+  paymentStatus: PaymentStatusView;
+  isOverdue: boolean;
+  deliveryLabel: string;
+  notes: string;
 };
 
-type PendingCloseTarget = "add" | "edit" | null;
-type SortKey =
-  | "id"
-  | "supplier"
-  | "product"
-  | "quantity"
-  | "totalCost"
-  | "date";
-type SortDirection = "asc" | "desc";
+type FilterState = {
+  supplier: string;
+  status: string;
+  orderDate: string;
+  deliveryDate: string;
+  paymentStatus: string;
+};
 
-const EMPTY_FORM: PurchaseForm = {
+type MenuState = {
+  id: string;
+  top: number;
+  left: number;
+  placement: "down" | "up";
+};
+
+type FormErrors = Partial<
+  Record<"supplierId" | "productId" | "quantity" | "unitPrice" | "date", string>
+>;
+
+const EMPTY_FORM: PurchaseFormState = {
   supplierId: "",
   productId: "",
-  quantity: "",
+  quantity: "1",
+  unitPrice: "",
   totalCost: "",
   date: new Date().toISOString().split("T")[0],
+  paymentTerms: "Net 30",
+  currency: "USD",
+  taxRate: "0",
+  warehouse: "Main Warehouse",
+  supplierReference: "",
+  internalReference: "",
+  attachmentName: "",
   notes: "",
 };
 
+const EMPTY_FILTERS: FilterState = {
+  supplier: "",
+  status: "",
+  orderDate: "",
+  deliveryDate: "",
+  paymentStatus: "",
+};
+
+const PAGE_SIZE_OPTIONS = [5, 10, 15];
 const DELETE_CONFIRMATION_CODE = "123";
-const NOTE_PREVIEW_LIMIT = 220;
-const BUSINESS_MIN_DATE = "2020-01-01";
-const TODAY_DATE = new Date().toISOString().split("T")[0];
+const TODAY = new Date().toISOString().split("T")[0];
 
-function buildPurchaseId(index: number) {
-  return `PUR-${1000 + index + 1}`;
+function money(value: number) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 2,
+  }).format(value);
 }
 
-function buildSupplierId(index: number) {
-  return `SUP-${1000 + index + 1}`;
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(new Date(value));
 }
 
-function normalizePurchases(purchases: Purchase[]): Purchase[] {
-  return purchases.map((purchase, index) => ({
-    ...purchase,
-    id: purchase.id || buildPurchaseId(index),
-    supplierId: purchase.supplierId || "",
-    productId: purchase.productId || "",
-    quantity: Number(purchase.quantity || 0),
-    totalCost: Number(purchase.totalCost || 0),
-    date: purchase.date || new Date().toISOString().split("T")[0],
-    notes: purchase.notes || "",
-  }));
+function addDays(date: string, amount: number) {
+  const next = new Date(date);
+  next.setDate(next.getDate() + amount);
+  return next.toISOString().split("T")[0];
 }
 
-function isIsoDate(value: string) {
-  return /^\d{4}-\d{2}-\d{2}$/.test(value);
-}
-
-function isValidCalendarDate(value: string) {
-  if (!isIsoDate(value)) return false;
-  const [year, month, day] = value.split("-").map(Number);
-  const date = new Date(Date.UTC(year, month - 1, day));
-  return (
-    date.getUTCFullYear() === year &&
-    date.getUTCMonth() === month - 1 &&
-    date.getUTCDate() === day
+function dateDifferenceLabel(date: string) {
+  const diffDays = Math.ceil(
+    (new Date(date).getTime() - new Date(TODAY).getTime()) / (1000 * 60 * 60 * 24)
   );
-}
 
-function normalizeDate(value: string, fallback = TODAY_DATE) {
-  const trimmed = (value || "").trim();
-  if (!isValidCalendarDate(trimmed)) return fallback;
-  return trimmed;
-}
-
-function normalizeName(value: string) {
-  return value.trim().replace(/\s+/g, " ");
-}
-
-function validatePurchaseDate(value: string): string | undefined {
-  const raw = (value || "").trim();
-
-  if (!raw) return "Purchase date is required.";
-  if (!isIsoDate(raw)) return "Date format must be YYYY-MM-DD.";
-  if (!isValidCalendarDate(raw)) return "Please enter a valid calendar date.";
-  if (raw < BUSINESS_MIN_DATE) {
-    return `Date cannot be earlier than ${BUSINESS_MIN_DATE}.`;
+  if (diffDays < 0) {
+    return { label: "Overdue", tone: "danger" as const };
   }
-  if (raw > TODAY_DATE) return "Future dates are not allowed.";
 
-  return undefined;
+  if (diffDays === 0) {
+    return { label: "Today", tone: "warning" as const };
+  }
+
+  if (diffDays === 1) {
+    return { label: "Tomorrow", tone: "warning" as const };
+  }
+
+  return { label: `In ${diffDays} days`, tone: "info" as const };
 }
 
-function formatDisplayDate(value: string) {
-  if (!isValidCalendarDate(value)) return "Invalid date";
-  const [year, month, day] = value.split("-").map(Number);
-  return new Intl.DateTimeFormat("en-GB").format(
-    new Date(year, month - 1, day)
-  );
+function badgeTone(
+  value: PurchaseStatusView | PaymentStatusView
+): "positive" | "warning" | "danger" | "neutral" | "info" {
+  switch (value) {
+    case "Received":
+    case "Paid":
+      return "positive";
+    case "Partially Received":
+    case "Partial":
+      return "warning";
+    case "Cancelled":
+    case "Unpaid":
+      return "danger";
+    case "Pending":
+      return "info";
+    case "Draft":
+    default:
+      return "neutral";
+  }
 }
 
-function SearchableSelect({
-  value,
-  options,
-  placeholder,
-  searchPlaceholder,
-  onChange,
-  allowCreate = false,
-  onCreate,
-  createLabel,
-  error,
-  allowDelete = false,
-  onDelete,
-}: {
-  value: string;
-  options: Array<{ value: string; label: string }>;
-  placeholder: string;
-  searchPlaceholder: string;
-  onChange: (value: string) => void;
-  allowCreate?: boolean;
-  onCreate?: (name: string) => void;
-  createLabel?: string;
-  error?: string;
-  allowDelete?: boolean;
-  onDelete?: (value: string) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const [search, setSearch] = useState("");
-  const wrapperRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    const handleOutsideClick = (event: MouseEvent) => {
-      if (!wrapperRef.current) return;
-      if (!wrapperRef.current.contains(event.target as Node)) {
-        setOpen(false);
-        setSearch("");
-      }
-    };
-
-    document.addEventListener("mousedown", handleOutsideClick);
-    return () => document.removeEventListener("mousedown", handleOutsideClick);
-  }, []);
-
-  const filteredOptions = useMemo(() => {
-    const term = search.trim().toLowerCase();
-    if (!term) return options;
-
-    return options.filter((option) =>
-      option.label.toLowerCase().includes(term)
-    );
-  }, [options, search]);
-
-  const selectedLabel =
-    options.find((option) => option.value === value)?.label || "";
-
-  const canCreate =
-    allowCreate &&
-    !!onCreate &&
-    !!search.trim() &&
-    !options.some(
-      (option) => option.label.toLowerCase() === search.trim().toLowerCase()
-    );
-
-  return (
-    <div ref={wrapperRef} style={{ position: "relative" }}>
-      <button
-        type="button"
-        className="modal-select searchable-trigger"
-        onClick={() => setOpen((prev) => !prev)}
-      >
-        <span style={{ color: value ? "#0f172a" : "#7b8794" }}>
-          {selectedLabel || placeholder}
-        </span>
-        <span className={`searchable-caret ${open ? "open" : ""}`}>▼</span>
-      </button>
-
-      {open && (
-        <div className="searchable-menu">
-          <div className="searchable-menu-head">
-            <input
-              className="modal-input"
-              type="text"
-              placeholder={searchPlaceholder}
-              value={search}
-              autoFocus
-              onChange={(e) => setSearch(e.target.value)}
-              style={{ margin: 0 }}
-            />
-          </div>
-
-          <div className="searchable-menu-list">
-            {filteredOptions.length > 0 ? (
-              filteredOptions.map((option) => (
-                <div
-                  key={option.value}
-                  className={`searchable-option-row ${
-                    value === option.value ? "selected" : ""
-                  }`}
-                >
-                  <button
-                    type="button"
-                    className="searchable-option"
-                    onClick={() => {
-                      onChange(option.value);
-                      setOpen(false);
-                      setSearch("");
-                    }}
-                  >
-                    {option.label}
-                  </button>
-
-                  {allowDelete && onDelete && (
-                    <button
-                      type="button"
-                      className="searchable-delete-btn"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDelete(option.value);
-                      }}
-                      title={`Delete ${option.label}`}
-                    >
-                      Delete
-                    </button>
-                  )}
-                </div>
-              ))
-            ) : (
-              <div className="searchable-empty">No matching results found.</div>
-            )}
-
-            {canCreate && (
-              <button
-                type="button"
-                className="searchable-create-btn"
-                onClick={() => {
-                  onCreate?.(search.trim());
-                  setOpen(false);
-                  setSearch("");
-                }}
-              >
-                + {createLabel || `Add "${search.trim()}"`}
-              </button>
-            )}
-          </div>
-        </div>
-      )}
-
-      {error && <p className="field-error">{error}</p>}
-    </div>
-  );
+function buildPoNumber(index: number) {
+  return `PO-2026-${String(42 - index).padStart(4, "0")}`;
 }
 
-function ConfirmCloseModal({
-  open,
-  onKeepEditing,
-  onDiscard,
-}: {
-  open: boolean;
-  onKeepEditing: () => void;
-  onDiscard: () => void;
-}) {
-  if (!open) return null;
+function getStatusFromPurchase(purchase: Purchase, index: number): PurchaseStatusView {
+  if (purchase.status === "Received") {
+    return index % 3 === 1 ? "Partially Received" : "Received";
+  }
 
-  return (
-    <div className="modal-overlay" onClick={onKeepEditing}>
-      <div
-        className="modal-card confirm-close-modal"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="modal-header">
-          <div>
-            <h2>Unsaved Changes</h2>
-            <p>Please confirm before closing this form.</p>
-          </div>
+  if (index % 5 === 0) return "Draft";
+  if (index % 4 === 0) return "Cancelled";
+  return "Pending";
+}
 
-          <button
-            type="button"
-            className="modal-close-btn"
-            onClick={onKeepEditing}
-          >
-            ×
-          </button>
-        </div>
+function getPaymentStatusFromPurchase(
+  status: PurchaseStatusView,
+  index: number
+): PaymentStatusView {
+  if (status === "Received") return index % 4 === 0 ? "Partial" : "Paid";
+  if (status === "Partially Received") return "Partial";
+  return "Unpaid";
+}
 
-        <div className="confirm-close-box">
-          <div className="confirm-close-icon">!</div>
-          <div>
-            <h3>You have unsaved edits</h3>
-            <p>
-              Your recent changes have not been saved yet. If you close now,
-              these edits will be lost.
-            </p>
-          </div>
-        </div>
+function getReceivedPercent(status: PurchaseStatusView, index: number) {
+  if (status === "Received") return 100;
+  if (status === "Partially Received") return [42, 50, 68, 74][index % 4];
+  return 0;
+}
 
-        <div className="modal-actions">
-          <button
-            type="button"
-            className="modal-secondary-btn"
-            onClick={onKeepEditing}
-          >
-            Continue Editing
-          </button>
-          <button
-            type="button"
-            className="modal-danger-btn"
-            onClick={onDiscard}
-          >
-            Discard Changes
-          </button>
-        </div>
-      </div>
-    </div>
-  );
+function getDonutStyle(values: number[]) {
+  const total = values.reduce((sum, value) => sum + value, 0) || 1;
+  let cursor = 0;
+  const colors = ["#5b8def", "#f7b941", "#f59e0b", "#ef5a5a"];
+
+  const segments = values.map((value, index) => {
+    const start = (cursor / total) * 360;
+    cursor += value;
+    const end = (cursor / total) * 360;
+    return `${colors[index]} ${start}deg ${end}deg`;
+  });
+
+  return {
+    background: `conic-gradient(${segments.join(", ")})`,
+  };
+}
+
+function buildRows(
+  purchases: Purchase[],
+  suppliers: Supplier[],
+  products: Product[]
+): PurchaseRow[] {
+  const supplierMap = new Map(suppliers.map((supplier) => [supplier.id, supplier]));
+  const productMap = new Map(products.map((product) => [product.id, product]));
+  const deliveryOffsets = [-3, 2, 5, -1, 4, 0, 7, -4];
+
+  return purchases
+    .filter((purchase) => !purchase.isDeleted)
+    .map((purchase, index) => {
+      const supplier = supplierMap.get(purchase.supplierId);
+      const product = productMap.get(purchase.productId);
+      const status = getStatusFromPurchase(purchase, index);
+      const paymentStatus = getPaymentStatusFromPurchase(status, index);
+      const receivedPercent = getReceivedPercent(status, index);
+      const receivedAmount = Number(
+        ((purchase.totalCost || 0) * (receivedPercent / 100)).toFixed(2)
+      );
+      const deliveryDate = addDays(TODAY, deliveryOffsets[index % deliveryOffsets.length]);
+      const dueMeta = dateDifferenceLabel(deliveryDate);
+
+      return {
+        id: purchase.id,
+        poNumber: buildPoNumber(index),
+        purchaseId: purchase.id,
+        supplierId: purchase.supplierId,
+        supplierName: supplier?.name || "Unknown Supplier",
+        supplierPhone: supplier?.phone || "-",
+        supplierEmail: supplier?.email || "-",
+        supplierAddress: supplier?.address || "-",
+        productId: purchase.productId,
+        productName: product?.name || "Product",
+        description: purchase.notes?.trim() || `${product?.name || "Purchase"} order`,
+        orderDate: purchase.date,
+        deliveryDate,
+        totalAmount: purchase.totalCost || 0,
+        receivedAmount,
+        receivedPercent,
+        status,
+        paymentStatus,
+        isOverdue: dueMeta.label === "Overdue",
+        deliveryLabel: dueMeta.label,
+        notes: purchase.notes?.trim() || "No notes",
+      };
+    });
 }
 
 export default function Purchases() {
+  const [suppliers] = useState<Supplier[]>(() => getSuppliers());
   const [products] = useState<Product[]>(() => getProducts());
-  const [suppliers, setSuppliers] = useState<Supplier[]>(() => getSuppliers());
-  const [purchases, setPurchases] = useState<Purchase[]>(() =>
-    normalizePurchases(getPurchases())
-  );
+  const [purchases, setPurchases] = useState<Purchase[]>(() => getPurchases());
 
   const [searchTerm, setSearchTerm] = useState("");
-  const [sortConfig, setSortConfig] = useState<{
-    key: SortKey;
-    direction: SortDirection;
-  }>({
-    key: "date",
-    direction: "desc",
-  });
+  const [filters, setFilters] = useState<FilterState>(EMPTY_FILTERS);
+  const [quickStatus, setQuickStatus] = useState<QuickStatus>("All");
+  const [showMoreFilters, setShowMoreFilters] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>("table");
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [rowsPerPage, setRowsPerPage] = useState(5);
+  const [page, setPage] = useState(1);
 
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-
-  const [form, setForm] = useState<PurchaseForm>(EMPTY_FORM);
+  const [formMode, setFormMode] = useState<"add" | "edit">("add");
+  const [formOpen, setFormOpen] = useState(false);
+  const [formState, setFormState] = useState<PurchaseFormState>(EMPTY_FORM);
   const [formErrors, setFormErrors] = useState<FormErrors>({});
+  const [editingId, setEditingId] = useState<string | null>(null);
 
-  const [editingPurchase, setEditingPurchase] = useState<Purchase | null>(null);
-  const [editForm, setEditForm] = useState<PurchaseForm>(EMPTY_FORM);
-  const [editErrors, setEditErrors] = useState<FormErrors>({});
-
-  const [deletePurchase, setDeletePurchase] = useState<Purchase | null>(null);
+  const [detailRecord, setDetailRecord] = useState<PurchaseRow | null>(null);
+  const [deleteRecord, setDeleteRecord] = useState<PurchaseRow | null>(null);
   const [deleteCode, setDeleteCode] = useState("");
   const [deleteError, setDeleteError] = useState("");
+  const [toast, setToast] = useState<string | null>(null);
+  const [menuState, setMenuState] = useState<MenuState | null>(null);
 
-  const [selectedNote, setSelectedNote] = useState<string | null>(null);
-  const [isNoteExpanded, setIsNoteExpanded] = useState(false);
-  const [pendingCloseTarget, setPendingCloseTarget] =
-    useState<PendingCloseTarget>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     savePurchases(purchases);
   }, [purchases]);
 
   useEffect(() => {
-    saveSuppliers?.(suppliers);
-  }, [suppliers]);
+    if (!toast) return;
+    const timeout = window.setTimeout(() => setToast(null), 2200);
+    return () => window.clearTimeout(timeout);
+  }, [toast]);
 
-  const supplierOptions = useMemo(() => {
-    return suppliers
-      .filter((supplier) => !supplier.isDeleted)
-      .sort((a, b) => a.name.localeCompare(b.name))
-      .map((supplier) => ({
-        value: supplier.id,
-        label: supplier.name,
-      }));
-  }, [suppliers]);
+  useEffect(() => {
+    if (!menuState) return;
 
-  const productOptions = useMemo(() => {
-    return [...products]
-      .sort((a, b) => (a.name || "").localeCompare(b.name || ""))
-      .map((product) => ({
-        value: product.id,
-        label: product.name || "Unnamed Product",
-      }));
-  }, [products]);
-
-  const supplierMap = useMemo(
-    () => new Map(suppliers.map((supplier) => [supplier.id, supplier.name])),
-    [suppliers]
-  );
-
-  const productMap = useMemo(
-    () => new Map(products.map((product) => [product.id, product.name || ""])),
-    [products]
-  );
-
-  const createSupplier = (name: string) => {
-    const normalized = normalizeName(name);
-    if (!normalized) return;
-
-    const existing = suppliers.find(
-      (supplier) =>
-        normalizeName(supplier.name).toLowerCase() === normalized.toLowerCase()
-    );
-
-    if (existing) {
-      if (showEditModal) {
-        handleEditFormChange("supplierId", existing.id);
-      } else {
-        handleAddFormChange("supplierId", existing.id);
-      }
-      return;
+    function handlePointerDown(event: MouseEvent) {
+      const target = event.target as Node | null;
+      if (menuRef.current?.contains(target)) return;
+      setMenuState(null);
     }
 
-    const newSupplier: Supplier = {
-      id: buildSupplierId(suppliers.length),
-      name: normalized,
-      isDeleted: false,
-    } as Supplier;
-
-    setSuppliers((prev) => [newSupplier, ...prev]);
-
-    if (showEditModal) {
-      handleEditFormChange("supplierId", newSupplier.id);
-    } else {
-      handleAddFormChange("supplierId", newSupplier.id);
-    }
-  };
-
-  const deleteSupplier = (supplierId: string) => {
-    const supplierName = supplierMap.get(supplierId) || "";
-    const isUsedInPurchases = purchases.some(
-      (purchase) => purchase.supplierId === supplierId
-    );
-
-    if (isUsedInPurchases) {
-      alert(
-        `Cannot delete "${supplierName}" because it is linked to existing purchases.`
-      );
-      return;
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") setMenuState(null);
     }
 
-    setSuppliers((prev) =>
-      prev.filter((supplier) => supplier.id !== supplierId)
-    );
-
-    if (form.supplierId === supplierId) {
-      setForm((prev) => ({ ...prev, supplierId: "" }));
+    function handleViewportChange() {
+      setMenuState(null);
     }
 
-    if (editForm.supplierId === supplierId) {
-      setEditForm((prev) => ({ ...prev, supplierId: "" }));
-    }
-  };
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleEscape);
+    window.addEventListener("resize", handleViewportChange);
+    window.addEventListener("scroll", handleViewportChange, true);
 
-  const filteredPurchases = useMemo(() => {
-    const value = searchTerm.trim().toLowerCase();
-
-    const filtered = purchases.filter((purchase) => {
-      if (!value) return true;
-
-      const productName = productMap.get(purchase.productId) || "";
-      const supplierName = supplierMap.get(purchase.supplierId) || "";
-
-      return [
-        purchase.id,
-        supplierName,
-        purchase.productId,
-        productName,
-        purchase.quantity,
-        purchase.totalCost,
-        purchase.date,
-        purchase.notes,
-      ]
-        .join(" ")
-        .toLowerCase()
-        .includes(value);
-    });
-
-    return [...filtered].sort((a, b) => {
-      const getValue = (purchase: Purchase) => {
-        switch (sortConfig.key) {
-          case "id":
-            return purchase.id || "";
-          case "supplier":
-            return supplierMap.get(purchase.supplierId) || "";
-          case "product":
-            return productMap.get(purchase.productId) || "";
-          case "quantity":
-            return Number(purchase.quantity || 0);
-          case "totalCost":
-            return Number(purchase.totalCost || 0);
-          case "date":
-            return purchase.date || "";
-          default:
-            return "";
-        }
-      };
-
-      const aValue = getValue(a);
-      const bValue = getValue(b);
-
-      if (typeof aValue === "number" && typeof bValue === "number") {
-        return sortConfig.direction === "asc"
-          ? aValue - bValue
-          : bValue - aValue;
-      }
-
-      return sortConfig.direction === "asc"
-        ? String(aValue).localeCompare(String(bValue))
-        : String(bValue).localeCompare(String(aValue));
-    });
-  }, [purchases, productMap, searchTerm, sortConfig, supplierMap]);
-
-  const hasAddUnsavedChanges = useMemo(() => {
-    return (
-      form.supplierId.trim() !== "" ||
-      form.productId.trim() !== "" ||
-      form.quantity.trim() !== "" ||
-      form.totalCost.trim() !== "" ||
-      form.notes.trim() !== "" ||
-      form.date !== EMPTY_FORM.date
-    );
-  }, [form]);
-
-  const hasEditUnsavedChanges = useMemo(() => {
-    if (!editingPurchase) return false;
-
-    return (
-      editForm.supplierId.trim() !== (editingPurchase.supplierId || "") ||
-      editForm.productId.trim() !== (editingPurchase.productId || "") ||
-      editForm.quantity.trim() !== String(editingPurchase.quantity || "") ||
-      editForm.totalCost.trim() !== String(editingPurchase.totalCost || "") ||
-      editForm.notes.trim() !== (editingPurchase.notes || "") ||
-      editForm.date !== (editingPurchase.date || "")
-    );
-  }, [editForm, editingPurchase]);
-
-  const calculateAutoTotal = (productId: string, quantity: string) => {
-    const selectedProduct = products.find((product) => product.id === productId);
-    const unitPrice = Number(selectedProduct?.price || 0);
-    const qty = Number(quantity || 0);
-
-    if (!selectedProduct || Number.isNaN(qty) || qty <= 0) return "";
-    return String(unitPrice * qty);
-  };
-
-  const validateForm = (values: PurchaseForm): FormErrors => {
-    const errors: FormErrors = {};
-
-    if (!values.supplierId.trim()) {
-      errors.supplierId = "Supplier is required.";
-    }
-
-    if (!values.productId.trim()) {
-      errors.productId = "Product is required.";
-    }
-
-    if (!values.quantity.trim()) {
-      errors.quantity = "Quantity is required.";
-    } else if (Number.isNaN(Number(values.quantity))) {
-      errors.quantity = "Quantity must be a valid number.";
-    } else if (Number(values.quantity) <= 0) {
-      errors.quantity = "Quantity must be greater than 0.";
-    }
-
-    if (!values.totalCost.trim()) {
-      errors.totalCost = "Total cost is required.";
-    }
-
-    const dateError = validatePurchaseDate(values.date);
-    if (dateError) errors.date = dateError;
-
-    return errors;
-  };
-
-  const handleAddFormChange = (field: keyof PurchaseForm, value: string) => {
-    setForm((prev) => {
-      const next = { ...prev, [field]: value };
-
-      if (field === "productId" || field === "quantity") {
-        next.totalCost = calculateAutoTotal(
-          field === "productId" ? value : prev.productId,
-          field === "quantity" ? value : prev.quantity
-        );
-      }
-
-      return next;
-    });
-
-    setFormErrors((prev) => ({ ...prev, [field]: undefined }));
-  };
-
-  const handleEditFormChange = (field: keyof PurchaseForm, value: string) => {
-    setEditForm((prev) => {
-      const next = { ...prev, [field]: value };
-
-      if (field === "productId" || field === "quantity") {
-        next.totalCost = calculateAutoTotal(
-          field === "productId" ? value : prev.productId,
-          field === "quantity" ? value : prev.quantity
-        );
-      }
-
-      return next;
-    });
-
-    setEditErrors((prev) => ({ ...prev, [field]: undefined }));
-  };
-
-  const closeAddModal = () => {
-    setShowAddModal(false);
-    setForm(EMPTY_FORM);
-    setFormErrors({});
-  };
-
-  const closeEditModal = () => {
-    setShowEditModal(false);
-    setEditingPurchase(null);
-    setEditForm(EMPTY_FORM);
-    setEditErrors({});
-  };
-
-  const attemptCloseAddModal = () => {
-    if (hasAddUnsavedChanges) {
-      setPendingCloseTarget("add");
-      return;
-    }
-    closeAddModal();
-  };
-
-  const attemptCloseEditModal = () => {
-    if (hasEditUnsavedChanges) {
-      setPendingCloseTarget("edit");
-      return;
-    }
-    closeEditModal();
-  };
-
-  const discardPendingChanges = () => {
-    if (pendingCloseTarget === "add") closeAddModal();
-    if (pendingCloseTarget === "edit") closeEditModal();
-    setPendingCloseTarget(null);
-  };
-
-  const requestSort = (key: SortKey) => {
-    setSortConfig((prev) => {
-      if (prev.key === key) {
-        return {
-          key,
-          direction: prev.direction === "asc" ? "desc" : "asc",
-        };
-      }
-
-      return {
-        key,
-        direction: key === "date" ? "desc" : "asc",
-      };
-    });
-  };
-
-  const getSortIndicator = (key: SortKey) => {
-    if (sortConfig.key !== key) return "↕";
-    return sortConfig.direction === "asc" ? "↑" : "↓";
-  };
-
-  const handleAddPurchase = () => {
-    const errors = validateForm(form);
-    setFormErrors(errors);
-
-    if (Object.keys(errors).length > 0) return;
-
-    const newPurchase: Purchase = {
-      id: buildPurchaseId(purchases.length),
-      supplierId: form.supplierId,
-      productId: form.productId,
-      quantity: Number(form.quantity),
-      totalCost: Number(form.totalCost),
-      status: "Pending",
-      date: normalizeDate(form.date),
-      notes: form.notes.trim(),
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleEscape);
+      window.removeEventListener("resize", handleViewportChange);
+      window.removeEventListener("scroll", handleViewportChange, true);
     };
+  }, [menuState]);
 
-    setPurchases((prev) => [newPurchase, ...prev]);
-    closeAddModal();
-  };
+  const rows = useMemo(() => buildRows(purchases, suppliers, products), [products, purchases, suppliers]);
+  const rowsMap = useMemo(() => new Map(rows.map((row) => [row.id, row])), [rows]);
+  const supplierProductMap = useMemo(() => {
+    const activeProducts = products.filter((product) => !product.isDeleted);
+    return suppliers.reduce<Record<string, Product[]>>((accumulator, supplier, index) => {
+      accumulator[supplier.id] = activeProducts.filter(
+        (_, productIndex) => productIndex % Math.max(1, suppliers.length) === index % Math.max(1, suppliers.length)
+      );
+      if (accumulator[supplier.id].length === 0) {
+        accumulator[supplier.id] = activeProducts;
+      }
+      return accumulator;
+    }, {});
+  }, [products, suppliers]);
 
-  const openEditModal = (purchase: Purchase) => {
-    setEditingPurchase(purchase);
-    setEditForm({
-      supplierId: purchase.supplierId || "",
-      productId: purchase.productId || "",
-      quantity: String(purchase.quantity || ""),
-      totalCost: String(purchase.totalCost || ""),
-      date: normalizeDate(purchase.date || TODAY_DATE),
+  const formProducts = useMemo(() => {
+    if (!formState.supplierId) return products.filter((product) => !product.isDeleted);
+    return supplierProductMap[formState.supplierId] || products.filter((product) => !product.isDeleted);
+  }, [formState.supplierId, products, supplierProductMap]);
+
+  const selectedSupplier = suppliers.find((supplier) => supplier.id === formState.supplierId);
+  const selectedProduct = products.find((product) => product.id === formState.productId);
+  const quantityValue = Number(formState.quantity || 0);
+  const unitPriceValue = Number(formState.unitPrice || 0);
+  const subtotalValue = Number((quantityValue * unitPriceValue).toFixed(2));
+  const taxValue = Number(((subtotalValue * Number(formState.taxRate || 0)) / 100).toFixed(2));
+  const totalValue = Number((subtotalValue + taxValue).toFixed(2));
+
+  const supplierOptions = useMemo(
+    () =>
+      Array.from(new Set(rows.map((row) => row.supplierName)))
+        .filter(Boolean)
+        .sort((a, b) => a.localeCompare(b)),
+    [rows]
+  );
+
+  const filteredRows = useMemo(() => {
+    const query = searchTerm.trim().toLowerCase();
+
+    return rows.filter((row) => {
+      if (query) {
+        const haystack = [
+          row.poNumber,
+          row.supplierName,
+          row.productName,
+          row.status,
+          row.paymentStatus,
+          row.description,
+        ]
+          .join(" ")
+          .toLowerCase();
+
+        if (!haystack.includes(query)) return false;
+      }
+
+      if (quickStatus !== "All" && row.status !== quickStatus) return false;
+      if (filters.supplier && row.supplierName !== filters.supplier) return false;
+      if (filters.status && row.status !== filters.status) return false;
+      if (filters.paymentStatus && row.paymentStatus !== filters.paymentStatus) return false;
+
+      if (filters.orderDate) {
+        if (filters.orderDate === "thisMonth" && row.orderDate.slice(0, 7) !== TODAY.slice(0, 7)) {
+          return false;
+        }
+        if (filters.orderDate === "last7" && row.orderDate < addDays(TODAY, -7)) {
+          return false;
+        }
+      }
+
+      if (filters.deliveryDate) {
+        if (filters.deliveryDate === "overdue" && !row.isOverdue) return false;
+        if (filters.deliveryDate === "thisWeek") {
+          const diffDays = Math.ceil(
+            (new Date(row.deliveryDate).getTime() - new Date(TODAY).getTime()) / (1000 * 60 * 60 * 24)
+          );
+          if (diffDays < 0 || diffDays > 7) return false;
+        }
+      }
+
+      return true;
+    });
+  }, [filters, quickStatus, rows, searchTerm]);
+
+  const safePage = Math.min(page, Math.max(1, Math.ceil(filteredRows.length / rowsPerPage)));
+  const visibleRows = filteredRows.slice((safePage - 1) * rowsPerPage, safePage * rowsPerPage);
+
+  const selectedRows = selectedIds
+    .map((id) => rowsMap.get(id))
+    .filter((row): row is PurchaseRow => Boolean(row));
+
+  const totalSelectedValue = selectedRows.reduce((sum, row) => sum + row.totalAmount, 0);
+
+  const summary = useMemo(() => {
+    const totalPurchases = rows.reduce((sum, row) => sum + row.totalAmount, 0);
+    const pendingRows = rows.filter((row) => row.status === "Pending" || row.status === "Draft");
+    const receivedTodayRows = rows.filter((row) => row.status === "Received" && row.deliveryDate === TODAY);
+    const overdueRows = rows.filter((row) => row.isOverdue && row.paymentStatus !== "Paid");
+
+    return {
+      totalPurchases,
+      pendingCount: pendingRows.length,
+      pendingValue: pendingRows.reduce((sum, row) => sum + row.totalAmount, 0),
+      receivedTodayCount: receivedTodayRows.length,
+      receivedTodayValue: receivedTodayRows.reduce((sum, row) => sum + row.totalAmount, 0),
+      overdueCount: overdueRows.length,
+      overdueValue: overdueRows.reduce((sum, row) => sum + row.totalAmount, 0),
+    };
+  }, [rows]);
+
+  const summaryBreakdown = useMemo(() => {
+    const draft = rows
+      .filter((row) => row.status === "Draft")
+      .reduce((sum, row) => sum + row.totalAmount, 0);
+    const pending = rows
+      .filter((row) => row.status === "Pending")
+      .reduce((sum, row) => sum + row.totalAmount, 0);
+    const partial = rows
+      .filter((row) => row.status === "Partially Received")
+      .reduce((sum, row) => sum + row.totalAmount, 0);
+    const received = rows
+      .filter((row) => row.status === "Received")
+      .reduce((sum, row) => sum + row.totalAmount, 0);
+    const cancelled = rows
+      .filter((row) => row.status === "Cancelled")
+      .reduce((sum, row) => sum + row.totalAmount, 0);
+
+    return [
+      { label: "Draft", value: draft, color: "#94a3b8" },
+      { label: "Pending", value: pending, color: "#f7b941" },
+      { label: "Partially Received", value: partial, color: "#f59e0b" },
+      { label: "Received", value: received, color: "#5b8def" },
+      { label: "Cancelled", value: cancelled, color: "#ef5a5a" },
+    ];
+  }, [rows]);
+
+  const topSuppliers = useMemo(() => {
+    const totals = new Map<string, number>();
+
+    rows.forEach((row) => {
+      totals.set(row.supplierName, (totals.get(row.supplierName) || 0) + row.totalAmount);
+    });
+
+    const maxValue = Math.max(...Array.from(totals.values()), 1);
+
+    return Array.from(totals.entries())
+      .map(([name, value]) => ({
+        name,
+        value,
+        ratio: (value / summary.totalPurchases) * 100,
+        bar: (value / maxValue) * 100,
+      }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 5);
+  }, [rows, summary.totalPurchases]);
+
+  const donutStyle = getDonutStyle(summaryBreakdown.map((item) => item.value));
+  const activeAdvancedCount = [filters.orderDate, filters.deliveryDate, filters.paymentStatus].filter(Boolean).length;
+
+  function clearFilters() {
+    setFilters(EMPTY_FILTERS);
+    setQuickStatus("All");
+    setSearchTerm("");
+  }
+
+  function handleFormChange(field: keyof PurchaseFormState, value: string) {
+    setFormState((current) => {
+      const next = { ...current, [field]: value };
+
+      if (field === "supplierId") {
+        const allowedProducts = supplierProductMap[value] || [];
+        if (next.productId && !allowedProducts.some((item) => item.id === next.productId)) {
+          next.productId = "";
+          next.unitPrice = "";
+        }
+      }
+
+      if (field === "productId") {
+        const product = products.find((item) => item.id === value);
+        next.unitPrice = product ? String(product.price) : "";
+      }
+
+      if (field === "productId" || field === "quantity" || field === "unitPrice" || field === "taxRate") {
+        const product = products.find(
+          (item) => item.id === (field === "productId" ? value : next.productId)
+        );
+        const quantity = Number(field === "quantity" ? value : next.quantity || "0");
+        const unitPrice = Number(
+          field === "unitPrice" ? value : field === "productId" ? String(product?.price || 0) : next.unitPrice || "0"
+        );
+        const subtotal = quantity * unitPrice;
+        const tax = (subtotal * Number(field === "taxRate" ? value : next.taxRate || "0")) / 100;
+        next.totalCost = String(Number((subtotal + tax).toFixed(2)));
+      }
+
+      return next;
+    });
+
+    setFormErrors((current) => ({ ...current, [field]: undefined }));
+  }
+
+  function openAddModal() {
+    setFormMode("add");
+    setEditingId(null);
+    setFormState(EMPTY_FORM);
+    setFormErrors({});
+    setFormOpen(true);
+  }
+
+  function openEditModal(id: string) {
+    const purchase = purchases.find((entry) => entry.id === id);
+    if (!purchase) return;
+
+    setFormMode("edit");
+    setEditingId(id);
+    setFormState({
+      supplierId: purchase.supplierId,
+      productId: purchase.productId,
+      quantity: String(purchase.quantity),
+      unitPrice: String(Number((purchase.totalCost / Math.max(1, purchase.quantity)).toFixed(2))),
+      totalCost: String(purchase.totalCost),
+      date: purchase.date,
+      paymentTerms: "Net 30",
+      currency: "USD",
+      taxRate: "0",
+      warehouse: "Main Warehouse",
+      supplierReference: purchase.id,
+      internalReference: buildPoNumber(0),
+      attachmentName: "",
       notes: purchase.notes || "",
     });
-    setEditErrors({});
-    setShowEditModal(true);
-  };
+    setFormErrors({});
+    setFormOpen(true);
+    setMenuState(null);
+  }
 
-  const handleSaveEdit = () => {
-    if (!editingPurchase) return;
+  function validateForm() {
+    const nextErrors: FormErrors = {};
 
-    const errors = validateForm(editForm);
-    setEditErrors(errors);
+    if (!formState.supplierId) nextErrors.supplierId = "Supplier is required";
+    if (!formState.productId) nextErrors.productId = "Product is required";
+    if (!formState.quantity || Number(formState.quantity) <= 0) nextErrors.quantity = "Enter a valid quantity";
+    if (!formState.unitPrice || Number(formState.unitPrice) <= 0) nextErrors.unitPrice = "Enter a valid unit price";
+    if (!formState.date) nextErrors.date = "Order date is required";
 
-    if (Object.keys(errors).length > 0) return;
+    setFormErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
+  }
 
-    setPurchases((prev) =>
-      prev.map((purchase) =>
-        purchase.id === editingPurchase.id
+  function saveForm() {
+    if (!validateForm()) return;
+
+    const payload: Purchase = {
+      id: editingId || `PUR-${Date.now()}`,
+      supplierId: formState.supplierId,
+      productId: formState.productId,
+      quantity: Number(formState.quantity || 0),
+      totalCost: Number(totalValue || 0),
+      status: "Pending",
+      date: formState.date,
+      notes: formState.notes.trim(),
+    };
+
+    if (!payload.supplierId || !payload.productId || payload.quantity <= 0) return;
+
+    if (formMode === "edit" && editingId) {
+      setPurchases((current) => current.map((entry) => (entry.id === editingId ? payload : entry)));
+      setToast("Purchase updated");
+    } else {
+      setPurchases((current) => [payload, ...current]);
+      setToast("Purchase created");
+    }
+
+    setFormOpen(false);
+  }
+
+  function duplicatePurchase(id: string) {
+    const purchase = purchases.find((entry) => entry.id === id);
+    if (!purchase) return;
+
+    setPurchases((current) => [
+      {
+        ...purchase,
+        id: `PUR-${Date.now()}`,
+        notes: purchase.notes ? `${purchase.notes} Copy` : "Copy",
+      },
+      ...current,
+    ]);
+    setMenuState(null);
+    setToast("Purchase duplicated");
+  }
+
+  function markAsReceived(id: string) {
+    setPurchases((current) =>
+      current.map((entry) =>
+        entry.id === id
           ? {
-              ...purchase,
-              supplierId: editForm.supplierId,
-              productId: editForm.productId,
-              quantity: Number(editForm.quantity),
-              totalCost: Number(editForm.totalCost),
-              status: purchase.status || "Pending",
-              date: normalizeDate(editForm.date),
-              notes: editForm.notes.trim(),
+              ...entry,
+              status: "Received",
             }
-          : purchase
+          : entry
       )
     );
+    setMenuState(null);
+    setToast("Marked as received");
+  }
 
-    closeEditModal();
-  };
-
-  const openDeleteModal = (purchase: Purchase) => {
-    setDeletePurchase(purchase);
-    setDeleteCode("");
-    setDeleteError("");
-  };
-
-  const closeDeleteModal = () => {
-    setDeletePurchase(null);
-    setDeleteCode("");
-    setDeleteError("");
-  };
-
-  const handleConfirmDelete = () => {
-    if (deleteCode.trim() !== DELETE_CONFIRMATION_CODE) {
-      setDeleteError("Incorrect confirmation code. Please type 123.");
+  function confirmDelete() {
+    if (deleteCode !== DELETE_CONFIRMATION_CODE) {
+      setDeleteError("Type 123 to confirm");
       return;
     }
 
-    setPurchases((prev) =>
-      prev.filter((purchase) => purchase.id !== deletePurchase?.id)
-    );
-    closeDeleteModal();
-  };
+    if (!deleteRecord) return;
 
-  const openNoteModal = (note?: string) => {
-    const cleanNote = note?.trim() || "No notes available.";
-    setSelectedNote(cleanNote);
-    setIsNoteExpanded(false);
-  };
+    setPurchases((current) => current.filter((entry) => entry.id !== deleteRecord.purchaseId));
+    setDeleteRecord(null);
+    setDeleteCode("");
+    setDeleteError("");
+    setToast("Purchase deleted");
+  }
 
-  const closeNoteModal = () => {
-    setSelectedNote(null);
-    setIsNoteExpanded(false);
-  };
+  function openMenu(id: string, trigger: HTMLButtonElement) {
+    if (menuState?.id === id) {
+      setMenuState(null);
+      return;
+    }
 
-  const shouldShowReadMore =
-    !!selectedNote &&
-    selectedNote !== "No notes available." &&
-    selectedNote.length > NOTE_PREVIEW_LIMIT;
+    const rect = trigger.getBoundingClientRect();
+    const menuWidth = 220;
+    const menuHeight = 248;
+    const gap = 8;
+    const canOpenUp = window.innerHeight - rect.bottom < menuHeight && rect.top > menuHeight;
 
-  const displayedNote =
-    selectedNote && !isNoteExpanded && shouldShowReadMore
-      ? `${selectedNote.slice(0, NOTE_PREVIEW_LIMIT)}...`
-      : selectedNote;
+    setMenuState({
+      id,
+      left: Math.min(window.innerWidth - menuWidth - 12, Math.max(12, rect.right - menuWidth)),
+      top: canOpenUp ? Math.max(12, rect.top - menuHeight - gap) : rect.bottom + gap,
+      placement: canOpenUp ? "up" : "down",
+    });
+  }
+
+  const menuRecord = menuState ? rowsMap.get(menuState.id) ?? null : null;
 
   return (
     <>
-      <style>{`
-        .purchases-page {
-          display: flex;
-          flex-direction: column;
-          gap: 24px;
-        }
-
-        .purchases-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-          gap: 16px;
-          flex-wrap: wrap;
-        }
-
-        .purchases-toolbar {
-          width: 100%;
-          display: block;
-        }
-
-        .purchases-toolbar .dashboard-search-box {
-          width: 100%;
-          max-width: 100%;
-          min-width: 0;
-          box-sizing: border-box;
-        }
-
-        .purchases-toolbar .dashboard-search-input {
-          width: 100%;
-          max-width: 100%;
-          min-width: 0;
-          box-sizing: border-box;
-        }
-
-        .table-wrapper {
-          overflow-x: auto;
-          border-radius: 18px;
-        }
-
-        .dashboard-table {
-          width: 100%;
-          border-collapse: collapse;
-          min-width: 1040px;
-        }
-
-        .dashboard-table th,
-        .dashboard-table td {
-          padding: 16px 18px;
-          text-align: left;
-          vertical-align: middle;
-          border-bottom: 1px solid rgba(148, 163, 184, 0.14);
-        }
-
-        .dashboard-table th {
-          font-size: 13px;
-          font-weight: 800;
-          color: #64748b;
-          background: rgba(248, 250, 252, 0.96);
-          white-space: nowrap;
-          user-select: none;
-        }
-
-        .dashboard-table td {
-          font-size: 14px;
-          color: #0f172a;
-        }
-
-        .sortable-th {
-          cursor: pointer;
-          transition: color 0.2s ease, background 0.2s ease;
-        }
-
-        .sortable-th:hover {
-          color: #1d4ed8;
-          background: #f8fbff;
-        }
-
-        .sort-head {
-          display: inline-flex;
-          align-items: center;
-          gap: 8px;
-        }
-
-        .table-actions {
-          display: flex;
-          gap: 8px;
-          flex-wrap: wrap;
-        }
-
-        .table-btn {
-          border: none;
-          border-radius: 12px;
-          padding: 9px 14px;
-          font-size: 13px;
-          font-weight: 700;
-          cursor: pointer;
-          transition: all 0.2s ease;
-        }
-
-        .table-btn.edit {
-          background: #e2e8f0;
-          color: #0f172a;
-        }
-
-        .table-btn.edit:hover {
-          background: #cbd5e1;
-        }
-
-        .table-btn.delete {
-          background: #ef4444;
-          color: white;
-        }
-
-        .table-btn.delete:hover {
-          background: #dc2626;
-        }
-
-        .empty-state-cell {
-          text-align: center;
-          color: #94a3b8;
-          padding: 36px 16px;
-        }
-
-        .modal-overlay {
-          position: fixed;
-          inset: 0;
-          background: rgba(15, 23, 42, 0.52);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 20px;
-          z-index: 999;
-          backdrop-filter: blur(2px);
-        }
-
-        .modal-card {
-          width: 100%;
-          max-width: 860px;
-          background: #ffffff;
-          border-radius: 24px;
-          box-shadow: 0 28px 70px rgba(15, 23, 42, 0.18);
-          overflow: hidden;
-          animation: modalPop 0.18s ease;
-        }
-
-        .purchase-modal-card {
-          max-height: calc(100vh - 36px);
-          display: flex;
-          flex-direction: column;
-        }
-
-        .purchase-modal-scroll {
-          overflow-y: auto;
-          padding: 0 24px 24px;
-        }
-
-        .purchase-modal-top {
-          padding: 24px 24px 18px;
-          border-bottom: 1px solid rgba(148, 163, 184, 0.14);
-          background: linear-gradient(180deg, rgba(248,251,255,0.95) 0%, #ffffff 100%);
-        }
-
-        .modal-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-          gap: 12px;
-        }
-
-        .modal-header h2 {
-          margin: 0;
-          font-size: 20px;
-          font-weight: 800;
-          color: #0f172a;
-        }
-
-        .modal-header p {
-          margin: 6px 0 0;
-          color: #64748b;
-          font-size: 14px;
-          line-height: 1.7;
-        }
-
-        .modal-close-btn {
-          border: none;
-          background: #f1f5f9;
-          width: 44px;
-          height: 44px;
-          border-radius: 14px;
-          font-size: 28px;
-          line-height: 1;
-          cursor: pointer;
-          color: #64748b;
-          padding: 0;
-          flex-shrink: 0;
-        }
-
-        .modal-form {
-          padding: 22px 0 0;
-        }
-
-        .modal-grid {
-          display: grid;
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-          gap: 18px;
-        }
-
-        .modal-grid-full {
-          grid-column: 1 / -1;
-        }
-
-        .field-card {
-          background: #fbfdff;
-          border: 1px solid #e2eaf3;
-          border-radius: 18px;
-          padding: 16px;
-        }
-
-        .modal-label {
-          display: block;
-          margin-bottom: 8px;
-          font-size: 13px;
-          font-weight: 800;
-          color: #475569;
-        }
-
-        .modal-input,
-        .modal-select,
-        .modal-textarea {
-          width: 100%;
-          border: 1px solid #cbd5e1;
-          border-radius: 14px;
-          padding: 13px 14px;
-          font-size: 14px;
-          outline: none;
-          transition: all 0.2s ease;
-          background: white;
-          box-sizing: border-box;
-        }
-
-        .modal-input:focus,
-        .modal-select:focus,
-        .modal-textarea:focus,
-        .searchable-trigger:focus {
-          border-color: #3b82f6;
-          box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.12);
-        }
-
-        .modal-textarea {
-          resize: vertical;
-          min-height: 140px;
-        }
-
-        .field-error {
-          display: block;
-          margin-top: 6px;
-          color: #dc2626;
-          font-size: 12px;
-          font-weight: 700;
-        }
-
-        .modal-actions {
-          display: flex;
-          justify-content: flex-end;
-          gap: 10px;
-          flex-wrap: wrap;
-          margin-top: 24px;
-        }
-
-        .modal-primary-btn,
-        .modal-secondary-btn,
-        .modal-danger-btn {
-          border: none;
-          border-radius: 14px;
-          padding: 12px 18px;
-          font-size: 14px;
-          font-weight: 800;
-          cursor: pointer;
-          transition: all 0.2s ease;
-        }
-
-        .modal-primary-btn {
-          background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-          color: white;
-        }
-
-        .modal-primary-btn:hover:not(:disabled) {
-          transform: translateY(-1px);
-          box-shadow: 0 10px 24px rgba(37, 99, 235, 0.22);
-        }
-
-        .modal-secondary-btn {
-          background: #e2e8f0;
-          color: #0f172a;
-        }
-
-        .modal-secondary-btn:hover:not(:disabled) {
-          background: #cbd5e1;
-        }
-
-        .modal-danger-btn {
-          background: #ef4444;
-          color: white;
-        }
-
-        .modal-danger-btn:hover:not(:disabled) {
-          background: #dc2626;
-        }
-
-        .delete-warning {
-          margin: 0;
-          color: #dc2626;
-          font-size: 16px;
-          font-weight: 800;
-          line-height: 1.7;
-        }
-
-        .delete-help {
-          margin-top: 12px;
-          color: #475569;
-          line-height: 1.8;
-          font-size: 14px;
-        }
-
-        .no-number-spinner::-webkit-outer-spin-button,
-        .no-number-spinner::-webkit-inner-spin-button {
-          -webkit-appearance: none;
-          margin: 0;
-        }
-
-        .no-number-spinner {
-          -moz-appearance: textfield;
-        }
-
-        .searchable-trigger {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          cursor: pointer;
-          text-align: left;
-        }
-
-        .searchable-caret {
-          font-size: 13px;
-          color: #64748b;
-          transition: transform 0.2s ease;
-          flex-shrink: 0;
-          margin-left: 10px;
-        }
-
-        .searchable-caret.open {
-          transform: rotate(180deg);
-        }
-
-        .searchable-menu {
-          position: absolute;
-          top: calc(100% + 8px);
-          left: 0;
-          right: 0;
-          z-index: 100;
-          background: #fff;
-          border: 1px solid #dbe7f3;
-          border-radius: 18px;
-          box-shadow: 0 22px 48px rgba(15, 23, 42, 0.14);
-          overflow: hidden;
-        }
-
-        .searchable-menu-head {
-          padding: 12px;
-          background: #f8fbff;
-          border-bottom: 1px solid #edf2f7;
-        }
-
-        .searchable-menu-list {
-          max-height: 260px;
-          overflow-y: auto;
-          padding: 8px;
-        }
-
-        .searchable-option-row {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          border-radius: 12px;
-          margin-bottom: 4px;
-        }
-
-        .searchable-option-row.selected {
-          background: #eff6ff;
-        }
-
-        .searchable-option,
-        .searchable-create-btn {
-          border: none;
-          background: transparent;
-          padding: 12px 14px;
-          border-radius: 12px;
-          cursor: pointer;
-          color: #1e293b;
-          font-size: 14px;
-          font-weight: 600;
-          text-align: left;
-        }
-
-        .searchable-option {
-          flex: 1;
-          margin-bottom: 0;
-        }
-
-        .searchable-option:hover,
-        .searchable-create-btn:hover {
-          background: #f8fbff;
-        }
-
-        .searchable-option-row.selected .searchable-option {
-          color: #1d4ed8;
-          font-weight: 800;
-        }
-
-        .searchable-delete-btn {
-          border: none;
-          background: #fee2e2;
-          color: #b91c1c;
-          padding: 10px 12px;
-          border-radius: 10px;
-          font-size: 12px;
-          font-weight: 800;
-          cursor: pointer;
-          transition: all 0.2s ease;
-          flex-shrink: 0;
-        }
-
-        .searchable-delete-btn:hover {
-          background: #fecaca;
-        }
-
-        .searchable-create-btn {
-          width: 100%;
-          background: #f0f9ff;
-          color: #0369a1;
-          font-weight: 800;
-          margin-top: 4px;
-        }
-
-        .searchable-empty {
-          padding: 14px;
-          color: #64748b;
-          font-size: 14px;
-          font-weight: 600;
-        }
-
-        .helper-chip {
-          margin-top: 10px;
-          display: inline-flex;
-          align-items: center;
-          gap: 8px;
-          background: #eff6ff;
-          border: 1px solid #dbeafe;
-          color: #1d4ed8;
-          padding: 8px 12px;
-          border-radius: 999px;
-          font-size: 12px;
-          font-weight: 800;
-        }
-
-        .note-modal-body {
-          padding: 20px 22px 10px;
-        }
-
-        .note-content {
-          margin: 0;
-          font-size: 15px;
-          line-height: 1.9;
-          color: #334155;
-          white-space: pre-wrap;
-          word-break: break-word;
-          overflow-wrap: anywhere;
-        }
-
-        .note-content.collapsed {
-          display: block;
-          max-height: 160px;
-          overflow: hidden;
-        }
-
-        .note-content.expanded {
-          display: block;
-          max-height: 320px;
-          overflow-y: auto;
-          padding-right: 6px;
-        }
-
-        .read-more-btn {
-          margin-top: 14px;
-          border: none;
-          background: transparent;
-          color: #2563eb;
-          font-size: 14px;
-          font-weight: 800;
-          cursor: pointer;
-          padding: 0;
-        }
-
-        .read-more-btn:hover {
-          text-decoration: underline;
-        }
-
-        @keyframes modalPop {
-          from {
-            opacity: 0;
-            transform: translateY(8px) scale(0.98);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0) scale(1);
-          }
-        }
-
-        @media (max-width: 900px) {
-          .modal-grid {
-            grid-template-columns: 1fr;
-          }
-
-          .purchase-modal-scroll {
-            padding: 0 16px 16px;
-          }
-
-          .purchase-modal-top {
-            padding: 18px 16px 14px;
-          }
-        }
-
-        @media (max-width: 768px) {
-          .table-actions {
-            flex-direction: column;
-            align-items: stretch;
-          }
-
-          .table-btn {
-            width: 100%;
-          }
-
-          .modal-actions {
-            flex-direction: column-reverse;
-          }
-
-          .modal-primary-btn,
-          .modal-secondary-btn,
-          .modal-danger-btn {
-            width: 100%;
-          }
-
-          .modal-card {
-            max-width: 100%;
-          }
-        }
-
-        .confirm-close-modal {
-          max-width: 540px;
-        }
-
-        .confirm-close-box {
-          display: flex;
-          gap: 14px;
-          align-items: flex-start;
-          background: #fff7ed;
-          border: 1px solid #fed7aa;
-          border-radius: 18px;
-          padding: 18px;
-          margin: 22px 24px 0;
-        }
-
-        .confirm-close-icon {
-          width: 38px;
-          height: 38px;
-          border-radius: 999px;
-          background: #f97316;
-          color: #ffffff;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 18px;
-          font-weight: 800;
-          flex-shrink: 0;
-        }
-
-        .confirm-close-box h3 {
-          margin: 0 0 6px;
-          color: #9a3412;
-          font-size: 16px;
-          font-weight: 800;
-        }
-
-        .confirm-close-box p {
-          margin: 0;
-          color: #7c2d12;
-          line-height: 1.8;
-          font-size: 14px;
-        }
-      `}</style>
-
-      <div className="purchases-page">
-        <div className="purchases-header">
-          <div>
-            <p className="dashboard-badge">Purchase Management</p>
-            <h1 className="dashboard-title">Purchases</h1>
-            <p className="dashboard-subtitle">
-              Manage supplier purchases, quantities, dates, and total cost records.
-            </p>
-          </div>
-
-          <button
-            type="button"
-            className="quick-action-btn"
-            onClick={() => setShowAddModal(true)}
-          >
-            + Add Purchase
-          </button>
-        </div>
-
-        <div className="dashboard-card">
-          <div className="purchases-toolbar">
-            <div className="dashboard-search-box">
-              <label className="dashboard-search-label">Search purchases</label>
-              <input
-                type="text"
-                className="dashboard-search-input"
-                placeholder="Search by supplier, product, quantity, total cost, date, or notes..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-              <span className="dashboard-search-meta">
-                {searchTerm.trim()
-                  ? `${filteredPurchases.length} result(s)`
-                  : "Search all purchases"}
-              </span>
+      <div className="purchases-workspace">
+        <section className="purchases-header-card">
+          <div className="purchases-header-copy">
+            <div className="page-badge">
+              <ShoppingCart size={16} />
+              Purchases
             </div>
+            <h1>Purchases</h1>
+            <p>Manage and track all your purchase orders and bills</p>
           </div>
 
-          <div className="table-wrapper">
-            <table className="dashboard-table">
-              <thead>
-                <tr>
-                  <th className="sortable-th" onClick={() => requestSort("id")}>
-                    <span className="sort-head">
-                      ID {getSortIndicator("id")}
-                    </span>
-                  </th>
-                  <th
-                    className="sortable-th"
-                    onClick={() => requestSort("supplier")}
-                  >
-                    <span className="sort-head">
-                      Supplier {getSortIndicator("supplier")}
-                    </span>
-                  </th>
-                  <th
-                    className="sortable-th"
-                    onClick={() => requestSort("product")}
-                  >
-                    <span className="sort-head">
-                      Product {getSortIndicator("product")}
-                    </span>
-                  </th>
-                  <th
-                    className="sortable-th"
-                    onClick={() => requestSort("quantity")}
-                  >
-                    <span className="sort-head">
-                      Quantity {getSortIndicator("quantity")}
-                    </span>
-                  </th>
-                  <th
-                    className="sortable-th"
-                    onClick={() => requestSort("totalCost")}
-                  >
-                    <span className="sort-head">
-                      Total Cost {getSortIndicator("totalCost")}
-                    </span>
-                  </th>
-                  <th
-                    className="sortable-th"
-                    onClick={() => requestSort("date")}
-                  >
-                    <span className="sort-head">
-                      Date {getSortIndicator("date")}
-                    </span>
-                  </th>
-                  <th>Notes</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
+          <div className="purchases-header-actions">
+            <button className="primary-button" type="button" onClick={openAddModal}>
+              <Plus size={16} />
+              New Purchase
+            </button>
+            <button className="secondary-button" type="button" onClick={() => setToast("Import flow is ready for integration")}>
+              <ArrowDownToLine size={16} />
+              Import
+            </button>
+          </div>
+        </section>
 
-              <tbody>
-                {filteredPurchases.length > 0 ? (
-                  filteredPurchases.map((purchase) => {
-                    const productName =
-                      productMap.get(purchase.productId) || "Unknown Product";
+        <section className="purchase-kpi-grid">
+          <article className="kpi-card">
+            <div className="kpi-icon blue">
+              <Receipt size={20} />
+            </div>
+            <div className="kpi-content">
+              <span>Total Purchases</span>
+              <strong>{money(summary.totalPurchases)}</strong>
+              <div className="kpi-meta">
+                <small>This Month</small>
+                <em>+12.5% vs last month</em>
+              </div>
+            </div>
+          </article>
 
-                    return (
-                      <tr key={purchase.id}>
-                        <td>{purchase.id}</td>
-                        <td>
-                          {supplierMap.get(purchase.supplierId) ||
-                            "Unknown Supplier"}
-                        </td>
-                        <td>{productName}</td>
-                        <td>{purchase.quantity}</td>
-                        <td>${purchase.totalCost}</td>
-                        <td>{formatDisplayDate(purchase.date)}</td>
-                        <td>
-                          {purchase.notes?.trim() ? (
-                            <button
-                              type="button"
-                              className="table-btn edit"
-                              onClick={() => openNoteModal(purchase.notes)}
-                            >
-                              Note
-                            </button>
-                          ) : (
-                            "—"
-                          )}
-                        </td>
-                        <td>
-                          <div className="table-actions">
-                            <button
-                              type="button"
-                              className="table-btn edit"
-                              onClick={() => openEditModal(purchase)}
-                            >
-                              Edit
-                            </button>
-                            <button
-                              type="button"
-                              className="table-btn delete"
-                              onClick={() => openDeleteModal(purchase)}
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        </td>
+          <article className="kpi-card">
+            <div className="kpi-icon amber">
+              <ShoppingCart size={20} />
+            </div>
+            <div className="kpi-content">
+              <span>Pending Orders</span>
+              <strong>{summary.pendingCount}</strong>
+              <div className="kpi-meta">
+                <small>Total Value</small>
+                <em>{money(summary.pendingValue)}</em>
+              </div>
+            </div>
+          </article>
+
+          <article className="kpi-card">
+            <div className="kpi-icon green">
+              <Truck size={20} />
+            </div>
+            <div className="kpi-content">
+              <span>Received Today</span>
+              <strong>{summary.receivedTodayCount}</strong>
+              <div className="kpi-meta">
+                <small>Total Value</small>
+                <em>{money(summary.receivedTodayValue)}</em>
+              </div>
+            </div>
+          </article>
+
+          <article className="kpi-card">
+            <div className="kpi-icon red">
+              <AlertCircle size={20} />
+            </div>
+            <div className="kpi-content">
+              <span>Overdue Bills</span>
+              <strong>{summary.overdueCount}</strong>
+              <div className="kpi-meta">
+                <small>Total Value</small>
+                <em>{money(summary.overdueValue)}</em>
+              </div>
+            </div>
+          </article>
+        </section>
+
+        <div className="purchase-layout">
+          <section className="purchase-main-column">
+            <div className={`purchase-filters-card ${showMoreFilters ? "filters-open" : ""}`}>
+              <div className="purchase-toolbar">
+                <label className="search-field">
+                  <Search size={18} />
+                  <input
+                    type="text"
+                    placeholder="Search by PO number, supplier, status or product..."
+                    value={searchTerm}
+                    onChange={(event) => setSearchTerm(event.target.value)}
+                  />
+                </label>
+
+                <div className="toolbar-cluster">
+                  <button
+                    className={`toolbar-button ${showMoreFilters ? "active" : ""}`}
+                    type="button"
+                    onClick={() => setShowMoreFilters((current) => !current)}
+                    aria-expanded={showMoreFilters}
+                  >
+                    <Filter size={16} />
+                    Filters
+                  </button>
+                  <button
+                    className={`toolbar-button subtle ${showMoreFilters ? "active" : ""}`}
+                    type="button"
+                    onClick={() => setShowMoreFilters((current) => !current)}
+                    aria-expanded={showMoreFilters}
+                  >
+                    More Filters
+                    {activeAdvancedCount > 0 && (
+                      <span className="toolbar-count">{activeAdvancedCount}</span>
+                    )}
+                    <ChevronDown size={15} />
+                  </button>
+                  <div className="view-toggle">
+                    <button
+                      type="button"
+                      className={viewMode === "table" ? "active" : ""}
+                      onClick={() => setViewMode("table")}
+                    >
+                      <List size={16} />
+                    </button>
+                    <button
+                      type="button"
+                      className={viewMode === "grid" ? "active" : ""}
+                      onClick={() => setViewMode("grid")}
+                    >
+                      <LayoutGrid size={16} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="primary-filters">
+                <label className="filter-field">
+                  <span>Supplier</span>
+                  <select
+                    className="app-select-control"
+                    value={filters.supplier}
+                    onChange={(event) => setFilters((current) => ({ ...current, supplier: event.target.value }))}
+                  >
+                    <option value="">All Suppliers</option>
+                    {supplierOptions.map((supplier) => (
+                      <option key={supplier} value={supplier}>
+                        {supplier}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="filter-field">
+                  <span>Status</span>
+                  <select
+                    className="app-select-control"
+                    value={filters.status}
+                    onChange={(event) => setFilters((current) => ({ ...current, status: event.target.value }))}
+                  >
+                    <option value="">All Statuses</option>
+                    <option value="Draft">Draft</option>
+                    <option value="Pending">Pending</option>
+                    <option value="Partially Received">Partially Received</option>
+                    <option value="Received">Received</option>
+                    <option value="Cancelled">Cancelled</option>
+                  </select>
+                </label>
+
+                <label className="filter-field">
+                  <span>Order Date</span>
+                  <select
+                    className="app-select-control"
+                    value={filters.orderDate}
+                    onChange={(event) => setFilters((current) => ({ ...current, orderDate: event.target.value }))}
+                  >
+                    <option value="">Any Range</option>
+                    <option value="thisMonth">This Month</option>
+                    <option value="last7">Last 7 Days</option>
+                  </select>
+                </label>
+
+                <label className="filter-field">
+                  <span>Delivery Date</span>
+                  <select
+                    className="app-select-control"
+                    value={filters.deliveryDate}
+                    onChange={(event) => setFilters((current) => ({ ...current, deliveryDate: event.target.value }))}
+                  >
+                    <option value="">Any Range</option>
+                    <option value="thisWeek">This Week</option>
+                    <option value="overdue">Overdue</option>
+                  </select>
+                </label>
+
+                <label className="filter-field">
+                  <span>Payment Status</span>
+                  <select
+                    className="app-select-control"
+                    value={filters.paymentStatus}
+                    onChange={(event) =>
+                      setFilters((current) => ({ ...current, paymentStatus: event.target.value }))
+                    }
+                  >
+                    <option value="">All</option>
+                    <option value="Paid">Paid</option>
+                    <option value="Partial">Partial</option>
+                    <option value="Unpaid">Unpaid</option>
+                  </select>
+                </label>
+
+                <button className="clear-button" type="button" onClick={clearFilters}>
+                  Clear Filters
+                </button>
+              </div>
+
+              {showMoreFilters && (
+                <div className="more-filters-panel">
+                  <div className="more-filter-chip">
+                    <CalendarDays size={14} />
+                    This month
+                  </div>
+                  <div className="more-filter-chip">
+                    <PackageCheck size={14} />
+                    Supplier health
+                  </div>
+                  <div className="more-filter-chip">
+                    <Building2 size={14} />
+                    Linked bills
+                  </div>
+                </div>
+              )}
+
+              <div className="status-chip-row">
+                {(["All", "Draft", "Pending", "Partially Received", "Received", "Cancelled"] as QuickStatus[]).map((status) => {
+                  const count =
+                    status === "All"
+                      ? rows.length
+                      : rows.filter((row) => row.status === status).length;
+
+                  return (
+                    <button
+                      key={status}
+                      type="button"
+                      className={`status-chip ${quickStatus === status ? "active" : ""}`}
+                      onClick={() => setQuickStatus(status)}
+                    >
+                      <span>{status}</span>
+                      <em>{count}</em>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="purchase-table-card">
+              {selectedRows.length > 0 && (
+                <div className="bulk-bar">
+                  <span>{selectedRows.length} selected</span>
+                  <strong>{money(totalSelectedValue)}</strong>
+                </div>
+              )}
+
+              {viewMode === "table" ? (
+                <div className="purchase-table-wrap app-table-wrap">
+                  <table className="purchase-table app-data-table">
+                    <thead>
+                      <tr>
+                        <th>
+                          <input
+                            type="checkbox"
+                            checked={visibleRows.length > 0 && visibleRows.every((row) => selectedIds.includes(row.id))}
+                            onChange={(event) =>
+                              setSelectedIds(
+                                event.target.checked ? visibleRows.map((row) => row.id) : []
+                              )
+                            }
+                          />
+                        </th>
+                        <th>PO Number</th>
+                        <th>Supplier</th>
+                        <th>Delivery Date</th>
+                        <th>Total Amount</th>
+                        <th>Received</th>
+                        <th>Status</th>
+                        <th>Actions</th>
                       </tr>
-                    );
-                  })
-                ) : (
-                  <tr>
-                    <td colSpan={8} className="empty-state-cell">
-                      No matching purchases found.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+                    </thead>
+
+                    <tbody>
+                      {visibleRows.map((row) => {
+                        const deliveryMeta = dateDifferenceLabel(row.deliveryDate);
+
+                        return (
+                          <tr key={row.id}>
+                            <td>
+                              <input
+                                type="checkbox"
+                                checked={selectedIds.includes(row.id)}
+                                onChange={() =>
+                                  setSelectedIds((current) =>
+                                    current.includes(row.id)
+                                      ? current.filter((entry) => entry !== row.id)
+                                      : [...current, row.id]
+                                  )
+                                }
+                              />
+                            </td>
+                            <td>
+                              <div className="po-cell app-cell-stack">
+                                <strong>{row.poNumber}</strong>
+                                <small>Ordered {formatDate(row.orderDate)}</small>
+                                <OverflowContent
+                                  title={row.poNumber}
+                                  subtitle={row.supplierName}
+                                  preview={row.description}
+                                  content={row.description}
+                                  meta={[
+                                    { label: "Order date", value: formatDate(row.orderDate) },
+                                    { label: "Delivery", value: formatDate(row.deliveryDate) },
+                                  ]}
+                                />
+                              </div>
+                            </td>
+                            <td>
+                              <div className="supplier-cell">
+                                <strong>{row.supplierName}</strong>
+                                <span>{row.productName}</span>
+                              </div>
+                            </td>
+                            <td>
+                              <div className="delivery-cell app-cell-stack">
+                                <strong>{formatDate(row.deliveryDate)}</strong>
+                                <span className={deliveryMeta.tone}>{row.deliveryLabel}</span>
+                              </div>
+                            </td>
+                            <td className="numeric-cell">{money(row.totalAmount)}</td>
+                            <td>
+                              <div className="received-cell app-cell-stack">
+                                <strong>{money(row.receivedAmount)}</strong>
+                                <span>{row.receivedPercent}% received</span>
+                              </div>
+                            </td>
+                            <td>
+                              <div className="status-stack app-cell-stack">
+                                <span className={`status-badge ${badgeTone(row.status)}`}>{row.status}</span>
+                                <span className={`status-badge ${badgeTone(row.paymentStatus)}`}>
+                                  {row.paymentStatus}
+                                </span>
+                              </div>
+                            </td>
+                            <td>
+                              <button
+                                type="button"
+                                className="action-button"
+                                aria-label={`Open actions for ${row.poNumber}`}
+                                onClick={(event) => openMenu(row.id, event.currentTarget)}
+                              >
+                                <MoreHorizontal size={16} />
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="purchase-grid">
+                  {visibleRows.map((row) => (
+                    <article key={row.id} className="purchase-grid-card">
+                      <div className="purchase-grid-top">
+                        <div>
+                          <strong>{row.poNumber}</strong>
+                          <p>{row.description}</p>
+                        </div>
+                        <span className={`status-badge ${badgeTone(row.status)}`}>{row.status}</span>
+                      </div>
+                      <div className="purchase-grid-meta">
+                        <span>{row.supplierName}</span>
+                        <span>{formatDate(row.deliveryDate)}</span>
+                        <span>{money(row.totalAmount)}</span>
+                        <span>{row.receivedPercent}% received</span>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              )}
+
+                <TableFooter
+                  className="table-footer"
+                  total={filteredRows.length}
+                  page={safePage}
+                  rowsPerPage={rowsPerPage}
+                  rowsPerPageOptions={PAGE_SIZE_OPTIONS}
+                onRowsPerPageChange={(value) => {
+                  setRowsPerPage(value);
+                  setPage(1);
+                }}
+                onPageChange={setPage}
+              />
+            </div>
+          </section>
+
+          <aside className="purchase-side-column">
+            <section className="side-card">
+              <div className="side-card-head">
+                <h3>Status Mix</h3>
+                <button type="button">This Month</button>
+              </div>
+
+              <div className="summary-chart-row">
+                <div className="donut-chart" style={donutStyle}>
+                  <div className="donut-chart-center">
+                    <strong>{money(summary.totalPurchases)}</strong>
+                    <span>Total Purchases</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="summary-breakdown">
+                {summaryBreakdown.map((item) => {
+                  const percent = summary.totalPurchases === 0 ? 0 : (item.value / summary.totalPurchases) * 100;
+                  return (
+                    <div key={item.label} className="summary-breakdown-row">
+                      <div className="summary-breakdown-label">
+                        <i style={{ background: item.color }} />
+                        <span>{item.label}</span>
+                      </div>
+                      <strong>{money(item.value)}</strong>
+                      <em>{percent.toFixed(1)}%</em>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="summary-overdue-strip">
+                <span>Overdue deliveries</span>
+                <strong>
+                  {summary.overdueCount} · {money(summary.overdueValue)}
+                </strong>
+              </div>
+            </section>
+
+            <section className="side-card">
+              <div className="side-card-head">
+                <h3>Top Suppliers</h3>
+                <button type="button">This Month</button>
+              </div>
+
+              <div className="supplier-rank-list">
+                {topSuppliers.map((supplier) => (
+                  <div key={supplier.name} className="supplier-rank-item">
+                    <div className="supplier-rank-top">
+                      <span>{supplier.name}</span>
+                      <strong>{money(supplier.value)}</strong>
+                    </div>
+                    <div className="supplier-rank-progress">
+                      <div style={{ width: `${supplier.bar}%` }} />
+                    </div>
+                    <small>{supplier.ratio.toFixed(1)}%</small>
+                  </div>
+                ))}
+              </div>
+            </section>
+          </aside>
         </div>
       </div>
 
-      {showAddModal && (
-        <div className="modal-overlay" onClick={attemptCloseAddModal}>
-          <div
-            className="modal-card purchase-modal-card"
-            onClick={(e) => e.stopPropagation()}
+      {menuState && menuRecord && createPortal(
+        <div
+          ref={menuRef}
+          className={`purchase-actions-menu ${menuState.placement === "up" ? "upward" : ""}`}
+          style={{ top: menuState.top, left: menuState.left }}
+        >
+          <button type="button" onClick={() => { setDetailRecord(menuRecord); setMenuState(null); }}>
+            <Eye size={15} />
+            View Purchase
+          </button>
+          <button type="button" onClick={() => openEditModal(menuRecord.purchaseId)}>
+            <Pencil size={15} />
+            Edit Purchase
+          </button>
+          <button type="button" onClick={() => markAsReceived(menuRecord.purchaseId)}>
+            <CheckCircle2 size={15} />
+            Mark Received
+          </button>
+          <button type="button" onClick={() => duplicatePurchase(menuRecord.purchaseId)}>
+            <Receipt size={15} />
+            Duplicate
+          </button>
+          <div className="menu-divider" />
+          <button
+            type="button"
+            className="danger"
+            onClick={() => {
+              setDeleteRecord(menuRecord);
+              setDeleteCode("");
+              setDeleteError("");
+              setMenuState(null);
+            }}
           >
-            <div className="purchase-modal-top">
-              <div className="modal-header">
-                <div>
-                  <h2>Add Purchase</h2>
-                  <p>Enter the new purchase information.</p>
-                </div>
+            <Trash2 size={15} />
+            Delete
+          </button>
+        </div>,
+        document.body
+      )}
 
-                <button
-                  type="button"
-                  className="modal-close-btn"
-                  onClick={attemptCloseAddModal}
-                >
-                  ×
-                </button>
+      {detailRecord && (
+        <div className="purchase-overlay" onClick={() => setDetailRecord(null)}>
+          <aside className="purchase-drawer" onClick={(event) => event.stopPropagation()}>
+            <div className="drawer-head">
+              <div>
+                <span>{detailRecord.poNumber}</span>
+                <h2>{detailRecord.supplierName}</h2>
+                <p>{detailRecord.description}</p>
+              </div>
+              <button type="button" className="icon-button" onClick={() => setDetailRecord(null)}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="drawer-grid">
+              <div className="drawer-card">
+                <h3>Overview</h3>
+                <dl>
+                  <div><dt>Product</dt><dd>{detailRecord.productName}</dd></div>
+                  <div><dt>Order Date</dt><dd>{formatDate(detailRecord.orderDate)}</dd></div>
+                  <div><dt>Delivery</dt><dd>{formatDate(detailRecord.deliveryDate)}</dd></div>
+                  <div><dt>Total</dt><dd>{money(detailRecord.totalAmount)}</dd></div>
+                  <div><dt>Received</dt><dd>{money(detailRecord.receivedAmount)}</dd></div>
+                </dl>
+              </div>
+
+              <div className="drawer-card">
+                <h3>Supplier</h3>
+                <dl>
+                  <div><dt>Name</dt><dd>{detailRecord.supplierName}</dd></div>
+                  <div><dt>Phone</dt><dd>{detailRecord.supplierPhone}</dd></div>
+                  <div><dt>Email</dt><dd>{detailRecord.supplierEmail}</dd></div>
+                  <div><dt>Address</dt><dd>{detailRecord.supplierAddress}</dd></div>
+                </dl>
+              </div>
+
+              <div className="drawer-card full">
+                <h3>Notes</h3>
+                <p>{detailRecord.notes}</p>
               </div>
             </div>
-
-            <div className="purchase-modal-scroll">
-              <form className="modal-form">
-                <div className="modal-grid">
-                  <div className="field-card">
-                    <label className="modal-label">Supplier</label>
-                    <SearchableSelect
-                      value={form.supplierId}
-                      options={supplierOptions}
-                      placeholder="Search, add, or delete supplier..."
-                      searchPlaceholder="Search supplier..."
-                      allowCreate
-                      allowDelete
-                      onCreate={createSupplier}
-                      onDelete={deleteSupplier}
-                      onChange={(value) =>
-                        handleAddFormChange("supplierId", value)
-                      }
-                      error={formErrors.supplierId}
-                    />
-                    {form.supplierId && (
-                      <div className="helper-chip">
-                        Selected: {supplierMap.get(form.supplierId)}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="field-card">
-                    <label className="modal-label">Product</label>
-                    <SearchableSelect
-                      value={form.productId}
-                      options={productOptions}
-                      placeholder="Search product..."
-                      searchPlaceholder="Search product..."
-                      onChange={(value) =>
-                        handleAddFormChange("productId", value)
-                      }
-                      error={formErrors.productId}
-                    />
-                    {form.productId && (
-                      <div className="helper-chip">
-                        Product: {productMap.get(form.productId)}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="field-card">
-                    <label className="modal-label">Quantity</label>
-                    <input
-                      className="modal-input no-number-spinner"
-                      type="number"
-                      min="1"
-                      step="1"
-                      placeholder="Enter quantity"
-                      value={form.quantity}
-                      onChange={(e) =>
-                        handleAddFormChange("quantity", e.target.value)
-                      }
-                    />
-                    {formErrors.quantity && (
-                      <p className="field-error">{formErrors.quantity}</p>
-                    )}
-                  </div>
-
-                  <div className="field-card">
-                    <label className="modal-label">Total Cost</label>
-                    <input
-                      className="modal-input no-number-spinner"
-                      type="number"
-                      value={form.totalCost}
-                      readOnly
-                      placeholder="Calculated automatically"
-                    />
-                    {formErrors.totalCost && (
-                      <p className="field-error">{formErrors.totalCost}</p>
-                    )}
-                  </div>
-
-                  <div className="modal-grid-full field-card">
-                    <label className="modal-label">Date</label>
-                    <input
-                      className="modal-input"
-                      type="date"
-                      value={form.date}
-                      min={BUSINESS_MIN_DATE}
-                      max={TODAY_DATE}
-                      onChange={(e) =>
-                        handleAddFormChange("date", e.target.value)
-                      }
-                    />
-                    <p className="dashboard-search-meta">
-                      Allowed range: {BUSINESS_MIN_DATE} to {TODAY_DATE}
-                    </p>
-                    {formErrors.date && (
-                      <p className="field-error">{formErrors.date}</p>
-                    )}
-                  </div>
-
-                  <div className="modal-grid-full field-card">
-                    <label className="modal-label">Notes</label>
-                    <textarea
-                      className="modal-textarea"
-                      placeholder="Add purchase notes..."
-                      rows={4}
-                      value={form.notes}
-                      onChange={(e) =>
-                        handleAddFormChange("notes", e.target.value)
-                      }
-                    />
-                  </div>
-                </div>
-
-                <div className="modal-actions">
-                  <button
-                    type="button"
-                    className="modal-secondary-btn"
-                    onClick={attemptCloseAddModal}
-                  >
-                    Cancel
-                  </button>
-
-                  <button
-                    type="button"
-                    className="modal-primary-btn"
-                    onClick={handleAddPurchase}
-                  >
-                    Save Purchase
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
+          </aside>
         </div>
       )}
 
-      {showEditModal && editingPurchase && (
-        <div className="modal-overlay" onClick={attemptCloseEditModal}>
-          <div
-            className="modal-card purchase-modal-card"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="purchase-modal-top">
-              <div className="modal-header">
-                <div>
-                  <h2>Edit Purchase</h2>
-                  <p>Update purchase information.</p>
-                </div>
-
-                <button
-                  type="button"
-                  className="modal-close-btn"
-                  onClick={attemptCloseEditModal}
-                >
-                  ×
-                </button>
+      {formOpen && (
+        <div className="purchase-overlay" onClick={() => setFormOpen(false)}>
+          <div className="purchase-modal purchase-order-modal" onClick={(event) => event.stopPropagation()}>
+            <div className="drawer-head">
+              <div>
+                <span>{formMode === "add" ? "New Supplier Purchase" : "Edit Supplier Purchase"}</span>
+                <h2>{formMode === "add" ? "Add Supplier Purchase" : "Update Supplier Purchase"}</h2>
+                <p>Create a new purchase entry linked to a supplier</p>
               </div>
+              <button type="button" className="icon-button" onClick={() => setFormOpen(false)}>
+                <X size={18} />
+              </button>
             </div>
 
-            <div className="purchase-modal-scroll">
-              <form className="modal-form">
-                <div className="modal-grid">
-                  <div className="field-card">
-                    <label className="modal-label">Supplier</label>
-                    <SearchableSelect
-                      value={editForm.supplierId}
-                      options={supplierOptions}
-                      placeholder="Search, add, or delete supplier..."
-                      searchPlaceholder="Search supplier..."
-                      allowCreate
-                      allowDelete
-                      onCreate={createSupplier}
-                      onDelete={deleteSupplier}
-                      onChange={(value) =>
-                        handleEditFormChange("supplierId", value)
-                      }
-                      error={editErrors.supplierId}
-                    />
-                    {editForm.supplierId && (
-                      <div className="helper-chip">
-                        Selected: {supplierMap.get(editForm.supplierId)}
+            <div className="purchase-order-layout">
+              <div className="purchase-order-main">
+                <section className="purchase-form-section">
+                  <div className="purchase-section-head">
+                    <h3>Supplier Details</h3>
+                  </div>
+                  <div className="purchase-form-grid">
+                    <label className="purchase-field">
+                      <span>Supplier *</span>
+                      <select
+                        className="app-select-control"
+                        value={formState.supplierId}
+                        onChange={(event) => handleFormChange("supplierId", event.target.value)}
+                      >
+                        <option value="">Choose supplier</option>
+                        {suppliers.map((supplier) => (
+                          <option key={supplier.id} value={supplier.id}>
+                            {supplier.name}
+                          </option>
+                        ))}
+                      </select>
+                      {formErrors.supplierId && <small className="field-error-text">{formErrors.supplierId}</small>}
+                    </label>
+
+                    <label className="purchase-field">
+                      <span>Supplier Reference</span>
+                      <input
+                        type="text"
+                        placeholder="Optional supplier reference"
+                        value={formState.supplierReference}
+                        onChange={(event) => handleFormChange("supplierReference", event.target.value)}
+                      />
+                    </label>
+
+                    {selectedSupplier && (
+                      <div className="purchase-inline-preview full">
+                        <span>{selectedSupplier.name}</span>
+                        <small>{selectedSupplier.email || selectedSupplier.phone || "Supplier profile available"}</small>
                       </div>
                     )}
                   </div>
+                </section>
 
-                  <div className="field-card">
-                    <label className="modal-label">Product</label>
-                    <SearchableSelect
-                      value={editForm.productId}
-                      options={productOptions}
-                      placeholder="Search product..."
-                      searchPlaceholder="Search product..."
-                      onChange={(value) =>
-                        handleEditFormChange("productId", value)
-                      }
-                      error={editErrors.productId}
-                    />
-                    {editForm.productId && (
-                      <div className="helper-chip">
-                        Product: {productMap.get(editForm.productId)}
-                      </div>
-                    )}
+                <section className="purchase-form-section">
+                  <div className="purchase-section-head">
+                    <h3>Purchase Details</h3>
                   </div>
+                  <div className="purchase-form-grid">
+                    <label className="purchase-field">
+                      <span>Product *</span>
+                      <select
+                        className="app-select-control"
+                        value={formState.productId}
+                        onChange={(event) => handleFormChange("productId", event.target.value)}
+                      >
+                        <option value="">Search or select product</option>
+                        {formProducts.map((product) => (
+                          <option key={product.id} value={product.id}>
+                            {product.name}
+                          </option>
+                        ))}
+                      </select>
+                      {formErrors.productId && <small className="field-error-text">{formErrors.productId}</small>}
+                    </label>
 
-                  <div className="field-card">
-                    <label className="modal-label">Quantity</label>
-                    <input
-                      className="modal-input no-number-spinner"
-                      type="number"
-                      min="1"
-                      step="1"
-                      placeholder="Enter quantity"
-                      value={editForm.quantity}
-                      onChange={(e) =>
-                        handleEditFormChange("quantity", e.target.value)
-                      }
-                    />
-                    {editErrors.quantity && (
-                      <p className="field-error">{editErrors.quantity}</p>
-                    )}
+                    <label className="purchase-field">
+                      <span>Quantity *</span>
+                      <input
+                        type="number"
+                        min="1"
+                        placeholder="Enter quantity"
+                        value={formState.quantity}
+                        onChange={(event) => handleFormChange("quantity", event.target.value)}
+                      />
+                      {formErrors.quantity && <small className="field-error-text">{formErrors.quantity}</small>}
+                    </label>
+
+                    <label className="purchase-field">
+                      <span>Unit Price *</span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        placeholder="Auto-filled or editable"
+                        value={formState.unitPrice}
+                        onChange={(event) => handleFormChange("unitPrice", event.target.value)}
+                      />
+                      {formErrors.unitPrice && <small className="field-error-text">{formErrors.unitPrice}</small>}
+                    </label>
+
+                    <label className="purchase-field purchase-field-readonly">
+                      <span>Total Cost</span>
+                      <input type="text" value={money(totalValue)} readOnly placeholder="Auto-calculated total" />
+                    </label>
+
+                    <label className="purchase-field">
+                      <span>Tax / VAT</span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        placeholder="0"
+                        value={formState.taxRate}
+                        onChange={(event) => handleFormChange("taxRate", event.target.value)}
+                      />
+                    </label>
                   </div>
+                </section>
 
-                  <div className="field-card">
-                    <label className="modal-label">Total Cost</label>
-                    <input
-                      className="modal-input no-number-spinner"
-                      type="number"
-                      value={editForm.totalCost}
-                      readOnly
-                      placeholder="Calculated automatically"
-                    />
-                    {editErrors.totalCost && (
-                      <p className="field-error">{editErrors.totalCost}</p>
-                    )}
+                <section className="purchase-form-section">
+                  <div className="purchase-section-head">
+                    <h3>Order Information</h3>
                   </div>
+                  <div className="purchase-form-grid">
+                    <label className="purchase-field">
+                      <span>Order Date *</span>
+                      <input
+                        type="date"
+                        value={formState.date}
+                        onChange={(event) => handleFormChange("date", event.target.value)}
+                      />
+                      {formErrors.date && <small className="field-error-text">{formErrors.date}</small>}
+                    </label>
 
-                  <div className="modal-grid-full field-card">
-                    <label className="modal-label">Date</label>
-                    <input
-                      className="modal-input"
-                      type="date"
-                      value={editForm.date}
-                      min={BUSINESS_MIN_DATE}
-                      max={TODAY_DATE}
-                      onChange={(e) =>
-                        handleEditFormChange("date", e.target.value)
-                      }
-                    />
-                    <p className="dashboard-search-meta">
-                      Allowed range: {BUSINESS_MIN_DATE} to {TODAY_DATE}
-                    </p>
-                    {editErrors.date && (
-                      <p className="field-error">{editErrors.date}</p>
-                    )}
+                    <label className="purchase-field">
+                      <span>Payment Terms</span>
+                      <select
+                        className="app-select-control"
+                        value={formState.paymentTerms}
+                        onChange={(event) => handleFormChange("paymentTerms", event.target.value)}
+                      >
+                        <option value="Due on Receipt">Due on Receipt</option>
+                        <option value="Net 15">Net 15</option>
+                        <option value="Net 30">Net 30</option>
+                        <option value="Net 45">Net 45</option>
+                      </select>
+                    </label>
+
+                    <label className="purchase-field">
+                      <span>Currency</span>
+                      <select
+                        className="app-select-control"
+                        value={formState.currency}
+                        onChange={(event) => handleFormChange("currency", event.target.value)}
+                      >
+                        <option value="USD">USD</option>
+                        <option value="EUR">EUR</option>
+                        <option value="ILS">ILS</option>
+                      </select>
+                    </label>
+
+                    <label className="purchase-field">
+                      <span>Warehouse</span>
+                      <input
+                        type="text"
+                        placeholder="Destination warehouse"
+                        value={formState.warehouse}
+                        onChange={(event) => handleFormChange("warehouse", event.target.value)}
+                      />
+                    </label>
                   </div>
+                </section>
 
-                  <div className="modal-grid-full field-card">
-                    <label className="modal-label">Notes</label>
-                    <textarea
-                      className="modal-textarea"
-                      placeholder="Add purchase notes..."
-                      rows={4}
-                      value={editForm.notes}
-                      onChange={(e) =>
-                        handleEditFormChange("notes", e.target.value)
-                      }
-                    />
+                <section className="purchase-form-section">
+                  <div className="purchase-section-head">
+                    <h3>Additional Information</h3>
                   </div>
-                </div>
+                  <div className="purchase-form-grid">
+                    <label className="purchase-field">
+                      <span>Attachment</span>
+                      <input
+                        type="text"
+                        placeholder="Optional file name"
+                        value={formState.attachmentName}
+                        onChange={(event) => handleFormChange("attachmentName", event.target.value)}
+                      />
+                    </label>
 
-                <div className="modal-actions">
-                  <button
-                    type="button"
-                    className="modal-secondary-btn"
-                    onClick={attemptCloseEditModal}
-                  >
-                    Cancel
-                  </button>
+                    <label className="purchase-field">
+                      <span>Internal Reference</span>
+                      <input
+                        type="text"
+                        placeholder="Optional internal reference"
+                        value={formState.internalReference}
+                        onChange={(event) => handleFormChange("internalReference", event.target.value)}
+                      />
+                    </label>
 
-                  <button
-                    type="button"
-                    className="modal-primary-btn"
-                    onClick={handleSaveEdit}
-                  >
-                    Save Changes
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {deletePurchase && (
-        <div className="modal-overlay" onClick={closeDeleteModal}>
-          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-            <div className="purchase-modal-top">
-              <div className="modal-header">
-                <div>
-                  <h2>Delete Purchase</h2>
-                  <p>This action cannot be undone.</p>
-                </div>
-
-                <button
-                  type="button"
-                  className="modal-close-btn"
-                  onClick={closeDeleteModal}
-                >
-                  ×
-                </button>
+                    <label className="purchase-field full">
+                      <span>Notes</span>
+                      <textarea
+                        rows={3}
+                        placeholder="Optional notes"
+                        value={formState.notes}
+                        onChange={(event) => handleFormChange("notes", event.target.value)}
+                      />
+                    </label>
+                  </div>
+                </section>
               </div>
-            </div>
 
-            <div className="purchase-modal-scroll" style={{ paddingTop: "20px" }}>
-              <p className="delete-warning">
-                You are about to permanently delete this purchase.
-              </p>
-              <p className="delete-help">
-                To confirm deletion, type exactly <strong>123</strong> below.
-              </p>
-
-              <div style={{ marginTop: "16px" }}>
-                <input
-                  className="modal-input"
-                  type="text"
-                  placeholder="Type 123"
-                  value={deleteCode}
-                  onChange={(e) => {
-                    setDeleteCode(e.target.value);
-                    setDeleteError("");
-                  }}
-                />
-                {deleteError && <p className="field-error">{deleteError}</p>}
-              </div>
-
-              <div className="modal-actions" style={{ marginTop: "20px" }}>
-                <button
-                  type="button"
-                  className="modal-secondary-btn"
-                  onClick={closeDeleteModal}
-                >
-                  Cancel
-                </button>
-
-                <button
-                  type="button"
-                  className="modal-danger-btn"
-                  onClick={handleConfirmDelete}
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {selectedNote !== null && (
-        <div className="modal-overlay" onClick={closeNoteModal}>
-          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-            <div className="purchase-modal-top">
-              <div className="modal-header">
-                <div>
-                  <h2>Purchase Note</h2>
-                  <p>Purchase note details.</p>
+              <aside className="purchase-order-summary">
+                <div className="purchase-summary-card">
+                  <span className="summary-label">PO Preview</span>
+                  <strong>{editingId ? rowsMap.get(editingId)?.poNumber || "PO-Preview" : buildPoNumber(0)}</strong>
+                  <div className="summary-kv">
+                    <span>Supplier</span>
+                    <strong>{selectedSupplier?.name || "Not selected"}</strong>
+                  </div>
+                  <div className="summary-kv">
+                    <span>Product</span>
+                    <strong>{selectedProduct?.name || "Not selected"}</strong>
+                  </div>
+                  <div className="summary-kv">
+                    <span>Quantity</span>
+                    <strong>{formState.quantity || "0"}</strong>
+                  </div>
+                  <div className="summary-kv">
+                    <span>Unit Price</span>
+                    <strong>{formState.unitPrice ? money(unitPriceValue) : "—"}</strong>
+                  </div>
+                  <div className="summary-kv">
+                    <span>Order Date</span>
+                    <strong>{formState.date ? formatDate(formState.date) : "—"}</strong>
+                  </div>
+                  <div className="summary-kv">
+                    <span>Payment Terms</span>
+                    <strong>{formState.paymentTerms || "—"}</strong>
+                  </div>
+                  <div className="summary-kv">
+                    <span>Currency</span>
+                    <strong>{formState.currency || "—"}</strong>
+                  </div>
+                  <div className="summary-divider" />
+                  <div className="summary-kv">
+                    <span>Subtotal</span>
+                    <strong>{money(subtotalValue)}</strong>
+                  </div>
+                  <div className="summary-kv">
+                    <span>Tax</span>
+                    <strong>{money(taxValue)}</strong>
+                  </div>
+                  <div className="summary-kv total">
+                    <span>Estimated Total</span>
+                    <strong>{money(totalValue)}</strong>
+                  </div>
+                  {(selectedSupplier || selectedProduct) && (
+                    <div className="summary-hint">
+                      {selectedSupplier && <span>{selectedSupplier.email || selectedSupplier.phone || "Supplier profile ready"}</span>}
+                      {selectedProduct && <span>{selectedProduct.stock} in stock now</span>}
+                    </div>
+                  )}
                 </div>
-
-                <button
-                  type="button"
-                  className="modal-close-btn"
-                  onClick={closeNoteModal}
-                >
-                  ×
-                </button>
-              </div>
+              </aside>
             </div>
 
-            <div className="note-modal-body">
-              <p
-                className={`note-content ${
-                  isNoteExpanded ? "expanded" : "collapsed"
-                }`}
+            <div className="modal-footer">
+              <button
+                className="secondary-button"
+                type="button"
+                onClick={() => {
+                  setFormOpen(false);
+                  setFormErrors({});
+                }}
               >
-                {displayedNote}
-              </p>
-
-              {shouldShowReadMore && (
-                <button
-                  type="button"
-                  className="read-more-btn"
-                  onClick={() => setIsNoteExpanded((prev) => !prev)}
-                >
-                  {isNoteExpanded ? "Read Less" : "Read More"}
-                </button>
-              )}
-            </div>
-
-            <div className="purchase-modal-scroll" style={{ paddingTop: 0 }}>
-              <div className="modal-actions">
-                <button
-                  type="button"
-                  className="modal-primary-btn"
-                  onClick={closeNoteModal}
-                >
-                  Close
-                </button>
-              </div>
+                Cancel
+              </button>
+              <button
+                className="secondary-button subtle-action"
+                type="button"
+                onClick={() => {
+                  setToast("Purchase saved as draft");
+                  setFormOpen(false);
+                }}
+              >
+                Save as Draft
+              </button>
+              <button className="primary-button" type="button" onClick={saveForm}>
+                {formMode === "add" ? "Save Purchase" : "Save Changes"}
+              </button>
             </div>
           </div>
         </div>
       )}
 
-      <ConfirmCloseModal
-        open={pendingCloseTarget !== null}
-        onKeepEditing={() => setPendingCloseTarget(null)}
-        onDiscard={discardPendingChanges}
-      />
+      {deleteRecord && (
+        <div className="purchase-overlay" onClick={() => setDeleteRecord(null)}>
+          <div className="purchase-modal compact" onClick={(event) => event.stopPropagation()}>
+            <div className="drawer-head">
+              <div>
+                <span>Delete Purchase</span>
+                <h2>{deleteRecord.poNumber}</h2>
+              </div>
+              <button type="button" className="icon-button" onClick={() => setDeleteRecord(null)}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="delete-box">
+              <p>Type <strong>123</strong> to confirm deletion.</p>
+              <input
+                type="text"
+                value={deleteCode}
+                onChange={(event) => {
+                  setDeleteCode(event.target.value);
+                  setDeleteError("");
+                }}
+                placeholder="Type 123"
+              />
+              {deleteError && <small>{deleteError}</small>}
+            </div>
+
+            <div className="modal-footer">
+              <button className="secondary-button" type="button" onClick={() => setDeleteRecord(null)}>
+                Cancel
+              </button>
+              <button className="danger-button" type="button" onClick={confirmDelete}>
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {toast && (
+        <div className="purchase-toast">
+          <CheckCircle2 size={16} />
+          <span>{toast}</span>
+        </div>
+      )}
     </>
   );
 }

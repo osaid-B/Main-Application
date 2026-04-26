@@ -11,10 +11,12 @@ import {
   Users,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import { useSettings } from "../context/SettingsContext";
 import "./login.css";
 
 export default function Login() {
   const { login } = useAuth();
+  const { t, language, setLanguage, isArabic } = useSettings();
   const navigate = useNavigate();
 
   const [username, setUsername] = useState("");
@@ -29,7 +31,7 @@ export default function Login() {
     const trimmedPassword = password.trim();
 
     if (!trimmedUsername || !trimmedPassword) {
-      setError("Please enter username and password");
+      setError(t.login.missingCredentials);
       return;
     }
 
@@ -39,12 +41,12 @@ export default function Login() {
       setError("");
       navigate("/dashboard");
     } else {
-      setError("Invalid username or password");
+      setError(t.login.invalidCredentials);
     }
   };
 
   return (
-    <div className="auth-page">
+    <div className="auth-page" dir={isArabic ? "rtl" : "ltr"}>
       <section className="auth-left">
         <div className="auth-left-inner">
           <div className="auth-brand">
@@ -53,27 +55,41 @@ export default function Login() {
             </div>
 
             <div className="auth-brand-text">
-              <p className="auth-brand-label">Business Dashboard</p>
-              <h1 className="auth-brand-title">Sign in to your workspace</h1>
+              <p className="auth-brand-label">{t.login.brandLabel}</p>
+              <h1 className="auth-brand-title">{t.login.title}</h1>
             </div>
           </div>
 
           <div className="auth-card">
-            <div className="auth-badge">
-              <ShieldCheck size={14} />
-              Secure access for authorized business users
+            <div className="auth-row auth-language-row">
+              <button
+                type="button"
+                className={`auth-lang-chip ${language === "en" ? "active" : ""}`}
+                onClick={() => setLanguage("en")}
+              >
+                {t.common.english}
+              </button>
+              <button
+                type="button"
+                className={`auth-lang-chip ${language === "ar" ? "active" : ""}`}
+                onClick={() => setLanguage("ar")}
+              >
+                {t.common.arabic}
+              </button>
             </div>
 
-            <h2 className="auth-heading">Welcome back</h2>
-            <p className="auth-subheading">
-              Access your accounting, customers, invoices, payments, inventory,
-              and purchases from one modern control center.
-            </p>
+            <div className="auth-badge">
+              <ShieldCheck size={14} />
+              {t.login.secureAccess}
+            </div>
+
+            <h2 className="auth-heading">{t.login.welcomeBack}</h2>
+            <p className="auth-subheading">{t.login.subtitle}</p>
 
             <form onSubmit={handleSubmit} className="auth-form">
               <div className="auth-field">
                 <label className="auth-label" htmlFor="username">
-                  Email or username
+                  {t.login.username}
                 </label>
 
                 <div className="auth-input-wrap">
@@ -82,7 +98,7 @@ export default function Login() {
                     id="username"
                     className="auth-input"
                     type="text"
-                    placeholder="you@company.com"
+                    placeholder={t.login.usernamePlaceholder}
                     value={username}
                     onChange={(e) => {
                       setUsername(e.target.value);
@@ -96,11 +112,11 @@ export default function Login() {
               <div className="auth-field">
                 <div className="auth-row">
                   <label className="auth-label" htmlFor="password">
-                    Password
+                    {t.login.password}
                   </label>
 
                   <button type="button" className="auth-link">
-                    Forgot password?
+                    {t.login.forgotPassword}
                   </button>
                 </div>
 
@@ -112,7 +128,7 @@ export default function Login() {
                     id="password"
                     className="auth-input"
                     type="password"
-                    placeholder="Enter your password"
+                    placeholder={t.login.passwordPlaceholder}
                     value={password}
                     onChange={(e) => {
                       setPassword(e.target.value);
@@ -130,26 +146,23 @@ export default function Login() {
                     checked={remember}
                     onChange={(e) => setRemember(e.target.checked)}
                   />
-                  <span>Remember me</span>
+                  <span>{t.login.rememberMe}</span>
                 </label>
 
                 <div className="auth-trust-inline">
                   <ShieldCheck size={14} />
-                  Protected with enterprise-grade access control
+                  {t.login.trustInline}
                 </div>
               </div>
 
               {error && <p className="auth-error">{error}</p>}
 
               <button className="auth-submit" type="submit">
-                <span>Sign in</span>
+                <span>{t.login.signIn}</span>
                 <ArrowRight size={18} />
               </button>
 
-              <p className="auth-footer-note">
-                By continuing, you agree to secure usage policies for authorized
-                teams, finance staff, and business operators.
-              </p>
+              <p className="auth-footer-note">{t.login.footerNote}</p>
             </form>
           </div>
         </div>
@@ -160,18 +173,12 @@ export default function Login() {
           <div className="auth-hero-top">
             <div className="auth-hero-pill">
               <CreditCard size={14} />
-              Built for finance teams, operators, and growing businesses
+              {t.login.rightPill}
             </div>
 
-            <h2 className="auth-hero-title">
-              Manage your business with clarity, speed, and control.
-            </h2>
+            <h2 className="auth-hero-title">{t.login.rightTitle}</h2>
 
-            <p className="auth-hero-text">
-              Track invoices, customers, payments, purchases, and inventory in
-              one smart dashboard designed for accounting workflows and modern
-              business operations.
-            </p>
+            <p className="auth-hero-text">{t.login.rightText}</p>
           </div>
 
           <div className="auth-features">
@@ -179,44 +186,32 @@ export default function Login() {
               <div className="auth-feature-icon">
                 <BarChart3 size={20} />
               </div>
-              <h3 className="auth-feature-title">Real-time financial tracking</h3>
-              <p className="auth-feature-text">
-                Monitor revenue, outstanding invoices, payment flow, and
-                operational metrics in one unified view.
-              </p>
+              <h3 className="auth-feature-title">{t.login.features.finance.title}</h3>
+              <p className="auth-feature-text">{t.login.features.finance.text}</p>
             </div>
 
             <div className="auth-feature-card">
               <div className="auth-feature-icon">
                 <Users size={20} />
               </div>
-              <h3 className="auth-feature-title">Customer & invoice management</h3>
-              <p className="auth-feature-text">
-                Organize clients, billing records, notes, and invoice history
-                with clean, structured workflows.
-              </p>
+              <h3 className="auth-feature-title">{t.login.features.customers.title}</h3>
+              <p className="auth-feature-text">{t.login.features.customers.text}</p>
             </div>
 
             <div className="auth-feature-card">
               <div className="auth-feature-icon">
                 <Receipt size={20} />
               </div>
-              <h3 className="auth-feature-title">Smart reporting and insights</h3>
-              <p className="auth-feature-text">
-                Turn daily business activity into clear summaries, trends, and
-                decisions your team can act on.
-              </p>
+              <h3 className="auth-feature-title">{t.login.features.insights.title}</h3>
+              <p className="auth-feature-text">{t.login.features.insights.text}</p>
             </div>
 
             <div className="auth-feature-card">
               <div className="auth-feature-icon">
                 <Boxes size={20} />
               </div>
-              <h3 className="auth-feature-title">Secure and modern workflow</h3>
-              <p className="auth-feature-text">
-                A trustworthy interface built for authorized teams handling
-                finance, purchases, and internal operations.
-              </p>
+              <h3 className="auth-feature-title">{t.login.features.secure.title}</h3>
+              <p className="auth-feature-text">{t.login.features.secure.text}</p>
             </div>
           </div>
 

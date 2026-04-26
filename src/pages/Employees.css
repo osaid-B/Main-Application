@@ -1282,6 +1282,10 @@ textarea.modal-input:focus {
   .employees-mini-stats {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .employees-month-week-switch {
+    align-items: stretch;
+  }
 }
 
 @media (max-width: 640px) {
@@ -1395,6 +1399,44 @@ textarea.modal-input:focus {
   color: #123c72;
 }
 
+.employees-month-label-chip.secondary {
+  background: #ffffff;
+  color: #4d79a4;
+}
+
+.employees-month-week-switch {
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.employees-week-chip-list {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.employees-week-chip {
+  border: 1px solid #dbe7f3;
+  background: #ffffff;
+  color: #4d79a4;
+  border-radius: 999px;
+  min-height: 38px;
+  padding: 0 14px;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.employees-week-chip.active {
+  background: #eff6ff;
+  border-color: rgba(37, 99, 235, 0.22);
+  color: #1d4ed8;
+}
+
 .employees-monthly-grid-wrap {
   width: 100%;
   overflow-x: auto;
@@ -1402,7 +1444,7 @@ textarea.modal-input:focus {
 
 .employees-monthly-grid-table {
   width: 100%;
-  min-width: 1200px;
+  min-width: 920px;
   border-collapse: separate;
   border-spacing: 0;
 }

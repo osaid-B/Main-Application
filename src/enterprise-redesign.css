@@ -1,0 +1,866 @@
+html,
+body,
+#root {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+:root {
+  --enterprise-bg: #f6f8fb;
+  --enterprise-surface: #ffffff;
+  --enterprise-surface-soft: #f8fafc;
+  --enterprise-line: rgba(148, 163, 184, 0.22);
+  --enterprise-line-strong: rgba(100, 116, 139, 0.24);
+  --enterprise-text: #111827;
+  --enterprise-muted: #64748b;
+  --enterprise-primary: #2563eb;
+  --enterprise-primary-soft: rgba(37, 99, 235, 0.08);
+  --enterprise-radius: 10px;
+  --enterprise-shadow: 0 18px 42px rgba(15, 23, 42, 0.08);
+}
+
+* {
+  min-width: 0;
+}
+
+.app-layout,
+.app-main,
+.app-main-shell,
+.app-page-content {
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: clip;
+}
+
+.app-main {
+  padding: 18px 20px 22px;
+  background: var(--enterprise-bg);
+}
+
+.app-main-shell {
+  gap: 14px;
+}
+
+.app-page-content {
+  width: min(100%, 1480px);
+}
+
+.page-title,
+.dashboard-hero-title,
+.products-page-title,
+.purchase-page-title,
+.suppliers-page-title,
+.data-import-title,
+.hero-copy h1,
+.invoice-hero-text h1,
+.products-header-copy h1,
+.employees-page-title {
+  letter-spacing: 0;
+}
+
+.customers-workspace,
+.payments-workspace,
+.products-page,
+.purchase-page-shell,
+.suppliers-page,
+.invoice-management-page,
+.treasury-page,
+.employees-page,
+.data-import-page,
+.settings-page,
+.dashboard-command-center {
+  display: flex;
+  flex-direction: column;
+  gap: 14px !important;
+}
+
+.card-surface,
+.workspace-surface,
+.toolbar-surface,
+.summary-surface,
+.detail-surface,
+.products-header-card,
+.products-toolbar-card,
+.products-results-card,
+.purchase-filters-card,
+.purchase-table-card,
+.suppliers-filter-card,
+.suppliers-table-card,
+.payments-main,
+.customers-main,
+.invoice-workspace,
+.invoice-hero-card,
+.treasury-card,
+.treasury-table-card,
+.employees-panel,
+.data-import-main,
+.data-import-panel,
+.settings-card,
+.dashboard-panel {
+  border: 1px solid var(--enterprise-line);
+  border-radius: var(--enterprise-radius) !important;
+  background: var(--enterprise-surface);
+  box-shadow: none !important;
+}
+
+.customers-hero,
+.payments-hero,
+.products-header-card,
+.invoice-hero-card,
+.purchase-page-header,
+.suppliers-header,
+.treasury-hero,
+.dashboard-executive-hero,
+.data-import-header,
+.employees-header {
+  padding: 14px 2px 4px !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.hero-copy h1,
+.invoice-hero-text h1,
+.products-header-copy h1,
+.dashboard-hero-title,
+.purchase-page-title,
+.suppliers-page-title,
+.treasury-title,
+.employees-page-title,
+.data-import-title {
+  margin: 0;
+  font-size: clamp(1.45rem, 2vw, 2rem) !important;
+  line-height: 1.12 !important;
+  color: var(--enterprise-text);
+}
+
+.hero-copy p,
+.invoice-hero-text p,
+.products-header-copy p,
+.dashboard-hero-copy p,
+.purchase-page-subtitle,
+.suppliers-page-subtitle,
+.treasury-subtitle,
+.employees-page-subtitle,
+.data-import-subtitle {
+  max-width: 760px;
+  margin-top: 4px;
+  color: var(--enterprise-muted);
+  font-size: 13px !important;
+  line-height: 1.5 !important;
+}
+
+.eyebrow,
+.products-badge,
+.dashboard-hero-eyebrow,
+.data-import-eyebrow {
+  min-height: 22px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  color: var(--enterprise-muted) !important;
+  font-size: 11px !important;
+  letter-spacing: 0 !important;
+}
+
+.customers-hero .hero-actions,
+.payments-hero .hero-actions,
+.products-header-actions,
+.invoice-hero-actions,
+.purchase-page-actions,
+.suppliers-header-actions,
+.data-import-actions {
+  gap: 8px !important;
+}
+
+.primary-btn,
+.secondary-btn,
+.products-primary-btn,
+.products-secondary-btn,
+.primary-action,
+.secondary-action,
+.primary-button,
+.secondary-button,
+.suppliers-primary-btn,
+.suppliers-secondary-btn,
+.toolbar-btn,
+.toolbar-button,
+.supplier-toolbar-btn,
+.toolbar-chip,
+.details-btn,
+.row-view-btn,
+.mini-action-btn,
+.action-button {
+  min-height: 36px !important;
+  padding: 0 11px !important;
+  border-radius: 8px !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  box-shadow: none !important;
+}
+
+.primary-btn,
+.products-primary-btn,
+.primary-action,
+.primary-button,
+.suppliers-primary-btn,
+.toolbar-btn.active,
+.toolbar-button.active,
+.supplier-toolbar-btn.active,
+.toolbar-chip.active {
+  background: var(--enterprise-primary) !important;
+  border-color: var(--enterprise-primary) !important;
+  color: #ffffff !important;
+}
+
+.secondary-btn,
+.products-secondary-btn,
+.secondary-action,
+.secondary-button,
+.suppliers-secondary-btn,
+.toolbar-btn,
+.toolbar-button,
+.supplier-toolbar-btn,
+.toolbar-chip,
+.mini-action-btn,
+.row-view-btn {
+  background: #ffffff !important;
+  border: 1px solid var(--enterprise-line-strong) !important;
+  color: var(--enterprise-text) !important;
+}
+
+.customers-stats-grid,
+.customers-kpi-grid,
+.payments-kpi-grid,
+.products-kpi-grid,
+.purchase-kpi-grid,
+.suppliers-kpi-grid,
+.hero-summary-inline,
+.dashboard-kpi-strip,
+.data-import-kpi-grid {
+  display: none !important;
+}
+
+.customers-main,
+.payments-main,
+.products-toolbar-card,
+.purchase-filters-card,
+.suppliers-filter-card,
+.invoice-workspace {
+  position: relative;
+  overflow: visible !important;
+  padding: 12px !important;
+  z-index: 30;
+}
+
+.toolbar-row,
+.payments-toolbar-row,
+.products-toolbar,
+.purchase-toolbar,
+.supplier-toolbar,
+.workspace-toolbar,
+.treasury-toolbar {
+  display: flex;
+  align-items: center !important;
+  gap: 10px !important;
+  margin: 0 !important;
+}
+
+.search-wrap,
+.search-input-wrap,
+.products-search-field,
+.search-field,
+.supplier-search-field,
+.search-shell,
+.toolbar-search,
+.payments-search-shell,
+.invoice-search-shell,
+.treasury-search {
+  flex: 1 1 360px;
+  min-width: min(100%, 280px);
+  height: 38px !important;
+  min-height: 38px !important;
+  padding: 0 11px !important;
+  border: 1px solid var(--enterprise-line-strong) !important;
+  border-radius: 8px !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+}
+
+.search-wrap input,
+.search-input-wrap input,
+.products-search-field input,
+.search-field input,
+.supplier-search-field input,
+.search-shell input,
+.treasury-search input {
+  min-height: 34px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.toolbar-actions,
+.products-toolbar-actions,
+.toolbar-cluster,
+.supplier-toolbar-actions,
+.workspace-toolbar .toolbar-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px !important;
+  flex-wrap: nowrap !important;
+}
+
+.toolbar-actions .toolbar-btn.subtle,
+.products-toolbar-actions .toolbar-btn.subtle,
+.toolbar-cluster .toolbar-button.subtle,
+.supplier-toolbar-actions .supplier-toolbar-btn.subtle,
+.workspace-toolbar .toolbar-chip:not(.subtle) {
+  display: none !important;
+}
+
+.primary-filters,
+.primary-filters-row,
+.products-filter-grid,
+.purchase-filters-card > .primary-filters,
+.supplier-primary-filters,
+.contextual-filters-scroll {
+  display: none !important;
+}
+
+.customers-main.filters-open > .primary-filters,
+.payments-main.filters-open > .primary-filters-row,
+.products-toolbar-card.filters-open > .products-filter-grid,
+.purchase-filters-card.filters-open > .primary-filters,
+.suppliers-filter-card.filters-open > .supplier-primary-filters,
+.invoice-workspace.filters-open .contextual-filters-scroll {
+  position: absolute;
+  inset-inline-start: 12px;
+  top: 58px;
+  z-index: 90;
+  display: grid !important;
+  width: min(720px, calc(100vw - 48px));
+  grid-template-columns: repeat(2, minmax(180px, 1fr));
+  gap: 10px !important;
+  padding: 12px;
+  border: 1px solid var(--enterprise-line);
+  border-radius: 10px;
+  background: #ffffff;
+  box-shadow: var(--enterprise-shadow) !important;
+}
+
+.suppliers-filter-card.filters-open > .supplier-primary-filters.secondary,
+.customers-main.filters-open > .advanced-filters,
+.payments-main.filters-open > .advanced-filters-panel,
+.products-toolbar-card.filters-open > .products-more-filters,
+.purchase-filters-card.filters-open > .more-filters-panel,
+.invoice-workspace.filters-open .more-filters-popover {
+  position: absolute;
+  inset-inline-start: 12px;
+  top: 232px;
+  z-index: 91;
+  display: grid !important;
+  width: min(720px, calc(100vw - 48px));
+  grid-template-columns: repeat(2, minmax(180px, 1fr));
+  gap: 10px !important;
+  padding: 12px;
+  border: 1px solid var(--enterprise-line);
+  border-radius: 10px;
+  background: #ffffff;
+  box-shadow: var(--enterprise-shadow) !important;
+}
+
+.purchase-filters-card.filters-open > .more-filters-panel,
+.invoice-workspace.filters-open .more-filters-popover {
+  top: 58px;
+  inset-inline-start: min(748px, calc(100vw - 760px));
+  width: min(360px, calc(100vw - 48px));
+  grid-template-columns: 1fr;
+}
+
+.filter-block,
+.filter-control,
+.toolbar-field,
+.filter-field,
+.supplier-field,
+.compact-filter-field {
+  gap: 5px !important;
+}
+
+.filter-block span,
+.filter-control span,
+.toolbar-field span,
+.filter-field span,
+.supplier-field span,
+.compact-filter-field span {
+  color: var(--enterprise-muted) !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+}
+
+.app-select-control,
+.compact-filter-select,
+.modal-select {
+  min-height: 36px !important;
+  border-radius: 8px !important;
+  font-size: 12px !important;
+}
+
+.chip-row,
+.quick-chip-row,
+.status-chip-row,
+.supplier-quick-filters,
+.quick-filter-chips,
+.active-filter-row,
+.active-filter-chips {
+  display: flex;
+  align-items: center;
+  gap: 6px !important;
+  flex-wrap: wrap;
+  margin: 10px 0 0 !important;
+}
+
+.quick-chip,
+.supplier-quick-chip,
+.status-chip,
+.active-filter-chip,
+.clear-link-btn,
+.clear-filters-link {
+  min-height: 28px !important;
+  padding: 0 9px !important;
+  border-radius: 999px !important;
+  border: 1px solid var(--enterprise-line) !important;
+  background: #ffffff !important;
+  color: var(--enterprise-muted) !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+}
+
+.quick-chip.active,
+.supplier-quick-chip.active,
+.status-chip.active,
+.active-filter-chip {
+  background: var(--enterprise-primary-soft) !important;
+  border-color: rgba(37, 99, 235, 0.18) !important;
+  color: #1d4ed8 !important;
+}
+
+.summary-strip,
+.decision-summary-strip,
+.bulk-bar,
+.bulk-actions-bar,
+.supplier-bulk-bar {
+  margin-top: 10px !important;
+  padding: 8px 10px !important;
+  border: 1px solid var(--enterprise-line) !important;
+  border-radius: 8px !important;
+  background: var(--enterprise-surface-soft) !important;
+  box-shadow: none !important;
+}
+
+.table-card,
+.payments-table-card,
+.products-results-card,
+.purchase-table-card,
+.suppliers-table-card,
+.treasury-table-card,
+.employees-attendance-simple-card,
+.employees-report-card,
+.data-import-preview-card {
+  margin-top: 12px !important;
+  padding: 10px 12px !important;
+  border: 1px solid var(--enterprise-line) !important;
+  border-radius: 10px !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+}
+
+.table-card-header,
+.table-headline,
+.results-header,
+.treasury-card-head,
+.employees-card-top,
+.employees-report-head {
+  margin: 0 0 8px !important;
+  padding: 0 !important;
+  border: 0 !important;
+}
+
+.table-card-header h2,
+.table-headline h2,
+.results-header h2,
+.section-title {
+  margin: 0 !important;
+  font-size: 15px !important;
+  line-height: 1.25 !important;
+  color: var(--enterprise-text) !important;
+}
+
+.table-card-header p,
+.table-headline p,
+.results-header p,
+.section-subtitle {
+  margin: 2px 0 0 !important;
+  color: var(--enterprise-muted) !important;
+  font-size: 12px !important;
+  line-height: 1.35 !important;
+}
+
+.app-table-wrap,
+.customers-table-wrap,
+.payments-table-wrap,
+.invoice-table-wrap,
+.products-table-wrap,
+.purchase-table-wrap,
+.suppliers-table-wrap,
+.treasury-table-wrap,
+.preview-table-wrap,
+.employees-attendance-table-wrap,
+.employees-report-table-wrap {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden !important;
+  overflow-y: visible;
+}
+
+.app-data-table,
+.customers-table-v2,
+.payments-table,
+.invoice-table,
+.products-table,
+.purchase-table,
+.suppliers-table,
+.treasury-table,
+.preview-table,
+.employees-attendance-table,
+.employees-report-table {
+  width: 100% !important;
+  min-width: 0 !important;
+  table-layout: fixed !important;
+  border-collapse: collapse !important;
+  border-spacing: 0 !important;
+}
+
+.app-data-table th,
+.app-data-table td {
+  padding: 9px 10px !important;
+  border-top: 1px solid rgba(226, 232, 240, 0.78) !important;
+  background: transparent !important;
+  color: var(--enterprise-text);
+  font-size: 12px !important;
+  line-height: 1.35 !important;
+  vertical-align: middle !important;
+  overflow: hidden;
+}
+
+.app-data-table th {
+  padding-top: 0 !important;
+  border-top: 0 !important;
+  color: var(--enterprise-muted) !important;
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  text-align: start !important;
+  text-transform: none !important;
+}
+
+.app-data-table tbody tr {
+  height: 54px;
+}
+
+.app-data-table tbody tr:hover {
+  background: #f8fafc !important;
+}
+
+.app-data-table .align-right,
+.app-data-table th.align-right,
+.numeric-cell {
+  text-align: end !important;
+}
+
+.app-cell-stack strong,
+.app-cell-stack span,
+.app-cell-stack small,
+.primary-cell strong,
+.primary-cell span,
+.customer-cell strong,
+.customer-cell span,
+.contact-cell span,
+.supplier-cell strong,
+.supplier-cell span,
+.balance-cell span,
+.amount-cell span {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.contact-cell,
+.status-stack,
+.row-actions,
+.treasury-row-actions {
+  min-width: 0;
+  gap: 5px !important;
+}
+
+.row-actions {
+  justify-content: flex-end;
+  flex-wrap: nowrap !important;
+}
+
+.details-btn,
+.row-view-btn {
+  min-width: 0 !important;
+}
+
+.icon-btn,
+.row-menu-btn,
+.action-button {
+  width: 32px !important;
+  height: 32px !important;
+  min-height: 32px !important;
+  padding: 0 !important;
+  border-radius: 8px !important;
+}
+
+.status-badge,
+.status-chip,
+.customer-status-badge,
+.product-status,
+.supplier-status-badge,
+.meta-badge {
+  min-height: 24px !important;
+  padding: 0 8px !important;
+  border-radius: 999px !important;
+  border: 1px solid rgba(148, 163, 184, 0.18) !important;
+  background: #f8fafc !important;
+  color: #475569 !important;
+  font-size: 11px !important;
+  font-weight: 800 !important;
+}
+
+.status-paid,
+.success,
+.status-chip.success,
+.customer-status-badge.success,
+.product-status.success,
+.supplier-status-badge.success {
+  background: rgba(22, 163, 74, 0.08) !important;
+  color: #15803d !important;
+}
+
+.status-pending,
+.warning,
+.status-chip.warning,
+.customer-status-badge.warning,
+.product-status.warning,
+.supplier-status-badge.warning {
+  background: rgba(217, 119, 6, 0.08) !important;
+  color: #b45309 !important;
+}
+
+.danger,
+.danger-lite,
+.status-chip.danger,
+.customer-status-badge.danger,
+.product-status.danger,
+.supplier-status-badge.danger {
+  background: rgba(220, 38, 38, 0.07) !important;
+  color: #b91c1c !important;
+}
+
+.app-table-footer {
+  margin-top: 8px !important;
+  padding-top: 8px !important;
+  border-top: 1px solid var(--enterprise-line) !important;
+}
+
+.app-table-footer-summary,
+.app-single-page-note,
+.app-rows-per-page span {
+  font-size: 11px !important;
+}
+
+.app-page-btn {
+  min-height: 30px !important;
+  border-radius: 8px !important;
+  font-size: 11px !important;
+}
+
+.modal-card,
+.customer-form-modal,
+.customer-details-modal,
+.payment-modal-card,
+.product-form-modal,
+.details-drawer,
+.payment-drawer,
+.purchase-drawer,
+.supplier-drawer {
+  border-radius: 12px !important;
+  border: 1px solid var(--enterprise-line) !important;
+  box-shadow: 0 30px 80px rgba(15, 23, 42, 0.2) !important;
+}
+
+body.rtl,
+html[dir="rtl"] body {
+  font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+}
+
+html[dir="rtl"] .app-data-table th,
+html[dir="rtl"] .app-data-table td {
+  text-align: right !important;
+}
+
+html[dir="rtl"] .app-data-table .align-right,
+html[dir="rtl"] .app-data-table th.align-right,
+html[dir="rtl"] .numeric-cell {
+  text-align: left !important;
+}
+
+html[dir="rtl"] .app-select-control {
+  background-position: left 12px center !important;
+  padding-inline: 34px 12px !important;
+}
+
+@media (min-width: 1181px) {
+  .customers-table-v2 th:nth-child(1),
+  .payments-table th:nth-child(1),
+  .purchase-table th:nth-child(1),
+  .suppliers-table th:nth-child(1),
+  .invoice-table th:nth-child(1),
+  .customers-table-v2 td:nth-child(1),
+  .payments-table td:nth-child(1),
+  .purchase-table td:nth-child(1),
+  .suppliers-table td:nth-child(1),
+  .invoice-table td:nth-child(1) {
+    width: 38px;
+  }
+
+  .customers-table-v2 th:last-child,
+  .payments-table th:last-child,
+  .products-table th:last-child,
+  .purchase-table th:last-child,
+  .suppliers-table th:last-child,
+  .invoice-table th:last-child,
+  .treasury-table th:last-child,
+  .customers-table-v2 td:last-child,
+  .payments-table td:last-child,
+  .products-table td:last-child,
+  .purchase-table td:last-child,
+  .suppliers-table td:last-child,
+  .invoice-table td:last-child,
+  .treasury-table td:last-child {
+    width: 96px;
+  }
+}
+
+@media (max-width: 1180px) {
+  .payments-table th:nth-child(8),
+  .payments-table td:nth-child(8),
+  .products-table th:nth-child(4),
+  .products-table td:nth-child(4),
+  .products-table th:nth-child(6),
+  .products-table td:nth-child(6),
+  .invoice-table th:nth-child(4),
+  .invoice-table td:nth-child(4),
+  .suppliers-table th:nth-child(6),
+  .suppliers-table td:nth-child(6),
+  .treasury-table th:nth-child(6),
+  .treasury-table td:nth-child(6) {
+    display: none !important;
+  }
+}
+
+@media (max-width: 900px) {
+  .app-main {
+    padding: 12px 12px calc(var(--mobile-bottom-nav-height) + 18px);
+  }
+
+  .toolbar-row,
+  .payments-toolbar-row,
+  .products-toolbar,
+  .purchase-toolbar,
+  .supplier-toolbar,
+  .workspace-toolbar,
+  .treasury-toolbar {
+    flex-wrap: wrap !important;
+  }
+
+  .toolbar-actions,
+  .products-toolbar-actions,
+  .toolbar-cluster,
+  .supplier-toolbar-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .customers-main.filters-open > .primary-filters,
+  .payments-main.filters-open > .primary-filters-row,
+  .products-toolbar-card.filters-open > .products-filter-grid,
+  .purchase-filters-card.filters-open > .primary-filters,
+  .suppliers-filter-card.filters-open > .supplier-primary-filters,
+  .invoice-workspace.filters-open .contextual-filters-scroll,
+  .suppliers-filter-card.filters-open > .supplier-primary-filters.secondary,
+  .customers-main.filters-open > .advanced-filters,
+  .payments-main.filters-open > .advanced-filters-panel,
+  .products-toolbar-card.filters-open > .products-more-filters,
+  .purchase-filters-card.filters-open > .more-filters-panel,
+  .invoice-workspace.filters-open .more-filters-popover {
+    position: static;
+    width: 100%;
+    grid-template-columns: 1fr;
+    margin-top: 10px;
+    box-shadow: none !important;
+  }
+
+  .customers-table-v2 th:nth-child(6),
+  .customers-table-v2 td:nth-child(6),
+  .payments-table th:nth-child(5),
+  .payments-table td:nth-child(5),
+  .payments-table th:nth-child(7),
+  .payments-table td:nth-child(7),
+  .products-table th:nth-child(2),
+  .products-table td:nth-child(2),
+  .products-table th:nth-child(3),
+  .products-table td:nth-child(3),
+  .purchase-table th:nth-child(4),
+  .purchase-table td:nth-child(4),
+  .invoice-table th:nth-child(5),
+  .invoice-table td:nth-child(5),
+  .treasury-table th:nth-child(3),
+  .treasury-table td:nth-child(3) {
+    display: none !important;
+  }
+}
+
+@media (max-width: 680px) {
+  .app-data-table th,
+  .app-data-table td {
+    padding: 8px 6px !important;
+    font-size: 11px !important;
+  }
+
+  .customers-table-v2 th:nth-child(3),
+  .customers-table-v2 td:nth-child(3),
+  .payments-table th:nth-child(2),
+  .payments-table td:nth-child(2),
+  .products-table th:nth-child(7),
+  .products-table td:nth-child(7),
+  .purchase-table th:nth-child(6),
+  .purchase-table td:nth-child(6),
+  .suppliers-table th:nth-child(3),
+  .suppliers-table td:nth-child(3),
+  .invoice-table th:nth-child(6),
+  .invoice-table td:nth-child(6),
+  .treasury-table th:nth-child(4),
+  .treasury-table td:nth-child(4) {
+    display: none !important;
+  }
+
+  .row-actions .details-btn,
+  .row-actions .row-view-btn {
+    display: none !important;
+  }
+}

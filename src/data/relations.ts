@@ -9,7 +9,7 @@ import type {
 } from "./types";
 
 export function isSuccessfulPaymentStatus(status?: string) {
-  return status === "Completed" || status === "Paid";
+  return status === "Completed" || status === "Paid" || status === "Partial";
 }
 
 export function roundMoney(value: number) {

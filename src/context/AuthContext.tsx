@@ -1,4 +1,5 @@
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+/* eslint-disable react-refresh/only-export-components */
+import { createContext, useCallback, useContext, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 
 type User = {
@@ -25,27 +26,28 @@ function isValidUser(value: unknown): value is User {
   );
 }
 
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+function readStoredUser(): User | null {
+  const storedUser = localStorage.getItem(AUTH_STORAGE_KEY);
+  if (!storedUser) return null;
 
-  useEffect(() => {
-    const storedUser = localStorage.getItem(AUTH_STORAGE_KEY);
-    if (!storedUser) return;
+  try {
+    const parsedUser: unknown = JSON.parse(storedUser);
 
-    try {
-      const parsedUser: unknown = JSON.parse(storedUser);
-
-      if (isValidUser(parsedUser)) {
-        setUser(parsedUser);
-      } else {
-        localStorage.removeItem(AUTH_STORAGE_KEY);
-      }
-    } catch {
-      localStorage.removeItem(AUTH_STORAGE_KEY);
+    if (isValidUser(parsedUser)) {
+      return parsedUser;
     }
-  }, []);
+  } catch {
+    // Invalid stored auth should be cleared and treated as logged out.
+  }
 
-  const login = (username: string, password: string) => {
+  localStorage.removeItem(AUTH_STORAGE_KEY);
+  return null;
+}
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<User | null>(() => readStoredUser());
+
+  const login = useCallback((username: string, password: string) => {
     const trimmedUsername = username.trim();
     const trimmedPassword = password.trim();
 
@@ -57,12 +59,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     return false;
-  };
+  }, []);
 
-  const logout = () => {
+  const logout = useCallback(() => {
     setUser(null);
     localStorage.removeItem(AUTH_STORAGE_KEY);
-  };
+  }, []);
 
   const value = useMemo(
     () => ({
@@ -71,7 +73,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       login,
       logout,
     }),
-    [user]
+    [login, logout, user]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

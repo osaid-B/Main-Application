@@ -1,9 +1,24 @@
-import AISmartBrief from "../components/ai/AISmartBrief";
-import AIActionTrigger from "../components/ai/AIActionTrigger";
-import { useAI } from "../context/AIContext";
 import { useEffect, useMemo, useState } from "react";
-import type { ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
+import {
+  ArrowRight,
+  BadgeDollarSign,
+  BrainCircuit,
+  Boxes,
+  BriefcaseBusiness,
+  CheckCircle2,
+  ChevronRight,
+  CircleAlert,
+  CreditCard,
+  FileClock,
+  FileSearch,
+  PackageSearch,
+  TrendingDown,
+  TrendingUp,
+  Users,
+} from "lucide-react";
+import { useAI } from "../context/AIContext";
+import "./Dashboard.css";
 import {
   getCustomers,
   getEmployees,
@@ -16,6 +31,7 @@ import {
 import {
   buildInvoicesWithRelations,
   calculateProductSoldQuantity,
+  roundMoney,
 } from "../data/relations";
 import type {
   Customer,
@@ -27,20 +43,17 @@ import type {
   Purchase,
 } from "../data/types";
 
+type PeriodFilter = "today" | "week" | "month";
+type PriorityTone = "critical" | "important" | "info";
+type PreviewKey = "payments" | "invoices" | "products" | "customers";
+
 type DashboardNotification = {
   id: string;
   title: string;
   description: string;
+  actionLabel: string;
   path: string;
-  tone: "info" | "warning" | "success" | "danger";
-};
-
-type PreviewSection = {
-  key: string;
-  label: string;
-  path: string;
-  description: string;
-  render: () => ReactNode;
+  tone: PriorityTone;
 };
 
 type ExtendedInvoice = Invoice & {
@@ -49,94 +62,122 @@ type ExtendedInvoice = Invoice & {
   status: "Paid" | "Partial" | "Debit";
 };
 
+type SmartBriefItem = {
+  id: string;
+  category: "Risk" | "Opportunity" | "Recommended Action";
+  title: string;
+  detail: string;
+  tone: PriorityTone;
+  actionLabel: string;
+  prompt: string;
+};
+
 function formatMoney(value: number) {
-  const safeValue = Number.isFinite(value) ? value : 0;
-  return `$${safeValue.toLocaleString()}`;
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 2,
+  }).format(roundMoney(value));
 }
 
-function isRecent(dateString?: string, days = 7) {
+function formatDate(value?: string) {
+  if (!value) return "No date";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+
+  return new Intl.DateTimeFormat("en-US", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(parsed);
+}
+
+function isWithinPeriod(dateString: string | undefined, period: PeriodFilter) {
   if (!dateString) return false;
-  const input = new Date(dateString);
-  if (Number.isNaN(input.getTime())) return false;
+  const target = new Date(dateString);
+  if (Number.isNaN(target.getTime())) return false;
 
   const now = new Date();
-  const diff = now.getTime() - input.getTime();
-  return diff <= days * 24 * 60 * 60 * 1000;
+  const start = new Date(now);
+  start.setHours(0, 0, 0, 0);
+
+  if (period === "today") {
+    return target >= start;
+  }
+
+  if (period === "week") {
+    start.setDate(start.getDate() - 6);
+    return target >= start;
+  }
+
+  start.setDate(1);
+  return target >= start;
 }
 
-function MiniPageFrame({
+function getPeriodLabel(period: PeriodFilter) {
+  if (period === "today") return "Today";
+  if (period === "week") return "This Week";
+  return "This Month";
+}
+
+function getPriorityToneClass(tone: PriorityTone) {
+  if (tone === "critical") return "tone-critical";
+  if (tone === "important") return "tone-important";
+  return "tone-info";
+}
+
+function getRelativeText(dateString?: string) {
+  if (!dateString) return "No recent activity";
+  const date = new Date(dateString);
+  if (Number.isNaN(date.getTime())) return "";
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const target = new Date(date);
+  target.setHours(0, 0, 0, 0);
+  const diff = Math.round((today.getTime() - target.getTime()) / 86400000);
+  if (diff === 0) return "Today";
+  if (diff === 1) return "Yesterday";
+  if (diff < 7) return `${diff} days ago`;
+  if (diff < 30) return `${Math.floor(diff / 7)} weeks ago`;
+  return `${Math.floor(diff / 30)} months ago`;
+}
+
+function PreviewFrame({
   title,
-  badge,
+  subtitle,
   children,
 }: {
   title: string;
-  badge: string;
-  children: ReactNode;
+  subtitle: string;
+  children: React.ReactNode;
 }) {
   return (
-    <div className="mini-page-frame">
-      <div className="mini-page-topbar">
-        <span className="mini-page-badge">{badge}</span>
-
-        <div className="mini-page-window-actions">
-          <span />
-          <span />
-          <span />
-        </div>
-      </div>
-
-      <div className="mini-page-header">
+    <div className="preview-frame">
+      <div className="preview-frame-header">
         <div>
           <h3>{title}</h3>
-          <p>Live interface snapshot</p>
+          <p>{subtitle}</p>
         </div>
-
-        <div className="mini-page-search">
-          <span />
-        </div>
+        <span className="preview-frame-badge">Live</span>
       </div>
-
-      <div className="mini-page-content">{children}</div>
+      <div className="preview-frame-content">{children}</div>
     </div>
   );
 }
 
-function MiniStat({
-  label,
-  value,
-}: {
-  label: string;
-  value: string | number;
-}) {
-  return (
-    <div className="mini-stat">
-      <span>{label}</span>
-      <strong>{value}</strong>
-    </div>
-  );
-}
-
-function InsightCard({
-  label,
-  value,
-  meta,
-}: {
-  label: string;
-  value: string | number;
-  meta: string;
-}) {
-  return (
-    <div className="dashboard-summary-card">
-      <div className="dashboard-summary-label">{label}</div>
-      <div className="dashboard-summary-value">{value}</div>
-      <div className="dashboard-summary-meta">{meta}</div>
-    </div>
-  );
+function SkeletonCard() {
+  return <div className="dashboard-skeleton-card" />;
 }
 
 export default function Dashboard() {
   const navigate = useNavigate();
   const { openAI } = useAI();
+
+  const [period, setPeriod] = useState<PeriodFilter>("week");
+  const [previewKey, setPreviewKey] = useState<PreviewKey>("payments");
+  const [loading, setLoading] = useState(true);
+  const [notificationsPaused, setNotificationsPaused] = useState(false);
+  const [notificationIndex, setNotificationIndex] = useState(0);
 
   const [customers] = useState<Customer[]>(() => getCustomers());
   const [products] = useState<Product[]>(() => getProducts());
@@ -146,49 +187,23 @@ export default function Dashboard() {
   const [payments] = useState<Payment[]>(() => getPayments());
   const [employees] = useState<Employee[]>(() => getEmployees());
 
-  const [previewIndex, setPreviewIndex] = useState(0);
-  const [notificationsPaused, setNotificationsPaused] = useState(false);
-  const [activeNotification, setActiveNotification] =
-    useState<DashboardNotification | null>(null);
-  const [notificationCursor, setNotificationCursor] = useState(0);
-  const [isToastVisible, setIsToastVisible] = useState(false);
+  useEffect(() => {
+    const timer = window.setTimeout(() => setLoading(false), 280);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   const invoices = useMemo<ExtendedInvoice[]>(
     () => buildInvoicesWithRelations(invoicesRaw, customers, payments),
     [invoicesRaw, customers, payments]
   );
 
-  const completedPaymentsTotal = useMemo(() => {
-    return payments
-      .filter(
-        (payment) =>
-          payment.status === "Completed" || payment.status === "Paid"
-      )
-      .reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
-  }, [payments]);
-
-  const purchasesTotal = useMemo(() => {
-    return purchases
-      .filter((purchase) => purchase.status === "Received")
-      .reduce((sum, purchase) => sum + Number(purchase.totalCost || 0), 0);
-  }, [purchases]);
-
   const lowStockProducts = useMemo(() => {
     return products.filter((product) => {
       const purchasedQty = purchases
-        .filter(
-          (purchase) =>
-            purchase.productId === product.id &&
-            purchase.status === "Received"
-        )
+        .filter((purchase) => purchase.productId === product.id && purchase.status === "Received")
         .reduce((sum, purchase) => sum + Number(purchase.quantity || 0), 0);
-
       const soldQty = calculateProductSoldQuantity(product.id, invoiceItems);
-      const available = Math.max(
-        Number(product.stock || 0) + purchasedQty - soldQty,
-        0
-      );
-
+      const available = Math.max(Number(product.stock || 0) + purchasedQty - soldQty, 0);
       return available > 0 && available <= 15;
     });
   }, [products, purchases, invoiceItems]);
@@ -196,1177 +211,707 @@ export default function Dashboard() {
   const outOfStockProducts = useMemo(() => {
     return products.filter((product) => {
       const purchasedQty = purchases
-        .filter(
-          (purchase) =>
-            purchase.productId === product.id &&
-            purchase.status === "Received"
-        )
+        .filter((purchase) => purchase.productId === product.id && purchase.status === "Received")
         .reduce((sum, purchase) => sum + Number(purchase.quantity || 0), 0);
-
       const soldQty = calculateProductSoldQuantity(product.id, invoiceItems);
-      const available = Math.max(
-        Number(product.stock || 0) + purchasedQty - soldQty,
-        0
-      );
-
+      const available = Math.max(Number(product.stock || 0) + purchasedQty - soldQty, 0);
       return available <= 0;
     });
   }, [products, purchases, invoiceItems]);
 
-  const debitInvoices = useMemo(
-    () => invoices.filter((invoice) => invoice.status === "Debit"),
-    [invoices]
+  const filteredPayments = useMemo(
+    () => payments.filter((payment) => isWithinPeriod(payment.date, period)),
+    [payments, period]
+  );
+  const filteredInvoices = useMemo(
+    () => invoices.filter((invoice) => isWithinPeriod(invoice.date, period)),
+    [invoices, period]
+  );
+  const filteredCustomers = useMemo(
+    () => customers.filter((customer) => isWithinPeriod(customer.joinedAt, period)),
+    [customers, period]
   );
 
-  const partialInvoices = useMemo(
-    () => invoices.filter((invoice) => invoice.status === "Partial"),
-    [invoices]
-  );
-
-  const recentCustomers = useMemo(
+  const completedPayments = useMemo(
     () =>
-      customers.filter((customer) => isRecent(customer.joinedAt, 14)).slice(0, 5),
-    [customers]
+      filteredPayments.filter(
+        (payment) => payment.status === "Completed" || payment.status === "Paid" || payment.status === "Partial"
+      ),
+    [filteredPayments]
   );
 
-  const recentInvoices = useMemo(
-    () => [...invoices].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5),
-    [invoices]
+  const revenue = useMemo(
+    () => completedPayments.reduce((sum, payment) => sum + Number(payment.amount || 0), 0),
+    [completedPayments]
   );
 
-  const recentPayments = useMemo(
-    () => [...payments].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5),
-    [payments]
+  const openInvoices = useMemo(
+    () => filteredInvoices.filter((invoice) => invoice.status === "Debit" || invoice.status === "Partial"),
+    [filteredInvoices]
   );
 
-  const previewSections = useMemo<PreviewSection[]>(
+  const pendingCollections = useMemo(
+    () => openInvoices.reduce((sum, invoice) => sum + Number(invoice.remainingAmount || 0), 0),
+    [openInvoices]
+  );
+
+  const failedPayments = useMemo(
+    () => filteredPayments.filter((payment) => payment.status === "Failed").length,
+    [filteredPayments]
+  );
+
+  const refundedPayments = useMemo(
+    () => filteredPayments.filter((payment) => payment.status === "Refunded").length,
+    [filteredPayments]
+  );
+
+  const newCustomers = filteredCustomers.length;
+  const stockAlerts = lowStockProducts.length + outOfStockProducts.length;
+  const activeTeamSignals = useMemo(() => {
+    const employeesWithRecentNotes = employees.filter((employee) => isWithinPeriod(employee.checkIn, period)).length;
+    return employeesWithRecentNotes || employees.length;
+  }, [employees, period]);
+
+  const purchasesTotal = useMemo(
+    () =>
+      purchases
+        .filter((purchase) => purchase.status === "Received" && isWithinPeriod(purchase.date, period))
+        .reduce((sum, purchase) => sum + Number(purchase.totalCost || 0), 0),
+    [period, purchases]
+  );
+
+  const executiveSnapshot = useMemo(
+    () => [
+      { label: "Revenue", value: formatMoney(revenue) },
+      { label: "Open invoices", value: openInvoices.length },
+      { label: "Stock alerts", value: stockAlerts },
+    ],
+    [revenue, openInvoices.length, stockAlerts]
+  );
+
+  const kpis = useMemo(
     () => [
       {
-        key: "customers",
-        label: "Customers",
-        path: "/customers",
-        description: "Recent additions and customer activity snapshot.",
-        render: () => (
-          <MiniPageFrame title="Customers" badge="Customers">
-            <div className="mini-stats-grid">
-              <MiniStat label="Total" value={customers.length} />
-              <MiniStat label="New" value={recentCustomers.length} />
-              <MiniStat label="Team" value={employees.length} />
+        label: "Revenue",
+        value: formatMoney(revenue),
+        meta: `${getPeriodLabel(period)}`,
+        icon: <BadgeDollarSign size={18} />,
+      },
+      {
+        label: "Open Invoices",
+        value: openInvoices.length,
+        meta: `${formatMoney(pendingCollections)} pending`,
+        icon: <FileClock size={18} />,
+      },
+      {
+        label: "Collections Pending",
+        value: formatMoney(pendingCollections),
+        meta: `${openInvoices.length} invoices waiting`,
+        icon: <CreditCard size={18} />,
+      },
+      {
+        label: "Stock Alerts",
+        value: stockAlerts,
+        meta: `${outOfStockProducts.length} out of stock`,
+        icon: <Boxes size={18} />,
+      },
+      {
+        label: "New Customers",
+        value: newCustomers,
+        meta: `${getPeriodLabel(period)}`,
+        icon: <Users size={18} />,
+      },
+      {
+        label: "Team Signals",
+        value: activeTeamSignals,
+        meta: `${employees.length} employees tracked`,
+        icon: <BriefcaseBusiness size={18} />,
+      },
+    ],
+    [
+      revenue,
+      period,
+      openInvoices.length,
+      pendingCollections,
+      stockAlerts,
+      outOfStockProducts.length,
+      newCustomers,
+      activeTeamSignals,
+      employees.length,
+    ]
+  );
+
+  const smartBrief = useMemo<SmartBriefItem[]>(() => {
+    const debitCount = filteredInvoices.filter((invoice) => invoice.status === "Debit").length;
+    const partialCount = filteredInvoices.filter((invoice) => invoice.status === "Partial").length;
+    const recentCustomerCount = filteredCustomers.length;
+    const collectionsTrend = purchasesTotal > 0 ? ((revenue - purchasesTotal) / purchasesTotal) * 100 : 0;
+
+    return [
+      {
+        id: "risk",
+        category: "Risk",
+        title:
+          debitCount > 0
+            ? `${debitCount} invoices need review`
+            : stockAlerts > 0
+            ? `${stockAlerts} stock alerts need action`
+            : "No critical alerts right now",
+        detail:
+          debitCount > 0
+            ? `${partialCount} more invoices are partially collected.`
+            : stockAlerts > 0
+            ? `${outOfStockProducts.length} products are already unavailable.`
+            : "Collections and stock are stable in the current view.",
+        tone: debitCount > 0 || stockAlerts > 0 ? "critical" : "info",
+        actionLabel: debitCount > 0 ? "Review invoices" : "Check stock",
+        prompt:
+          debitCount > 0
+            ? "Review the invoice risk signals on the dashboard and tell me what should be handled first."
+            : "Analyze the current stock alerts and suggest the next actions.",
+      },
+      {
+        id: "opportunity",
+        category: "Opportunity",
+        title:
+          recentCustomerCount > 0
+            ? `${recentCustomerCount} new customers entered the pipeline`
+            : "Customer growth is flat in this view",
+        detail:
+          recentCustomerCount > 0
+            ? "Follow up with recent accounts for early invoice conversion."
+            : "Consider targeting inactive customer segments this period.",
+        tone: "important",
+        actionLabel: "Review customers",
+        prompt:
+          recentCustomerCount > 0
+            ? "Analyze the recent customers and suggest the strongest next commercial actions."
+            : "Suggest actions to improve customer growth based on current dashboard signals.",
+      },
+      {
+        id: "action",
+        category: "Recommended Action",
+        title:
+          collectionsTrend < -10
+            ? "Collections are down versus purchase cost"
+            : failedPayments > 0
+            ? `${failedPayments} payments need follow-up`
+            : "Generate an executive summary",
+        detail:
+          collectionsTrend < -10
+            ? "Review collections, payment failures, and overdue exposure with AI."
+            : failedPayments > 0
+            ? `${refundedPayments} refunds were also recorded in this period.`
+            : "Ask AI to explain revenue, collections, and stock movement together.",
+        tone: collectionsTrend < -10 || failedPayments > 0 ? "important" : "info",
+        actionLabel: collectionsTrend < -10 ? "Explain revenue" : "Open AI summary",
+        prompt:
+          collectionsTrend < -10
+            ? "Explain the revenue and collections change compared with purchasing activity."
+            : "Give me a concise executive summary for this dashboard view.",
+      },
+    ];
+  }, [failedPayments, filteredCustomers.length, filteredInvoices, outOfStockProducts.length, purchasesTotal, refundedPayments, revenue, stockAlerts]);
+
+  const rightColumnTotals = useMemo(
+    () => [
+      {
+        label: "Revenue",
+        value: formatMoney(revenue),
+        meta: `${getPeriodLabel(period)}`,
+      },
+      {
+        label: "Collections",
+        value: formatMoney(pendingCollections),
+        meta: `${openInvoices.length} open invoices`,
+      },
+      {
+        label: "Stock Alerts",
+        value: stockAlerts,
+        meta: `${lowStockProducts.length} low · ${outOfStockProducts.length} out`,
+      },
+    ],
+    [revenue, period, pendingCollections, openInvoices.length, stockAlerts, lowStockProducts.length, outOfStockProducts.length]
+  );
+
+  const attentionSignals = useMemo(
+    () => [
+      {
+        title: "Invoices to review",
+        value: filteredInvoices.filter((invoice) => invoice.status === "Debit").length,
+        tone: "critical" as PriorityTone,
+        hint: "Critical follow-up required",
+      },
+      {
+        title: "New customers",
+        value: newCustomers,
+        tone: "info" as PriorityTone,
+        hint: `${getPeriodLabel(period)}`,
+      },
+      {
+        title: "Team signals",
+        value: activeTeamSignals,
+        tone: "important" as PriorityTone,
+        hint: "Review workload and activity",
+      },
+    ],
+    [activeTeamSignals, filteredInvoices, newCustomers, period]
+  );
+
+  const previewTabs = useMemo(() => {
+    const recentInvoiceRows = [...filteredInvoices]
+      .sort((a, b) => b.date.localeCompare(a.date))
+      .slice(0, 4);
+    const recentPaymentRows = [...filteredPayments]
+      .sort((a, b) => b.date.localeCompare(a.date))
+      .slice(0, 4);
+    const recentCustomerRows = [...customers]
+      .sort((a, b) => (b.joinedAt ?? "").localeCompare(a.joinedAt ?? ""))
+      .slice(0, 4);
+    const productRows = [...products]
+      .map((product) => {
+        const purchasedQty = purchases
+          .filter((purchase) => purchase.productId === product.id && purchase.status === "Received")
+          .reduce((sum, purchase) => sum + Number(purchase.quantity || 0), 0);
+        const soldQty = calculateProductSoldQuantity(product.id, invoiceItems);
+        const available = Math.max(Number(product.stock || 0) + purchasedQty - soldQty, 0);
+        return { ...product, available };
+      })
+      .slice(0, 4);
+
+    return {
+      payments: {
+        title: "Payments",
+        subtitle: "Recent collection activity and recorded amounts.",
+        path: "/payments",
+        actionLabel: "Check payments",
+        content: (
+          <PreviewFrame title="Payments" subtitle="Recent collection activity">
+            <div className="preview-mini-stats">
+              <div><span>Revenue</span><strong>{formatMoney(revenue)}</strong></div>
+              <div><span>Pending</span><strong>{filteredPayments.filter((payment) => payment.status === "Pending").length}</strong></div>
+              <div><span>Refunded</span><strong>{refundedPayments}</strong></div>
             </div>
-
-            <div className="mini-table">
-              <div className="mini-table-head">
-                <span>Name</span>
-                <span>Phone</span>
-                <span>ID</span>
-              </div>
-
-              {customers.slice(0, 4).map((customer) => (
-                <div key={customer.id} className="mini-table-row">
-                  <span>{customer.name}</span>
-                  <span>{customer.phone}</span>
-                  <span>{customer.id}</span>
+            <div className="preview-table">
+              <div className="preview-table-head"><span>Payment</span><span>Date</span><span>Amount</span></div>
+              {recentPaymentRows.map((payment) => (
+                <div key={payment.id} className="preview-table-row">
+                  <span>{payment.paymentId ?? payment.id}</span>
+                  <span>{formatDate(payment.date)}</span>
+                  <span>{formatMoney(Number(payment.amount || 0))}</span>
                 </div>
               ))}
             </div>
-          </MiniPageFrame>
+          </PreviewFrame>
         ),
       },
-      {
-        key: "invoices",
-        label: "Invoices",
+      invoices: {
+        title: "Invoices",
+        subtitle: "Open balances and review priority.",
         path: "/invoices",
-        description: "Outstanding balances and current invoice status.",
-        render: () => (
-          <MiniPageFrame title="Invoices" badge="Invoices">
-            <div className="mini-stats-grid">
-              <MiniStat label="Total" value={invoices.length} />
-              <MiniStat label="Debit" value={debitInvoices.length} />
-              <MiniStat label="Partial" value={partialInvoices.length} />
+        actionLabel: "Open invoices",
+        content: (
+          <PreviewFrame title="Invoices" subtitle="Open balances and risk">
+            <div className="preview-mini-stats">
+              <div><span>Open</span><strong>{openInvoices.length}</strong></div>
+              <div><span>Partial</span><strong>{filteredInvoices.filter((invoice) => invoice.status === "Partial").length}</strong></div>
+              <div><span>Balance</span><strong>{formatMoney(pendingCollections)}</strong></div>
             </div>
-
-            <div className="mini-table">
-              <div className="mini-table-head">
-                <span>Invoice</span>
-                <span>Customer</span>
-                <span>Status</span>
-              </div>
-
-              {recentInvoices.slice(0, 4).map((invoice) => (
-                <div key={invoice.id} className="mini-table-row">
+            <div className="preview-table">
+              <div className="preview-table-head"><span>Invoice</span><span>Customer</span><span>Status</span></div>
+              {recentInvoiceRows.map((invoice) => (
+                <div key={invoice.id} className="preview-table-row">
                   <span>{invoice.id}</span>
                   <span>{invoice.customerName}</span>
                   <span>{invoice.status}</span>
                 </div>
               ))}
             </div>
-          </MiniPageFrame>
+          </PreviewFrame>
         ),
       },
-      {
-        key: "payments",
-        label: "Payments",
-        path: "/payments",
-        description: "Revenue movement and recent payment records.",
-        render: () => (
-          <MiniPageFrame title="Payments" badge="Payments">
-            <div className="mini-stats-grid">
-              <MiniStat label="Total" value={payments.length} />
-              <MiniStat label="Revenue" value={formatMoney(completedPaymentsTotal)} />
-              <MiniStat label="Recent" value={recentPayments.length} />
-            </div>
-
-            <div className="mini-table">
-              <div className="mini-table-head">
-                <span>Payment</span>
-                <span>Date</span>
-                <span>Amount</span>
-              </div>
-
-              {recentPayments.slice(0, 4).map((payment) => (
-                <div key={payment.id} className="mini-table-row">
-                  <span>{payment.paymentId ?? payment.id}</span>
-                  <span>{payment.date}</span>
-                  <span>{formatMoney(Number(payment.amount || 0))}</span>
-                </div>
-              ))}
-            </div>
-          </MiniPageFrame>
-        ),
-      },
-      {
-        key: "products",
-        label: "Products",
+      products: {
+        title: "Products",
+        subtitle: "Inventory health and replenishment signals.",
         path: "/products",
-        description: "Stock visibility and quick product health check.",
-        render: () => (
-          <MiniPageFrame title="Products" badge="Products">
-            <div className="mini-stats-grid">
-              <MiniStat label="Products" value={products.length} />
-              <MiniStat label="Low Stock" value={lowStockProducts.length} />
-              <MiniStat label="Out" value={outOfStockProducts.length} />
+        actionLabel: "Open stock alerts",
+        content: (
+          <PreviewFrame title="Products" subtitle="Inventory health snapshot">
+            <div className="preview-mini-stats">
+              <div><span>Products</span><strong>{products.length}</strong></div>
+              <div><span>Low</span><strong>{lowStockProducts.length}</strong></div>
+              <div><span>Out</span><strong>{outOfStockProducts.length}</strong></div>
             </div>
-
-            <div className="mini-table">
-              <div className="mini-table-head">
-                <span>Name</span>
-                <span>Category</span>
-                <span>Status</span>
-              </div>
-
-              {products.slice(0, 4).map((product) => (
-                <div key={product.id} className="mini-table-row">
+            <div className="preview-table">
+              <div className="preview-table-head"><span>Product</span><span>Category</span><span>Stock</span></div>
+              {productRows.map((product) => (
+                <div key={product.id} className="preview-table-row">
                   <span>{product.name}</span>
                   <span>{product.category}</span>
-                  <span>
-                    {outOfStockProducts.some((p) => p.id === product.id)
-                      ? "Out"
-                      : lowStockProducts.some((p) => p.id === product.id)
-                      ? "Low"
-                      : "Good"}
-                  </span>
+                  <span>{product.available}</span>
                 </div>
               ))}
             </div>
-          </MiniPageFrame>
+          </PreviewFrame>
         ),
       },
-      {
-        key: "purchases",
-        label: "Purchases",
-        path: "/purchases",
-        description: "Purchase flow, received records, and cost snapshot.",
-        render: () => (
-          <MiniPageFrame title="Purchases" badge="Purchases">
-            <div className="mini-stats-grid">
-              <MiniStat label="Total" value={purchases.length} />
-              <MiniStat label="Cost" value={formatMoney(purchasesTotal)} />
-              <MiniStat
-                label="Received"
-                value={purchases.filter((p) => p.status === "Received").length}
-              />
+      customers: {
+        title: "Customers",
+        subtitle: "Recent additions and account movement.",
+        path: "/customers",
+        actionLabel: "Open customers",
+        content: (
+          <PreviewFrame title="Customers" subtitle="Customer pipeline snapshot">
+            <div className="preview-mini-stats">
+              <div><span>Total</span><strong>{customers.length}</strong></div>
+              <div><span>New</span><strong>{newCustomers}</strong></div>
+              <div><span>Open invoices</span><strong>{openInvoices.length}</strong></div>
             </div>
-
-            <div className="mini-table">
-              <div className="mini-table-head">
-                <span>Product ID</span>
-                <span>Status</span>
-                <span>Qty</span>
-              </div>
-
-              {purchases.slice(0, 4).map((purchase) => (
-                <div key={purchase.id} className="mini-table-row">
-                  <span>{purchase.productId}</span>
-                  <span>{purchase.status}</span>
-                  <span>{purchase.quantity}</span>
+            <div className="preview-table">
+              <div className="preview-table-head"><span>Name</span><span>Phone</span><span>Joined</span></div>
+              {recentCustomerRows.map((customer) => (
+                <div key={customer.id} className="preview-table-row">
+                  <span>{customer.name}</span>
+                  <span>{customer.phone}</span>
+                  <span>{getRelativeText(customer.joinedAt)}</span>
                 </div>
               ))}
             </div>
-          </MiniPageFrame>
+          </PreviewFrame>
         ),
       },
-    ],
-    [
-      customers,
-      recentCustomers,
-      employees,
-      invoices,
-      debitInvoices,
-      partialInvoices,
-      recentInvoices,
-      payments,
-      recentPayments,
-      products,
-      lowStockProducts,
-      outOfStockProducts,
-      purchases,
-      purchasesTotal,
-      completedPaymentsTotal,
-    ]
-  );
-
-  useEffect(() => {
-    if (previewSections.length <= 1) return;
-
-    const interval = window.setInterval(() => {
-      setPreviewIndex((prev) => (prev + 1) % previewSections.length);
-    }, 4200);
-
-    return () => window.clearInterval(interval);
-  }, [previewSections.length]);
+    };
+  }, [
+    customers,
+    filteredInvoices,
+    filteredPayments,
+    invoiceItems,
+    lowStockProducts.length,
+    newCustomers,
+    openInvoices.length,
+    pendingCollections,
+    products,
+    purchases,
+    refundedPayments,
+    revenue,
+    outOfStockProducts.length,
+  ]);
 
   const notifications = useMemo<DashboardNotification[]>(() => {
     const items: DashboardNotification[] = [];
 
-    lowStockProducts.slice(0, 2).forEach((product) => {
+    const debitInvoice = filteredInvoices.find((invoice) => invoice.status === "Debit");
+    if (debitInvoice) {
       items.push({
-        id: `low-${product.id}`,
-        title: "Low stock",
-        description: `${product.name} is close to the warning level.`,
-        path: "/products",
-        tone: "warning",
-      });
-    });
-
-    outOfStockProducts.slice(0, 1).forEach((product) => {
-      items.push({
-        id: `out-${product.id}`,
-        title: "Out of stock",
-        description: `${product.name} is unavailable right now.`,
-        path: "/products",
-        tone: "danger",
-      });
-    });
-
-    recentInvoices.slice(0, 2).forEach((invoice) => {
-      items.push({
-        id: `invoice-${invoice.id}`,
-        title: "Invoice update",
-        description: `${invoice.id} is currently ${invoice.status}.`,
+        id: `invoice-${debitInvoice.id}`,
+        title: "Invoice needs review",
+        description: `${debitInvoice.id} still has ${formatMoney(debitInvoice.remainingAmount)} outstanding.`,
+        actionLabel: "Review invoice",
         path: "/invoices",
-        tone: invoice.status === "Debit" ? "danger" : "info",
+        tone: "critical",
       });
-    });
+    }
+
+    const failedPayment = filteredPayments.find((payment) => payment.status === "Failed");
+    if (failedPayment) {
+      items.push({
+        id: `payment-${failedPayment.id}`,
+        title: "Payment follow-up required",
+        description: `${failedPayment.paymentId ?? failedPayment.id} failed and needs review.`,
+        actionLabel: "Check payments",
+        path: "/payments",
+        tone: "important",
+      });
+    }
+
+    const stockProduct = outOfStockProducts[0] ?? lowStockProducts[0];
+    if (stockProduct) {
+      items.push({
+        id: `stock-${stockProduct.id}`,
+        title: outOfStockProducts.length > 0 ? "Stock issue detected" : "Stock alert detected",
+        description: `${stockProduct.name} needs replenishment attention.`,
+        actionLabel: "Resolve now",
+        path: "/products",
+        tone: outOfStockProducts.length > 0 ? "critical" : "important",
+      });
+    }
 
     return items;
-  }, [lowStockProducts, outOfStockProducts, recentInvoices]);
+  }, [filteredInvoices, filteredPayments, lowStockProducts, outOfStockProducts]);
 
   useEffect(() => {
     if (notificationsPaused || notifications.length === 0) {
-      setActiveNotification(null);
-      setIsToastVisible(false);
       return;
     }
 
-    const current = notifications[notificationCursor % notifications.length];
-    setActiveNotification(current);
-    setIsToastVisible(true);
+    const timer = window.setTimeout(
+      () => setNotificationIndex((current) => (current + 1) % notifications.length),
+      4200
+    );
+    return () => window.clearTimeout(timer);
+  }, [notificationIndex, notifications, notificationsPaused]);
 
-    const hideTimer = window.setTimeout(() => {
-      setIsToastVisible(false);
-    }, 3200);
+  const activeNotification =
+    !notificationsPaused && notifications.length > 0
+      ? notifications[notificationIndex % notifications.length]
+      : null;
 
-    const nextTimer = window.setTimeout(() => {
-      setNotificationCursor((prev) => prev + 1);
-    }, 4700);
-
-    return () => {
-      window.clearTimeout(hideTimer);
-      window.clearTimeout(nextTimer);
-    };
-  }, [notificationCursor, notifications, notificationsPaused]);
-
-  useEffect(() => {
-    if (notificationCursor >= notifications.length && notifications.length > 0) {
-      setNotificationCursor(0);
-    }
-  }, [notificationCursor, notifications.length]);
-
-  const currentPreview = previewSections[previewIndex] ?? previewSections[0];
-
-  const dashboardSummary = useMemo(
-    () => [
-      {
-        label: "Revenue",
-        value: formatMoney(completedPaymentsTotal),
-        meta: "Completed payment records",
-      },
-      {
-        label: "Collections",
-        value: debitInvoices.length + partialInvoices.length,
-        meta: "Pending customer follow-up",
-      },
-      {
-        label: "Stock Alerts",
-        value: lowStockProducts.length + outOfStockProducts.length,
-        meta: "Low and out-of-stock products",
-      },
-    ],
-    [
-      completedPaymentsTotal,
-      debitInvoices.length,
-      partialInvoices.length,
-      lowStockProducts.length,
-      outOfStockProducts.length,
-    ]
-  );
-
-  const quickInsights = useMemo(
-    () => [
-      {
-        title: "Invoices to review",
-        value: debitInvoices.length,
-        hint: "Debit invoices still unpaid",
-      },
-      {
-        title: "New customers",
-        value: recentCustomers.length,
-        hint: "Added in the last 14 days",
-      },
-      {
-        title: "Team size",
-        value: employees.length,
-        hint: "Registered active staff",
-      },
-    ],
-    [debitInvoices.length, recentCustomers.length, employees.length]
-  );
-
-  const smartBriefItems = useMemo(
-    () => [
-      {
-        id: "attention",
-        label: "Attention",
-        value: `${debitInvoices.length} invoices need review`,
-        prompt: "حلل الفواتير التي تحتاج مراجعة الآن واعطني أهم الأولويات",
-      },
-      {
-        id: "opportunity",
-        label: "Opportunity",
-        value: `${recentCustomers.length} new customers joined recently`,
-        prompt: "حلل العملاء الجدد مؤخرًا وما الفرص المحتملة معهم",
-      },
-      {
-        id: "action",
-        label: "Recommended Action",
-        value: "Open AI Copilot for a deeper operational summary",
-        prompt: "اعطني ملخصًا تشغيليًا ذكيًا للوحة التحكم الحالية",
-      },
-    ],
-    [debitInvoices.length, recentCustomers.length]
-  );
+  const currentPreview = previewTabs[previewKey];
 
   return (
-    <>
-      <style>{`
-        .dashboard-page {
-          display: flex;
-          flex-direction: column;
-          gap: 24px;
-        }
-
-        .dashboard-hero {
-          position: relative;
-          overflow: hidden;
-          border-radius: 28px;
-          padding: 34px;
-          background:
-            linear-gradient(135deg, rgba(15, 23, 42, 0.78), rgba(37, 99, 235, 0.68)),
-            url("https://images.unsplash.com/photo-1556740749-887f6717d7e4?auto=format&fit=crop&w=1600&q=80")
-              center/cover no-repeat;
-          color: white;
-          box-shadow: 0 24px 60px rgba(15, 23, 42, 0.16);
-        }
-
-        .dashboard-hero::after {
-          content: "";
-          position: absolute;
-          inset: 0;
-          background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0));
-          pointer-events: none;
-        }
-
-        .dashboard-hero-content {
-          position: relative;
-          z-index: 1;
-          display: flex;
-          justify-content: space-between;
-          gap: 18px;
-          flex-wrap: wrap;
-          align-items: flex-start;
-        }
-
-        .dashboard-hero-text {
-          max-width: 760px;
-        }
-
-        .dashboard-hero-badge {
-          display: inline-flex;
-          align-items: center;
-          padding: 8px 14px;
-          border-radius: 999px;
-          background: rgba(255, 255, 255, 0.16);
-          color: white;
-          font-size: 13px;
-          font-weight: 700;
-          backdrop-filter: blur(10px);
-          margin-bottom: 14px;
-        }
-
-        .dashboard-hero-title {
-          margin: 0;
-          font-size: 46px;
-          line-height: 1.04;
-          font-weight: 800;
-          letter-spacing: -0.03em;
-        }
-
-        .dashboard-hero-subtitle {
-          margin: 14px 0 0;
-          font-size: 16px;
-          line-height: 1.8;
-          color: rgba(255,255,255,0.92);
-          max-width: 660px;
-        }
-
-        .dashboard-hero-actions {
-          display: flex;
-          gap: 12px;
-          flex-wrap: wrap;
-          margin-top: 24px;
-        }
-
-        .dashboard-hero-btn {
-          border: none;
-          border-radius: 14px;
-          padding: 12px 16px;
-          font-size: 14px;
-          font-weight: 700;
-          cursor: pointer;
-          transition: all 0.2s ease;
-        }
-
-        .dashboard-hero-btn.primary {
-          background: white;
-          color: #0f172a;
-        }
-
-        .dashboard-hero-btn.primary:hover {
-          transform: translateY(-1px);
-        }
-
-        .dashboard-hero-btn.secondary {
-          background: rgba(255,255,255,0.14);
-          color: white;
-          border: 1px solid rgba(255,255,255,0.18);
-        }
-
-        .dashboard-hero-btn.secondary:hover {
-          background: rgba(255,255,255,0.2);
-        }
-
-        .dashboard-main-grid {
-          display: grid;
-          grid-template-columns: 1.45fr 0.82fr;
-          gap: 24px;
-        }
-
-        .dashboard-panel {
-          background: #ffffff;
-          border: 1px solid #e2e8f0;
-          border-radius: 24px;
-          padding: 22px;
-          box-shadow: 0 14px 34px rgba(15, 23, 42, 0.04);
-        }
-
-        .dashboard-panel-title {
-          margin: 0;
-          font-size: 26px;
-          font-weight: 800;
-          color: #0f172a;
-          letter-spacing: -0.02em;
-        }
-
-        .dashboard-panel-subtitle {
-          margin: 8px 0 0;
-          color: #64748b;
-          font-size: 14px;
-          line-height: 1.7;
-        }
-
-        .dashboard-preview-head {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 12px;
-          margin-bottom: 18px;
-          flex-wrap: wrap;
-        }
-
-        .dashboard-preview-chip {
-          display: inline-flex;
-          align-items: center;
-          padding: 7px 12px;
-          border-radius: 999px;
-          background: #eff6ff;
-          color: #2563eb;
-          font-size: 12px;
-          font-weight: 700;
-        }
-
-        .dashboard-preview-body {
-          border: 1px solid #dbeafe;
-          background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
-          border-radius: 22px;
-          padding: 18px;
-          min-height: 350px;
-          transition: all 0.28s ease;
-          position: relative;
-          overflow: hidden;
-        }
-
-        .dashboard-preview-body::before {
-          content: "";
-          position: absolute;
-          inset: 0;
-          background: radial-gradient(circle at top right, rgba(37,99,235,0.06), transparent 32%);
-          pointer-events: none;
-        }
-
-        .dashboard-preview-footer {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-top: 18px;
-          gap: 12px;
-          flex-wrap: wrap;
-        }
-
-        .dashboard-link-btn {
-          border: none;
-          background: #dbeafe;
-          color: #1d4ed8;
-          padding: 10px 14px;
-          border-radius: 12px;
-          font-weight: 700;
-          cursor: pointer;
-          transition: all 0.2s ease;
-        }
-
-        .dashboard-link-btn:hover {
-          transform: translateY(-1px);
-          background: #bfdbfe;
-        }
-
-        .dashboard-preview-dots {
-          display: flex;
-          gap: 8px;
-        }
-
-        .dashboard-preview-dot {
-          width: 10px;
-          height: 10px;
-          border-radius: 999px;
-          background: #cbd5e1;
-          transition: all 0.2s ease;
-        }
-
-        .dashboard-preview-dot.active {
-          background: #2563eb;
-          transform: scale(1.1);
-        }
-
-        .dashboard-summary-grid {
-          display: grid;
-          grid-template-columns: 1fr;
-          gap: 14px;
-        }
-
-        .dashboard-summary-card {
-          border: 1px solid #e2e8f0;
-          border-radius: 18px;
-          padding: 16px;
-          background: #ffffff;
-          transition: transform 0.2s ease, box-shadow 0.2s ease;
-        }
-
-        .dashboard-summary-card:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 12px 24px rgba(15, 23, 42, 0.06);
-        }
-
-        .dashboard-summary-label {
-          color: #64748b;
-          font-size: 13px;
-          font-weight: 700;
-        }
-
-        .dashboard-summary-value {
-          margin-top: 10px;
-          color: #0f172a;
-          font-size: 30px;
-          font-weight: 800;
-        }
-
-        .dashboard-summary-meta {
-          margin-top: 8px;
-          color: #94a3b8;
-          font-size: 13px;
-        }
-
-        .dashboard-insights-list {
-          margin-top: 16px;
-          display: grid;
-          gap: 10px;
-        }
-
-        .dashboard-insight-row {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          gap: 12px;
-          border: 1px solid #e2e8f0;
-          border-radius: 16px;
-          padding: 12px 14px;
-          background: #fbfdff;
-        }
-
-        .dashboard-insight-title {
-          color: #0f172a;
-          font-size: 14px;
-          font-weight: 700;
-        }
-
-        .dashboard-insight-hint {
-          margin-top: 4px;
-          color: #94a3b8;
-          font-size: 12px;
-        }
-
-        .dashboard-insight-value {
-          color: #1d4ed8;
-          font-size: 22px;
-          font-weight: 800;
-          flex-shrink: 0;
-        }
-
-        .dashboard-ai-actions {
-          display: flex;
-          gap: 10px;
-          flex-wrap: wrap;
-          margin-top: 16px;
-        }
-
-        .dashboard-notification {
-          position: fixed;
-          right: 22px;
-          bottom: 20px;
-          width: min(340px, calc(100vw - 28px));
-          background: rgba(255,255,255,0.95);
-          backdrop-filter: blur(14px);
-          border: 1px solid #e2e8f0;
-          border-radius: 18px;
-          box-shadow: 0 22px 42px rgba(15, 23, 42, 0.12);
-          padding: 14px 14px 13px;
-          z-index: 1200;
-          transition: transform 0.35s ease, opacity 0.35s ease;
-        }
-
-        .dashboard-notification.visible {
-          opacity: 1;
-          transform: translateY(0);
-          pointer-events: auto;
-        }
-
-        .dashboard-notification.hidden {
-          opacity: 0;
-          transform: translateY(18px);
-          pointer-events: none;
-        }
-
-        .dashboard-notification.info {
-          border-left: 4px solid #3b82f6;
-        }
-
-        .dashboard-notification.warning {
-          border-left: 4px solid #f59e0b;
-        }
-
-        .dashboard-notification.success {
-          border-left: 4px solid #22c55e;
-        }
-
-        .dashboard-notification.danger {
-          border-left: 4px solid #ef4444;
-        }
-
-        .dashboard-notification-head {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-          gap: 12px;
-        }
-
-        .dashboard-notification-title {
-          margin: 0;
-          font-size: 14px;
-          font-weight: 800;
-          color: #0f172a;
-        }
-
-        .dashboard-notification-text {
-          margin: 6px 0 0;
-          color: #64748b;
-          font-size: 13px;
-          line-height: 1.65;
-        }
-
-        .dashboard-notification-link {
-          margin-top: 10px;
-          border: none;
-          background: transparent;
-          padding: 0;
-          color: #2563eb;
-          font-size: 13px;
-          font-weight: 700;
-          cursor: pointer;
-        }
-
-        .dashboard-toast-close {
-          border: none;
-          background: #f1f5f9;
-          color: #475569;
-          width: 34px;
-          height: 34px;
-          border-radius: 10px;
-          cursor: pointer;
-          flex-shrink: 0;
-          font-weight: 800;
-        }
-
-        .mini-page-frame {
-          height: 100%;
-          border: 1px solid #dbeafe;
-          border-radius: 22px;
-          background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
-          padding: 16px;
-          display: flex;
-          flex-direction: column;
-          gap: 14px;
-          position: relative;
-          overflow: hidden;
-        }
-
-        .mini-page-frame::after {
-          content: "";
-          position: absolute;
-          right: -40px;
-          top: -40px;
-          width: 130px;
-          height: 130px;
-          border-radius: 999px;
-          background: rgba(37,99,235,0.05);
-          pointer-events: none;
-        }
-
-        .mini-page-topbar {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-        }
-
-        .mini-page-badge {
-          display: inline-flex;
-          align-items: center;
-          padding: 6px 10px;
-          border-radius: 999px;
-          background: #eff6ff;
-          color: #2563eb;
-          font-size: 11px;
-          font-weight: 800;
-        }
-
-        .mini-page-window-actions {
-          display: flex;
-          gap: 6px;
-        }
-
-        .mini-page-window-actions span {
-          width: 8px;
-          height: 8px;
-          border-radius: 999px;
-          background: #cbd5e1;
-        }
-
-        .mini-page-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          gap: 12px;
-        }
-
-        .mini-page-header h3 {
-          margin: 0;
-          font-size: 18px;
-          color: #0f172a;
-          font-weight: 800;
-        }
-
-        .mini-page-header p {
-          margin: 4px 0 0;
-          font-size: 12px;
-          color: #64748b;
-        }
-
-        .mini-page-search {
-          width: 126px;
-          height: 38px;
-          border-radius: 14px;
-          border: 1px solid #dbeafe;
-          background: #f8fafc;
-          flex-shrink: 0;
-          display: flex;
-          align-items: center;
-          padding: 0 12px;
-        }
-
-        .mini-page-search span {
-          display: block;
-          width: 58px;
-          height: 8px;
-          border-radius: 999px;
-          background: #dbeafe;
-        }
-
-        .mini-page-content {
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-          position: relative;
-          z-index: 1;
-        }
-
-        .mini-stats-grid {
-          display: grid;
-          grid-template-columns: repeat(3, minmax(0, 1fr));
-          gap: 10px;
-        }
-
-        .mini-stat {
-          border: 1px solid #e2e8f0;
-          background: white;
-          border-radius: 15px;
-          padding: 10px;
-          display: flex;
-          flex-direction: column;
-          gap: 6px;
-          min-height: 74px;
-          box-shadow: 0 8px 16px rgba(15, 23, 42, 0.03);
-        }
-
-        .mini-stat span {
-          font-size: 11px;
-          color: #64748b;
-          font-weight: 700;
-        }
-
-        .mini-stat strong {
-          font-size: 15px;
-          color: #0f172a;
-          font-weight: 800;
-          word-break: break-word;
-        }
-
-        .mini-table {
-          border: 1px solid #e2e8f0;
-          border-radius: 16px;
-          overflow: hidden;
-          background: white;
-        }
-
-        .mini-table-head,
-        .mini-table-row {
-          display: grid;
-          grid-template-columns: repeat(3, minmax(0, 1fr));
-          gap: 10px;
-          padding: 10px 12px;
-          align-items: center;
-        }
-
-        .mini-table-head {
-          background: #f8fafc;
-          border-bottom: 1px solid #e2e8f0;
-        }
-
-        .mini-table-head span {
-          font-size: 11px;
-          font-weight: 800;
-          color: #64748b;
-        }
-
-        .mini-table-row {
-          border-bottom: 1px solid #f1f5f9;
-          transition: background 0.18s ease;
-        }
-
-        .mini-table-row:hover {
-          background: #fbfdff;
-        }
-
-        .mini-table-row:last-child {
-          border-bottom: none;
-        }
-
-        .mini-table-row span {
-          font-size: 12px;
-          color: #0f172a;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
-
-        @media (max-width: 1100px) {
-          .dashboard-main-grid {
-            grid-template-columns: 1fr;
-          }
-        }
-
-        @media (max-width: 768px) {
-          .dashboard-hero {
-            padding: 24px;
-          }
-
-          .dashboard-hero-title {
-            font-size: 34px;
-          }
-
-          .dashboard-hero-actions {
-            flex-direction: column;
-            align-items: stretch;
-          }
-
-          .dashboard-hero-btn,
-          .dashboard-link-btn {
-            width: 100%;
-          }
-
-          .dashboard-notification {
-            right: 14px;
-            left: 14px;
-            width: auto;
-            bottom: 14px;
-          }
-
-          .mini-page-header {
-            flex-direction: column;
-            align-items: flex-start;
-          }
-
-          .mini-page-search {
-            width: 100%;
-          }
-
-          .mini-stats-grid {
-            grid-template-columns: 1fr;
-          }
-        }
-      `}</style>
-
-      <div className="dashboard-page">
-        <section className="dashboard-hero">
-          <div className="dashboard-hero-content">
-            <div className="dashboard-hero-text">
-              <span className="dashboard-hero-badge">Business Control Center</span>
-              <h1 className="dashboard-hero-title">Dashboard Overview</h1>
-              <p className="dashboard-hero-subtitle">
-                A cleaner executive dashboard with live previews, better signal-focused
-                alerts, and a faster snapshot of revenue, invoices, stock, and team activity.
-              </p>
-
-              <div className="dashboard-hero-actions">
-                <button
-                  className="dashboard-hero-btn primary"
-                  onClick={() => navigate("/customers")}
-                >
-                  + Add Customer
-                </button>
-                <button
-                  className="dashboard-hero-btn secondary"
-                  onClick={() => navigate("/invoices")}
-                >
-                  + Add Invoice
-                </button>
-                <button
-                  className="dashboard-hero-btn secondary"
-                  onClick={() => setNotificationsPaused((prev) => !prev)}
-                >
-                  {notificationsPaused ? "Resume Alerts" : "Pause Alerts"}
-                </button>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <AISmartBrief
-          items={smartBriefItems}
-          onOpenCopilot={(prompt) => openAI({ prompt })}
-        />
-
-        <section className="dashboard-main-grid">
-          <div className="dashboard-panel">
-            <div className="dashboard-preview-head">
-              <div>
-                <span className="dashboard-preview-chip">Live Page Preview</span>
-                <h2 className="dashboard-panel-title">{currentPreview.label}</h2>
-                <p className="dashboard-panel-subtitle">
-                  {currentPreview.description}
-                </p>
-              </div>
-            </div>
-
-            <div className="dashboard-preview-body">
-              {currentPreview.render()}
-            </div>
-
-            <div className="dashboard-preview-footer">
-              <button
-                className="dashboard-link-btn"
-                onClick={() => navigate(currentPreview.path)}
-              >
-                Open {currentPreview.label}
-              </button>
-
-              <div className="dashboard-preview-dots">
-                {previewSections.map((section, index) => (
-                  <span
-                    key={section.key}
-                    className={`dashboard-preview-dot ${
-                      previewIndex === index ? "active" : ""
-                    }`}
-                  />
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <div className="dashboard-panel">
-            <div style={{ marginBottom: "18px" }}>
-              <span className="dashboard-preview-chip">Business Snapshot</span>
-              <h2 className="dashboard-panel-title">Key Totals</h2>
-              <p className="dashboard-panel-subtitle">
-                A lighter summary with the most important numbers only.
-              </p>
-            </div>
-
-            <div className="dashboard-summary-grid">
-              {dashboardSummary.map((item) => (
-                <InsightCard
-                  key={item.label}
-                  label={item.label}
-                  value={item.value}
-                  meta={item.meta}
-                />
-              ))}
-            </div>
-
-            <div className="dashboard-ai-actions">
-              <AIActionTrigger
-                label="Explain Revenue"
-                onClick={() =>
-                  openAI({
-                    prompt: "اشرح لي رقم الإيرادات الحالي وما الذي يؤثر عليه",
-                  })
-                }
-              />
-              <AIActionTrigger
-                label="Review Collections"
-                onClick={() =>
-                  openAI({
-                    prompt: "حلل التحصيلات الحالية وما الفواتير التي تحتاج متابعة",
-                  })
-                }
-              />
-              <AIActionTrigger
-                label="Check Stock Alerts"
-                onClick={() =>
-                  openAI({
-                    prompt: "حلل تنبيهات المخزون الحالية وما الإجراء المقترح",
-                  })
-                }
-              />
-            </div>
-
-            <div className="dashboard-insights-list">
-              {quickInsights.map((item) => (
-                <div key={item.title} className="dashboard-insight-row">
-                  <div>
-                    <div className="dashboard-insight-title">{item.title}</div>
-                    <div className="dashboard-insight-hint">{item.hint}</div>
-                  </div>
-                  <div className="dashboard-insight-value">{item.value}</div>
+    <div className="dashboard-command-center">
+      <section className="dashboard-executive-hero">
+        <div className="dashboard-hero-overlay" />
+        <div className="dashboard-hero-content">
+          <div className="dashboard-hero-copy">
+            <span className="dashboard-hero-label">{getPeriodLabel(period)} Executive View</span>
+            <h1>Business Control Center</h1>
+            <p>Revenue, collections, invoices, stock, and team signals in one compact command view.</p>
+
+            <div className="dashboard-inline-kpis">
+              {executiveSnapshot.map((item) => (
+                <div key={item.label} className="dashboard-inline-kpi">
+                  <span>{item.label}</span>
+                  <strong>{item.value}</strong>
                 </div>
               ))}
             </div>
           </div>
-        </section>
-      </div>
 
-      {activeNotification && !notificationsPaused && (
-        <div
-          className={`dashboard-notification ${activeNotification.tone} ${
-            isToastVisible ? "visible" : "hidden"
-          }`}
-        >
-          <div className="dashboard-notification-head">
-            <div>
-              <h4 className="dashboard-notification-title">
-                {activeNotification.title}
-              </h4>
-              <p className="dashboard-notification-text">
-                {activeNotification.description}
-              </p>
-              <button
-                type="button"
-                className="dashboard-notification-link"
-                onClick={() => navigate(activeNotification.path)}
-              >
-                Open page
-              </button>
+          <div className="dashboard-hero-actions">
+            <div className="dashboard-period-switch">
+              {(["today", "week", "month"] as PeriodFilter[]).map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  className={`period-btn ${period === value ? "active" : ""}`}
+                  onClick={() => setPeriod(value)}
+                >
+                  {getPeriodLabel(value)}
+                </button>
+              ))}
             </div>
 
+            <div className="dashboard-hero-cta-row">
+              <button type="button" className="hero-btn primary" onClick={() => navigate("/invoices")}>
+                Add Invoice
+              </button>
+              <button type="button" className="hero-btn secondary" onClick={() => navigate("/customers")}>
+                Add Customer
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="dashboard-kpi-strip">
+        {loading
+          ? Array.from({ length: 6 }).map((_, index) => <SkeletonCard key={index} />)
+          : kpis.map((item) => (
+              <article key={item.label} className="dashboard-kpi-card">
+                <span className="dashboard-kpi-icon">{item.icon}</span>
+                <div>
+                  <p>{item.label}</p>
+                  <strong>{item.value}</strong>
+                  <small>{item.meta}</small>
+                </div>
+              </article>
+            ))}
+      </section>
+
+      <section className="dashboard-smart-brief">
+        <div className="smart-brief-header">
+          <div>
+            <span className="section-chip">Smart Brief</span>
+            <h2>Operational summary</h2>
+            <p>Short risk, opportunity, and AI-ready actions for the current view.</p>
+          </div>
+          <button
+            type="button"
+            className="smart-brief-main-ai"
+            onClick={() => openAI({ prompt: "Give me an executive summary of this dashboard with priorities and next actions." })}
+          >
+            Ask AI
+          </button>
+        </div>
+
+        <div className="smart-brief-grid">
+          {loading
+            ? Array.from({ length: 3 }).map((_, index) => <SkeletonCard key={index} />)
+            : smartBrief.map((item) => (
+                <article key={item.id} className={`smart-brief-card ${getPriorityToneClass(item.tone)}`}>
+                  <div className="smart-brief-top">
+                    <span>{item.category}</span>
+                    {item.tone === "critical" ? <CircleAlert size={15} /> : item.tone === "important" ? <TrendingDown size={15} /> : <TrendingUp size={15} />}
+                  </div>
+                  <h3>{item.title}</h3>
+                  <p>{item.detail}</p>
+                  <button type="button" className="smart-brief-link" onClick={() => openAI({ prompt: item.prompt })}>
+                    {item.actionLabel}
+                  </button>
+                </article>
+              ))}
+        </div>
+      </section>
+
+      <section className="dashboard-main-grid">
+        <div className="dashboard-main-column">
+          <section className="dashboard-panel">
+            <div className="panel-header">
+              <div>
+                <span className="section-chip">Live Preview</span>
+                <h2>Operational previews</h2>
+                <p>Use these live snapshots as shortcuts into the busiest modules.</p>
+              </div>
+            </div>
+
+            <div className="preview-tab-bar">
+              {(["payments", "invoices", "products", "customers"] as PreviewKey[]).map((key) => (
+                <button
+                  key={key}
+                  type="button"
+                  className={`preview-tab-btn ${previewKey === key ? "active" : ""}`}
+                  onClick={() => setPreviewKey(key)}
+                >
+                  {key === "payments" && "Payments"}
+                  {key === "invoices" && "Invoices"}
+                  {key === "products" && "Products"}
+                  {key === "customers" && "Customers"}
+                </button>
+              ))}
+            </div>
+
+            <div className="preview-panel-body">
+              {loading ? <SkeletonCard /> : currentPreview.content}
+            </div>
+
+            <div className="preview-panel-footer">
+              <button type="button" className="preview-link-btn" onClick={() => navigate(currentPreview.path)}>
+                {currentPreview.actionLabel}
+                <ArrowRight size={14} />
+              </button>
+            </div>
+          </section>
+        </div>
+
+        <aside className="dashboard-side-column">
+          <section className="dashboard-panel">
+            <div className="panel-header compact">
+              <div>
+                <span className="section-chip">Key Totals</span>
+                <h2>Topline view</h2>
+              </div>
+            </div>
+            <div className="totals-grid">
+              {loading
+                ? Array.from({ length: 3 }).map((_, index) => <SkeletonCard key={index} />)
+                : rightColumnTotals.map((item) => (
+                    <article key={item.label} className="total-card">
+                      <span>{item.label}</span>
+                      <strong>{item.value}</strong>
+                      <small>{item.meta}</small>
+                    </article>
+                  ))}
+            </div>
+          </section>
+
+          <section className="dashboard-panel">
+            <div className="panel-header compact">
+              <div>
+                <span className="section-chip">Signals</span>
+                <h2>Requiring attention</h2>
+              </div>
+              <button
+                type="button"
+                className="panel-ghost-action"
+                onClick={() => setNotificationsPaused((current) => !current)}
+              >
+                {notificationsPaused ? "Resume alerts" : "Pause alerts"}
+              </button>
+            </div>
+            <div className="signals-list">
+              {loading
+                ? Array.from({ length: 3 }).map((_, index) => <SkeletonCard key={index} />)
+                : attentionSignals.map((item) => (
+                    <article key={item.title} className={`signal-card ${getPriorityToneClass(item.tone)}`}>
+                      <div>
+                        <strong>{item.title}</strong>
+                        <p>{item.hint}</p>
+                      </div>
+                      <b>{item.value}</b>
+                    </article>
+                  ))}
+            </div>
+          </section>
+
+          <section className="dashboard-panel">
+            <div className="panel-header compact">
+              <div>
+                <span className="section-chip">AI Shortcuts</span>
+                <h2>Focused drill-down</h2>
+              </div>
+            </div>
+            <div className="ai-shortcut-list">
+              <button
+                type="button"
+                className="ai-shortcut-btn"
+                onClick={() => openAI({ prompt: "Explain the current revenue movement and what is driving it." })}
+              >
+                <BrainCircuit size={16} />
+                Explain Revenue
+                <ChevronRight size={15} />
+              </button>
+              <button
+                type="button"
+                className="ai-shortcut-btn"
+                onClick={() => openAI({ prompt: "Review collection risks, overdue exposure, and what should happen next." })}
+              >
+                <FileSearch size={16} />
+                Review Collections
+                <ChevronRight size={15} />
+              </button>
+              <button
+                type="button"
+                className="ai-shortcut-btn"
+                onClick={() => openAI({ prompt: "Check current stock alerts and tell me what requires action first." })}
+              >
+                <PackageSearch size={16} />
+                Check Stock Alerts
+                <ChevronRight size={15} />
+              </button>
+            </div>
+          </section>
+        </aside>
+      </section>
+
+      {activeNotification && !notificationsPaused && (
+        <div className={`dashboard-alert-toast ${getPriorityToneClass(activeNotification.tone)}`}>
+          <div className="dashboard-alert-copy">
+            <strong>{activeNotification.title}</strong>
+            <p>{activeNotification.description}</p>
+          </div>
+          <div className="dashboard-alert-actions">
+            <button type="button" className="alert-link-btn" onClick={() => navigate(activeNotification.path)}>
+              {activeNotification.actionLabel}
+            </button>
             <button
               type="button"
-              className="dashboard-toast-close"
-              onClick={() => {
-                setIsToastVisible(false);
-                setActiveNotification(null);
-              }}
+              className="alert-dismiss-btn"
+              onClick={() => setNotificationsPaused(true)}
+              aria-label="Dismiss alert"
             >
-              ×
+              <CheckCircle2 size={14} />
             </button>
           </div>
         </div>
       )}
-    </>
+
+      {!loading && notifications.length === 0 && (
+        <div className="dashboard-alert-empty">
+          <CheckCircle2 size={16} />
+          <span>No alerts require attention in the current view.</span>
+        </div>
+      )}
+    </div>
   );
 }

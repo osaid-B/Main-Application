@@ -19,7 +19,7 @@ export const aiService = {
       }
 
       return await response.json();
-    } catch (error) {
+    } catch {
       return {
         ...mockChatResponse,
         reply: `Mock AI Response: ${payload.message}`,
@@ -41,7 +41,7 @@ export const aiService = {
       }
 
       return await response.json();
-    } catch (error) {
+    } catch {
       return mockInsights;
     }
   },

@@ -15,7 +15,7 @@ export default function useAIInsights() {
 
         const data = await aiService.getInsights();
         setInsights(data);
-      } catch (err) {
+      } catch {
         setError("فشل تحميل التحليلات الذكية.");
       } finally {
         setLoading(false);

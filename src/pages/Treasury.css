@@ -1,0 +1,513 @@
+.treasury-page {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  color: #0f172a;
+}
+
+.treasury-hero,
+.treasury-toolbar,
+.treasury-table-card,
+.treasury-side-card,
+.treasury-drawer-card,
+.treasury-modal {
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(226, 232, 240, 0.92);
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.05);
+}
+
+.treasury-hero {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: flex-start;
+  padding: 24px;
+  border-radius: 26px;
+}
+
+.treasury-hero-copy {
+  max-width: 900px;
+}
+
+.treasury-hero-actions {
+  display: flex;
+  gap: 12px;
+  align-items: stretch;
+  flex-wrap: wrap;
+}
+
+.treasury-role-card {
+  min-width: 240px;
+  padding: 16px 18px;
+  border: 1px solid rgba(226, 232, 240, 0.94);
+}
+
+.treasury-role-card span,
+.treasury-role-card small {
+  display: block;
+  color: #64748b;
+}
+
+.treasury-role-card strong {
+  display: block;
+  margin: 6px 0 8px;
+  font-size: 1.2rem;
+}
+
+.treasury-primary-btn,
+.mini-action-btn,
+.icon-dismiss-btn,
+.treasury-tab-btn {
+  border: none;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  font: inherit;
+}
+
+.treasury-primary-btn,
+.mini-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 12px;
+  border-radius: 14px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.treasury-primary-btn,
+.mini-action-btn.primary {
+  background: linear-gradient(135deg, #1d4ed8 0%, #1e3a8a 100%);
+  color: #ffffff;
+}
+
+.mini-action-btn {
+  background: #ffffff;
+  color: #0f172a;
+  border: 1px solid rgba(203, 213, 225, 0.9);
+}
+
+.mini-action-btn:disabled {
+  opacity: 0.46;
+  cursor: not-allowed;
+}
+
+.treasury-main-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(280px, 0.62fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.treasury-main-column,
+.treasury-side-column,
+.treasury-overview-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.treasury-overview-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.treasury-signal-card,
+.treasury-bank-card,
+.treasury-side-card {
+  border-radius: 20px;
+  padding: 16px;
+}
+
+.treasury-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.treasury-toolbar {
+  border-radius: 22px;
+  padding: 16px;
+}
+
+.treasury-search-shell {
+  flex: 1 1 420px;
+  min-height: 46px;
+  padding: 0 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(203, 213, 225, 0.9);
+  background: #f8fafc;
+}
+
+.treasury-search-shell input {
+  border: none;
+  background: transparent;
+  padding: 0;
+  box-shadow: none;
+}
+
+.treasury-tab-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.treasury-tab-btn {
+  min-height: 38px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: #f8fafc;
+  color: #475569;
+  border: 1px solid rgba(203, 213, 225, 0.9);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.treasury-tab-btn.active {
+  color: #1d4ed8;
+  background: rgba(37, 99, 235, 0.08);
+  border-color: rgba(37, 99, 235, 0.16);
+}
+
+.treasury-signal-list,
+.treasury-bank-stack,
+.treasury-ocr-queue,
+.document-list,
+.audit-list,
+.control-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.signal-row,
+.treasury-bank-row,
+.ocr-queue-row,
+.document-row,
+.audit-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 0;
+  border-bottom: 1px solid rgba(241, 245, 249, 0.95);
+}
+
+.signal-row:last-child,
+.treasury-bank-row:last-child,
+.ocr-queue-row:last-child,
+.document-row:last-child,
+.audit-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.signal-row strong,
+.treasury-bank-row strong,
+.ocr-queue-row strong,
+.document-row strong,
+.audit-row strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.signal-row span,
+.treasury-bank-row span,
+.ocr-queue-row span,
+.document-row span,
+.audit-row span,
+.audit-row small {
+  color: #64748b;
+  line-height: 1.55;
+}
+
+.signal-row.critical strong {
+  color: #b91c1c;
+}
+
+.signal-row.warning strong {
+  color: #b45309;
+}
+
+.control-list div,
+.treasury-detail-grid,
+.treasury-detail-links {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.control-list div {
+  background: #f8fafc;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 16px;
+  padding: 12px;
+}
+
+.control-list span,
+.treasury-detail-grid span,
+.treasury-detail-links span {
+  display: block;
+  color: #64748b;
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
+.treasury-table-card {
+  border-radius: 22px;
+  padding: 16px;
+}
+
+.treasury-table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.treasury-table {
+  width: 100%;
+  min-width: 720px;
+  border-collapse: collapse;
+}
+
+.treasury-table th,
+.treasury-table td {
+  padding: 14px 12px;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.88);
+  text-align: left;
+  vertical-align: top;
+}
+
+.treasury-table th {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.primary-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.primary-cell strong {
+  color: #0f172a;
+}
+
+.primary-cell span,
+.muted-note {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.danger-text {
+  color: #b91c1c !important;
+}
+
+.treasury-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.treasury-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(15, 23, 42, 0.42);
+  display: flex;
+  justify-content: flex-end;
+}
+
+.treasury-drawer,
+.treasury-modal {
+  width: min(760px, 100vw);
+  height: 100dvh;
+  background: #ffffff;
+  display: flex;
+  flex-direction: column;
+}
+
+.treasury-modal {
+  margin-left: auto;
+  width: min(920px, 100vw);
+}
+
+.treasury-drawer-head,
+.treasury-modal-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 20px 22px;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.9);
+}
+
+.treasury-drawer-head span,
+.treasury-modal-head span {
+  display: block;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.treasury-drawer-head h2,
+.treasury-modal-head h2 {
+  margin: 8px 0 6px;
+  font-size: 1.7rem;
+  letter-spacing: -0.03em;
+}
+
+.treasury-drawer-head p,
+.treasury-modal-head p {
+  margin: 0;
+  color: #64748b;
+  line-height: 1.6;
+}
+
+.icon-dismiss-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
+  background: #f8fafc;
+  color: #0f172a;
+  border: 1px solid rgba(203, 213, 225, 0.9);
+}
+
+.treasury-drawer-body,
+.ocr-field-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.treasury-drawer-card {
+  border-radius: 20px;
+  padding: 18px;
+}
+
+.treasury-drawer-card h3 {
+  margin: 0 0 14px;
+  font-size: 15px;
+}
+
+.ocr-summary-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  padding: 16px 22px;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.9);
+}
+
+.ocr-summary-strip div {
+  background: #f8fafc;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 16px;
+  padding: 12px;
+}
+
+.ocr-summary-strip span {
+  display: block;
+  color: #64748b;
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
+.ocr-field-row {
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr) minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+  padding: 16px 0;
+  border-bottom: 1px solid rgba(241, 245, 249, 0.95);
+}
+
+.ocr-field-row label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ocr-field-row label span,
+.ocr-field-meta span {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.ocr-field-meta strong {
+  display: block;
+  margin-bottom: 6px;
+}
+
+.treasury-modal-footer {
+  padding: 16px 22px;
+  border-top: 1px solid rgba(226, 232, 240, 0.9);
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.treasury-toast {
+  position: fixed;
+  right: 20px;
+  bottom: 24px;
+  z-index: 220;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: #0f172a;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+  box-shadow: 0 16px 28px rgba(15, 23, 42, 0.22);
+}
+
+@media (max-width: 1180px) {
+  .treasury-main-grid,
+  .treasury-overview-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 767px) {
+  .treasury-hero,
+  .treasury-hero-actions,
+  .ocr-summary-strip,
+  .ocr-field-row,
+  .control-list,
+  .treasury-detail-grid,
+  .treasury-detail-links {
+    grid-template-columns: 1fr;
+    flex-direction: column;
+  }
+
+  .treasury-hero-actions {
+    width: 100%;
+  }
+
+  .treasury-primary-btn,
+  .treasury-role-card,
+  .mini-action-btn {
+    width: 100%;
+  }
+
+  .treasury-drawer,
+  .treasury-modal {
+    width: 100vw;
+  }
+
+  .treasury-toast {
+    left: 12px;
+    right: 12px;
+    bottom: calc(84px + env(safe-area-inset-bottom));
+  }
+}

@@ -1,0 +1,678 @@
+:root {
+  --mobile-shell-padding: 14px;
+  --mobile-bottom-nav-height: calc(72px + env(safe-area-inset-bottom));
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  overscroll-behavior-y: contain;
+}
+
+img,
+svg,
+video,
+canvas {
+  max-width: 100%;
+}
+
+#root,
+.app-layout {
+  min-height: 100dvh;
+}
+
+.app-main {
+  min-width: 0;
+}
+
+.app-main-shell {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.app-page-content {
+  min-width: 0;
+}
+
+.sidebar-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.sidebar-close-btn,
+.mobile-menu-btn,
+.mobile-topbar-btn {
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: #ffffff;
+  color: #0f172a;
+  border-radius: 14px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.sidebar-close-btn,
+.mobile-menu-btn {
+  width: 42px;
+  height: 42px;
+}
+
+.mobile-topbar-btn {
+  min-width: 42px;
+  height: 42px;
+  padding: 0 12px;
+}
+
+.mobile-topbar-btn.primary {
+  background: #111827;
+  color: #ffffff;
+  border-color: #111827;
+}
+
+.sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.sidebar-link-icon {
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.sidebar-link-text {
+  min-width: 0;
+}
+
+.sidebar-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sidebar-group + .sidebar-group {
+  margin-top: 14px;
+}
+
+.sidebar-group-label {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 4px;
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.sidebar-group-links {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sidebar-link-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sidebar-link-text small {
+  color: inherit;
+  opacity: 0.68;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.sidebar-link-disabled {
+  cursor: default;
+  background: rgba(248, 250, 252, 0.9);
+  color: #94a3b8;
+  border: 1px solid rgba(226, 232, 240, 0.92);
+  opacity: 0.78;
+}
+
+.sidebar-link-planned {
+  background: transparent;
+  border-color: transparent;
+  opacity: 0.58;
+}
+
+.mobile-topbar,
+.mobile-bottom-nav,
+.mobile-nav-backdrop,
+.mobile-drawer-sidebar {
+  display: none;
+}
+
+.app-floating-ai {
+  position: fixed;
+  right: 18px;
+  bottom: 22px;
+  transform: none;
+  z-index: 1300;
+  border: none;
+  border-radius: 18px;
+  padding: 10px 10px;
+  background: #111827;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.18);
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 54px;
+  opacity: 0.94;
+}
+
+.app-floating-ai small {
+  opacity: 0.74;
+  font-size: 10px;
+}
+
+@media (max-width: 1024px) {
+  .app-layout {
+    display: block;
+  }
+
+  .desktop-sidebar {
+    display: none;
+  }
+
+  .mobile-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    position: sticky;
+    top: 0;
+    z-index: 90;
+    padding: 10px 0 14px;
+    background: linear-gradient(180deg, rgba(243, 244, 246, 0.98), rgba(243, 244, 246, 0.9) 78%, rgba(243, 244, 246, 0));
+    backdrop-filter: blur(12px);
+  }
+
+  .mobile-topbar-copy {
+    min-width: 0;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .mobile-topbar-copy strong {
+    color: #0f172a;
+    font-size: 17px;
+    line-height: 1.1;
+  }
+
+  .mobile-topbar-copy span {
+    color: #64748b;
+    font-size: 12px;
+    line-height: 1.4;
+  }
+
+  .mobile-topbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .mobile-nav-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 160;
+    border: none;
+    background: rgba(15, 23, 42, 0.42);
+  }
+
+  .mobile-drawer-sidebar {
+    display: flex;
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: min(320px, calc(100vw - 28px));
+    min-height: 100dvh;
+    z-index: 170;
+    transform: translateX(-110%);
+    transition: transform 0.24s ease;
+    box-shadow: 0 24px 48px rgba(15, 23, 42, 0.18);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .mobile-drawer-sidebar[dir="rtl"] {
+    left: auto;
+    right: 0;
+    transform: translateX(110%);
+  }
+
+  .mobile-drawer-sidebar.is-open {
+    transform: translateX(0);
+  }
+
+  .app-main {
+    padding: 14px var(--mobile-shell-padding) calc(var(--mobile-bottom-nav-height) + 20px);
+  }
+
+  .mobile-bottom-nav {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 8px;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 120;
+    padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+    background: rgba(255, 255, 255, 0.96);
+    border-top: 1px solid rgba(226, 232, 240, 0.9);
+    backdrop-filter: blur(14px);
+    box-shadow: 0 -10px 24px rgba(15, 23, 42, 0.08);
+  }
+
+  .mobile-bottom-link {
+    min-height: 48px;
+    padding: 0 8px;
+    border: 1px solid transparent;
+    border-radius: 16px;
+    background: transparent;
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1.2;
+    cursor: pointer;
+  }
+
+  .mobile-bottom-link.active {
+    color: #1d4ed8;
+    background: rgba(37, 99, 235, 0.08);
+    border-color: rgba(37, 99, 235, 0.12);
+  }
+
+  .app-floating-ai {
+    right: 14px;
+    top: auto;
+    bottom: calc(var(--mobile-bottom-nav-height) + 14px);
+    transform: none;
+    border-radius: 16px;
+    padding: 10px 12px;
+    font-size: 13px;
+    min-width: auto;
+    flex-direction: row;
+  }
+
+  .dashboard-command-center,
+  .customers-workspace,
+  .payments-workspace,
+  .treasury-page,
+  .invoice-management-page,
+  .products-page,
+  .purchases-workspace,
+  .suppliers-page,
+  .data-import-page,
+  .settings-page,
+  .employees-page {
+    gap: 16px !important;
+  }
+
+  .customers-hero,
+  .payments-hero,
+  .treasury-hero,
+  .invoice-hero-top,
+  .invoice-hero-main,
+  .invoice-hero-actions,
+  .workspace-topbar,
+  .workspace-toolbar,
+  .dashboard-executive-hero,
+  .dashboard-main-grid,
+  .dashboard-side-column,
+  .products-page-header,
+  .products-toolbar,
+  .products-controls,
+  .purchase-page-shell,
+  .purchases-layout,
+  .suppliers-layout,
+  .suppliers-header,
+  .data-import-header,
+  .data-import-layout {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  .kpi-grid,
+  .payments-kpi-grid,
+  .hero-summary-inline,
+  .dashboard-kpi-strip,
+  .products-kpi-grid,
+  .purchase-kpi-grid,
+  .suppliers-kpi-grid,
+  .data-import-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .customers-main,
+  .payments-main,
+  .treasury-toolbar,
+  .invoice-workspace,
+  .products-main-card,
+  .purchase-order-main,
+  .suppliers-main-card,
+  .data-import-main {
+    padding: 16px !important;
+  }
+
+  .toolbar-row,
+  .payments-toolbar-row,
+  .workspace-toolbar,
+  .filters-grid,
+  .primary-filters,
+  .primary-filters-row,
+  .filter-select-row,
+  .import-method-switcher,
+  .data-import-action-row {
+    gap: 10px !important;
+  }
+
+  .toolbar-search,
+  .search-shell,
+  .payments-search-shell,
+  .invoice-search-shell,
+  .data-import-search-shell {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .customers-table-wrap,
+  .payments-table-wrap,
+  .invoice-table-wrap,
+  .products-table-wrap,
+  .purchase-table-wrap,
+  .suppliers-table-wrap,
+  .preview-table-wrap,
+  .employees-attendance-table-wrap,
+  .employees-report-table-wrap {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 2px;
+  }
+
+  .customers-table-v2,
+  .payments-table,
+  .invoice-table,
+  .products-table,
+  .purchase-table,
+  .suppliers-table,
+  .preview-table,
+  .employees-attendance-table,
+  .employees-report-table {
+    min-width: 860px;
+  }
+
+  .customer-form-modal,
+  .customer-details-modal,
+  .payment-modal-card,
+  .product-form-modal,
+  .modal-card {
+    width: min(100%, 880px) !important;
+    max-height: min(92dvh, 920px) !important;
+  }
+
+  .details-drawer,
+  .payment-drawer,
+  .purchase-drawer,
+  .supplier-drawer {
+    width: min(100vw, 520px) !important;
+  }
+
+  .customer-form-body,
+  .invoice-form-main,
+  .product-form-main,
+  .purchase-form-layout,
+  .supplier-form-layout,
+  .data-import-entry-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 767px) {
+  .app-main {
+    padding-inline: 12px;
+  }
+
+  .mobile-topbar {
+    padding-top: 4px;
+  }
+
+  .mobile-topbar-copy span {
+    display: none;
+  }
+
+  .app-floating-ai {
+    border-radius: 16px;
+  }
+
+  .customers-hero,
+  .payments-hero,
+  .treasury-hero,
+  .invoice-hero-card,
+  .invoice-workspace,
+  .dashboard-executive-hero,
+  .products-page,
+  .purchase-order-main,
+  .suppliers-main-card,
+  .data-import-main {
+    border-radius: 20px !important;
+  }
+
+  .hero-copy h1,
+  .invoice-hero-text h1,
+  .dashboard-hero-title,
+  .products-page-title,
+  .purchase-page-title,
+  .suppliers-page-title,
+  .data-import-title {
+    font-size: clamp(1.7rem, 6.5vw, 2.2rem) !important;
+    line-height: 1.1 !important;
+  }
+
+  .hero-copy p,
+  .invoice-hero-text p,
+  .dashboard-hero-copy p,
+  .products-page-subtitle,
+  .purchase-page-subtitle,
+  .suppliers-page-subtitle,
+  .data-import-subtitle {
+    font-size: 13px !important;
+    line-height: 1.55 !important;
+  }
+
+  .hero-actions,
+  .invoice-hero-actions,
+  .page-header-actions,
+  .purchase-page-actions,
+  .suppliers-page-actions,
+  .data-import-actions,
+  .toolbar-actions,
+  .page-group,
+  .footer-controls,
+  .customer-profile-actions,
+  .row-actions,
+  .payments-table-footer,
+  .table-footer,
+  .pagination-actions {
+    width: 100%;
+  }
+
+  .hero-actions > *,
+  .invoice-hero-actions > *,
+  .page-header-actions > *,
+  .purchase-page-actions > *,
+  .suppliers-page-actions > *,
+  .data-import-actions > *,
+  .toolbar-actions > *,
+  .footer-controls > * {
+    flex: 1 1 auto;
+  }
+
+  .primary-btn,
+  .secondary-btn,
+  .danger-btn,
+  .toolbar-btn,
+  .primary-action,
+  .secondary-action,
+  .danger-action,
+  .view-button,
+  .details-btn,
+  .page-btn,
+  .drawer-primary-btn,
+  .drawer-secondary-btn {
+    min-height: 44px !important;
+  }
+
+  .kpi-grid,
+  .payments-kpi-grid,
+  .hero-summary-inline,
+  .dashboard-kpi-strip,
+  .products-kpi-grid,
+  .purchase-kpi-grid,
+  .suppliers-kpi-grid,
+  .data-import-kpi-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .customers-table-v2,
+  .payments-table,
+  .invoice-table,
+  .purchase-table,
+  .suppliers-table,
+  .products-table,
+  .preview-table {
+    min-width: 720px;
+  }
+
+  .customers-table-v2 th:nth-child(6),
+  .customers-table-v2 td:nth-child(6),
+  .customers-table-v2 th:nth-child(7),
+  .customers-table-v2 td:nth-child(7),
+  .payments-table th:nth-child(3),
+  .payments-table td:nth-child(3),
+  .payments-table th:nth-child(8),
+  .payments-table td:nth-child(8),
+  .payments-table th:nth-child(9),
+  .payments-table td:nth-child(9),
+  .invoice-table th:nth-child(4),
+  .invoice-table td:nth-child(4),
+  .invoice-table th:nth-child(8),
+  .invoice-table td:nth-child(8),
+  .invoice-table th:nth-child(9),
+  .invoice-table td:nth-child(9),
+  .purchase-table th:nth-child(3),
+  .purchase-table td:nth-child(3),
+  .suppliers-table th:nth-child(4),
+  .suppliers-table td:nth-child(4),
+  .suppliers-table th:nth-child(6),
+  .suppliers-table td:nth-child(6) {
+    display: none;
+  }
+
+  .customer-modal-overlay,
+  .payment-modal-overlay,
+  .payment-drawer-overlay,
+  .modal-overlay,
+  .overlay-shell,
+  .drawer-shell {
+    padding: 0 !important;
+    align-items: stretch !important;
+  }
+
+  .customer-form-modal,
+  .customer-details-modal,
+  .payment-modal-card,
+  .product-form-modal,
+  .modal-card,
+  .details-drawer,
+  .payment-drawer,
+  .purchase-drawer,
+  .supplier-drawer {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: 100dvh;
+    max-height: 100dvh !important;
+    border-radius: 0 !important;
+  }
+
+  .customer-modal-header,
+  .customer-modal-footer,
+  .payment-modal-header,
+  .payment-modal-footer,
+  .drawer-header,
+  .payment-drawer-header,
+  .supplier-drawer-head,
+  .drawer-head {
+    padding-inline: 16px !important;
+  }
+
+  .customer-form-body,
+  .customer-form-grid,
+  .drawer-grid,
+  .payment-form-grid,
+  .product-form-grid,
+  .purchase-form-grid,
+  .supplier-form-grid,
+  .details-grid,
+  .key-value-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .customer-form-body,
+  .product-form-main,
+  .invoice-form-main,
+  .payment-form-body,
+  .supplier-drawer-body,
+  .drawer-content,
+  .payment-drawer-content {
+    padding: 16px !important;
+  }
+
+  .details-tabs,
+  .drawer-tabs,
+  .drawer-tab-strip,
+  .supplier-drawer-tabs {
+    overflow-x: auto;
+    flex-wrap: nowrap !important;
+    scrollbar-width: none;
+  }
+
+  .details-tabs::-webkit-scrollbar,
+  .drawer-tabs::-webkit-scrollbar,
+  .drawer-tab-strip::-webkit-scrollbar,
+  .supplier-drawer-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .data-import-layout,
+  .success-card-layout,
+  .purchase-layout-grid,
+  .suppliers-layout-grid {
+    grid-template-columns: 1fr !important;
+  }
+}

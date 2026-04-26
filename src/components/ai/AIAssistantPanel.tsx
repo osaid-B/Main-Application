@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { aiService } from "../../services/ai.service";
 import type { AIMessage, AIQuickAction } from "../../types/ai.types";
 import AIChatMessage from "./AIChatMessage";
@@ -136,15 +136,7 @@ export default function AIAssistantPanel({
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading, isOpen]);
 
-  useEffect(() => {
-    if (!isOpen || !initialPrompt) return;
-    if (lastInitialPromptRef.current === initialPrompt) return;
-
-    lastInitialPromptRef.current = initialPrompt;
-    void handleSend(initialPrompt);
-  }, [isOpen, initialPrompt]);
-
-  const handleSend = async (customMessage?: string) => {
+  const handleSend = useCallback(async (customMessage?: string) => {
     const messageToSend = (customMessage || input).trim();
 
     if (!messageToSend || loading) return;
@@ -176,7 +168,7 @@ export default function AIAssistantPanel({
 
       setMessages((prev) => [...prev, assistantMessage]);
       setLastSuggestions(response.suggestions ?? []);
-    } catch (error) {
+    } catch {
       const errorMessage: AIMessage = {
         id: `${Date.now()}-error`,
         role: "assistant",
@@ -188,7 +180,15 @@ export default function AIAssistantPanel({
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentPage, input, loading]);
+
+  useEffect(() => {
+    if (!isOpen || !initialPrompt) return;
+    if (lastInitialPromptRef.current === initialPrompt) return;
+
+    lastInitialPromptRef.current = initialPrompt;
+    void handleSend(initialPrompt);
+  }, [handleSend, initialPrompt, isOpen]);
 
   const handleClearChat = () => {
     setMessages([
@@ -330,9 +330,9 @@ const styles: Record<string, React.CSSProperties> = {
     zIndex: 9999,
   },
   panel: {
-    width: "460px",
+    width: "min(460px, 100vw)",
     maxWidth: "100%",
-    height: "100vh",
+    height: "100dvh",
     backgroundColor: "#ffffff",
     display: "flex",
     flexDirection: "column",

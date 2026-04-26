@@ -44,6 +44,7 @@ type DeleteDialogState =
 
 type MainTab = "today" | "monthly" | "reports" | "employees";
 type AttendanceRange = "today" | "week" | "month";
+type MonthlyViewMode = "week" | "month";
 
 type ReportSortKey =
   | "name"
@@ -188,6 +189,14 @@ function getMonthDays(baseDate: string) {
     }),
     days,
   };
+}
+
+function groupDaysIntoWeeks(days: Array<{ day: number; date: string }>) {
+  const weeks: Array<Array<{ day: number; date: string }>> = [];
+  for (let index = 0; index < days.length; index += 7) {
+    weeks.push(days.slice(index, index + 7));
+  }
+  return weeks;
 }
 
 function downloadTextFile(
@@ -930,8 +939,8 @@ function TodayAttendanceSection({
         </div>
 
         {employees.length > 0 ? (
-          <div className="employees-attendance-table-wrap">
-            <table className="employees-attendance-table employees-daily-sheet-table employees-simple-sheet-table">
+          <div className="employees-attendance-table-wrap app-table-wrap">
+            <table className="employees-attendance-table employees-daily-sheet-table employees-simple-sheet-table app-data-table">
               <thead>
                 <tr>
                   <th>Employee</th>
@@ -1063,15 +1072,26 @@ function TodayAttendanceSection({
 function MonthlyAttendanceSection({
   employees,
   monthDate,
+  viewMode,
+  weekIndex,
   onChangeMonthDate,
+  onChangeViewMode,
+  onChangeWeekIndex,
   onOpenEditor,
 }: {
   employees: Employee[];
   monthDate: string;
+  viewMode: MonthlyViewMode;
+  weekIndex: number;
   onChangeMonthDate: (date: string) => void;
+  onChangeViewMode: (mode: MonthlyViewMode) => void;
+  onChangeWeekIndex: (index: number) => void;
   onOpenEditor: (employee: Employee, date: string) => void;
 }) {
   const { monthLabel, days } = useMemo(() => getMonthDays(monthDate), [monthDate]);
+  const weeks = useMemo(() => groupDaysIntoWeeks(days), [days]);
+  const safeWeekIndex = Math.min(Math.max(weekIndex, 0), Math.max(weeks.length - 1, 0));
+  const visibleDays = viewMode === "month" ? days : weeks[safeWeekIndex] || [];
 
   return (
     <>
@@ -1083,6 +1103,22 @@ function MonthlyAttendanceSection({
           </div>
 
           <div className="employees-attendance-simple-controls">
+            <div className="employees-range-switch employees-range-switch-compact">
+              <button
+                type="button"
+                className={`employees-range-chip ${viewMode === "week" ? "active" : ""}`}
+                onClick={() => onChangeViewMode("week")}
+              >
+                Week View
+              </button>
+              <button
+                type="button"
+                className={`employees-range-chip ${viewMode === "month" ? "active" : ""}`}
+                onClick={() => onChangeViewMode("month")}
+              >
+                Full Month
+              </button>
+            </div>
             <button
               type="button"
               className="quick-action-btn secondary"
@@ -1093,6 +1129,12 @@ function MonthlyAttendanceSection({
 
             <div className="employees-month-label-chip">{monthLabel}</div>
 
+            {viewMode === "week" && weeks.length > 1 ? (
+              <div className="employees-month-label-chip secondary">
+                Week {safeWeekIndex + 1} of {weeks.length}
+              </div>
+            ) : null}
+
             <button
               type="button"
               className="quick-action-btn secondary"
@@ -1102,16 +1144,48 @@ function MonthlyAttendanceSection({
             </button>
           </div>
         </div>
+        {viewMode === "week" && weeks.length > 1 ? (
+          <div className="employees-month-week-switch">
+            <button
+              type="button"
+              className="quick-action-btn secondary"
+              onClick={() => onChangeWeekIndex(Math.max(safeWeekIndex - 1, 0))}
+              disabled={safeWeekIndex === 0}
+            >
+              Previous Week
+            </button>
+            <div className="employees-week-chip-list">
+              {weeks.map((week, index) => (
+                <button
+                  key={week[0]?.date || index}
+                  type="button"
+                  className={`employees-week-chip ${safeWeekIndex === index ? "active" : ""}`}
+                  onClick={() => onChangeWeekIndex(index)}
+                >
+                  {week[0]?.day}-{week[week.length - 1]?.day}
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              className="quick-action-btn secondary"
+              onClick={() => onChangeWeekIndex(Math.min(safeWeekIndex + 1, weeks.length - 1))}
+              disabled={safeWeekIndex === weeks.length - 1}
+            >
+              Next Week
+            </button>
+          </div>
+        ) : null}
       </div>
 
       <div className="employees-attendance-simple-card">
         {employees.length > 0 ? (
-          <div className="employees-monthly-grid-wrap">
-            <table className="employees-monthly-grid-table">
+          <div className="employees-monthly-grid-wrap app-table-wrap">
+            <table className="employees-monthly-grid-table app-data-table">
               <thead>
                 <tr>
                   <th className="employees-monthly-name-col">Employee</th>
-                  {days.map((day) => (
+                  {visibleDays.map((day) => (
                     <th key={day.date}>{day.day}</th>
                   ))}
                 </tr>
@@ -1133,7 +1207,7 @@ function MonthlyAttendanceSection({
                       </div>
                     </td>
 
-                    {days.map((day) => {
+                    {visibleDays.map((day) => {
                       const entry = getDailyAttendanceEntryByDate(employee, day.date);
 
                       return (
@@ -1295,8 +1369,8 @@ function ReportsSection({
         </div>
 
         {attendanceReportRows.length > 0 ? (
-          <div className="employees-report-table-wrap">
-            <table className="employees-report-table">
+          <div className="employees-report-table-wrap app-table-wrap">
+            <table className="employees-report-table app-data-table">
               <thead>
                 <tr>
                   <th
@@ -1442,6 +1516,8 @@ export default function Employees() {
     useState(getTodayDate());
   const [selectedMonthDate, setSelectedMonthDate] =
     useState(getTodayDate());
+  const [monthlyViewMode, setMonthlyViewMode] = useState<MonthlyViewMode>("week");
+  const [selectedMonthWeekIndex, setSelectedMonthWeekIndex] = useState(0);
 
   const [showEmployeeModal, setShowEmployeeModal] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
@@ -1521,6 +1597,16 @@ export default function Employees() {
   const currentMonthlyEditorEmployee = monthlyEditor
     ? employees.find((emp) => emp.id === monthlyEditor.employeeId) || null
     : null;
+
+  const handleMonthDateChange = (date: string) => {
+    setSelectedMonthDate(date);
+    setSelectedMonthWeekIndex(0);
+  };
+
+  const handleMonthViewChange = (mode: MonthlyViewMode) => {
+    setMonthlyViewMode(mode);
+    setSelectedMonthWeekIndex(0);
+  };
 
   const getReportSortIndicator = (key: ReportSortKey) => {
     if (reportSortKey !== key) return "";
@@ -1880,7 +1966,11 @@ export default function Employees() {
             <MonthlyAttendanceSection
               employees={filteredEmployees}
               monthDate={selectedMonthDate}
-              onChangeMonthDate={setSelectedMonthDate}
+              viewMode={monthlyViewMode}
+              weekIndex={selectedMonthWeekIndex}
+              onChangeMonthDate={handleMonthDateChange}
+              onChangeViewMode={handleMonthViewChange}
+              onChangeWeekIndex={setSelectedMonthWeekIndex}
               onOpenEditor={openMonthlyEditor}
             />
           )}
