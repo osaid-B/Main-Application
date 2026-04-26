@@ -1,25 +1,3 @@
-<<<<<<< HEAD
-  products: {
-    pageTitle: "المنتجات",
-    addProduct: "إضافة منتج",
-    searchPlaceholder: "ابحث في المنتجات، SKU، الفئة...",
-    filters: "المرشحات",
-    category: "الفئة",
-    supplier: "المورد",
-    stock: "المخزون",
-    low: "قليل",
-    out: "نفد",
-    inStock: "متوفر",
-    purchasePrice: "سعر الشراء",
-    salePrice: "سعر البيع",
-    margin: "الهامش",
-    status: "الحالة",
-    actions: "الإجراءات",
-    noProducts: "لا توجد منتجات.",
-    viewToggleTable: "عرض جدول",
-    viewToggleCards: "عرض بطاقات",
-  },
-=======
 export const translations = {
   en: {
     common: {
@@ -66,6 +44,7 @@ export const translations = {
       active: "Active",
       inactive: "Inactive",
     },
+
     sidebar: {
       title: "Business Dashboard",
       subtitle: "Business operating system",
@@ -86,6 +65,7 @@ export const translations = {
       closeNavigation: "Close navigation",
       planned: "Planned",
     },
+
     groups: {
       executive: "Executive",
       operations: "Operations",
@@ -93,23 +73,70 @@ export const translations = {
       admin: "Administration",
       expansion: "Future Ready",
     },
+
     modules: {
-      dashboard: { label: "Dashboard", description: "Executive control center" },
-      customers: { label: "Customers", description: "CRM, balances, and account activity" },
-      products: { label: "Products", description: "Inventory, pricing, and SKU control" },
-      purchases: { label: "Purchases", description: "Procurement and receiving workflow" },
-      suppliers: { label: "Suppliers", description: "Vendor profile and payables view" },
-      invoices: { label: "Invoices", description: "Receivables, payables, and billing" },
-      payments: { label: "Payments", description: "Collections, refunds, and allocation" },
-      treasury: { label: "Treasury", description: "Banking, cheques, transfers, and reconciliation" },
-      employees: { label: "Employees", description: "Attendance, payroll, and HR basics" },
-      settings: { label: "Settings", description: "System, localization, and business rules" },
-      "data-import": { label: "Data Import", description: "Migration, validation, and onboarding" },
-      ledger: { label: "General Ledger", description: "Journals, COA, and financial statements" },
-      pos: { label: "POS", description: "Retail cashier and checkout workflow" },
-      manufacturing: { label: "Manufacturing", description: "BOM, production orders, and costing" },
-      reports: { label: "Reports", description: "Operational exports and period analysis" },
+      dashboard: {
+        label: "Dashboard",
+        description: "Executive control center",
+      },
+      customers: {
+        label: "Customers",
+        description: "CRM, balances, and account activity",
+      },
+      products: {
+        label: "Products",
+        description: "Inventory, pricing, and SKU control",
+      },
+      purchases: {
+        label: "Purchases",
+        description: "Procurement and receiving workflow",
+      },
+      suppliers: {
+        label: "Suppliers",
+        description: "Vendor profile and payables view",
+      },
+      invoices: {
+        label: "Invoices",
+        description: "Receivables, payables, and billing",
+      },
+      payments: {
+        label: "Payments",
+        description: "Collections, refunds, and allocation",
+      },
+      treasury: {
+        label: "Treasury",
+        description: "Banking, cheques, transfers, and reconciliation",
+      },
+      employees: {
+        label: "Employees",
+        description: "Attendance, payroll, and HR basics",
+      },
+      settings: {
+        label: "Settings",
+        description: "System, localization, and business rules",
+      },
+      "data-import": {
+        label: "Data Import",
+        description: "Migration, validation, and onboarding",
+      },
+      ledger: {
+        label: "General Ledger",
+        description: "Journals, COA, and financial statements",
+      },
+      pos: {
+        label: "POS",
+        description: "Retail cashier and checkout workflow",
+      },
+      manufacturing: {
+        label: "Manufacturing",
+        description: "BOM, production orders, and costing",
+      },
+      reports: {
+        label: "Reports",
+        description: "Operational exports and period analysis",
+      },
     },
+
     layout: {
       mobileOpenNavigation: "Open navigation",
       mobileOpenAI: "Open AI assistant",
@@ -123,12 +150,14 @@ export const translations = {
         suppliers: "Manage supplier health, balances, and purchase history.",
         invoices: "Review receivables, payables, and invoice actions quickly.",
         payments: "Monitor collections, refunds, and payment operations.",
-        treasury: "Manage bank balances, cheques, transfers, OCR review, and reconciliation.",
+        treasury:
+          "Manage bank balances, cheques, transfers, OCR review, and reconciliation.",
         employees: "Team records, attendance, and HR operations.",
         settings: "Preferences, business rules, and system configuration.",
         "data-import": "Import operational data safely from CSV or file upload.",
       },
     },
+
     shell: {
       searchPlaceholder: "Jump to module or workflow",
       globalSearch: "Global search",
@@ -148,7 +177,8 @@ export const translations = {
       },
       signalDetails: {
         invoices: "Open receivable or payable records still need action.",
-        payments: "Pending, partial, or failed payments are waiting for resolution.",
+        payments:
+          "Pending, partial, or failed payments are waiting for resolution.",
         stock: "Low or out-of-stock products may require replenishment.",
         purchases: "Receiving or supplier follow-up is still pending.",
       },
@@ -159,28 +189,58 @@ export const translations = {
         Inventory: "Inventory",
       },
       roleSummary: {
-        Admin: "Balanced executive view across finance, operations, and administration.",
-        Finance: "Prioritize collections, invoices, payments, and accounting signals.",
-        Sales: "Focus on customers, invoices, collections, and follow-up actions.",
-        Inventory: "Focus on products, purchases, supplier flow, and stock alerts.",
+        Admin:
+          "Balanced executive view across finance, operations, and administration.",
+        Finance:
+          "Prioritize collections, invoices, payments, and accounting signals.",
+        Sales:
+          "Focus on customers, invoices, collections, and follow-up actions.",
+        Inventory:
+          "Focus on products, purchases, supplier flow, and stock alerts.",
       },
       quickCreateItems: {
-        "new-invoice": { label: "New Invoice", description: "Create a receivable, payable, or internal invoice" },
-        "new-payment": { label: "Record Payment", description: "Add a payment and link it to an invoice" },
-        "new-transfer": { label: "New Transfer", description: "Record a bank transfer with proof and verification" },
-        "new-cheque": { label: "Register Cheque", description: "Capture an incoming or outgoing cheque instrument" },
-        "new-customer": { label: "Add Customer", description: "Create a customer profile with financial details" },
-        "new-product": { label: "Add Product", description: "Create a product with pricing and stock rules" },
-        "new-purchase": { label: "New Purchase", description: "Create a supplier-linked purchase order" },
-        "new-supplier": { label: "Add Supplier", description: "Create a supplier profile and payment terms" },
+        "new-invoice": {
+          label: "New Invoice",
+          description: "Create a receivable, payable, or internal invoice",
+        },
+        "new-payment": {
+          label: "Record Payment",
+          description: "Add a payment and link it to an invoice",
+        },
+        "new-transfer": {
+          label: "New Transfer",
+          description: "Record a bank transfer with proof and verification",
+        },
+        "new-cheque": {
+          label: "Register Cheque",
+          description: "Capture an incoming or outgoing cheque instrument",
+        },
+        "new-customer": {
+          label: "Add Customer",
+          description: "Create a customer profile with financial details",
+        },
+        "new-product": {
+          label: "Add Product",
+          description: "Create a product with pricing and stock rules",
+        },
+        "new-purchase": {
+          label: "New Purchase",
+          description: "Create a supplier-linked purchase order",
+        },
+        "new-supplier": {
+          label: "Add Supplier",
+          description: "Create a supplier profile and payment terms",
+        },
       },
     },
+
     login: {
       brandLabel: "Business Dashboard",
       title: "Sign in to your workspace",
       secureAccess: "Secure access for authorized business users",
       welcomeBack: "Welcome back",
-      subtitle: "Access your accounting, customers, invoices, payments, inventory, and purchases from one modern control center.",
+      subtitle:
+        "Access your accounting, customers, invoices, payments, inventory, and purchases from one modern control center.",
       username: "Email or username",
       usernamePlaceholder: "you@company.com",
       password: "Password",
@@ -189,36 +249,66 @@ export const translations = {
       rememberMe: "Remember me",
       trustInline: "Protected with enterprise-grade access control",
       signIn: "Sign in",
-      footerNote: "By continuing, you agree to secure usage policies for authorized teams, finance staff, and business operators.",
+      footerNote:
+        "By continuing, you agree to secure usage policies for authorized teams, finance staff, and business operators.",
       invalidCredentials: "Invalid username or password",
       missingCredentials: "Please enter username and password",
       rightPill: "Built for finance teams, operators, and growing businesses",
       rightTitle: "Manage your business with clarity, speed, and control.",
-      rightText: "Track invoices, customers, payments, purchases, and inventory in one smart dashboard designed for accounting workflows and modern business operations.",
+      rightText:
+        "Track invoices, customers, payments, purchases, and inventory in one smart dashboard designed for accounting workflows and modern business operations.",
       features: {
         finance: {
           title: "Real-time financial tracking",
-          text: "Monitor revenue, outstanding invoices, payment flow, and operational metrics in one unified view.",
+          text:
+            "Monitor revenue, outstanding invoices, payment flow, and operational metrics in one unified view.",
         },
         customers: {
           title: "Customer and invoice management",
-          text: "Organize clients, billing records, notes, and invoice history with clean, structured workflows.",
+          text:
+            "Organize clients, billing records, notes, and invoice history with clean, structured workflows.",
         },
         insights: {
           title: "Smart reporting and insights",
-          text: "Turn daily business activity into clear summaries, trends, and decisions your team can act on.",
+          text:
+            "Turn daily business activity into clear summaries, trends, and decisions your team can act on.",
         },
         secure: {
           title: "Secure and modern workflow",
-          text: "A trustworthy interface built for authorized teams handling finance, purchases, and internal operations.",
+          text:
+            "A trustworthy interface built for authorized teams handling finance, purchases, and internal operations.",
         },
       },
     },
+
+    products: {
+      pageTitle: "Products",
+      addProduct: "Add Product",
+      searchPlaceholder: "Search products, SKU, category...",
+      filters: "Filters",
+      category: "Category",
+      supplier: "Supplier",
+      stock: "Stock",
+      low: "Low",
+      out: "Out",
+      inStock: "In Stock",
+      purchasePrice: "Purchase Price",
+      salePrice: "Sale Price",
+      margin: "Margin",
+      status: "Status",
+      actions: "Actions",
+      noProducts: "No products found.",
+      viewToggleTable: "Table View",
+      viewToggleCards: "Card View",
+    },
+
     settings: {
       pageTitle: "System Settings",
-      subtitle: "Customize language, direction, and appearance across the workspace.",
+      subtitle:
+        "Customize language, direction, and appearance across the workspace.",
       languageTitle: "Language",
-      languageDescription: "Choose the primary interface language for the workspace.",
+      languageDescription:
+        "Choose the primary interface language for the workspace.",
       themeTitle: "Theme",
       themeDescription: "Switch between light and dark display modes.",
       currentLanguage: "Current language",
@@ -229,12 +319,14 @@ export const translations = {
       configurationStatus: "Configuration status",
       corePreferences: "Core preferences active",
       nextExpansion: "Next expansion",
-      nextExpansionDescription: "Roles, branches, currencies, taxes, and treasury settings will live here next.",
+      nextExpansionDescription:
+        "Roles, branches, currencies, taxes, and treasury settings will live here next.",
       foundationReady: "Foundation ready",
       ltrHelper: "LTR workspace and system labels",
       rtlHelper: "RTL workspace and localized terminology",
     },
   },
+
   ar: {
     common: {
       add: "إضافة",
@@ -280,6 +372,7 @@ export const translations = {
       active: "نشط",
       inactive: "غير نشط",
     },
+
     sidebar: {
       title: "لوحة الأعمال",
       subtitle: "نظام تشغيل الأعمال",
@@ -300,6 +393,7 @@ export const translations = {
       closeNavigation: "إغلاق التنقل",
       planned: "مخطط لها",
     },
+
     groups: {
       executive: "تنفيذي",
       operations: "العمليات",
@@ -307,23 +401,70 @@ export const translations = {
       admin: "الإدارة",
       expansion: "جاهزية مستقبلية",
     },
+
     modules: {
-      dashboard: { label: "لوحة التحكم", description: "مركز التحكم التنفيذي" },
-      customers: { label: "العملاء", description: "إدارة العلاقات والأرصدة وحركة الحساب" },
-      products: { label: "المنتجات", description: "المخزون والتسعير والتحكم في الأكواد" },
-      purchases: { label: "المشتريات", description: "سير الشراء والاستلام" },
-      suppliers: { label: "الموردون", description: "ملفات الموردين وعرض المستحقات" },
-      invoices: { label: "الفواتير", description: "المدينون والدائنون والفوترة" },
-      payments: { label: "الدفعات", description: "التحصيلات والاستردادات والتخصيص" },
-      treasury: { label: "الخزينة", description: "البنوك والشيكات والتحويلات والتسوية" },
-      employees: { label: "الموظفون", description: "الحضور والرواتب وأساسيات الموارد البشرية" },
-      settings: { label: "الإعدادات", description: "النظام والتوطين وقواعد العمل" },
-      "data-import": { label: "استيراد البيانات", description: "الترحيل والتحقق والتهيئة" },
-      ledger: { label: "الأستاذ العام", description: "القيود والدليل والتقارير المالية" },
-      pos: { label: "نقطة البيع", description: "الكاشير والبيع بالتجزئة" },
-      manufacturing: { label: "التصنيع", description: "الوصفات وأوامر الإنتاج والتكلفة" },
-      reports: { label: "التقارير", description: "التصدير والتحليل الدوري" },
+      dashboard: {
+        label: "لوحة التحكم",
+        description: "مركز التحكم التنفيذي",
+      },
+      customers: {
+        label: "العملاء",
+        description: "إدارة العلاقات والأرصدة وحركة الحساب",
+      },
+      products: {
+        label: "المنتجات",
+        description: "المخزون والتسعير والتحكم في الأكواد",
+      },
+      purchases: {
+        label: "المشتريات",
+        description: "سير الشراء والاستلام",
+      },
+      suppliers: {
+        label: "الموردون",
+        description: "ملفات الموردين وعرض المستحقات",
+      },
+      invoices: {
+        label: "الفواتير",
+        description: "المدينون والدائنون والفوترة",
+      },
+      payments: {
+        label: "الدفعات",
+        description: "التحصيلات والاستردادات والتخصيص",
+      },
+      treasury: {
+        label: "الخزينة",
+        description: "البنوك والشيكات والتحويلات والتسوية",
+      },
+      employees: {
+        label: "الموظفون",
+        description: "الحضور والرواتب وأساسيات الموارد البشرية",
+      },
+      settings: {
+        label: "الإعدادات",
+        description: "النظام والتوطين وقواعد العمل",
+      },
+      "data-import": {
+        label: "استيراد البيانات",
+        description: "الترحيل والتحقق والتهيئة",
+      },
+      ledger: {
+        label: "الأستاذ العام",
+        description: "القيود والدليل والتقارير المالية",
+      },
+      pos: {
+        label: "نقطة البيع",
+        description: "الكاشير والبيع بالتجزئة",
+      },
+      manufacturing: {
+        label: "التصنيع",
+        description: "الوصفات وأوامر الإنتاج والتكلفة",
+      },
+      reports: {
+        label: "التقارير",
+        description: "التصدير والتحليل الدوري",
+      },
     },
+
     layout: {
       mobileOpenNavigation: "فتح التنقل",
       mobileOpenAI: "فتح المساعد الذكي",
@@ -337,12 +478,14 @@ export const translations = {
         suppliers: "إدارة صحة الموردين والأرصدة وتاريخ الشراء.",
         invoices: "راجع الذمم المدينة والدائنة وإجراءات الفواتير بسرعة.",
         payments: "راقب التحصيلات والاستردادات وحركة الدفعات.",
-        treasury: "أدر الأرصدة البنكية والشيكات والتحويلات ومراجعة OCR والتسوية.",
+        treasury:
+          "أدر الأرصدة البنكية والشيكات والتحويلات ومراجعة OCR والتسوية.",
         employees: "سجلات الفريق والحضور وعمليات الموارد البشرية.",
         settings: "التفضيلات وقواعد العمل وإعدادات النظام.",
         "data-import": "استورد البيانات التشغيلية بأمان من الملفات أو CSV.",
       },
     },
+
     shell: {
       searchPlaceholder: "انتقل إلى شاشة أو إجراء",
       globalSearch: "بحث عام",
@@ -362,7 +505,8 @@ export const translations = {
       },
       signalDetails: {
         invoices: "ما زالت هناك سجلات ذمم مدينة أو دائنة بحاجة إلى إجراء.",
-        payments: "هناك دفعات معلقة أو جزئية أو فاشلة بانتظار المعالجة.",
+        payments:
+          "هناك دفعات معلقة أو جزئية أو فاشلة بانتظار المعالجة.",
         stock: "بعض المنتجات منخفضة أو نافدة وقد تحتاج إلى إعادة تزويد.",
         purchases: "ما زال الاستلام أو متابعة المورد معلقاً.",
       },
@@ -374,27 +518,56 @@ export const translations = {
       },
       roleSummary: {
         Admin: "عرض تنفيذي متوازن عبر المالية والعمليات والإدارة.",
-        Finance: "أعطِ الأولوية للتحصيلات والفواتير والدفعات والإشارات المحاسبية.",
-        Sales: "ركّز على العملاء والفواتير والتحصيلات وإجراءات المتابعة.",
-        Inventory: "ركّز على المنتجات والمشتريات وتدفق الموردين وتنبيهات المخزون.",
+        Finance:
+          "أعطِ الأولوية للتحصيلات والفواتير والدفعات والإشارات المحاسبية.",
+        Sales:
+          "ركّز على العملاء والفواتير والتحصيلات وإجراءات المتابعة.",
+        Inventory:
+          "ركّز على المنتجات والمشتريات وتدفق الموردين وتنبيهات المخزون.",
       },
       quickCreateItems: {
-        "new-invoice": { label: "فاتورة جديدة", description: "أنشئ فاتورة مدينة أو دائنة أو داخلية" },
-        "new-payment": { label: "تسجيل دفعة", description: "أضف دفعة واربطها بفاتورة" },
-        "new-transfer": { label: "تحويل جديد", description: "سجّل تحويلًا بنكيًا مع إثبات ومراجعة" },
-        "new-cheque": { label: "تسجيل شيك", description: "سجّل شيكًا واردًا أو صادرًا" },
-        "new-customer": { label: "إضافة عميل", description: "أنشئ ملف عميل ببيانات مالية" },
-        "new-product": { label: "إضافة منتج", description: "أنشئ منتجًا مع التسعير وقواعد المخزون" },
-        "new-purchase": { label: "شراء جديد", description: "أنشئ أمر شراء مرتبطًا بمورد" },
-        "new-supplier": { label: "إضافة مورد", description: "أنشئ ملف مورد وشروط الدفع" },
+        "new-invoice": {
+          label: "فاتورة جديدة",
+          description: "أنشئ فاتورة مدينة أو دائنة أو داخلية",
+        },
+        "new-payment": {
+          label: "تسجيل دفعة",
+          description: "أضف دفعة واربطها بفاتورة",
+        },
+        "new-transfer": {
+          label: "تحويل جديد",
+          description: "سجّل تحويلًا بنكيًا مع إثبات ومراجعة",
+        },
+        "new-cheque": {
+          label: "تسجيل شيك",
+          description: "سجّل شيكًا واردًا أو صادرًا",
+        },
+        "new-customer": {
+          label: "إضافة عميل",
+          description: "أنشئ ملف عميل ببيانات مالية",
+        },
+        "new-product": {
+          label: "إضافة منتج",
+          description: "أنشئ منتجًا مع التسعير وقواعد المخزون",
+        },
+        "new-purchase": {
+          label: "شراء جديد",
+          description: "أنشئ أمر شراء مرتبطًا بمورد",
+        },
+        "new-supplier": {
+          label: "إضافة مورد",
+          description: "أنشئ ملف مورد وشروط الدفع",
+        },
       },
     },
+
     login: {
       brandLabel: "لوحة الأعمال",
       title: "سجّل الدخول إلى مساحة العمل",
       secureAccess: "وصول آمن للمستخدمين المصرح لهم",
       welcomeBack: "مرحباً بعودتك",
-      subtitle: "ادخل إلى المحاسبة والعملاء والفواتير والدفعات والمخزون والمشتريات من مركز تحكم واحد حديث.",
+      subtitle:
+        "ادخل إلى المحاسبة والعملاء والفواتير والدفعات والمخزون والمشتريات من مركز تحكم واحد حديث.",
       username: "البريد الإلكتروني أو اسم المستخدم",
       usernamePlaceholder: "you@company.com",
       password: "كلمة المرور",
@@ -403,31 +576,59 @@ export const translations = {
       rememberMe: "تذكرني",
       trustInline: "محمي بضوابط وصول مؤسسية",
       signIn: "تسجيل الدخول",
-      footerNote: "بالمتابعة فأنت توافق على سياسات الاستخدام الآمن للفرق المعتمدة وموظفي المالية ومشغلي الأعمال.",
+      footerNote:
+        "بالمتابعة فأنت توافق على سياسات الاستخدام الآمن للفرق المعتمدة وموظفي المالية ومشغلي الأعمال.",
       invalidCredentials: "اسم المستخدم أو كلمة المرور غير صحيحين",
       missingCredentials: "يرجى إدخال اسم المستخدم وكلمة المرور",
       rightPill: "مصمم لفرق المالية والمشغلين والشركات النامية",
       rightTitle: "أدر أعمالك بوضوح وسرعة وتحكم.",
-      rightText: "تابع الفواتير والعملاء والدفعات والمشتريات والمخزون من خلال لوحة ذكية مصممة لسير العمل المحاسبي وعمليات الأعمال الحديثة.",
+      rightText:
+        "تابع الفواتير والعملاء والدفعات والمشتريات والمخزون من خلال لوحة ذكية مصممة لسير العمل المحاسبي وعمليات الأعمال الحديثة.",
       features: {
         finance: {
           title: "متابعة مالية لحظية",
-          text: "راقب الإيرادات والفواتير المستحقة وحركة الدفعات والمؤشرات التشغيلية في عرض موحد.",
+          text:
+            "راقب الإيرادات والفواتير المستحقة وحركة الدفعات والمؤشرات التشغيلية في عرض موحد.",
         },
         customers: {
           title: "إدارة العملاء والفواتير",
-          text: "نظّم العملاء وسجلات الفوترة والملاحظات وتاريخ الفواتير ضمن مسارات عمل واضحة.",
+          text:
+            "نظّم العملاء وسجلات الفوترة والملاحظات وتاريخ الفواتير ضمن مسارات عمل واضحة.",
         },
         insights: {
           title: "تقارير ورؤى ذكية",
-          text: "حوّل النشاط اليومي إلى ملخصات واتجاهات وقرارات قابلة للتنفيذ.",
+          text:
+            "حوّل النشاط اليومي إلى ملخصات واتجاهات وقرارات قابلة للتنفيذ.",
         },
         secure: {
           title: "سير عمل حديث وآمن",
-          text: "واجهة موثوقة للفرق المصرح لها التي تدير المالية والمشتريات والعمليات الداخلية.",
+          text:
+            "واجهة موثوقة للفرق المصرح لها التي تدير المالية والمشتريات والعمليات الداخلية.",
         },
       },
     },
+
+    products: {
+      pageTitle: "المنتجات",
+      addProduct: "إضافة منتج",
+      searchPlaceholder: "ابحث في المنتجات، SKU، الفئة...",
+      filters: "المرشحات",
+      category: "الفئة",
+      supplier: "المورد",
+      stock: "المخزون",
+      low: "قليل",
+      out: "نفد",
+      inStock: "متوفر",
+      purchasePrice: "سعر الشراء",
+      salePrice: "سعر البيع",
+      margin: "الهامش",
+      status: "الحالة",
+      actions: "الإجراءات",
+      noProducts: "لا توجد منتجات.",
+      viewToggleTable: "عرض جدول",
+      viewToggleCards: "عرض بطاقات",
+    },
+
     settings: {
       pageTitle: "إعدادات النظام",
       subtitle: "خصص اللغة والاتجاه والمظهر على مستوى مساحة العمل.",
@@ -443,7 +644,8 @@ export const translations = {
       configurationStatus: "حالة الإعداد",
       corePreferences: "التفضيلات الأساسية مفعّلة",
       nextExpansion: "التوسعة التالية",
-      nextExpansionDescription: "ستظهر هنا لاحقاً إعدادات الصلاحيات والفروع والعملات والضرائب والخزينة.",
+      nextExpansionDescription:
+        "ستظهر هنا لاحقاً إعدادات الصلاحيات والفروع والعملات والضرائب والخزينة.",
       foundationReady: "الأساس جاهز",
       ltrHelper: "واجهة من اليسار إلى اليمين وتسميات النظام",
       rtlHelper: "واجهة من اليمين إلى اليسار ومصطلحات عربية",
@@ -452,4 +654,3 @@ export const translations = {
 } as const;
 
 export type AppLanguage = keyof typeof translations;
->>>>>>> 1c472c9 (26/4/2026)

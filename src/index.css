@@ -9854,3 +9854,617 @@ body.nav-open {
     padding-bottom: 24px;
   }
 }
+/* =========================
+   Global Scroll Fix
+========================= */
+
+html,
+body,
+#root {
+  width: 100%;
+  min-height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+body {
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* يمنع السكرول فقط أثناء فتح قائمة الموبايل */
+body.nav-open {
+  overflow: hidden;
+}
+
+/* =========================
+   App Layout Scroll Fix
+========================= */
+
+.app-layout {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  align-items: stretch;
+  overflow: visible;
+}
+
+.app-main {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  min-height: 100vh;
+  padding: 24px;
+  background: #f3f4f6;
+  overflow-y: visible;
+  overflow-x: hidden;
+}
+
+.app-main-shell {
+  width: 100%;
+  min-height: 100vh;
+  overflow: visible;
+}
+
+.app-page-content {
+  width: 100%;
+  min-height: calc(100vh - 120px);
+  overflow: visible;
+}
+
+/* =========================
+   Sidebar Fix
+========================= */
+
+.sidebar {
+  flex-shrink: 0;
+}
+
+/* سايدبار الديسكتوب يبقى ثابت، والصفحة نفسها تعمل scroll */
+.desktop-sidebar {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+}
+
+/* سايدبار الموبايل */
+.mobile-drawer-sidebar {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 1200;
+  width: 280px;
+  max-width: calc(100vw - 56px);
+  min-height: 100vh;
+  transform: translateX(-110%);
+  visibility: hidden;
+  pointer-events: none;
+  overflow-y: auto;
+  transition:
+    transform 0.25s ease,
+    visibility 0.25s ease;
+}
+
+/* مهم: في Sidebar.tsx الكلاس اسمه is-open */
+.mobile-drawer-sidebar.is-open {
+  transform: translateX(0);
+  visibility: visible;
+  pointer-events: auto;
+}
+
+/* دعم العربي RTL */
+html[dir="rtl"] .mobile-drawer-sidebar {
+  left: auto;
+  right: 0;
+  transform: translateX(110%);
+}
+
+html[dir="rtl"] .mobile-drawer-sidebar.is-open {
+  transform: translateX(0);
+}
+
+.mobile-nav-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1190;
+  border: 0;
+  background: rgba(15, 23, 42, 0.35);
+  cursor: pointer;
+}
+
+/* =========================
+   Mobile Layout Fix
+========================= */
+
+@media (max-width: 768px) {
+  .app-layout {
+    display: block;
+    min-height: 100vh;
+    overflow: visible;
+  }
+
+  .desktop-sidebar {
+    display: none;
+  }
+
+  .app-main {
+    width: 100%;
+    min-height: 100vh;
+    padding: 16px;
+    padding-bottom: 110px;
+    overflow-y: visible;
+    overflow-x: hidden;
+  }
+
+  .app-main-shell {
+    width: 100%;
+    min-height: 100vh;
+    overflow: visible;
+  }
+
+  .app-page-content {
+    width: 100%;
+    min-height: calc(100vh - 160px);
+    padding-bottom: 32px;
+    overflow: visible;
+  }
+
+  .mobile-bottom-nav {
+    position: fixed;
+    left: 16px;
+    right: 16px;
+    bottom: 16px;
+    z-index: 1100;
+  }
+}
+html,
+body,
+#root {
+  width: 100%;
+  min-height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+body.nav-open {
+  overflow: hidden;
+}
+
+.app-layout {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  align-items: stretch;
+  overflow: visible;
+}
+
+.desktop-sidebar {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+
+.app-main {
+  flex: 1;
+  min-width: 0;
+  min-height: 100vh;
+  overflow-x: hidden;
+  overflow-y: visible;
+}
+
+.app-main-shell {
+  width: 100%;
+  min-height: 100vh;
+  overflow: visible;
+}
+
+.app-page-content {
+  width: 100%;
+  min-height: calc(100vh - 100px);
+  overflow: visible;
+}
+/* =========================
+   Global Scroll Fix For All Pages
+========================= */
+
+html,
+body,
+#root {
+  width: 100%;
+  min-height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+body {
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* لا تمنع السكرول إلا عند فتح قائمة الموبايل */
+body.nav-open {
+  overflow: hidden;
+}
+
+/* =========================
+   Main App Layout
+========================= */
+
+.app-layout {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  align-items: stretch;
+  overflow: visible;
+}
+
+/* السايدبار يبقى ثابت، وله سكرول خاص إذا كان طويل */
+.desktop-sidebar {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  flex-shrink: 0;
+}
+
+/* محتوى الصفحات */
+.app-main {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  min-height: 100vh;
+  overflow-x: hidden;
+  overflow-y: visible;
+}
+
+/* الغلاف الداخلي للصفحات */
+.app-main-shell {
+  width: 100%;
+  min-height: 100vh;
+  overflow: visible;
+}
+
+/* محتوى الصفحة نفسه */
+.app-page-content {
+  width: 100%;
+  min-height: calc(100vh - 90px);
+  overflow: visible;
+}
+
+/* مهم للجداول الطويلة */
+.table-wrapper,
+.app-table-wrap,
+.products-table-wrap,
+.compact-table-wrapper {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+/* =========================
+   Mobile Layout
+========================= */
+
+@media (max-width: 768px) {
+  html,
+  body,
+  #root {
+    min-height: 100%;
+  }
+
+  body {
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  .app-layout {
+    display: block;
+    min-height: 100vh;
+    overflow: visible;
+  }
+
+  .desktop-sidebar {
+    display: none;
+  }
+
+  .app-main {
+    width: 100%;
+    min-height: 100vh;
+    padding-bottom: 110px;
+    overflow-y: visible;
+    overflow-x: hidden;
+  }
+
+  .app-main-shell {
+    width: 100%;
+    min-height: 100vh;
+    overflow: visible;
+  }
+
+  .app-page-content {
+    width: 100%;
+    min-height: calc(100vh - 120px);
+    padding-bottom: 32px;
+    overflow: visible;
+  }
+
+  .mobile-bottom-nav {
+    position: fixed;
+    left: 16px;
+    right: 16px;
+    bottom: 16px;
+    z-index: 1100;
+  }
+}
+/* =========================
+   Global Scroll Fix For All Pages
+========================= */
+
+html,
+body,
+#root {
+  width: 100%;
+  min-height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+body {
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* يمنع السكرول فقط عند فتح قائمة الموبايل */
+body.nav-open {
+  overflow: hidden;
+}
+
+.app-layout {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  align-items: stretch;
+  overflow: visible;
+}
+
+.desktop-sidebar {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  flex-shrink: 0;
+}
+
+.app-main {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  min-height: 100vh;
+  overflow-x: hidden;
+  overflow-y: visible;
+}
+
+.app-main-shell {
+  width: 100%;
+  min-height: 100vh;
+  overflow: visible;
+}
+
+.app-page-content {
+  width: 100%;
+  min-height: calc(100vh - 90px);
+  overflow: visible;
+}
+
+.table-wrapper,
+.app-table-wrap,
+.products-table-wrap,
+.compact-table-wrapper {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+/* =========================
+   Mobile Layout
+========================= */
+
+@media (max-width: 768px) {
+  body {
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  .app-layout {
+    display: block;
+    min-height: 100vh;
+    overflow: visible;
+  }
+
+  .desktop-sidebar {
+    display: none;
+  }
+
+  .app-main {
+    width: 100%;
+    min-height: 100vh;
+    padding-bottom: 110px;
+    overflow-y: visible;
+    overflow-x: hidden;
+  }
+
+  .app-main-shell {
+    width: 100%;
+    min-height: 100vh;
+    overflow: visible;
+  }
+
+  .app-page-content {
+    width: 100%;
+    min-height: calc(100vh - 120px);
+    padding-bottom: 32px;
+    overflow: visible;
+  }
+
+  .mobile-bottom-nav {
+    position: fixed;
+    left: 16px;
+    right: 16px;
+    bottom: 16px;
+    z-index: 1100;
+  }
+}
+/* =========================
+   FINAL GLOBAL SCROLL FIX
+   Scroll inside app-main for all pages
+========================= */
+
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  overflow: hidden !important;
+}
+
+/* لا تمنع السكرول إلا عند فتح قائمة الموبايل */
+body.nav-open {
+  overflow: hidden !important;
+}
+
+.app-layout {
+  width: 100%;
+  height: 100vh;
+  min-height: 100vh;
+  display: flex;
+  align-items: stretch;
+  overflow: hidden !important;
+}
+
+/* Sidebar desktop ثابت وله سكرول خاص */
+.desktop-sidebar {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  max-height: 100vh;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  flex-shrink: 0;
+}
+
+/* هنا السكرول الأساسي لكل الصفحات */
+.app-main {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  height: 100vh;
+  min-height: 100vh;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  scroll-behavior: smooth;
+}
+
+/* محتوى الصفحات */
+.app-main-shell {
+  width: 100%;
+  min-height: 100vh;
+  height: auto !important;
+  overflow: visible !important;
+}
+
+.app-page-content {
+  width: 100%;
+  min-height: calc(100vh - 90px);
+  height: auto !important;
+  overflow: visible !important;
+  padding-bottom: 120px;
+}
+
+/* الجداول العريضة تتحرك أفقيًا فقط */
+.table-wrapper,
+.app-table-wrap,
+.products-table-wrap,
+.compact-table-wrapper {
+  max-width: 100%;
+  overflow-x: auto !important;
+}
+
+/* =========================
+   Mobile
+========================= */
+
+@media (max-width: 768px) {
+  .app-layout {
+    display: block;
+    height: 100vh;
+    min-height: 100vh;
+    overflow: hidden !important;
+  }
+
+  .desktop-sidebar {
+    display: none;
+  }
+
+  .app-main {
+    width: 100%;
+    height: 100vh;
+    min-height: 100vh;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    padding-bottom: 110px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .app-main-shell {
+    width: 100%;
+    min-height: 100vh;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  .app-page-content {
+    width: 100%;
+    min-height: calc(100vh - 120px);
+    height: auto !important;
+    overflow: visible !important;
+    padding-bottom: 140px;
+  }
+
+  .mobile-bottom-nav {
+    position: fixed;
+    left: 16px;
+    right: 16px;
+    bottom: 16px;
+    z-index: 1100;
+  }
+}

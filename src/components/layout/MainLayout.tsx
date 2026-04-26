@@ -24,8 +24,11 @@ export default function MainLayout() {
     localStorage.setItem("app-sidebar-collapsed", sidebarCollapsed ? "1" : "0");
   }, [sidebarCollapsed]);
 
-  // يمنع السكرول فقط أثناء فتح قائمة الموبايل
-  // ويرجع السكرول طبيعي عند الإغلاق أو تغيير الصفحة
+  /*
+    مهم:
+    لا نستخدم document.body.style.overflow = "hidden" مباشرة.
+    نضيف class فقط عند فتح قائمة الموبايل.
+  */
   useEffect(() => {
     document.body.classList.toggle("nav-open", mobileNavOpen);
 
@@ -53,7 +56,10 @@ export default function MainLayout() {
     };
   }, [mobileNavOpen]);
 
-  // عند التنقل بين الصفحات أغلق قائمة الموبايل
+  /*
+    عند الانتقال بين الصفحات، أغلق قائمة الموبايل
+    حتى لا تبقى nav-open وتمنع السكرول.
+  */
   useEffect(() => {
     setMobileNavOpen(false);
   }, [location.pathname]);
