@@ -1,0 +1,279 @@
+  font-weight: 700;
+}
+
+.kpi-meta em {
+  color: #22a364;
+}
+
+.purchase-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.purchase-main-column,
+.purchase-side-column {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.purchase-filters-card {
+  border-radius: 20px;
+  padding: 16px;
+  position: relative;
+}
+
+.purchase-filters-section {
+  padding: 16px 16px 0;
+  position: relative;
+  border-bottom: 1px solid #edf2f7;
+}
+
+.purchase-table-section {
+  /* no card wrapper needed — lives inside .purchases-content-card */
+}
+
+.purchase-toolbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.search-field {
+  flex: 1 1 440px;
+  min-height: 48px;
+  border-radius: 16px;
+  border: 1px solid #dce5f0;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px;
+}
+
+.search-field svg {
+  color: #7c8ca2;
+  flex-shrink: 0;
+}
+
+.search-field input {
+  width: 100%;
+  border: none;
+  background: transparent;
+  outline: none;
+  color: #122033;
+  font-size: 14px;
+}
+
+.toolbar-cluster {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  position: relative;
+}
+
+.toolbar-button {
+  min-height: 42px;
+  padding: 0 14px;
+  border-radius: 14px;
+  background: #ffffff;
+  border: 1px solid #dce5f0;
+  color: #24354b;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.toolbar-button.active {
+  background: #eef5ff;
+  border-color: #d8e4ff;
+  color: #2563eb;
+}
+
+.toolbar-button.subtle {
+  color: #607089;
+}
+
+.toolbar-count {
+  min-width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: #eef5ff;
+  color: #2563eb;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.view-toggle {
+  min-height: 42px;
+  padding: 4px;
+  border-radius: 14px;
+  background: #f6f9fc;
+  border: 1px solid #dce5f0;
+  display: inline-flex;
+  gap: 4px;
+}
+
+.view-toggle button {
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 10px;
+  color: #708198;
+  background: transparent;
+  cursor: pointer;
+}
+
+.view-toggle button.active {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.filter-field,
+.purchase-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.filter-field span,
+.purchase-field span {
+  font-size: 12px;
+  font-weight: 800;
+  color: #607089;
+}
+
+.filter-field select,
+.purchase-field select,
+.purchase-field input,
+.purchase-field textarea,
+.rows-select select,
+.delete-box input {
+  min-height: 44px;
+  border-radius: 14px;
+  border: 1px solid #dce5f0;
+  background: #ffffff;
+  color: #132033;
+  padding: 0 12px;
+  outline: none;
+  font: inherit;
+}
+
+.purchase-field textarea {
+  min-height: 92px;
+  padding: 12px;
+  resize: vertical;
+}
+
+.filters-popover-shell {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: min(100vw - 48px, 392px);
+  padding: 14px;
+  border-radius: 20px;
+  background: #ffffff;
+  border: 1px solid #dce5f0;
+  box-shadow: 0 22px 46px rgba(15, 23, 42, 0.12);
+  z-index: 40;
+}
+
+.filters-popover-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 14px;
+}
+
+.filters-popover-head strong {
+  display: block;
+  color: #122033;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.filters-popover-head span {
+  display: block;
+  margin-top: 4px;
+  color: #6f8097;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.filter-close-button {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  color: #6e7f95;
+}
+
+.filters-popover-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.filters-popover-actions {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid #edf2f7;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+
+.filters-popover-actions .secondary-button {
+  min-height: 42px;
+}
+
+.filters-popover-cta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* ── Status chips ── */
+.status-chip-row {
+  margin-top: 14px;
+  padding-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.status-chip {
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid #e2ecf5;
+  background: #ffffff;
+  color: #56677f;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  transition: all 0.15s ease;
+}
+
+.status-chip em {
+  min-width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: #f0f4f8;
+  display: inline-flex;

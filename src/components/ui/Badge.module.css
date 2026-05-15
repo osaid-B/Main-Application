@@ -1,0 +1,68 @@
+/* Base */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--app-space-1);
+  font-family: inherit;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  border: 1px solid transparent;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Sizes */
+.size_sm {
+  height: 20px;
+  padding: 0 var(--app-space-2);
+  font-size: 11px;
+  border-radius: var(--app-radius-xs);
+}
+
+.size_md {
+  height: 24px;
+  padding: 0 10px;
+  font-size: 12px;
+  border-radius: var(--app-radius-sm);
+}
+
+/* Variants — soft (subtle bg + main color) */
+.variant_success {
+  background: var(--app-success-subtle);
+  color: var(--app-success);
+}
+
+.variant_warning {
+  background: var(--app-warning-subtle);
+  color: var(--app-warning);
+}
+
+.variant_danger {
+  background: var(--app-danger-subtle);
+  color: var(--app-danger);
+}
+
+.variant_info {
+  background: var(--app-info-subtle);
+  color: var(--app-info);
+}
+
+.variant_neutral {
+  background: var(--app-surface-muted);
+  color: var(--app-text-muted);
+}
+
+/* Filled counter pill */
+.variant_count {
+  background: var(--app-accent);
+  color: #ffffff;
+}
+
+/* Icon slot */
+.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}

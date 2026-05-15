@@ -4,7 +4,8 @@ import {
   ArrowRight,
   BarChart3,
   Boxes,
-  CreditCard,
+  Eye,
+  EyeOff,
   LockKeyhole,
   Receipt,
   ShieldCheck,
@@ -22,11 +23,12 @@ export default function Login() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [remember, setRemember] = useState(true);
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-
     const trimmedUsername = username.trim();
     const trimmedPassword = password.trim();
 
@@ -35,7 +37,11 @@ export default function Login() {
       return;
     }
 
+    setLoading(true);
+    await new Promise((r) => setTimeout(r, 420));
+
     const success = login(trimmedUsername, trimmedPassword);
+    setLoading(false);
 
     if (success) {
       setError("");
@@ -46,246 +52,214 @@ export default function Login() {
   };
 
   return (
-    <div className="auth-page" dir={isArabic ? "rtl" : "ltr"}>
-      <section className="auth-left">
-        <div className="auth-left-inner">
-          <div className="auth-brand">
-            <div className="auth-brand-icon">
-              <BarChart3 size={24} />
-            </div>
+    <div className="auth-root" dir={isArabic ? "rtl" : "ltr"}>
 
-            <div className="auth-brand-text">
-              <p className="auth-brand-label">{t.login.brandLabel}</p>
-              <h1 className="auth-brand-title">{t.login.title}</h1>
+      {/* ── Left panel: form ─────────────────────────────────── */}
+      <section className="auth-panel auth-panel--form">
+        <div className="auth-form-container">
+
+          {/* Logo */}
+          <div className="auth-logo">
+            <div className="auth-logo-icon">
+              <BarChart3 size={18} />
             </div>
+            <span className="auth-logo-label">{t.login.brandLabel}</span>
           </div>
 
-          <div className="auth-card">
-            <div className="auth-row auth-language-row">
+          {/* Heading */}
+          <div className="auth-intro">
+            <h1 className="auth-intro-title">{t.login.welcomeBack}</h1>
+            <p className="auth-intro-sub">{t.login.subtitle}</p>
+          </div>
+
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="auth-form" noValidate>
+
+            <div className="auth-field">
+              <label className="auth-label" htmlFor="username">
+                {t.login.username}
+              </label>
+              <div className={`auth-input-wrap ${error && !username ? "auth-input-wrap--error" : ""}`}>
+                <span className="auth-input-prefix">@</span>
+                <input
+                  id="username"
+                  className="auth-input"
+                  type="text"
+                  placeholder={t.login.usernamePlaceholder}
+                  value={username}
+                  autoComplete="username"
+                  autoFocus
+                  onChange={(e) => { setUsername(e.target.value); setError(""); }}
+                />
+              </div>
+            </div>
+
+            <div className="auth-field">
+              <div className="auth-field-row">
+                <label className="auth-label" htmlFor="password">
+                  {t.login.password}
+                </label>
+                <button type="button" className="auth-link">{t.login.forgotPassword}</button>
+              </div>
+              <div className={`auth-input-wrap ${error && !password ? "auth-input-wrap--error" : ""}`}>
+                <span className="auth-input-prefix">
+                  <LockKeyhole size={15} />
+                </span>
+                <input
+                  id="password"
+                  className="auth-input"
+                  type={showPassword ? "text" : "password"}
+                  placeholder={t.login.passwordPlaceholder}
+                  value={password}
+                  autoComplete="current-password"
+                  onChange={(e) => { setPassword(e.target.value); setError(""); }}
+                />
+                <button
+                  type="button"
+                  className="auth-eye-btn"
+                  onClick={() => setShowPassword((v) => !v)}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  tabIndex={-1}
+                >
+                  {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                </button>
+              </div>
+            </div>
+
+            <div className="auth-options">
+              <label className="auth-remember">
+                <input
+                  type="checkbox"
+                  checked={remember}
+                  onChange={(e) => setRemember(e.target.checked)}
+                />
+                <span>{t.login.rememberMe}</span>
+              </label>
+              <div className="auth-trust">
+                <ShieldCheck size={13} />
+                <span>{t.login.trustInline}</span>
+              </div>
+            </div>
+
+            {error && (
+              <div className="auth-error-box">
+                <span>{error}</span>
+              </div>
+            )}
+
+            <button
+              className={`auth-submit-btn ${loading ? "auth-submit-btn--loading" : ""}`}
+              type="submit"
+              disabled={loading}
+            >
+              {loading ? (
+                <span className="auth-spinner" />
+              ) : (
+                <>
+                  <span>{t.login.signIn}</span>
+                  <ArrowRight size={16} />
+                </>
+              )}
+            </button>
+          </form>
+
+          {/* Footer */}
+          <div className="auth-footer">
+            <p className="auth-footer-note">{t.login.footerNote}</p>
+            <div className="auth-lang-toggle">
               <button
                 type="button"
-                className={`auth-lang-chip ${language === "en" ? "active" : ""}`}
+                className={`auth-lang-btn ${language === "en" ? "active" : ""}`}
                 onClick={() => setLanguage("en")}
               >
-                {t.common.english}
+                EN
               </button>
+              <div className="auth-lang-divider" />
               <button
                 type="button"
-                className={`auth-lang-chip ${language === "ar" ? "active" : ""}`}
+                className={`auth-lang-btn ${language === "ar" ? "active" : ""}`}
                 onClick={() => setLanguage("ar")}
               >
-                {t.common.arabic}
+                AR
               </button>
             </div>
-
-            <div className="auth-badge">
-              <ShieldCheck size={14} />
-              {t.login.secureAccess}
-            </div>
-
-            <h2 className="auth-heading">{t.login.welcomeBack}</h2>
-            <p className="auth-subheading">{t.login.subtitle}</p>
-
-            <form onSubmit={handleSubmit} className="auth-form">
-              <div className="auth-field">
-                <label className="auth-label" htmlFor="username">
-                  {t.login.username}
-                </label>
-
-                <div className="auth-input-wrap">
-                  <span className="auth-input-icon">@</span>
-                  <input
-                    id="username"
-                    className="auth-input"
-                    type="text"
-                    placeholder={t.login.usernamePlaceholder}
-                    value={username}
-                    onChange={(e) => {
-                      setUsername(e.target.value);
-                      setError("");
-                    }}
-                    autoComplete="username"
-                  />
-                </div>
-              </div>
-
-              <div className="auth-field">
-                <div className="auth-row">
-                  <label className="auth-label" htmlFor="password">
-                    {t.login.password}
-                  </label>
-
-                  <button type="button" className="auth-link">
-                    {t.login.forgotPassword}
-                  </button>
-                </div>
-
-                <div className="auth-input-wrap">
-                  <span className="auth-input-icon">
-                    <LockKeyhole size={16} />
-                  </span>
-                  <input
-                    id="password"
-                    className="auth-input"
-                    type="password"
-                    placeholder={t.login.passwordPlaceholder}
-                    value={password}
-                    onChange={(e) => {
-                      setPassword(e.target.value);
-                      setError("");
-                    }}
-                    autoComplete="current-password"
-                  />
-                </div>
-              </div>
-
-              <div className="auth-row">
-                <label className="auth-check">
-                  <input
-                    type="checkbox"
-                    checked={remember}
-                    onChange={(e) => setRemember(e.target.checked)}
-                  />
-                  <span>{t.login.rememberMe}</span>
-                </label>
-
-                <div className="auth-trust-inline">
-                  <ShieldCheck size={14} />
-                  {t.login.trustInline}
-                </div>
-              </div>
-
-              {error && <p className="auth-error">{error}</p>}
-
-              <button className="auth-submit" type="submit">
-                <span>{t.login.signIn}</span>
-                <ArrowRight size={18} />
-              </button>
-
-              <p className="auth-footer-note">{t.login.footerNote}</p>
-            </form>
           </div>
+
         </div>
       </section>
 
-      <section className="auth-right">
-        <div className="auth-hero">
-          <div className="auth-hero-top">
-            <div className="auth-hero-pill">
-              <CreditCard size={14} />
-              {t.login.rightPill}
+      {/* ── Right panel: visual showcase ─────────────────────── */}
+      <section className="auth-panel auth-panel--showcase">
+        <div className="auth-showcase">
+
+          <div className="auth-showcase-copy">
+            <div className="auth-showcase-pill">
+              <ShieldCheck size={12} />
+              <span>{t.login.rightPill}</span>
             </div>
-
-            <h2 className="auth-hero-title">{t.login.rightTitle}</h2>
-
-            <p className="auth-hero-text">{t.login.rightText}</p>
+            <h2 className="auth-showcase-title">{t.login.rightTitle}</h2>
+            <p className="auth-showcase-sub">{t.login.rightText}</p>
           </div>
 
-          <div className="auth-features">
-            <div className="auth-feature-card">
-              <div className="auth-feature-icon">
-                <BarChart3 size={20} />
+          <div className="auth-showcase-stats">
+            <div className="auth-stat">
+              <div className="auth-stat-icon auth-stat-icon--blue">
+                <BarChart3 size={16} />
               </div>
-              <h3 className="auth-feature-title">{t.login.features.finance.title}</h3>
-              <p className="auth-feature-text">{t.login.features.finance.text}</p>
+              <div className="auth-stat-body">
+                <span className="auth-stat-value">$48,240</span>
+                <span className="auth-stat-label">Revenue this month</span>
+              </div>
+              <div className="auth-stat-delta">↑ 12.4%</div>
             </div>
 
-            <div className="auth-feature-card">
-              <div className="auth-feature-icon">
-                <Users size={20} />
+            <div className="auth-stat">
+              <div className="auth-stat-icon auth-stat-icon--indigo">
+                <Users size={16} />
               </div>
-              <h3 className="auth-feature-title">{t.login.features.customers.title}</h3>
-              <p className="auth-feature-text">{t.login.features.customers.text}</p>
-            </div>
-
-            <div className="auth-feature-card">
-              <div className="auth-feature-icon">
-                <Receipt size={20} />
-              </div>
-              <h3 className="auth-feature-title">{t.login.features.insights.title}</h3>
-              <p className="auth-feature-text">{t.login.features.insights.text}</p>
-            </div>
-
-            <div className="auth-feature-card">
-              <div className="auth-feature-icon">
-                <Boxes size={20} />
-              </div>
-              <h3 className="auth-feature-title">{t.login.features.secure.title}</h3>
-              <p className="auth-feature-text">{t.login.features.secure.text}</p>
-            </div>
-          </div>
-
-          <div className="auth-preview">
-            <div className="auth-preview-header">
-              <div>
-                <div className="auth-preview-label">Live overview</div>
-                <h3 className="auth-preview-title">Business performance</h3>
-              </div>
-
-              <div className="auth-preview-status">Synced</div>
-            </div>
-
-            <div className="auth-preview-grid">
-              <div className="auth-mini-card">
-                <div className="auth-mini-label">Revenue</div>
-                <div className="auth-mini-value">$48,240</div>
-                <div className="auth-mini-note">+12.4% this month</div>
-              </div>
-
-              <div className="auth-mini-card">
-                <div className="auth-mini-label">Outstanding invoices</div>
-                <div className="auth-mini-value">18</div>
-                <div className="auth-mini-note">Need follow-up</div>
+              <div className="auth-stat-body">
+                <span className="auth-stat-value">1,284</span>
+                <span className="auth-stat-label">Active customers</span>
               </div>
             </div>
 
-            <div className="auth-chart-card">
-              <div className="auth-chart-top">
-                <div>
-                  <div className="auth-chart-meta">Cash flow</div>
-                  <div className="auth-chart-title">Last 8 periods</div>
-                </div>
-
-                <BarChart3 size={18} color="#0369a1" />
+            <div className="auth-stat">
+              <div className="auth-stat-icon auth-stat-icon--green">
+                <Receipt size={16} />
               </div>
-
-              <div className="auth-chart-bars">
-                {[38, 52, 46, 68, 58, 76, 64, 82].map((height, index) => (
-                  <div
-                    key={index}
-                    className="auth-chart-bar"
-                    style={{ height: `${height}%` }}
-                  />
-                ))}
+              <div className="auth-stat-body">
+                <span className="auth-stat-value">324</span>
+                <span className="auth-stat-label">Invoices issued</span>
               </div>
             </div>
 
-            <div className="auth-stats-row">
-              <div className="auth-stat-box">
-                <div className="auth-stat-icon sky">
-                  <Users size={16} />
-                </div>
-                <div className="auth-stat-label">Customers</div>
-                <div className="auth-stat-value">1,284</div>
+            <div className="auth-stat">
+              <div className="auth-stat-icon auth-stat-icon--amber">
+                <Boxes size={16} />
               </div>
-
-              <div className="auth-stat-box">
-                <div className="auth-stat-icon indigo">
-                  <Receipt size={16} />
-                </div>
-                <div className="auth-stat-label">Invoices</div>
-                <div className="auth-stat-value">324</div>
-              </div>
-
-              <div className="auth-stat-box">
-                <div className="auth-stat-icon green">
-                  <Boxes size={16} />
-                </div>
-                <div className="auth-stat-label">Inventory</div>
-                <div className="auth-stat-value">98%</div>
+              <div className="auth-stat-body">
+                <span className="auth-stat-value">98%</span>
+                <span className="auth-stat-label">Inventory health</span>
               </div>
             </div>
           </div>
+
+          <div className="auth-chart">
+            <div className="auth-chart-header">
+              <span className="auth-chart-label">Cash flow</span>
+              <span className="auth-chart-period">Last 8 periods</span>
+            </div>
+            <div className="auth-chart-bars">
+              {[42, 58, 48, 70, 56, 78, 66, 84].map((h, i) => (
+                <div
+                  key={i}
+                  className="auth-chart-bar"
+                  style={{ "--bar-h": `${h}%` } as React.CSSProperties}
+                />
+              ))}
+            </div>
+          </div>
+
         </div>
       </section>
     </div>

@@ -1,0 +1,129 @@
+/* Wrapper */
+.wrapper {
+  display: inline-flex;
+  flex-direction: column;
+  gap: var(--app-space-1);
+  min-width: 0;
+}
+
+.fullWidth {
+  display: flex;
+  width: 100%;
+}
+
+/* Label */
+.label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--app-text-soft);
+  margin-bottom: var(--app-space-1);
+  line-height: 1.2;
+}
+
+/* Field shell */
+.field {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  width: 100%;
+  background: var(--app-surface);
+  border: 1px solid var(--app-border-strong);
+  border-radius: var(--app-radius-sm);
+  color: var(--app-text);
+  transition:
+    border-color var(--app-transition),
+    box-shadow var(--app-transition),
+    background var(--app-transition);
+}
+
+.field:hover:not(.fieldDisabled) {
+  border-color: var(--app-text-subtle);
+}
+
+.field:focus-within {
+  border-color: var(--app-accent);
+  box-shadow: 0 0 0 3px var(--app-accent-subtle);
+}
+
+.fieldError {
+  border-color: var(--app-danger);
+}
+
+.fieldError:focus-within {
+  border-color: var(--app-danger);
+  box-shadow: 0 0 0 3px var(--app-danger-subtle);
+}
+
+.fieldDisabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: var(--app-surface-muted);
+}
+
+/* Sizes */
+.size_sm { height: 28px; font-size: 12px; }
+.size_md { height: 36px; font-size: 13px; }
+.size_lg { height: 44px; font-size: 14px; }
+
+/* Native <select> — transparent, owns no border / arrow */
+.select {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
+  width: 100%;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  padding-inline-start: var(--app-space-3);
+  /* Extra inline-end space to clear the chevron */
+  padding-inline-end: var(--app-space-7);
+}
+
+.select:disabled {
+  cursor: not-allowed;
+}
+
+.selectWithStart {
+  padding-inline-start: var(--app-space-1);
+}
+
+/* Icon slots */
+.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--app-text-muted);
+  pointer-events: none;
+}
+
+.iconStart {
+  padding-inline-start: var(--app-space-3);
+}
+
+/* Chevron overlay — absolutely positioned on the inline-end edge */
+.chevron {
+  position: absolute;
+  inset-inline-end: var(--app-space-3);
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+/* Helper / error text */
+.hintText {
+  font-size: 12px;
+  color: var(--app-text-muted);
+  line-height: 1.35;
+}
+
+.errorText {
+  font-size: 12px;
+  color: var(--app-danger);
+  line-height: 1.35;
+}

@@ -1,0 +1,2749 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   PAGES NORMALIZE — Final override layer.
+   Loaded last. Brings every page-specific CSS file into the unified
+   design system defined in foundation.css.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ─── 0. TYPOGRAPHY — Inter everywhere, consistent scale ────────────────── */
+
+*,
+*::before,
+*::after {
+  font-family: "Inter", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+}
+
+/* Single global type scale — kills every page's own h1/p overrides */
+body {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--app-text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Page headings — unified across all modules */
+.hero-copy h1,
+.invoice-hero-text h1,
+.products-header-copy h1,
+.purchases-header-copy h1,
+.dashboard-hero-title,
+.purchase-page-title,
+.suppliers-page-title,
+.treasury-title,
+.employees-page-title,
+.data-import-title,
+.customers-page-title {
+  font-size: clamp(1.15rem, 1.6vw, 1.5rem) !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.025em !important;
+  line-height: 1.15 !important;
+  color: var(--app-text) !important;
+}
+
+/* Page subtitles */
+.hero-copy p,
+.invoice-hero-text p,
+.products-header-copy p,
+.purchases-header-copy p,
+.dashboard-hero-copy p,
+.purchase-page-subtitle,
+.suppliers-page-subtitle,
+.treasury-subtitle,
+.employees-page-subtitle,
+.data-import-subtitle {
+  font-size: 12.5px !important;
+  line-height: 1.55 !important;
+  color: var(--app-text-muted) !important;
+  font-weight: 400 !important;
+}
+
+/* Table body text */
+.purchase-table td,
+.customers-table-v2 td,
+.payments-table td,
+.invoice-table td,
+.products-table td,
+.suppliers-table td,
+.treasury-table td {
+  font-size: 13px !important;
+  line-height: 1.4 !important;
+}
+
+/* Table header text */
+.purchase-table th,
+.customers-table-v2 th,
+.payments-table th,
+.invoice-table th,
+.products-table th,
+.suppliers-table th,
+.treasury-table th {
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.04em !important;
+  text-transform: uppercase !important;
+  color: var(--app-text-muted) !important;
+}
+
+/* ─── 1. BUTTONS ────────────────────────────────────────────────────────── */
+
+/* Remove lift-on-hover transform — feels cheap in an ERP */
+.primary-btn:hover,
+.secondary-btn:hover,
+.toolbar-btn:hover,
+.details-btn:hover,
+.page-btn:hover,
+.drawer-primary-btn:hover,
+.drawer-secondary-btn:hover,
+.modal-primary-btn:hover,
+.modal-secondary-btn:hover,
+.auth-submit:hover,
+.auth-feature-card:hover {
+  transform: none !important;
+}
+
+/* Primary button — flat, no gradient */
+.primary-btn,
+.modal-primary-btn,
+.drawer-primary-btn,
+.auth-submit {
+  background: var(--app-accent) !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  border: 1px solid var(--app-accent) !important;
+  border-radius: var(--app-radius-sm) !important;
+  min-height: 34px !important;
+  padding: 0 13px !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  color: #ffffff !important;
+  transition: background var(--app-transition), border-color var(--app-transition) !important;
+}
+
+.primary-btn:hover,
+.modal-primary-btn:hover,
+.drawer-primary-btn:hover {
+  background: var(--app-accent-strong) !important;
+  border-color: var(--app-accent-strong) !important;
+}
+
+/* Secondary button */
+.secondary-btn,
+.modal-secondary-btn,
+.drawer-secondary-btn {
+  background: var(--app-surface) !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  border: 1px solid var(--app-border-strong) !important;
+  border-radius: var(--app-radius-sm) !important;
+  min-height: 34px !important;
+  padding: 0 13px !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  color: var(--app-text-soft) !important;
+}
+
+.secondary-btn:hover,
+.modal-secondary-btn:hover,
+.drawer-secondary-btn:hover {
+  background: var(--app-surface-hover) !important;
+}
+
+/* Danger button */
+.danger-btn,
+.modal-danger-btn {
+  background: var(--app-danger) !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  border: 1px solid var(--app-danger) !important;
+  border-radius: var(--app-radius-sm) !important;
+  min-height: 34px !important;
+  padding: 0 13px !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  color: #ffffff !important;
+}
+
+/* Toolbar buttons */
+.toolbar-btn,
+.details-btn,
+.page-btn,
+.clear-link-btn,
+.row-view-btn,
+.icon-btn,
+.product-action-icon {
+  box-shadow: none !important;
+  border-radius: var(--app-radius-sm) !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  transition: background var(--app-transition), border-color var(--app-transition) !important;
+}
+
+.toolbar-btn {
+  min-height: 32px !important;
+  padding: 0 10px !important;
+  border: 1px solid var(--app-border-strong) !important;
+  background: var(--app-surface) !important;
+  color: var(--app-text-soft) !important;
+}
+
+.toolbar-btn:hover {
+  background: var(--app-surface-hover) !important;
+}
+
+.toolbar-btn.active {
+  background: var(--app-accent-subtle) !important;
+  color: var(--app-accent) !important;
+  border-color: rgba(37, 99, 235, 0.2) !important;
+}
+
+.toolbar-btn.danger-lite {
+  color: var(--app-danger) !important;
+  background: var(--app-danger-subtle) !important;
+  border-color: rgba(220, 38, 38, 0.18) !important;
+}
+
+/* Icon buttons */
+.icon-btn,
+.product-action-icon,
+.row-menu-btn {
+  width: 30px !important;
+  height: 30px !important;
+  min-height: 30px !important;
+  padding: 0 !important;
+  background: transparent !important;
+  border: 1px solid transparent !important;
+  color: var(--app-text-muted) !important;
+}
+
+.icon-btn:hover,
+.product-action-icon:hover,
+.row-menu-btn:hover {
+  background: var(--app-surface-hover) !important;
+  border-color: var(--app-border) !important;
+  color: var(--app-text) !important;
+}
+
+/* Auth submit button */
+.auth-submit {
+  width: 100% !important;
+  height: 42px !important;
+  border-radius: var(--app-radius-sm) !important;
+  background: var(--app-text) !important;
+  font-size: 14px !important;
+  box-shadow: none !important;
+}
+
+/* ─── 2. CARD SURFACES ──────────────────────────────────────────────────── */
+
+.card-surface,
+.kpi-card,
+.modal-card,
+.info-card,
+.detail-section,
+.tab-card,
+.auth-card,
+.auth-feature-card,
+.auth-preview,
+.auth-mini-card,
+.auth-chart-card,
+.auth-stat-box {
+  border-radius: var(--app-radius-lg) !important;
+  box-shadow: var(--app-shadow-soft) !important;
+  border: 1px solid var(--app-border) !important;
+}
+
+.auth-card {
+  background: var(--app-surface) !important;
+  backdrop-filter: none !important;
+  padding: 28px !important;
+}
+
+.auth-feature-card {
+  background: var(--app-surface) !important;
+  backdrop-filter: none !important;
+}
+
+.auth-mini-card,
+.auth-chart-card,
+.auth-stat-box {
+  background: var(--app-surface-muted) !important;
+}
+
+/* ─── 3. KPI / STAT CARDS ───────────────────────────────────────────────── */
+
+.kpi-card {
+  padding: 14px 16px !important;
+  gap: 12px !important;
+}
+
+.kpi-icon {
+  width: 36px !important;
+  height: 36px !important;
+  border-radius: var(--app-radius-sm) !important;
+}
+
+.kpi-card p {
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  color: var(--app-text-muted) !important;
+}
+
+.kpi-card strong {
+  font-size: 20px !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.02em !important;
+  font-variant-numeric: tabular-nums !important;
+}
+
+.kpi-card small {
+  font-size: 11px !important;
+  color: var(--app-text-subtle) !important;
+}
+
+/* ─── 4. SEARCH / INPUTS ────────────────────────────────────────────────── */
+
+.search-wrap,
+.search-field,
+.auth-input-wrap {
+  height: 34px !important;
+  min-height: 34px !important;
+  border-radius: var(--app-radius-sm) !important;
+  border: 1px solid var(--app-border-strong) !important;
+  background: var(--app-surface) !important;
+  box-shadow: none !important;
+}
+
+.search-wrap:focus-within,
+.auth-input-wrap:focus-within {
+  border-color: var(--app-accent) !important;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1) !important;
+  transform: none !important;
+}
+
+.auth-input-wrap {
+  height: 42px !important;
+}
+
+.filter-block select,
+.rows-select select,
+.modal-select,
+.field-block select {
+  height: 34px !important;
+  min-height: 34px !important;
+  border-radius: var(--app-radius-sm) !important;
+  border: 1px solid var(--app-border-strong) !important;
+  font-size: 13px !important;
+  padding: 0 10px !important;
+}
+
+.field-block input,
+.modal-input,
+.field-block textarea {
+  border-radius: var(--app-radius-sm) !important;
+  border: 1px solid var(--app-border-strong) !important;
+  font-size: 13px !important;
+  min-height: 34px !important;
+}
+
+.field-block input:focus,
+.modal-input:focus,
+.field-block select:focus,
+.field-block textarea:focus {
+  border-color: var(--app-accent) !important;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1) !important;
+  outline: none !important;
+}
+
+/* ─── 5. STATUS BADGES / CHIPS ──────────────────────────────────────────── */
+
+.customer-status-badge,
+.product-status,
+.supplier-status-badge,
+.status-pill,
+.meta-badge,
+.status-badge {
+  min-height: 20px !important;
+  padding: 0 7px !important;
+  border-radius: 999px !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  border: 1px solid transparent !important;
+  box-shadow: none !important;
+}
+
+/* Active / success state */
+.customer-status-badge.active,
+.supplier-status-badge.active,
+.status-active,
+.status-pill.active {
+  background: var(--app-success-subtle) !important;
+  color: var(--app-success) !important;
+  border-color: rgba(22, 163, 74, 0.2) !important;
+}
+
+/* Warning */
+.status-warning,
+.status-pill.warning {
+  background: var(--app-warning-subtle) !important;
+  color: var(--app-warning) !important;
+  border-color: rgba(217, 119, 6, 0.2) !important;
+}
+
+/* Danger / inactive */
+.status-danger,
+.status-inactive,
+.status-pill.danger {
+  background: var(--app-danger-subtle) !important;
+  color: var(--app-danger) !important;
+  border-color: rgba(220, 38, 38, 0.2) !important;
+}
+
+/* Neutral note / tag badge */
+.note-badge,
+.meta-badge {
+  background: #fef9ec !important;
+  color: #92400e !important;
+  border-color: rgba(217, 119, 6, 0.18) !important;
+}
+
+/* Count pills */
+.count-pill,
+.toolbar-count,
+.shell-count-pill {
+  min-width: 18px !important;
+  height: 18px !important;
+  padding: 0 5px !important;
+  border-radius: 999px !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  background: rgba(37, 99, 235, 0.1) !important;
+  color: var(--app-accent) !important;
+}
+
+/* ─── 6. TABLE ROW ACTIONS ──────────────────────────────────────────────── */
+
+.row-actions {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 3px !important;
+  justify-content: flex-end !important;
+}
+
+.details-btn,
+.row-view-btn {
+  min-height: 28px !important;
+  padding: 0 8px !important;
+  border-radius: var(--app-radius-xs) !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  border: 1px solid var(--app-border-strong) !important;
+  background: var(--app-surface) !important;
+  color: var(--app-text-soft) !important;
+}
+
+.details-btn:hover,
+.row-view-btn:hover {
+  background: var(--app-surface-hover) !important;
+}
+
+/* ─── 7. TABLE FOOTER PAGINATION ────────────────────────────────────────── */
+
+.table-footer,
+.payments-table-footer,
+.pagination-actions {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 10px !important;
+  flex-wrap: wrap !important;
+  padding-top: 10px !important;
+  border-top: 1px solid var(--app-border) !important;
+  font-size: 12px !important;
+  color: var(--app-text-muted) !important;
+}
+
+.page-btn {
+  min-height: 28px !important;
+  min-width: 28px !important;
+  padding: 0 6px !important;
+  border-radius: var(--app-radius-xs) !important;
+  border: 1px solid var(--app-border-strong) !important;
+  background: var(--app-surface) !important;
+  color: var(--app-text-soft) !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+}
+
+.page-btn.active,
+.page-btn:disabled {
+  background: var(--app-accent) !important;
+  border-color: var(--app-accent) !important;
+  color: #ffffff !important;
+}
+
+/* ─── 8. MODALS & DRAWERS ───────────────────────────────────────────────── */
+
+.modal-overlay,
+.payment-modal-overlay,
+.customer-modal-overlay,
+.overlay-shell,
+.drawer-shell,
+.payment-drawer-overlay {
+  background: rgba(15, 23, 42, 0.5) !important;
+  backdrop-filter: blur(3px) !important;
+}
+
+.modal-card,
+.customer-form-modal,
+.customer-details-modal,
+.payment-modal-card,
+.product-form-modal {
+  border-radius: var(--app-radius-xl) !important;
+  border: 1px solid var(--app-border) !important;
+  box-shadow: var(--app-shadow-overlay) !important;
+  background: var(--app-surface) !important;
+}
+
+.modal-header,
+.customer-modal-header,
+.payment-modal-header,
+.drawer-head,
+.drawer-header,
+.payment-drawer-header,
+.supplier-drawer-head {
+  padding: 14px 18px !important;
+  border-bottom: 1px solid var(--app-border) !important;
+  background: var(--app-surface-muted) !important;
+}
+
+.modal-header h2,
+.customer-modal-header h2,
+.drawer-head h2,
+.drawer-title {
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.01em !important;
+  color: var(--app-text) !important;
+}
+
+.modal-footer,
+.customer-modal-footer,
+.payment-modal-footer,
+.drawer-footer,
+.payment-drawer-footer {
+  padding: 12px 18px !important;
+  border-top: 1px solid var(--app-border) !important;
+  background: var(--app-surface-muted) !important;
+}
+
+.details-drawer,
+.payment-drawer,
+.purchase-drawer,
+.supplier-drawer {
+  border-left: 1px solid var(--app-border) !important;
+  box-shadow: var(--app-shadow-overlay) !important;
+  background: var(--app-surface) !important;
+}
+
+/* Modal eyebrow */
+.modal-eyebrow {
+  min-height: 20px !important;
+  padding: 0 7px !important;
+  border-radius: 999px !important;
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.06em !important;
+  background: var(--app-accent-subtle) !important;
+  color: var(--app-accent) !important;
+  border: 1px solid rgba(37, 99, 235, 0.14) !important;
+}
+
+/* Drawer tabs */
+.details-tabs,
+.drawer-tabs,
+.drawer-tab-strip,
+.supplier-drawer-tabs {
+  display: flex !important;
+  gap: 0 !important;
+  border-bottom: 1px solid var(--app-border) !important;
+  background: var(--app-surface) !important;
+  padding: 0 14px !important;
+}
+
+.details-tab,
+.drawer-tab,
+.supplier-drawer-tab {
+  padding: 9px 12px !important;
+  border-radius: 0 !important;
+  border: none !important;
+  border-bottom: 2px solid transparent !important;
+  background: transparent !important;
+  color: var(--app-text-muted) !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  transition: color var(--app-transition), border-color var(--app-transition) !important;
+  margin-bottom: -1px !important;
+}
+
+.details-tab.active,
+.drawer-tab.active,
+.supplier-drawer-tab.active {
+  color: var(--app-accent) !important;
+  border-bottom-color: var(--app-accent) !important;
+  background: transparent !important;
+}
+
+/* ─── 9. TYPOGRAPHY IN PAGES ────────────────────────────────────────────── */
+
+/* Page-level headings — tighter sizes */
+.hero-copy h1,
+.invoice-hero-text h1,
+.products-header-copy h1 {
+  font-size: clamp(1.2rem, 1.8vw, 1.6rem) !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.025em !important;
+  line-height: 1.15 !important;
+}
+
+/* Section headings */
+.section-title,
+.table-card-header h2,
+.table-headline h2,
+.results-header h2 {
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.005em !important;
+}
+
+/* ─── 10. FIELD BLOCKS (form layout) ────────────────────────────────────── */
+
+.field-block,
+.filter-block {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 5px !important;
+}
+
+.field-block > span,
+.filter-block > span,
+.form-label {
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  color: var(--app-text-muted) !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.04em !important;
+}
+
+/* ─── 11. BULK ACTIONS BAR ──────────────────────────────────────────────── */
+
+.bulk-bar,
+.bulk-actions-bar {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  padding: 8px 12px !important;
+  border-radius: var(--app-radius-sm) !important;
+  border: 1px solid rgba(37, 99, 235, 0.18) !important;
+  background: var(--app-accent-subtle) !important;
+  font-size: 12px !important;
+}
+
+/* ─── 12. LOGIN PAGE ────────────────────────────────────────────────────── */
+
+.auth-page {
+  background: var(--app-bg) !important;
+  background-image: none !important;
+}
+
+.auth-brand-icon {
+  width: 40px !important;
+  height: 40px !important;
+  border-radius: var(--app-radius-md) !important;
+  background: var(--app-text) !important;
+  box-shadow: none !important;
+}
+
+.auth-heading {
+  font-size: 28px !important;
+  letter-spacing: -0.03em !important;
+  margin: 12px 0 6px !important;
+}
+
+.auth-subheading {
+  font-size: 14px !important;
+  line-height: 1.6 !important;
+  margin: 0 0 20px !important;
+  color: var(--app-text-muted) !important;
+}
+
+.auth-label {
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  color: var(--app-text-muted) !important;
+}
+
+.auth-lang-chip {
+  border-radius: var(--app-radius-sm) !important;
+  min-height: 30px !important;
+  font-size: 12px !important;
+}
+
+.auth-lang-chip.active {
+  background: var(--app-text) !important;
+  border-color: var(--app-text) !important;
+}
+
+.auth-badge,
+.auth-hero-pill {
+  border-radius: var(--app-radius-sm) !important;
+  font-size: 11px !important;
+  padding: 4px 10px !important;
+}
+
+.auth-hero-title {
+  font-size: clamp(2rem, 4vw, 3rem) !important;
+  letter-spacing: -0.04em !important;
+  line-height: 1.05 !important;
+}
+
+.auth-feature-icon,
+.auth-stat-icon {
+  border-radius: var(--app-radius-sm) !important;
+}
+
+.auth-feature-card::before {
+  display: none !important;
+}
+
+/* ─── 13. DASHBOARD ─────────────────────────────────────────────────────── */
+
+.dashboard-executive-hero {
+  padding: 4px 0 2px !important;
+}
+
+.dashboard-hero-title {
+  font-size: clamp(1.2rem, 2vw, 1.65rem) !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.02em !important;
+}
+
+.smart-brief-card,
+.dashboard-panel,
+.signals-card,
+.preview-frame {
+  border-radius: var(--app-radius-lg) !important;
+  border: 1px solid var(--app-border) !important;
+  box-shadow: var(--app-shadow-soft) !important;
+  background: var(--app-surface) !important;
+}
+
+.ai-shortcut-btn {
+  border-radius: var(--app-radius-sm) !important;
+  border: 1px solid var(--app-border) !important;
+  background: var(--app-surface) !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+}
+
+/* ─── 14. SETTINGS PAGE ─────────────────────────────────────────────────── */
+
+.settings-card {
+  border-radius: var(--app-radius-lg) !important;
+  box-shadow: var(--app-shadow-soft) !important;
+}
+
+/* ─── 15. TREASURY / EMPLOYEES ──────────────────────────────────────────── */
+
+.treasury-card,
+.employees-panel,
+.employees-report-card {
+  border-radius: var(--app-radius-lg) !important;
+  box-shadow: var(--app-shadow-soft) !important;
+}
+
+/* ─── 16. DATA IMPORT ───────────────────────────────────────────────────── */
+
+.data-import-panel,
+.upload-zone,
+.import-method-card {
+  border-radius: var(--app-radius-lg) !important;
+  border: 1px solid var(--app-border) !important;
+  box-shadow: var(--app-shadow-soft) !important;
+}
+
+.upload-zone {
+  border-style: dashed !important;
+  border-color: var(--app-border-strong) !important;
+  background: var(--app-surface-muted) !important;
+}
+
+/* ─── 17. INLINE SUMMARY / BALANCE CELLS ───────────────────────────────── */
+
+.financial-value,
+.balance-cell strong,
+.amount-cell strong {
+  font-variant-numeric: tabular-nums !important;
+  letter-spacing: -0.01em !important;
+}
+
+/* Outstanding balance — red */
+.outstanding-balance,
+.balance-cell.danger strong {
+  color: var(--app-danger) !important;
+}
+
+/* Clear balance — muted */
+.clear-balance,
+.balance-cell.clear strong {
+  color: var(--app-text-muted) !important;
+}
+
+/* ─── 18. QUICK CHIP ROW ────────────────────────────────────────────────── */
+
+.quick-chip,
+.supplier-quick-chip,
+.quick-filter-chip {
+  min-height: 24px !important;
+  padding: 0 8px !important;
+  border-radius: 999px !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  border: 1px solid var(--app-border) !important;
+  background: var(--app-surface) !important;
+  color: var(--app-text-muted) !important;
+  cursor: pointer !important;
+  transition: all var(--app-transition) !important;
+}
+
+.quick-chip.active,
+.supplier-quick-chip.active,
+.quick-filter-chip.active {
+  background: var(--app-accent-subtle) !important;
+  border-color: rgba(37, 99, 235, 0.2) !important;
+  color: var(--app-accent) !important;
+}
+
+/* ─── 19. ALERT TOAST ───────────────────────────────────────────────────── */
+
+.dashboard-alert-toast {
+  border-radius: var(--app-radius-lg) !important;
+  border: 1px solid var(--app-border) !important;
+  box-shadow: var(--app-shadow-strong) !important;
+  background: var(--app-surface) !important;
+}
+
+/* ─── 20. AI ASSISTANT PANEL ────────────────────────────────────────────── */
+
+.ai-assistant-panel,
+.ai-panel-card {
+  border-radius: 0 !important;
+  border-left: 1px solid var(--app-border) !important;
+  box-shadow: var(--app-shadow-overlay) !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   21. PURCHASES PAGE — page-specific class names not covered above
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* Purchases card surfaces */
+.purchases-header-card,
+.purchase-filters-card,
+.purchase-table-card,
+.side-card,
+.purchase-modal {
+  border-radius: var(--app-radius-lg) !important;
+  border: 1px solid var(--app-border) !important;
+  box-shadow: var(--app-shadow-soft) !important;
+}
+
+/* Purchases primary/secondary buttons — different class names to the rest */
+.primary-button,
+.secondary-button,
+.danger-button,
+.suppliers-button {
+  min-height: 34px !important;
+  padding: 0 13px !important;
+  border-radius: var(--app-radius-sm) !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  box-shadow: none !important;
+  background-image: none !important;
+  transform: none !important;
+  transition: background var(--app-transition), border-color var(--app-transition) !important;
+}
+
+.primary-button {
+  background: var(--app-accent) !important;
+  border: 1px solid var(--app-accent) !important;
+  color: #ffffff !important;
+}
+
+.primary-button:hover {
+  background: var(--app-accent-strong) !important;
+  border-color: var(--app-accent-strong) !important;
+  transform: none !important;
+}
+
+.secondary-button,
+.suppliers-button {
+  background: var(--app-surface) !important;
+  border: 1px solid var(--app-border-strong) !important;
+  color: var(--app-text-soft) !important;
+}
+
+.secondary-button:hover,
+.suppliers-button:hover {
+  background: var(--app-surface-hover) !important;
+  transform: none !important;
+}
+
+.danger-button {
+  background: var(--app-danger) !important;
+  border: 1px solid var(--app-danger) !important;
+  color: #ffffff !important;
+}
+
+/* Purchases toolbar buttons */
+.toolbar-button {
+  min-height: 32px !important;
+  padding: 0 10px !important;
+  border-radius: var(--app-radius-sm) !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  box-shadow: none !important;
+  background-image: none !important;
+  background: var(--app-surface) !important;
+  border: 1px solid var(--app-border-strong) !important;
+  color: var(--app-text-soft) !important;
+  transition: background var(--app-transition) !important;
+}
+
+.toolbar-button:hover,
+.action-button:hover,
+.icon-button:hover {
+  background: var(--app-surface-hover) !important;
+  transform: none !important;
+}
+
+.toolbar-button.active,
+.active-menu-button {
+  background: var(--app-accent-subtle) !important;
+  border-color: rgba(37, 99, 235, 0.2) !important;
+  color: var(--app-accent) !important;
+}
+
+/* Purchases icon button */
+.icon-button {
+  width: 30px !important;
+  height: 30px !important;
+  min-height: 30px !important;
+  padding: 0 !important;
+  border-radius: var(--app-radius-sm) !important;
+  font-size: 12px !important;
+  background: transparent !important;
+  border: 1px solid transparent !important;
+  color: var(--app-text-muted) !important;
+}
+
+.icon-button:hover {
+  background: var(--app-surface-hover) !important;
+  border-color: var(--app-border) !important;
+  color: var(--app-text) !important;
+}
+
+/* ─── status-badge (Purchases + Suppliers — different class from status-chip) */
+.status-badge {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-height: 20px !important;
+  padding: 0 8px !important;
+  border-radius: 999px !important;
+  border: 1px solid transparent !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  line-height: 1 !important;
+  white-space: nowrap !important;
+  box-shadow: none !important;
+}
+
+.status-badge.positive {
+  background: var(--app-success-subtle) !important;
+  color: var(--app-success) !important;
+  border-color: rgba(22, 163, 74, 0.2) !important;
+}
+
+.status-badge.warning {
+  background: var(--app-warning-subtle) !important;
+  color: var(--app-warning) !important;
+  border-color: rgba(217, 119, 6, 0.2) !important;
+}
+
+.status-badge.danger {
+  background: var(--app-danger-subtle) !important;
+  color: var(--app-danger) !important;
+  border-color: rgba(220, 38, 38, 0.2) !important;
+}
+
+.status-badge.neutral {
+  background: #f1f5f9 !important;
+  color: var(--app-text-muted) !important;
+  border-color: var(--app-border) !important;
+}
+
+.status-badge.info {
+  background: var(--app-accent-subtle) !important;
+  color: var(--app-accent) !important;
+  border-color: rgba(37, 99, 235, 0.18) !important;
+}
+
+/* status-stack — column of two badges in purchases table */
+.status-stack {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  gap: 3px !important;
+}
+
+/* ─── Purchases action dropdown trigger (sticker icon) ──────────────────── */
+.sticker-action-trigger {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 30px !important;
+  height: 30px !important;
+  border-radius: var(--app-radius-sm) !important;
+  border: 1px solid var(--app-border-strong) !important;
+  background: var(--app-surface) !important;
+  color: var(--app-text-muted) !important;
+  cursor: pointer !important;
+  box-shadow: none !important;
+  transition: all var(--app-transition) !important;
+}
+
+.sticker-action-trigger:hover,
+.sticker-action-trigger.active {
+  background: var(--app-surface-hover) !important;
+  border-color: var(--app-border-strong) !important;
+  color: var(--app-text) !important;
+  box-shadow: none !important;
+}
+
+/* ─── Purchases actions dropdown panel ──────────────────────────────────── */
+.purchase-actions-dropdown {
+  border: 1px solid var(--app-border) !important;
+  border-radius: var(--app-radius-md) !important;
+  box-shadow: var(--app-shadow-overlay) !important;
+  background: var(--app-surface) !important;
+  padding: 4px !important;
+}
+
+.purchase-actions-dropdown-item {
+  min-height: 34px !important;
+  padding: 0 10px !important;
+  border-radius: var(--app-radius-sm) !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  color: var(--app-text-soft) !important;
+  background: transparent !important;
+  transition: background var(--app-transition), color var(--app-transition) !important;
+  transform: none !important;
+}
+
+.purchase-actions-dropdown-item:hover {
+  background: var(--app-surface-hover) !important;
+  transform: none !important;
+}
+
+.purchase-actions-dropdown-item.delete:hover {
+  background: var(--app-danger-subtle) !important;
+  color: var(--app-danger) !important;
+}
+
+/* ─── Purchases page header badge ────────────────────────────────────────── */
+.page-badge {
+  min-height: 20px !important;
+  padding: 0 8px !important;
+  border-radius: 999px !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  background: var(--app-accent-subtle) !important;
+  color: var(--app-accent) !important;
+  border: 1px solid rgba(37, 99, 235, 0.14) !important;
+}
+
+/* ─── Purchases delivery date urgency text ───────────────────────────────── */
+.delivery-cell .overdue-label,
+.purchase-table .overdue {
+  color: var(--app-danger) !important;
+  font-weight: 600 !important;
+  font-size: 12px !important;
+}
+
+.delivery-cell .soon-label,
+.purchase-table .soon {
+  color: var(--app-warning) !important;
+  font-weight: 600 !important;
+  font-size: 12px !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   22. SUPPLIERS PAGE — supplier-specific class names
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.suppliers-primary-btn,
+.suppliers-secondary-btn {
+  min-height: 34px !important;
+  padding: 0 13px !important;
+  border-radius: var(--app-radius-sm) !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  box-shadow: none !important;
+  background-image: none !important;
+}
+
+.supplier-drawer {
+  border-left: 1px solid var(--app-border) !important;
+  box-shadow: var(--app-shadow-overlay) !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   23. GLOBAL — remove ALL transform: translateY lifts on hover
+   ═══════════════════════════════════════════════════════════════════════ */
+
+button:hover,
+a:hover {
+  transform: none !important;
+}
+
+/* except explicit scrollable/animated elements */
+.auth-chart-bar,
+.shimmer-line,
+[data-animate] {
+  transform: revert !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   24. UNIVERSAL — consistent number display in all financial cells
+   ═══════════════════════════════════════════════════════════════════════ */
+
+td .financial-value,
+td strong,
+.amount-value,
+.total-value,
+.balance-value {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+  letter-spacing: -0.01em;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   25. UNIVERSAL ROW ACTIONS — normalize every page's action buttons
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── Action wrapper containers ─────────────────────────────────────────── */
+.customer-row-actions,
+.supplier-actions-menu-wrap,
+.treasury-row-actions,
+.employees-minimal-actions,
+.row-actions {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  flex-wrap: nowrap !important;
+}
+
+/* ── Shared ghost base for ALL icon-only row buttons ───────────────────── */
+.customer-row-actions button,
+.supplier-sticker-action,
+.menu-button,
+.icon-btn.quiet {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 30px !important;
+  height: 30px !important;
+  min-height: 30px !important;
+  padding: 0 !important;
+  border-radius: var(--app-radius-sm) !important;
+  border: 1px solid transparent !important;
+  background: transparent !important;
+  color: var(--app-text-muted) !important;
+  box-shadow: none !important;
+  transform: none !important;
+  cursor: pointer !important;
+  transition: background var(--app-transition), border-color var(--app-transition),
+    color var(--app-transition) !important;
+}
+
+.customer-row-actions button:hover,
+.supplier-sticker-action:hover,
+.supplier-sticker-action.active,
+.menu-button:hover,
+.icon-btn.quiet:hover {
+  background: var(--app-surface-hover) !important;
+  border-color: var(--app-border) !important;
+  color: var(--app-text) !important;
+  box-shadow: none !important;
+  transform: none !important;
+  filter: none !important;
+}
+
+/* ── Compact text+icon buttons (Open / View) ───────────────────────────── */
+.view-button,
+.details-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  min-height: 28px !important;
+  height: 28px !important;
+  padding: 0 9px !important;
+  border-radius: var(--app-radius-sm) !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  background: var(--app-surface-muted) !important;
+  border: 1px solid var(--app-border-strong) !important;
+  color: var(--app-text-soft) !important;
+  box-shadow: none !important;
+  transform: none !important;
+  transition: background var(--app-transition), border-color var(--app-transition),
+    color var(--app-transition) !important;
+}
+
+.view-button:hover,
+.details-btn:hover {
+  background: var(--app-surface-hover) !important;
+  border-color: var(--app-border-strong) !important;
+  color: var(--app-text) !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* ── Treasury in-row mini-action-btn ───────────────────────────────────── */
+.treasury-row-actions .mini-action-btn {
+  min-height: 28px !important;
+  height: 28px !important;
+  padding: 0 9px !important;
+  border-radius: var(--app-radius-sm) !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  background: var(--app-surface-muted) !important;
+  border: 1px solid var(--app-border-strong) !important;
+  color: var(--app-text-soft) !important;
+  box-shadow: none !important;
+  background-image: none !important;
+  transform: none !important;
+}
+
+.treasury-row-actions .mini-action-btn.primary {
+  background: var(--app-accent) !important;
+  background-image: none !important;
+  border-color: var(--app-accent) !important;
+  color: #ffffff !important;
+}
+
+.treasury-row-actions .mini-action-btn:hover:not(:disabled) {
+  background: var(--app-surface-hover) !important;
+  border-color: var(--app-border-strong) !important;
+  color: var(--app-text) !important;
+  transform: none !important;
+}
+
+.treasury-row-actions .mini-action-btn.primary:hover:not(:disabled) {
+  background: var(--app-accent-strong) !important;
+  border-color: var(--app-accent-strong) !important;
+  color: #ffffff !important;
+}
+
+/* ── Employees card-row action buttons ─────────────────────────────────── */
+.employees-minimal-actions .quick-action-btn {
+  min-height: 28px !important;
+  height: 28px !important;
+  padding: 0 9px !important;
+  border-radius: var(--app-radius-sm) !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  background: var(--app-surface-muted) !important;
+  border: 1px solid var(--app-border-strong) !important;
+  color: var(--app-text-soft) !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.employees-minimal-actions .quick-action-btn:hover {
+  background: var(--app-surface-hover) !important;
+  color: var(--app-text) !important;
+  transform: none !important;
+  filter: none !important;
+}
+
+.employees-minimal-actions .quick-action-btn.delete-btn {
+  background: var(--app-danger-subtle) !important;
+  border-color: rgba(220, 38, 38, 0.18) !important;
+  color: var(--app-danger) !important;
+}
+
+.employees-minimal-actions .quick-action-btn.delete-btn:hover {
+  background: var(--app-danger) !important;
+  border-color: var(--app-danger) !important;
+  color: #ffffff !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   26. CENTERED MODALS — ensure all add/create forms appear as centered popup
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* Overlay backdrop — shared properties */
+.purchase-overlay,
+.supplier-overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 1300 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 20px !important;
+  background: rgba(15, 23, 42, 0.5) !important;
+  backdrop-filter: blur(3px) !important;
+  overflow-y: auto !important;
+}
+
+/* Modal panels — centered, bounded */
+.purchase-modal,
+.supplier-modal,
+.supplier-drawer {
+  position: relative !important;
+  left: auto !important;
+  right: auto !important;
+  top: auto !important;
+  bottom: auto !important;
+  margin: auto !important;
+  border-radius: var(--app-radius-xl) !important;
+  border: 1px solid var(--app-border) !important;
+  box-shadow: var(--app-shadow-overlay) !important;
+  background: var(--app-surface) !important;
+  transform: none !important;
+}
+
+/* Order / detail modals — proportional sizing */
+.purchase-order-modal {
+  width: min(100%, 1060px) !important;
+  max-height: min(88dvh, 900px) !important;
+}
+
+.purchase-detail-modal {
+  width: min(100%, 880px) !important;
+  max-height: min(88dvh, 900px) !important;
+}
+
+.purchase-modal.compact {
+  width: min(100%, 460px) !important;
+}
+
+.supplier-modal {
+  width: min(100%, 940px) !important;
+  max-height: min(88dvh, 900px) !important;
+  overflow-y: auto !important;
+}
+
+.supplier-drawer {
+  width: min(100%, 1100px) !important;
+  max-height: min(88dvh, 900px) !important;
+  overflow-y: auto !important;
+}
+
+/* Modal header style matching app system */
+.purchase-modal .drawer-head,
+.supplier-modal .supplier-drawer-head,
+.supplier-drawer .supplier-drawer-head {
+  padding: 14px 18px !important;
+  border-bottom: 1px solid var(--app-border) !important;
+  background: var(--app-surface-muted) !important;
+  border-radius: var(--app-radius-xl) var(--app-radius-xl) 0 0 !important;
+}
+
+.purchase-modal .drawer-head h2,
+.supplier-drawer-head h2 {
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.01em !important;
+  color: var(--app-text) !important;
+  margin: 0 !important;
+}
+
+.purchase-modal .drawer-head p,
+.supplier-drawer-head p {
+  font-size: 12px !important;
+  color: var(--app-text-muted) !important;
+  margin: 2px 0 0 !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   27. ADD NEW CUSTOMER MODAL — balanced, compact, system-aligned
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* Modal size and shape */
+.customer-form-modal {
+  width: min(840px, calc(100vw - 32px)) !important;
+  max-height: min(88dvh, 860px) !important;
+  border-radius: var(--app-radius-xl) !important;
+  box-shadow: var(--app-shadow-overlay) !important;
+  border: 1px solid var(--app-border) !important;
+  background: var(--app-surface) !important;
+  overflow: hidden !important;
+}
+
+/* Header */
+.customer-modal-header {
+  padding: 14px 18px !important;
+  border-bottom: 1px solid var(--app-border) !important;
+  background: var(--app-surface-muted) !important;
+  align-items: center !important;
+}
+
+.customer-modal-header h2 {
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.01em !important;
+  color: var(--app-text) !important;
+}
+
+.customer-modal-header p {
+  font-size: 12px !important;
+  color: var(--app-text-muted) !important;
+  margin-top: 2px !important;
+  line-height: 1.4 !important;
+}
+
+/* Tab bar */
+.customer-form-tabs {
+  display: flex !important;
+  gap: 0 !important;
+  padding: 0 18px !important;
+  border-bottom: 1px solid var(--app-border) !important;
+  background: var(--app-surface) !important;
+}
+
+.customer-form-tabs button {
+  padding: 9px 13px !important;
+  margin-bottom: -1px !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  border-radius: 0 !important;
+  border: none !important;
+  border-bottom: 2px solid transparent !important;
+  background: transparent !important;
+  color: var(--app-text-muted) !important;
+  transition: color var(--app-transition), border-color var(--app-transition) !important;
+}
+
+.customer-form-tabs button:hover {
+  color: var(--app-text) !important;
+  background: transparent !important;
+}
+
+.customer-form-tabs button.active {
+  color: var(--app-accent) !important;
+  border-bottom-color: var(--app-accent) !important;
+  background: transparent !important;
+}
+
+/* Modal body */
+.customer-modal-body {
+  padding: 16px 18px !important;
+  gap: 0 !important;
+  overflow-y: auto !important;
+}
+
+/* Form sections — flat, separated by divider */
+.form-section {
+  padding: 14px 0 !important;
+  border: none !important;
+  border-bottom: 1px solid var(--app-border) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.form-section:last-child {
+  border-bottom: none !important;
+  padding-bottom: 4px !important;
+}
+
+.form-section-title {
+  margin-bottom: 10px !important;
+}
+
+.form-section-title h3 {
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  color: var(--app-text-muted) !important;
+  margin: 0 !important;
+}
+
+.form-section-title p {
+  font-size: 11.5px !important;
+  color: var(--app-text-subtle, var(--app-text-muted)) !important;
+  margin: 3px 0 0 !important;
+  line-height: 1.4 !important;
+}
+
+/* Form grid */
+.form-grid {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 10px 12px !important;
+  margin-top: 0 !important;
+}
+
+.customer-basic-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+}
+
+.field-span-2 {
+  grid-column: span 2 !important;
+}
+
+/* Field labels */
+.form-grid label > span:first-child,
+.form-grid > label > span {
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.04em !important;
+  color: var(--app-text-muted) !important;
+  margin-bottom: 4px !important;
+}
+
+/* Form inputs */
+.form-grid input,
+.form-grid select,
+.form-grid textarea,
+.customer-modal-body input,
+.customer-modal-body select,
+.customer-modal-body textarea {
+  border-radius: var(--app-radius-sm) !important;
+  border: 1px solid var(--app-border-strong) !important;
+  padding: 0 10px !important;
+  min-height: 34px !important;
+  font-size: 13px !important;
+  background: var(--app-surface) !important;
+  box-shadow: none !important;
+  transition: border-color var(--app-transition), box-shadow var(--app-transition) !important;
+}
+
+.form-grid input:focus,
+.form-grid select:focus,
+.form-grid textarea:focus,
+.customer-modal-body input:focus,
+.customer-modal-body select:focus {
+  border-color: var(--app-accent) !important;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1) !important;
+  outline: none !important;
+}
+
+.form-grid textarea,
+.customer-modal-body textarea {
+  min-height: 72px !important;
+  padding: 8px 10px !important;
+  resize: vertical !important;
+}
+
+.form-grid input[readonly] {
+  background: var(--app-surface-muted) !important;
+  color: var(--app-text-muted) !important;
+}
+
+/* Checkbox card */
+.inline-check-card {
+  display: flex !important;
+  align-items: flex-start !important;
+  gap: 10px !important;
+  padding: 10px 12px !important;
+  border-radius: var(--app-radius-sm) !important;
+  border: 1px solid var(--app-border) !important;
+  background: var(--app-surface-muted) !important;
+  cursor: pointer !important;
+}
+
+.inline-check-card input[type="checkbox"] {
+  min-height: auto !important;
+  height: 16px !important;
+  width: 16px !important;
+  margin-top: 1px !important;
+  flex-shrink: 0 !important;
+}
+
+.inline-check-card > span {
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  color: var(--app-text) !important;
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+.inline-check-card > span small {
+  display: block !important;
+  font-size: 11.5px !important;
+  font-weight: 400 !important;
+  color: var(--app-text-muted) !important;
+  margin-top: 2px !important;
+}
+
+/* Settings card inside form */
+.customer-modal-body .settings-card {
+  padding: 10px 12px !important;
+  border-radius: var(--app-radius-sm) !important;
+  border: 1px solid var(--app-border) !important;
+  background: var(--app-surface-muted) !important;
+  box-shadow: none !important;
+}
+
+.customer-modal-body .settings-card-head {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  margin-bottom: 10px !important;
+}
+
+.customer-modal-body .settings-card-head h4 {
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  color: var(--app-text) !important;
+  margin: 0 !important;
+}
+
+/* Modal footer */
+.customer-modal-footer {
+  padding: 12px 18px !important;
+  border-top: 1px solid var(--app-border) !important;
+  background: var(--app-surface-muted) !important;
+  gap: 8px !important;
+}
+
+/* Customer primary/secondary buttons */
+.customer-primary-btn {
+  background: var(--app-accent) !important;
+  background-image: none !important;
+  border: 1px solid var(--app-accent) !important;
+  border-radius: var(--app-radius-sm) !important;
+  min-height: 34px !important;
+  padding: 0 14px !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  color: #ffffff !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.customer-primary-btn:hover {
+  background: var(--app-accent-strong) !important;
+  transform: none !important;
+}
+
+.customer-secondary-btn {
+  background: var(--app-surface) !important;
+  background-image: none !important;
+  border: 1px solid var(--app-border-strong) !important;
+  border-radius: var(--app-radius-sm) !important;
+  min-height: 34px !important;
+  padding: 0 14px !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  color: var(--app-text-soft) !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.customer-secondary-btn:hover {
+  background: var(--app-surface-hover) !important;
+  transform: none !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   28. RECORD PAYMENT MODAL — match Customer modal style
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* Modal card */
+.payment-modal-card {
+  width: min(840px, calc(100vw - 32px)) !important;
+  max-height: min(88dvh, 860px) !important;
+  border-radius: var(--app-radius-xl) !important;
+  box-shadow: var(--app-shadow-overlay) !important;
+  border: 1px solid var(--app-border) !important;
+  background: var(--app-surface) !important;
+  overflow: hidden !important;
+}
+
+/* Header */
+.payment-modal-header {
+  padding: 14px 18px !important;
+  border-bottom: 1px solid var(--app-border) !important;
+  background: var(--app-surface-muted) !important;
+  align-items: center !important;
+}
+
+.payment-modal-header h2 {
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.01em !important;
+  color: var(--app-text) !important;
+}
+
+.payment-modal-header p {
+  font-size: 12px !important;
+  color: var(--app-text-muted) !important;
+  margin-top: 2px !important;
+  line-height: 1.4 !important;
+}
+
+/* Body layout — tighter */
+.payment-modal-body {
+  padding: 14px 18px !important;
+  gap: 14px !important;
+  grid-template-columns: minmax(0, 1fr) 260px !important;
+  overflow-y: auto !important;
+}
+
+/* Form sections — flat, separated by divider */
+.payment-form-section {
+  padding: 12px 14px !important;
+  border-radius: var(--app-radius-md) !important;
+  border: 1px solid var(--app-border) !important;
+  background: var(--app-surface-muted) !important;
+  box-shadow: none !important;
+}
+
+/* Section heading */
+.section-heading {
+  margin-bottom: 10px !important;
+}
+
+.section-heading h3 {
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  color: var(--app-text-muted) !important;
+  margin: 0 !important;
+}
+
+.section-heading p {
+  font-size: 11.5px !important;
+  color: var(--app-text-muted) !important;
+  margin: 3px 0 0 !important;
+  line-height: 1.4 !important;
+}
+
+/* Payment form grid */
+.payment-form-grid {
+  gap: 10px 12px !important;
+}
+
+/* Field inputs in payment form */
+.payment-modal-body .field-block input,
+.payment-modal-body .field-block select,
+.payment-modal-body .field-block textarea,
+.payment-modal-body .app-select-control {
+  border-radius: var(--app-radius-sm) !important;
+  border: 1px solid var(--app-border-strong) !important;
+  padding: 0 10px !important;
+  min-height: 34px !important;
+  font-size: 13px !important;
+  background: var(--app-surface) !important;
+  box-shadow: none !important;
+}
+
+.payment-modal-body .field-block textarea {
+  min-height: 72px !important;
+  padding: 8px 10px !important;
+}
+
+/* Summary sidebar */
+.payment-editor-summary {
+  gap: 10px !important;
+}
+
+.summary-card {
+  border-radius: var(--app-radius-md) !important;
+  border: 1px solid var(--app-border) !important;
+  padding: 12px 14px !important;
+  background: var(--app-surface-muted) !important;
+  box-shadow: none !important;
+}
+
+.summary-label {
+  font-size: 10px !important;
+  letter-spacing: 0.06em !important;
+  color: var(--app-text-muted) !important;
+}
+
+.summary-card strong {
+  font-size: 14px !important;
+  margin-top: 3px !important;
+  color: var(--app-text) !important;
+}
+
+.summary-list li span {
+  font-size: 12px !important;
+  color: var(--app-text-muted) !important;
+}
+
+.summary-list li b {
+  font-size: 12px !important;
+  color: var(--app-text) !important;
+  font-weight: 600 !important;
+}
+
+.summary-hints p {
+  font-size: 11.5px !important;
+  color: var(--app-text-muted) !important;
+  line-height: 1.5 !important;
+  margin: 0 0 5px !important;
+}
+
+/* Footer */
+.payment-modal-footer {
+  padding: 12px 18px !important;
+  border-top: 1px solid var(--app-border) !important;
+  background: var(--app-surface-muted) !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   29. UNIVERSAL TABLE SPACING — consistent padding and row height
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.customers-table th,
+.customers-table td,
+.dashboard-table th,
+.dashboard-table td,
+.purchase-table th,
+.purchase-table td,
+.suppliers-table th,
+.suppliers-table td,
+.invoice-table th,
+.invoice-table td,
+.payments-table th,
+.payments-table td,
+.treasury-table th,
+.treasury-table td,
+.employees-attendance-table th,
+.employees-attendance-table td,
+.employees-report-table th,
+.employees-report-table td {
+  padding: 9px 12px !important;
+  border-bottom: 1px solid var(--app-border) !important;
+  vertical-align: middle !important;
+  height: auto !important;
+}
+
+/* Universal table header — identical across every table */
+.customers-table th,
+.dashboard-table th,
+.purchase-table th,
+.suppliers-table th,
+.invoice-table th,
+.payments-table th,
+.treasury-table th,
+.employees-attendance-table th,
+.employees-report-table th {
+  background: #f8fafc !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.06em !important;
+  text-transform: uppercase !important;
+  color: #64748b !important;
+  white-space: nowrap !important;
+  padding-top: 9px !important;
+  padding-bottom: 9px !important;
+  border-bottom: 2px solid #e8eef6 !important;
+  line-height: 1.2 !important;
+}
+
+/* Universal table body cells */
+.customers-table td,
+.dashboard-table td,
+.purchase-table td,
+.suppliers-table td,
+.invoice-table td,
+.payments-table td,
+.treasury-table td,
+.employees-attendance-table td,
+.employees-report-table td {
+  font-size: 13px !important;
+  color: var(--app-text) !important;
+  font-weight: 500 !important;
+}
+
+/* Row hover — consistent light highlight */
+.customers-table tbody tr:hover td,
+.dashboard-table tbody tr:hover td,
+.purchase-table tbody tr:hover td,
+.suppliers-table tbody tr:hover td,
+.invoice-table tbody tr:hover td,
+.payments-table tbody tr:hover td,
+.treasury-table tbody tr:hover td {
+  background: var(--app-surface-hover) !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   30. STATUS SIMPLIFICATION — clean, single-purpose, no noise
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* All status stacks → single-column, tight gap */
+.status-stack {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  gap: 4px !important;
+}
+
+/* Unified status pill base */
+.status-pill,
+.customer-status-badge,
+.supplier-status-badge,
+.status-badge,
+.product-status,
+.meta-badge {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  min-height: 18px !important;
+  padding: 1px 7px !important;
+  border-radius: 4px !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.01em !important;
+  border: none !important;
+  box-shadow: none !important;
+  white-space: nowrap !important;
+}
+
+/* Secondary delivery/order indicator — small and subtle */
+.delivery-pill,
+.clear-pill {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 3px !important;
+  min-height: 16px !important;
+  padding: 1px 5px !important;
+  border-radius: 3px !important;
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.delivery-pill {
+  background: rgba(217, 119, 6, 0.1) !important;
+  color: var(--app-warning) !important;
+}
+
+.clear-pill {
+  background: transparent !important;
+  color: var(--app-text-subtle, var(--app-text-muted)) !important;
+  opacity: 0.6 !important;
+}
+
+/* Note pill — very minimal */
+.note-pill {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  min-height: 18px !important;
+  padding: 1px 6px !important;
+  border-radius: 4px !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  background: var(--app-surface-muted) !important;
+  color: var(--app-text-muted) !important;
+  border: none !important;
+}
+
+/* No-note pill — hide it, not informative */
+.no-note-pill {
+  display: none !important;
+}
+
+/* Customer type pill */
+.customer-type-pill {
+  display: inline-flex !important;
+  align-items: center !important;
+  min-height: 18px !important;
+  padding: 1px 7px !important;
+  border-radius: 4px !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  background: var(--app-accent-subtle) !important;
+  color: var(--app-accent) !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   31. PURCHASES CARD VIEW — structured, elegant, professional grid cards
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* Grid layout */
+.purchase-grid {
+  padding: 0 14px 14px !important;
+  display: grid !important;
+  grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)) !important;
+  gap: 12px !important;
+}
+
+/* Card base */
+.purchase-grid-card {
+  display: flex !important;
+  flex-direction: column !important;
+  border-radius: var(--app-radius-lg) !important;
+  border: 1px solid var(--app-border) !important;
+  background: var(--app-surface) !important;
+  box-shadow: var(--app-shadow-soft) !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  transition: box-shadow 150ms ease, border-color 150ms ease !important;
+}
+
+.purchase-grid-card:hover {
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.08), 0 1px 4px rgba(0, 0, 0, 0.04) !important;
+  border-color: var(--app-border-strong) !important;
+}
+
+/* ── Card header: PO number + status badge ─────────────────────────────── */
+.purchase-grid-head {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 10px !important;
+  padding: 12px 14px 6px !important;
+}
+
+.purchase-grid-po {
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  color: var(--app-text) !important;
+  letter-spacing: -0.01em !important;
+  font-variant-numeric: tabular-nums !important;
+}
+
+/* ── Description ───────────────────────────────────────────────────────── */
+.purchase-grid-desc {
+  padding: 0 14px 10px !important;
+  margin: 0 !important;
+  font-size: 12px !important;
+  color: var(--app-text-muted) !important;
+  line-height: 1.45 !important;
+}
+
+/* ── Divider ───────────────────────────────────────────────────────────── */
+.purchase-grid-divider {
+  height: 1px !important;
+  background: var(--app-border) !important;
+  flex-shrink: 0 !important;
+}
+
+/* ── Meta rows ─────────────────────────────────────────────────────────── */
+.purchase-grid-meta {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 5px !important;
+  padding: 10px 14px !important;
+  flex: 1 !important;
+}
+
+.purchase-grid-meta-row {
+  display: flex !important;
+  align-items: baseline !important;
+  justify-content: space-between !important;
+  gap: 8px !important;
+}
+
+.pgm-label {
+  font-size: 10.5px !important;
+  font-weight: 600 !important;
+  color: var(--app-text-muted) !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.04em !important;
+  flex-shrink: 0 !important;
+}
+
+.pgm-value {
+  font-size: 12.5px !important;
+  font-weight: 600 !important;
+  color: var(--app-text) !important;
+  text-align: right !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  max-width: 55% !important;
+}
+
+.pgm-amount {
+  font-variant-numeric: tabular-nums !important;
+  font-weight: 700 !important;
+  font-size: 13px !important;
+  color: var(--app-text) !important;
+}
+
+/* ── Actions footer: right-aligned ────────────────────────────────────── */
+.purchase-grid-actions {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 4px !important;
+  padding: 8px 10px !important;
+  border-top: 1px solid var(--app-border) !important;
+  background: var(--app-surface-muted) !important;
+  margin-top: 0 !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   32. SUPPLIERS TABLE — professional, compact, consistent with all tables
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* Kill the fixed 78px row height — use padding instead */
+.suppliers-table td,
+.supplier-actions-cell {
+  height: auto !important;
+  padding: 10px 12px !important;
+  vertical-align: middle !important;
+}
+
+/* Cell wrapper — remove fixed height, use natural flow */
+.supplier-table-cell,
+.supplier-actions-menu-wrap {
+  height: auto !important;
+  min-height: 0 !important;
+  gap: 2px !important;
+}
+
+/* Supplier name — tighter size */
+.supplier-table-cell strong {
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  color: var(--app-text) !important;
+  line-height: 1.3 !important;
+}
+
+/* Code · type sub-line */
+.supplier-table-cell span,
+.supplier-main-cell span {
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  color: var(--app-text-muted) !important;
+  line-height: 1.3 !important;
+}
+
+/* Category small label */
+.supplier-table-cell small,
+.supplier-main-cell small {
+  font-size: 10.5px !important;
+  font-weight: 500 !important;
+  color: var(--app-text-muted) !important;
+  opacity: 0.75 !important;
+}
+
+/* Phone and location cells — single line, no extra wrappers needed */
+.phone-stack strong,
+.location-stack strong {
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  color: var(--app-text) !important;
+}
+
+/* Balance — tabular, slightly prominent */
+.balance-stack strong,
+.suppliers-table .balance-cell {
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  color: var(--app-text) !important;
+  font-variant-numeric: tabular-nums !important;
+  letter-spacing: -0.01em !important;
+}
+
+/* ── Supplier status badge — simple, rectangular tag ──────────────────── */
+.supplier-status-badge {
+  display: inline-flex !important;
+  align-items: center !important;
+  min-height: 18px !important;
+  padding: 1px 7px !important;
+  border-radius: 4px !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.01em !important;
+  border: none !important;
+  box-shadow: none !important;
+  white-space: nowrap !important;
+}
+
+.supplier-status-badge.positive {
+  background: var(--app-success-subtle) !important;
+  color: var(--app-success) !important;
+}
+
+.supplier-status-badge.info {
+  background: var(--app-accent-subtle) !important;
+  color: var(--app-accent) !important;
+}
+
+.supplier-status-badge.danger {
+  background: var(--app-danger-subtle) !important;
+  color: var(--app-danger) !important;
+}
+
+.supplier-status-badge.neutral {
+  background: var(--app-surface-muted) !important;
+  color: var(--app-text-muted) !important;
+}
+
+/* ── Action button — ghost 30×30, matching all other tables ───────────── */
+.supplier-sticker-action {
+  width: 30px !important;
+  height: 30px !important;
+  min-height: 30px !important;
+  padding: 0 !important;
+  border-radius: var(--app-radius-sm) !important;
+  border: 1px solid transparent !important;
+  background: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  color: var(--app-text-muted) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  transition: background var(--app-transition), border-color var(--app-transition),
+    color var(--app-transition) !important;
+  transform: none !important;
+}
+
+.supplier-sticker-action:hover,
+.supplier-sticker-action.active {
+  background: var(--app-surface-hover) !important;
+  border-color: var(--app-border) !important;
+  color: var(--app-text) !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+/* Supplier actions cell — centered, no fixed height */
+.supplier-actions-cell {
+  text-align: center !important;
+  overflow: visible !important;
+}
+
+.supplier-actions-menu-wrap {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  position: relative !important;
+  overflow: visible !important;
+  width: auto !important;
+}
+
+/* Table header row */
+.suppliers-table th {
+  height: auto !important;
+  padding: 8px 12px !important;
+  background: var(--app-surface-muted) !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.04em !important;
+  text-transform: uppercase !important;
+  color: var(--app-text-muted) !important;
+  border-bottom: 1px solid var(--app-border) !important;
+}
+
+/* Row hover */
+.suppliers-table tbody tr:hover td {
+  background: var(--app-surface-hover) !important;
+}
+
+/* Footer */
+.simple-suppliers-footer {
+  padding: 10px 14px !important;
+  border-top: 1px solid var(--app-border) !important;
+  font-size: 12px !important;
+  color: var(--app-text-muted) !important;
+  font-weight: 500 !important;
+  min-height: auto !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   33. PURCHASES TABLE CELLS — compact, professional, consistent
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* PO cell: PO number + info icon on one row */
+.po-cell-row {
+  display: flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  min-width: 0 !important;
+}
+
+.po-cell-row strong {
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  color: var(--app-text) !important;
+  letter-spacing: -0.01em !important;
+  white-space: nowrap !important;
+}
+
+/* OverflowContent trigger — icon-only inside table cells */
+.po-cell .overflow-content-trigger {
+  width: 18px !important;
+  height: 18px !important;
+  min-height: 18px !important;
+  padding: 0 !important;
+  gap: 0 !important;
+  flex-shrink: 0 !important;
+  border-radius: 50% !important;
+  background: transparent !important;
+  border: none !important;
+  color: var(--app-text-muted) !important;
+  opacity: 0.6 !important;
+}
+
+.po-cell .overflow-content-trigger:hover {
+  opacity: 1 !important;
+  background: var(--app-surface-hover) !important;
+}
+
+/* Hide the preview text — only show the ⓘ icon in table */
+.po-cell .overflow-content-preview {
+  display: none !important;
+}
+
+/* PO second line — description or date */
+.po-cell > small {
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  color: var(--app-text-muted) !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  max-width: 200px !important;
+}
+
+/* Supplier cell sub-line */
+.supplier-cell span {
+  font-size: 11px !important;
+  color: var(--app-text-muted) !important;
+  font-weight: 500 !important;
+}
+
+/* Delivery date */
+.delivery-cell strong {
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  color: var(--app-text) !important;
+}
+
+/* Urgency label — no background box, just clean colored text */
+.delivery-cell span.danger,
+.delivery-cell .overdue {
+  color: var(--app-danger) !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  background: none !important;
+}
+
+.delivery-cell span.warning {
+  color: var(--app-warning) !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  background: none !important;
+}
+
+.delivery-cell span.info {
+  color: var(--app-accent) !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  background: none !important;
+}
+
+/* Amount cell — tabular, bold */
+.amount-cell strong,
+.numeric-cell {
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  font-variant-numeric: tabular-nums !important;
+  letter-spacing: -0.01em !important;
+  color: var(--app-text) !important;
+}
+
+/* Received cell */
+.received-cell strong {
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  font-variant-numeric: tabular-nums !important;
+  color: var(--app-text) !important;
+}
+
+.received-cell span {
+  font-size: 11px !important;
+  color: var(--app-text-muted) !important;
+  font-weight: 500 !important;
+}
+
+/* Status stack — two compact tags */
+.purchase-table .status-stack {
+  gap: 3px !important;
+  align-items: flex-start !important;
+}
+
+/* Unified status badge — compact rectangular tag */
+.purchase-table .status-badge {
+  min-height: 18px !important;
+  height: 18px !important;
+  padding: 0 6px !important;
+  border-radius: 4px !important;
+  font-size: 10.5px !important;
+  font-weight: 600 !important;
+  border: none !important;
+  box-shadow: none !important;
+  letter-spacing: 0.01em !important;
+}
+
+/* Actions column — centered, no extra width */
+.purchase-table .actions-cell {
+  text-align: center !important;
+  width: 48px !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   34. MANAGE CATEGORIES MODAL — smart search + professional styling
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.category-modal-card {
+  border-radius: var(--app-radius-xl) !important;
+  border: 1px solid var(--app-border) !important;
+  box-shadow: var(--app-shadow-overlay) !important;
+  background: var(--app-surface) !important;
+  width: min(600px, calc(100vw - 32px)) !important;
+  max-height: min(88dvh, 780px) !important;
+}
+
+.category-modal-header {
+  padding: 14px 18px !important;
+  border-bottom: 1px solid var(--app-border) !important;
+  background: var(--app-surface-muted) !important;
+  border-radius: var(--app-radius-xl) var(--app-radius-xl) 0 0 !important;
+}
+
+.category-modal-header h2 {
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.01em !important;
+  color: var(--app-text) !important;
+}
+
+.category-modal-header p {
+  font-size: 12px !important;
+  color: var(--app-text-muted) !important;
+  margin-top: 2px !important;
+  line-height: 1.4 !important;
+}
+
+.category-modal-body {
+  padding: 14px 18px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 12px !important;
+}
+
+.category-editor-card {
+  padding: 12px 14px !important;
+  border-radius: var(--app-radius-md) !important;
+  border: 1px solid var(--app-border) !important;
+  background: var(--app-surface-muted) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+}
+
+.category-editor-card label > span {
+  font-size: 10.5px !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  color: var(--app-text-muted) !important;
+  margin-bottom: 4px !important;
+  display: block !important;
+}
+
+.category-editor-card input {
+  height: 34px !important;
+  min-height: 34px !important;
+  border-radius: var(--app-radius-sm) !important;
+  border: 1px solid var(--app-border-strong) !important;
+  padding: 0 10px !important;
+  font-size: 13px !important;
+  background: var(--app-surface) !important;
+  box-shadow: none !important;
+}
+
+.category-editor-card input:focus {
+  border-color: var(--app-accent) !important;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1) !important;
+  outline: none !important;
+}
+
+.category-editor-actions {
+  display: flex !important;
+  gap: 8px !important;
+  margin-top: 2px !important;
+}
+
+/* Smart search bar */
+.category-search-wrap {
+  position: relative !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+.category-search-icon {
+  position: absolute !important;
+  left: 10px !important;
+  color: var(--app-text-muted) !important;
+  pointer-events: none !important;
+  flex-shrink: 0 !important;
+}
+
+.category-search-input {
+  width: 100% !important;
+  height: 34px !important;
+  padding: 0 32px !important;
+  border-radius: var(--app-radius-sm) !important;
+  border: 1px solid var(--app-border-strong) !important;
+  background: var(--app-surface) !important;
+  font-size: 13px !important;
+  color: var(--app-text) !important;
+  box-shadow: none !important;
+  transition: border-color var(--app-transition), box-shadow var(--app-transition) !important;
+}
+
+.category-search-input:focus {
+  border-color: var(--app-accent) !important;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1) !important;
+  outline: none !important;
+}
+
+.category-search-input::placeholder {
+  color: var(--app-text-muted) !important;
+}
+
+.category-search-clear {
+  position: absolute !important;
+  right: 6px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 22px !important;
+  height: 22px !important;
+  border-radius: 50% !important;
+  border: none !important;
+  background: var(--app-surface-hover) !important;
+  color: var(--app-text-muted) !important;
+  cursor: pointer !important;
+  padding: 0 !important;
+  transition: background var(--app-transition), color var(--app-transition) !important;
+}
+
+.category-search-clear:hover {
+  background: var(--app-border-strong) !important;
+  color: var(--app-text) !important;
+}
+
+.category-search-meta {
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  color: var(--app-text-muted) !important;
+  padding: 0 2px 2px !important;
+  letter-spacing: 0.01em !important;
+}
+
+/* Highlighted match text */
+.cat-highlight {
+  background: rgba(37, 99, 235, 0.12) !important;
+  color: var(--app-accent) !important;
+  border-radius: 2px !important;
+  font-weight: 700 !important;
+  padding: 0 1px !important;
+}
+
+/* Category list container */
+.category-list {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0 !important;
+  overflow-y: auto !important;
+  max-height: 360px !important;
+  border-radius: var(--app-radius-md) !important;
+  border: 1px solid var(--app-border) !important;
+}
+
+.category-list-item {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 12px !important;
+  padding: 10px 14px !important;
+  border-bottom: 1px solid var(--app-border) !important;
+  background: var(--app-surface) !important;
+  transition: background var(--app-transition) !important;
+}
+
+.category-list-item:last-child {
+  border-bottom: none !important;
+}
+
+.category-list-item:hover {
+  background: var(--app-surface-hover) !important;
+}
+
+.category-list-info strong {
+  display: block !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  color: var(--app-text) !important;
+  line-height: 1.3 !important;
+}
+
+.category-list-info span {
+  font-size: 11px !important;
+  color: var(--app-text-muted) !important;
+  font-weight: 500 !important;
+}
+
+.category-list-actions {
+  display: flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  flex-shrink: 0 !important;
+}
+
+.category-edit-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  min-height: 28px !important;
+  padding: 0 9px !important;
+  border-radius: var(--app-radius-sm) !important;
+  border: 1px solid var(--app-border-strong) !important;
+  background: var(--app-surface) !important;
+  color: var(--app-text-soft) !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  transition: background var(--app-transition), border-color var(--app-transition) !important;
+}
+
+.category-edit-btn:hover {
+  background: var(--app-surface-hover) !important;
+  color: var(--app-text) !important;
+}
+
+.category-delete-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  min-height: 28px !important;
+  padding: 0 9px !important;
+  border-radius: var(--app-radius-sm) !important;
+  border: 1px solid rgba(220, 38, 38, 0.15) !important;
+  background: var(--app-danger-subtle) !important;
+  color: var(--app-danger) !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  transition: background var(--app-transition), border-color var(--app-transition) !important;
+}
+
+.category-delete-btn:hover {
+  background: var(--app-danger) !important;
+  border-color: var(--app-danger) !important;
+  color: #ffffff !important;
+}
+
+.category-empty-state {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  padding: 28px 20px !important;
+  color: var(--app-text-muted) !important;
+  font-size: 13px !important;
+  text-align: center !important;
+  background: var(--app-surface-muted) !important;
+  border-radius: var(--app-radius-md) !important;
+  border: 1px solid var(--app-border) !important;
+}
+
+.category-search-reset {
+  min-height: 28px !important;
+  padding: 0 10px !important;
+  border-radius: var(--app-radius-sm) !important;
+  border: 1px solid var(--app-border-strong) !important;
+  background: var(--app-surface) !important;
+  color: var(--app-accent) !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  margin-top: 4px !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   35. PURCHASES TABLE — compact rows matching app standard
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* Tight row padding */
+.purchase-table th,
+.purchase-table td {
+  padding: 7px 12px !important;
+  line-height: 1.3 !important;
+}
+
+/* th stays slim */
+.purchase-table th {
+  padding-top: 7px !important;
+  padding-bottom: 7px !important;
+}
+
+/* Status badges on one row, not stacked */
+.purchase-table .status-stack {
+  flex-direction: row !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  gap: 3px !important;
+}
+
+/* Cell content gaps — ultra tight */
+.purchase-table .po-cell,
+.purchase-table .supplier-cell,
+.purchase-table .delivery-cell,
+.purchase-table .received-cell {
+  gap: 1px !important;
+}
+
+/* Secondary sub-lines — smaller, more subtle */
+.purchase-table .po-cell > small,
+.purchase-table .supplier-cell span,
+.purchase-table .received-cell span {
+  font-size: 10.5px !important;
+  line-height: 1.2 !important;
+  color: var(--app-text-muted) !important;
+}
+
+.purchase-table .delivery-cell span {
+  font-size: 10.5px !important;
+  line-height: 1.2 !important;
+}

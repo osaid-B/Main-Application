@@ -1,0 +1,115 @@
+/* Base */
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--app-space-2);
+  border: 1px solid transparent;
+  border-radius: var(--app-radius-sm);
+  font-family: inherit;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background var(--app-transition),
+    border-color var(--app-transition),
+    color var(--app-transition),
+    box-shadow var(--app-transition);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.button:focus-visible {
+  outline: 2px solid var(--app-accent);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 3px var(--app-accent-subtle);
+}
+
+.button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* Sizes */
+.size_sm { height: 32px; padding: 0 var(--app-space-3); font-size: 12px; }
+.size_md { height: 36px; padding: 0 var(--app-space-4); font-size: 13px; }
+.size_lg { height: 44px; padding: 0 var(--app-space-5); font-size: 14px; }
+
+/* Icon-only buttons are square */
+.variant_icon.size_sm { width: 32px; padding: 0; }
+.variant_icon.size_md { width: 36px; padding: 0; }
+.variant_icon.size_lg { width: 44px; padding: 0; }
+
+/* Primary */
+.variant_primary {
+  background: var(--app-accent);
+  color: #ffffff;
+  border-color: var(--app-accent-strong);
+}
+.variant_primary:hover:not(:disabled) { background: var(--app-accent-light); }
+.variant_primary:active:not(:disabled) { background: var(--app-accent-strong); }
+
+/* Secondary */
+.variant_secondary {
+  background: var(--app-surface);
+  color: var(--app-text-soft);
+  border-color: var(--app-border-strong);
+}
+.variant_secondary:hover:not(:disabled) {
+  background: var(--app-surface-hover);
+  color: var(--app-text);
+}
+
+/* Danger */
+.variant_danger {
+  background: var(--app-danger);
+  color: #ffffff;
+  border-color: var(--app-danger);
+}
+.variant_danger:hover:not(:disabled) { filter: brightness(0.92); }
+
+/* Icon (square, neutral) */
+.variant_icon {
+  background: var(--app-surface-muted);
+  color: var(--app-text-muted);
+  border-color: var(--app-border);
+}
+.variant_icon:hover:not(:disabled) {
+  background: var(--app-accent-subtle);
+  color: var(--app-accent);
+  border-color: var(--app-accent-light);
+}
+
+/* Ghost (transparent link-style) */
+.variant_ghost {
+  background: transparent;
+  color: var(--app-accent);
+  border-color: transparent;
+}
+.variant_ghost:hover:not(:disabled) {
+  background: var(--app-accent-subtle);
+  color: var(--app-accent);
+}
+
+/* Spinner + icon slot */
+.spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: btn-spin 700ms linear infinite;
+}
+.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+@keyframes btn-spin { to { transform: rotate(360deg); } }
+
+/* Responsive — soften large size on small screens */
+@media (max-width: 600px) {
+  .size_lg { height: 40px; font-size: 13px; }
+}

@@ -16,6 +16,7 @@ import Treasury from "./pages/Treasury";
 import Employees from "./pages/Employees";
 import Settings from "./pages/Settings";
 import DataImport from "./pages/DataImport";
+import Preview from "./pages/Preview";
 
 function AppRoutes() {
   const { isAuthenticated } = useAuth();
@@ -45,6 +46,7 @@ function AppRoutes() {
           <Route path="/employees" element={<Employees />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/data-import" element={<DataImport />} />
+          <Route path="/preview" element={<Preview />} />
 
         </Route>
       </Route>

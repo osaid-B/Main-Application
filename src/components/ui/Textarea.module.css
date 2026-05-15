@@ -1,0 +1,104 @@
+/* Wrapper */
+.wrapper {
+  display: inline-flex;
+  flex-direction: column;
+  gap: var(--app-space-1);
+  min-width: 0;
+}
+
+.fullWidth {
+  display: flex;
+  width: 100%;
+}
+
+/* Label */
+.label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--app-text-soft);
+  margin-bottom: var(--app-space-1);
+  line-height: 1.2;
+}
+
+/* Textarea base */
+.textarea {
+  width: 100%;
+  min-width: 0;
+  display: block;
+  background: var(--app-surface);
+  border: 1px solid var(--app-border-strong);
+  border-radius: var(--app-radius-sm);
+  color: var(--app-text);
+  font: inherit;
+  line-height: 1.5;
+  outline: none;
+  transition:
+    border-color var(--app-transition),
+    box-shadow var(--app-transition),
+    background var(--app-transition);
+}
+
+.textarea::placeholder {
+  color: var(--app-text-subtle);
+}
+
+.textarea:hover:not(:disabled):not(.textareaError) {
+  border-color: var(--app-text-subtle);
+}
+
+.textarea:focus-visible {
+  border-color: var(--app-accent);
+  box-shadow: 0 0 0 3px var(--app-accent-subtle);
+}
+
+.textareaError {
+  border-color: var(--app-danger);
+}
+
+.textareaError:focus-visible {
+  border-color: var(--app-danger);
+  box-shadow: 0 0 0 3px var(--app-danger-subtle);
+}
+
+.textareaDisabled,
+.textarea:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: var(--app-surface-muted);
+}
+
+/* Sizes — padding + font-size + a sensible min-height */
+.size_sm {
+  font-size: 12px;
+  padding: var(--app-space-2) var(--app-space-3);
+  min-height: 64px;
+}
+.size_md {
+  font-size: 13px;
+  padding: var(--app-space-3) var(--app-space-3);
+  min-height: 88px;
+}
+.size_lg {
+  font-size: 14px;
+  padding: var(--app-space-3) var(--app-space-4);
+  min-height: 112px;
+}
+
+/* Resize variants */
+.resize_none { resize: none; }
+.resize_vertical { resize: vertical; }
+.resize_horizontal { resize: horizontal; }
+.resize_both { resize: both; }
+
+/* Helper / error text */
+.hintText {
+  font-size: 12px;
+  color: var(--app-text-muted);
+  line-height: 1.35;
+}
+
+.errorText {
+  font-size: 12px;
+  color: var(--app-danger);
+  line-height: 1.35;
+}

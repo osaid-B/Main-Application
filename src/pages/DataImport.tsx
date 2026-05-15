@@ -15,6 +15,9 @@ import {
   X,
 } from "lucide-react";
 import "./DataImport.css";
+import { Button } from "../components/ui/Button";
+import { Textarea } from "../components/ui/Textarea";
+import { Badge } from "../components/ui/Badge";
 import type {
   Customer,
   Employee,
@@ -886,27 +889,34 @@ export default function DataImport() {
     <div className="data-import-page">
       <section className="data-import-header">
         <div className="data-import-header-copy">
-          <span className="data-import-badge">
-            <Upload size={15} />
+          <Badge variant="info" size="sm" className="data-import-badge" leftIcon={<Upload size={15} />}>
             Import Workspace
-          </span>
+          </Badge>
           <h1>Data Import</h1>
           <p>Import structured records into your system using CSV paste or file upload</p>
         </div>
 
         <div className="data-import-header-actions">
-          <button type="button" className="import-secondary-btn" onClick={handleTemplateDownload}>
-            <Download size={16} />
+          <Button
+            variant="secondary"
+            size="md"
+            type="button"
+            className="import-secondary-btn"
+            onClick={handleTemplateDownload}
+            leftIcon={<Download size={16} />}
+          >
             Download Template
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="secondary"
+            size="md"
             type="button"
             className="import-secondary-btn"
             onClick={() => guideRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
+            leftIcon={<Info size={16} />}
           >
-            <Info size={16} />
             View Format Guide
-          </button>
+          </Button>
         </div>
       </section>
 
@@ -916,7 +926,7 @@ export default function DataImport() {
             <h2>Choose entity type</h2>
             <p>{config.helper}</p>
           </div>
-          <div className="entity-count-pill">{config.label}</div>
+          <Badge variant="info" size="sm" className="entity-count-pill">{config.label}</Badge>
         </div>
 
         <div className="entity-pill-row">
@@ -969,8 +979,9 @@ export default function DataImport() {
                   <h3>Paste CSV</h3>
                   <span>Header row first</span>
                 </div>
-                <textarea
+                <Textarea
                   className="csv-textarea"
+                  fullWidth
                   value={method === "paste" ? rawText : rawText}
                   onChange={(event) => {
                     setMethod("paste");
@@ -1002,13 +1013,15 @@ export default function DataImport() {
                   <Upload size={26} />
                   <h3>Drop CSV file here or browse</h3>
                   <p>CSV only. Keep headers exactly as shown in the format guide.</p>
-                  <button
+                  <Button
+                    variant="secondary"
+                    size="md"
                     type="button"
                     className="import-secondary-btn"
                     onClick={() => fileInputRef.current?.click()}
                   >
                     Browse File
-                  </button>
+                  </Button>
                   <input
                     ref={fileInputRef}
                     type="file"
@@ -1024,9 +1037,9 @@ export default function DataImport() {
                       <strong>{fileName}</strong>
                       <span>{parsed.rows.length} detected rows</span>
                     </div>
-                    <button type="button" className="icon-action-btn" onClick={clearInput}>
+                    <Button variant="icon" size="sm" type="button" className="icon-action-btn" onClick={clearInput}>
                       <X size={15} />
-                    </button>
+                    </Button>
                   </div>
                 )}
               </div>
@@ -1040,18 +1053,26 @@ export default function DataImport() {
                 <p>Use the required columns exactly as shown for safer validation and preview mapping.</p>
               </div>
               <div className="card-heading-actions">
-                <button
+                <Button
+                  variant="secondary"
+                  size="sm"
                   type="button"
                   className="import-secondary-btn compact"
                   onClick={() => setShowGuide((current) => !current)}
+                  leftIcon={<ChevronRight size={16} className={showGuide ? "chevron-open" : ""} />}
                 >
-                  <ChevronRight size={16} className={showGuide ? "chevron-open" : ""} />
                   {showGuide ? "Collapse" : "Expand"}
-                </button>
-                <button type="button" className="import-secondary-btn" onClick={handleTemplateDownload}>
-                  <Download size={16} />
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="md"
+                  type="button"
+                  className="import-secondary-btn"
+                  onClick={handleTemplateDownload}
+                  leftIcon={<Download size={16} />}
+                >
                   Download Template
-                </button>
+                </Button>
               </div>
             </div>
 
@@ -1060,9 +1081,9 @@ export default function DataImport() {
                 <span className="guide-label">Required fields</span>
                 <div className="guide-chip-row">
                   {config.requiredFields.map((field) => (
-                    <span key={field} className="guide-chip strong">
+                    <Badge key={field} variant="info" size="sm" className="guide-chip strong">
                       {humanizeHeader(field)}
-                    </span>
+                    </Badge>
                   ))}
                 </div>
               </div>
@@ -1071,9 +1092,9 @@ export default function DataImport() {
                 <span className="guide-label">Optional fields</span>
                 <div className="guide-chip-row">
                   {config.optionalFields.map((field) => (
-                    <span key={field} className="guide-chip">
+                    <Badge key={field} variant="neutral" size="sm" className="guide-chip">
                       {humanizeHeader(field)}
-                    </span>
+                    </Badge>
                   ))}
                 </div>
               </div>
@@ -1102,9 +1123,9 @@ export default function DataImport() {
               </div>
               {!noInput && (
                 <div className="preview-summary-pills">
-                  <span className="summary-pill success">{validation.validCount} valid</span>
-                  <span className="summary-pill warning">{validation.warningCount} warnings</span>
-                  <span className="summary-pill danger">{validation.errorCount} errors</span>
+                  <Badge variant="success" size="sm" className="summary-pill success">{validation.validCount} valid</Badge>
+                  <Badge variant="warning" size="sm" className="summary-pill warning">{validation.warningCount} warnings</Badge>
+                  <Badge variant="danger" size="sm" className="summary-pill danger">{validation.errorCount} errors</Badge>
                 </div>
               )}
             </div>

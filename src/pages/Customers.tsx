@@ -1,1953 +1,1589 @@
-import { createPortal } from "react-dom";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertCircle,
   ArrowUpDown,
   Building2,
-  CreditCard,
-  Download,
+  CheckCircle2,
+  ChevronDown,
   Eye,
-  FilePlus2,
   Filter,
   Mail,
-  MoreHorizontal,
+  MapPin,
+  MoreVertical,
+  Pencil,
   Phone,
   Plus,
   Receipt,
   Search,
-  StickyNote,
-  Trash2,
+  Star,
+  Truck,
   UserCircle2,
-  Users,
-  Wallet,
   X,
 } from "lucide-react";
 import "./Customers.css";
-import TableFooter from "../components/ui/TableFooter";
+import { Button } from "../components/ui/Button";
+import { Input } from "../components/ui/Input";
+import { Textarea } from "../components/ui/Textarea";
+import { Select } from "../components/ui/Select";
+import { Modal } from "../components/ui/Modal";
+import { Badge } from "../components/ui/Badge";
 import { useSettings } from "../context/SettingsContext";
-import type { AppLanguage } from "../i18n/translations";
-import type { Customer, Invoice, Payment, PaymentMethod, PaymentStatus } from "../data/types";
+import type { Customer, Invoice, Payment } from "../data/types";
 import { getCustomers, getInvoices, getPayments, saveCustomers } from "../data/storage";
-import { roundMoney } from "../data/relations";
 
-type CustomerStatus = "Active" | "Inactive" | "VIP" | "Blocked" | "New" | "Debtor";
 type CustomerType = "Individual" | "Business" | "VIP";
-type PreferredContactMethod = "Phone" | "Email" | "WhatsApp";
-type SortKey = "name" | "status" | "balance" | "lastActivity" | "joinedAt";
-type SortDirection = "asc" | "desc";
-type DetailsTab = "overview" | "orders" | "payments" | "invoices" | "notes" | "activity";
-type JoinedFilter = "all" | "30d" | "90d" | "year";
-type BalanceFilter = "all" | "debtor" | "clear" | "high";
-type MoreFilter = {
-  customerType: string;
-  tag: string;
-  creditStatus: string;
-  lastOrder: string;
-  lastPayment: string;
+type CustomerStatus = "Active" | "Inactive" | "VIP" | "Blocked" | "New";
+
+type InvoiceTimeFilter = "all" | "today" | "week" | "month" | "year";
+type DebtFilter = "all" | "hasDebt" | "noDebt";
+type OrderFilter = "all" | "hasUnreceivedOrder" | "noUnreceivedOrder";
+type CustomerFormTab = "profile" | "billing";
+
+type SortOption =
+  | "nameAsc"
+  | "nameDesc"
+  | "highestBalance"
+  | "lowestBalance"
+  | "newestInvoice"
+  | "oldestInvoice"
+  | "customerType"
+  | "debtAmount"
+  | "region";
+
+type PalestineLocation = {
+  name: string;
+  type: "Governorate" | "City" | "Town" | "Village" | "Camp";
+  governorate: string;
 };
-type QuickFilter = "active" | "debtor" | "vip" | "new" | "inactive";
-type ActionMenuState = {
-  customerId: string;
-  top: number;
-  left: number;
+
+type BillingProfile = {
+  invoiceType: string;
+  taxEnabled: boolean;
+  taxRate: number;
+  discountType: "none" | "percentage" | "fixed";
+  discountValue: number;
+  companyName: string;
+  taxNumber: string;
+  customTerms: string;
 };
-type ToastState = { type: "success" | "warning" | "error" | "info"; message: string } | null;
 
 type CustomerForm = {
   name: string;
-  id: string;
-  status: Exclude<CustomerStatus, "Debtor">;
   customerType: CustomerType;
-  companyName: string;
+  status: CustomerStatus;
   phone: string;
   email: string;
-  preferredContactMethod: PreferredContactMethod;
-  city: string;
-  address: string;
-  locationNotes: string;
+  region: string;
+  companyName: string;
+  taxNumber: string;
+  invoiceType: string;
+  taxEnabled: boolean;
+  taxRate: string;
+  discountType: "none" | "percentage" | "fixed";
+  discountValue: string;
   openingBalance: string;
-  creditLimit: string;
-  currency: string;
-  notes: string;
-  tags: string;
-  internalNotes: string;
+  hasUnreceivedOrder: boolean;
+  noteText: string;
+  recommendationText: string;
+  customTerms: string;
 };
 
 type FormErrors = Partial<Record<keyof CustomerForm, string>>;
 
-type DerivedInvoice = {
-  id: string;
-  date: string;
-  total: number;
-  remaining: number;
-  status: string;
+type ExtendedCustomer = Customer & {
+  billingProfile?: Partial<BillingProfile>;
+  hasUnreceivedOrder?: boolean;
+  noteText?: string;
+  recommendationText?: string;
 };
 
-type DerivedPayment = {
-  id: string;
-  amount: number;
-  date: string;
-  method: PaymentMethod;
-  status: PaymentStatus;
-  reference: string;
-};
-
-type CustomerRecord = Customer & {
-  statusLabel: CustomerStatus;
-  outstandingBalance: number;
-  totalInvoiced: number;
-  totalPaid: number;
-  activeInvoices: number;
-  joinedLabel: string;
-  lastActivityLabel: string;
+type CustomerRow = Customer & {
+  displayCode: string;
+  region: string;
+  customerTypeResolved: CustomerType;
+  statusResolved: CustomerStatus;
+  lastInvoiceDate: string;
   lastActivityDate: string;
-  lastOrderLabel: string;
-  lastPaymentLabel: string;
-  balanceState: "Debtor" | "Clear";
-  tagsResolved: string[];
-  notesPreview: string;
-  invoices: DerivedInvoice[];
-  payments: DerivedPayment[];
-  averageOrderValue: number;
-  creditUsage: number;
-};
-
-type PersistedCustomerStatus = Customer["status"];
-
-const EMPTY_FORM: CustomerForm = {
-  name: "",
-  id: "",
-  status: "Active",
-  customerType: "Individual",
-  companyName: "",
-  phone: "",
-  email: "",
-  preferredContactMethod: "Phone",
-  city: "",
-  address: "",
-  locationNotes: "",
-  openingBalance: "0",
-  creditLimit: "0",
-  currency: "USD",
-  notes: "",
-  tags: "",
-  internalNotes: "",
+  outstandingBalance: number;
+  debtAmount: number;
+  hasDebt: boolean;
+  hasUnreceivedOrder: boolean;
+  noteText: string;
+  recommendationText: string;
+  billingProfile: BillingProfile;
 };
 
 const DELETE_CONFIRMATION_CODE = "123";
 
-function formatMoney(value: number, currency = "USD", locale = "en-US") {
-  return new Intl.NumberFormat(locale, {
-    style: "currency",
-    currency,
-    minimumFractionDigits: 2,
-  }).format(roundMoney(value));
+const EMPTY_FORM: CustomerForm = {
+  name: "",
+  customerType: "Individual",
+  status: "Active",
+  phone: "",
+  email: "",
+  region: "",
+  companyName: "",
+  taxNumber: "",
+  invoiceType: "Standard Invoice",
+  taxEnabled: false,
+  taxRate: "0",
+  discountType: "none",
+  discountValue: "0",
+  openingBalance: "0",
+  hasUnreceivedOrder: false,
+  noteText: "",
+  recommendationText: "",
+  customTerms: "",
+};
+
+const PALESTINE_LOCATIONS: PalestineLocation[] = [
+  { name: "Jerusalem (القدس)", type: "Governorate", governorate: "Jerusalem" },
+  { name: "Ramallah and Al-Bireh (رام الله والبيرة)", type: "Governorate", governorate: "Ramallah and Al-Bireh" },
+  { name: "Hebron (الخليل)", type: "Governorate", governorate: "Hebron" },
+  { name: "Bethlehem (بيت لحم)", type: "Governorate", governorate: "Bethlehem" },
+  { name: "Nablus (نابلس)", type: "Governorate", governorate: "Nablus" },
+  { name: "Jenin (جنين)", type: "Governorate", governorate: "Jenin" },
+  { name: "Tulkarm (طولكرم)", type: "Governorate", governorate: "Tulkarm" },
+  { name: "Qalqilya (قلقيلية)", type: "Governorate", governorate: "Qalqilya" },
+  { name: "Salfit (سلفيت)", type: "Governorate", governorate: "Salfit" },
+  { name: "Tubas (طوباس)", type: "Governorate", governorate: "Tubas" },
+  { name: "Jericho (أريحا)", type: "Governorate", governorate: "Jericho" },
+  { name: "Gaza (غزة)", type: "Governorate", governorate: "Gaza" },
+  { name: "North Gaza (شمال غزة)", type: "Governorate", governorate: "North Gaza" },
+  { name: "Deir al-Balah (دير البلح)", type: "Governorate", governorate: "Deir al-Balah" },
+  { name: "Khan Yunis (خان يونس)", type: "Governorate", governorate: "Khan Yunis" },
+  { name: "Rafah (رفح)", type: "Governorate", governorate: "Rafah" },
+
+  { name: "Al-Bireh (البيرة)", type: "City", governorate: "Ramallah and Al-Bireh" },
+  { name: "Beitunia (بيتونيا)", type: "City", governorate: "Ramallah and Al-Bireh" },
+  { name: "Rawabi (روابي)", type: "City", governorate: "Ramallah and Al-Bireh" },
+  { name: "Birzeit (بيرزيت)", type: "Town", governorate: "Ramallah and Al-Bireh" },
+  { name: "Silwad (سلواد)", type: "Town", governorate: "Ramallah and Al-Bireh" },
+  { name: "Dura (دورا)", type: "City", governorate: "Hebron" },
+  { name: "Yatta (يطا)", type: "City", governorate: "Hebron" },
+  { name: "Halhul (حلحول)", type: "City", governorate: "Hebron" },
+  { name: "Beit Ummar (بيت أمر)", type: "Town", governorate: "Hebron" },
+  { name: "Al-Dhahiriya (الظاهرية)", type: "Town", governorate: "Hebron" },
+  { name: "Beit Jala (بيت جالا)", type: "City", governorate: "Bethlehem" },
+  { name: "Beit Sahour (بيت ساحور)", type: "City", governorate: "Bethlehem" },
+  { name: "Al-Khader (الخضر)", type: "Town", governorate: "Bethlehem" },
+  { name: "Al-Eizariya (العيزرية)", type: "Town", governorate: "Jerusalem" },
+  { name: "Abu Dis (أبو ديس)", type: "Town", governorate: "Jerusalem" },
+  { name: "Anata (عناتا)", type: "Town", governorate: "Jerusalem" },
+  { name: "Beit Hanina (بيت حنينا)", type: "Town", governorate: "Jerusalem" },
+  { name: "Asira ash-Shamaliya (عصيرة الشمالية)", type: "Town", governorate: "Nablus" },
+  { name: "Beita (بيتا)", type: "Town", governorate: "Nablus" },
+  { name: "Huwara (حوارة)", type: "Town", governorate: "Nablus" },
+  { name: "Balata Camp (مخيم بلاطة)", type: "Camp", governorate: "Nablus" },
+  { name: "Qabatiya (قباطية)", type: "Town", governorate: "Jenin" },
+  { name: "Arraba (عرابة)", type: "Town", governorate: "Jenin" },
+  { name: "Ya'bad (يعبد)", type: "Town", governorate: "Jenin" },
+  { name: "Anabta (عنبتا)", type: "Town", governorate: "Tulkarm" },
+  { name: "Attil (عتيل)", type: "Town", governorate: "Tulkarm" },
+  { name: "Bala'a (بلعا)", type: "Town", governorate: "Tulkarm" },
+  { name: "Azzun (عزون)", type: "Town", governorate: "Qalqilya" },
+  { name: "Habla (حبلة)", type: "Town", governorate: "Qalqilya" },
+  { name: "Bidya (بديا)", type: "Town", governorate: "Salfit" },
+  { name: "Kifl Haris (كفل حارس)", type: "Village", governorate: "Salfit" },
+  { name: "Aqaba (العقبة)", type: "Village", governorate: "Tubas" },
+  { name: "Tammun (طمون)", type: "Town", governorate: "Tubas" },
+  { name: "Al-Auja (العوجا)", type: "Town", governorate: "Jericho" },
+  { name: "Aqabat Jaber Camp (مخيم عقبة جبر)", type: "Camp", governorate: "Jericho" },
+  { name: "Jabalia (جباليا)", type: "City", governorate: "North Gaza" },
+  { name: "Beit Lahia (بيت لاهيا)", type: "City", governorate: "North Gaza" },
+  { name: "Beit Hanoun (بيت حانون)", type: "City", governorate: "North Gaza" },
+  { name: "Al-Zahra (الزهراء)", type: "City", governorate: "Gaza" },
+  { name: "Al-Maghazi (المغازي)", type: "Camp", governorate: "Deir al-Balah" },
+  { name: "Nuseirat (النصيرات)", type: "Camp", governorate: "Deir al-Balah" },
+  { name: "Bani Suheila (بني سهيلا)", type: "Town", governorate: "Khan Yunis" },
+  { name: "Abasan al-Kabira (عبسان الكبيرة)", type: "Town", governorate: "Khan Yunis" },
+];
+
+function roundMoney(value: number) {
+  return Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;
 }
 
-function formatDate(value?: string, locale = "en-US") {
-  if (!value) return "No date";
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return value;
+function numericDate(value?: string) {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
 
-  return new Intl.DateTimeFormat(locale, {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  }).format(parsed);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}/${month}/${day}`;
 }
 
-function getRelativeDate(value?: string, language: AppLanguage = "en") {
-  if (!value) return "No activity";
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return "";
+function isWithinInvoiceFilter(dateValue: string, filter: InvoiceTimeFilter) {
+  if (filter === "all") return true;
+  if (!dateValue) return false;
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const target = new Date(parsed);
-  target.setHours(0, 0, 0, 0);
-  const diff = Math.round((today.getTime() - target.getTime()) / 86400000);
+  const date = new Date(dateValue);
+  if (Number.isNaN(date.getTime())) return false;
 
-  if (language === "ar") {
-    if (diff === 0) return "اليوم";
-    if (diff === 1) return "أمس";
-    if (diff < 30) return `منذ ${diff} يومًا`;
-    if (diff < 365) return `منذ ${Math.floor(diff / 30)} شهر`;
-    return `منذ ${Math.floor(diff / 365)} سنة`;
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  if (filter === "today") {
+    const target = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    return target.getTime() === startOfToday.getTime();
   }
 
-  if (diff === 0) return "Today";
-  if (diff === 1) return "Yesterday";
-  if (diff < 30) return `${diff} days ago`;
-  if (diff < 365) return `${Math.floor(diff / 30)} mo ago`;
-  return `${Math.floor(diff / 365)} yr ago`;
+  const diffDays = (startOfToday.getTime() - date.getTime()) / 86400000;
+
+  if (filter === "week") return diffDays <= 7;
+  if (filter === "month") return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth();
+  if (filter === "year") return date.getFullYear() === now.getFullYear();
+
+  return true;
 }
 
-function validatePhone(phone: string) {
-  return /^(059|056)\d{7}$/.test(phone);
+function buildCustomerCode(customers: Customer[]) {
+  const maxNumber = customers.reduce((max, customer) => {
+    const rawId = String(customer.id || "");
+    const match = rawId.match(/^CUST-(\d+)$/i);
+    return match ? Math.max(max, Number(match[1])) : max;
+  }, 1000);
+
+  return `CUST-${maxNumber + 1}`;
 }
 
-function validateEmail(email: string) {
-  if (!email.trim()) return true;
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+function getBillingProfile(customer: Customer): BillingProfile {
+  const raw = customer as ExtendedCustomer;
+  const profile = raw.billingProfile || {};
+
+  return {
+    invoiceType: profile.invoiceType || "Standard Invoice",
+    taxEnabled: Boolean(profile.taxEnabled),
+    taxRate: Number(profile.taxRate || 0),
+    discountType: profile.discountType || "none",
+    discountValue: Number(profile.discountValue || 0),
+    companyName: profile.companyName || String((customer as any).companyName || ""),
+    taxNumber: profile.taxNumber || String((customer as any).taxNumber || ""),
+    customTerms: profile.customTerms || "",
+  };
 }
 
-function buildCustomerId(index: number) {
-  return `CUST-${1001 + index}`;
-}
-
-function buildCustomerCode(name: string, index: number) {
-  const seed = name
-    .toUpperCase()
-    .replace(/[^A-Z0-9]/g, "")
-    .slice(0, 3)
-    .padEnd(3, "X");
-  return `${seed}-${200 + index}`;
-}
-
-function normalizePaymentStatus(status?: string): PaymentStatus {
-  if (
-    status === "Paid" ||
-    status === "Pending" ||
-    status === "Partial" ||
-    status === "Completed" ||
-    status === "Failed" ||
-    status === "Refunded" ||
-    status === "Cancelled"
-  ) {
-    return status;
-  }
-
-  return "Completed";
-}
-
-function normalizeMethod(method?: string): PaymentMethod {
-  if (
-    method === "Cash" ||
-    method === "Card" ||
-    method === "Bank Transfer" ||
-    method === "Wallet" ||
-    method === "Cheque"
-  ) {
-    return method;
-  }
-
-  return "Cash";
-}
-
-function deriveCustomerStatus(customer: Customer, outstandingBalance: number, joinedAt?: string): CustomerStatus {
-  if (customer.status === "Blocked") return "Blocked";
-  if (customer.status === "Inactive") return "Inactive";
-  if (customer.status === "VIP" || customer.customerType === "VIP") return "VIP";
-  if (outstandingBalance > 0) return "Debtor";
-
-  if (joinedAt) {
-    const parsed = new Date(joinedAt);
-    const diff = (Date.now() - parsed.getTime()) / 86400000;
-    if (diff <= 30) return "New";
-  }
-
-  return "Active";
-}
-
-function makeNotePreview(text?: string) {
-  if (!text?.trim()) return "No notes yet";
-  return text.length > 96 ? `${text.slice(0, 96)}...` : text;
-}
-
-function normalizeCustomerRecords(
-  customers: Customer[],
-  invoices: Invoice[],
-  payments: Payment[],
-  locale: string,
-  language: AppLanguage
-) {
+function normalizeCustomerRows(customers: Customer[], invoices: Invoice[], payments: Payment[]) {
   return customers
-    .filter((customer) => !customer.isDeleted)
-    .map((customer, index): CustomerRecord => {
+    .filter((customer) => !(customer as any).isDeleted)
+    .map((customer): CustomerRow => {
+      const rawCustomer = customer as ExtendedCustomer;
+
       const customerInvoices = invoices
         .filter((invoice) => invoice.customerId === customer.id)
-        .map((invoice) => ({
-          id: invoice.id,
-          date: invoice.date,
-          total: roundMoney(Number(invoice.total ?? invoice.amount ?? 0)),
-          remaining: roundMoney(Number(invoice.remainingAmount ?? 0)),
-          status: invoice.status ?? "Unpaid",
-        }))
         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
       const customerPayments = payments
         .filter((payment) => payment.customerId === customer.id)
-        .map((payment) => ({
-          id: payment.paymentId ?? payment.id,
-          amount: roundMoney(Number(payment.amount ?? 0)),
-          date: payment.date,
-          method: normalizeMethod(payment.method),
-          status: normalizePaymentStatus(payment.status),
-          reference: payment.referenceNumber ?? payment.paymentId ?? payment.id,
-        }))
         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-      const totalInvoiced = roundMoney(customerInvoices.reduce((sum, invoice) => sum + invoice.total, 0));
-      const totalPaid = roundMoney(
-        customerPayments
-          .filter((payment) => payment.status === "Completed" || payment.status === "Paid" || payment.status === "Partial")
-          .reduce((sum, payment) => sum + payment.amount, 0)
-      );
-      const openingBalance = roundMoney(Number(customer.openingBalance ?? 0));
-      const outstandingBalance = roundMoney(
-        Math.max(openingBalance + customerInvoices.reduce((sum, invoice) => sum + invoice.remaining, 0), 0)
-      );
-      const lastOrderDate = customerInvoices[0]?.date ?? "";
+      const invoiceDebt = customerInvoices.reduce((sum, invoice) => {
+        return sum + Number((invoice as any).remainingAmount ?? (invoice as any).remaining ?? 0);
+      }, 0);
+
+      const openingBalance = Number((customer as any).openingBalance ?? 0);
+      const outstandingBalance = Math.max(roundMoney(openingBalance + invoiceDebt), 0);
+
+      const lastInvoiceDate = customerInvoices[0]?.date ?? "";
       const lastPaymentDate = customerPayments[0]?.date ?? "";
-      const lastActivityDate = [lastOrderDate, lastPaymentDate, customer.joinedAt]
-        .filter(Boolean)
-        .sort((left, right) => new Date(right!).getTime() - new Date(left!).getTime())[0];
-      const creditLimit = Number(customer.creditLimit ?? 0);
-      const creditUsage =
-        creditLimit > 0 ? Math.min(100, Math.round((outstandingBalance / creditLimit) * 100)) : 0;
+      const lastActivityDate =
+        [lastInvoiceDate, lastPaymentDate, (customer as any).joinedAt]
+          .filter(Boolean)
+          .sort((a, b) => new Date(b as string).getTime() - new Date(a as string).getTime())[0] ?? "";
+
+      const customerTypeResolved = (((customer as any).customerType as CustomerType) || "Individual") as CustomerType;
+      const statusResolved = (((customer as any).status as CustomerStatus) || "Active") as CustomerStatus;
 
       return {
         ...customer,
-        id: customer.id || buildCustomerId(index),
-        city: customer.city ?? customer.location ?? "",
-        statusLabel: deriveCustomerStatus(customer, outstandingBalance, customer.joinedAt),
+        displayCode: customer.id,
+        region: String((customer as any).city || (customer as any).location || ""),
+        customerTypeResolved,
+        statusResolved,
+        lastInvoiceDate,
+        lastActivityDate,
         outstandingBalance,
-        totalInvoiced,
-        totalPaid,
-        activeInvoices: customerInvoices.filter((invoice) => invoice.remaining > 0).length,
-        joinedLabel: formatDate(customer.joinedAt, locale),
-        lastActivityLabel: getRelativeDate(lastActivityDate, language),
-        lastActivityDate: lastActivityDate ?? "",
-        lastOrderLabel: lastOrderDate ? formatDate(lastOrderDate, locale) : language === "ar" ? "لا توجد طلبات" : "No orders",
-        lastPaymentLabel: lastPaymentDate ? formatDate(lastPaymentDate, locale) : language === "ar" ? "لا توجد دفعات" : "No payments",
-        balanceState: outstandingBalance > 0 ? "Debtor" : "Clear",
-        tagsResolved:
-          customer.tags && customer.tags.length > 0
-            ? customer.tags
-            : [
-                customer.customerType ?? "Individual",
-                deriveCustomerStatus(customer, outstandingBalance, customer.joinedAt),
-              ],
-        notesPreview: makeNotePreview(customer.notes),
-        invoices: customerInvoices,
-        payments: customerPayments,
-        averageOrderValue:
-          customerInvoices.length > 0 ? roundMoney(totalInvoiced / customerInvoices.length) : 0,
-        creditUsage,
+        debtAmount: outstandingBalance,
+        hasDebt: outstandingBalance > 0,
+        hasUnreceivedOrder: Boolean(rawCustomer.hasUnreceivedOrder),
+        noteText: rawCustomer.noteText || String((customer as any).notes || ""),
+        recommendationText: rawCustomer.recommendationText || String((customer as any).internalNotes || ""),
+        billingProfile: getBillingProfile(customer),
       };
     });
 }
 
-function getStatusTone(status: CustomerStatus) {
-  switch (status) {
-    case "VIP":
-      return "status-vip";
-    case "Debtor":
-      return "status-debtor";
-    case "Blocked":
-      return "status-blocked";
-    case "Inactive":
-      return "status-inactive";
-    case "New":
-      return "status-new";
-    default:
-      return "status-active";
-  }
+function statusClass(status: CustomerStatus) {
+  if (status === "VIP") return "status-vip";
+  if (status === "Blocked") return "status-blocked";
+  if (status === "Inactive") return "status-inactive";
+  if (status === "New") return "status-new";
+  return "status-active";
 }
 
-const CUSTOMER_PAGE_COPY = {
-  en: {
-    eyebrow: "Customer workspace",
-    title: "Customers",
-    subtitle: "A cleaner customer ledger for accounts, balances, and follow-up activity.",
-    addCustomer: "Add Customer",
-    export: "Export",
-    summary: {
-      total: "Customers",
-      active: "Active",
-      debtors: "Debtors",
-      due: "Balance due",
-    },
-    searchPlaceholder: "Search customer, code, phone, email, or note",
-    filters: "Filters",
-    filtersLabel: "Advanced filters",
-    filtersApplied: "applied",
-    clear: "Clear",
-    close: "Close",
-    bulk: {
-      selected: "selected",
-      export: "Export selected",
-      tag: "Tag selected",
-      vip: "Mark as VIP",
-      archive: "Archive",
-      delete: "Delete",
-    },
-    quick: {
-      active: "Active",
-      debtor: "Debtor",
-      vip: "VIP",
-      new: "New",
-    },
-    advanced: {
-      title: "Refine customer view",
-      subtitle: "Keep the page compact and reveal secondary filters only when needed.",
-      status: "Status",
-      location: "Location",
-      balance: "Balance state",
-      joined: "Joined date",
-      type: "Customer type",
-      tags: "Tag",
-      credit: "Credit status",
-      lastOrder: "Last order",
-      lastPayment: "Last payment",
-      allStatuses: "All statuses",
-      allLocations: "All locations",
-      allBalances: "All balances",
-      allTime: "All time",
-      anyType: "Any type",
-      anyTag: "Any tag",
-      anyStatus: "Any status",
-      anyValue: "Any",
-      debtorsOnly: "Debtors only",
-      clearBalance: "Clear balance",
-      highBalance: "High balance",
-      last30: "Last 30 days",
-      last90: "Last 90 days",
-      last12Months: "Last 12 months",
-      nearLimit: "Near credit limit",
-      overLimit: "Over credit limit",
-      noOrders: "No orders",
-      noPayments: "No payments",
-    },
-    table: {
-      title: "Customer directory",
-      count: "in current view",
-      customer: "Customer",
-      contact: "Contact",
-      status: "Status",
-      balance: "Balance",
-      activity: "Last activity",
-      actions: "Actions",
-      customerFallback: "Customer account",
-      noEmail: "No email",
-      noPhone: "No phone",
-      joined: "Joined",
-      openInvoices: "open invoices",
-      clearBalance: "Clear balance",
-      noActivity: "No activity",
-      noNotes: "No notes yet",
-      noLocation: "No location",
-      open: "Open",
-      moreActions: "More actions",
-      selectAll: "Select all visible customers",
-      selectRow: "Select",
-    },
-    states: {
-      loadError: "Unable to load customers",
-      emptyTitle: "No matching customers found",
-      emptyText: "Adjust filters or add a new customer.",
-    },
-    statuses: {
-      Active: "Active",
-      Debtor: "Debtor",
-      VIP: "VIP",
-      New: "New",
-      Inactive: "Inactive",
-      Blocked: "Blocked",
-      Clear: "Clear",
-      Individual: "Individual",
-      Business: "Business",
-    },
-  },
-  ar: {
-    eyebrow: "مساحة العملاء",
-    title: "العملاء",
-    subtitle: "دفتر عملاء أنظف لإدارة الحسابات والأرصدة والمتابعة اليومية.",
-    addCustomer: "إضافة عميل",
-    export: "تصدير",
-    summary: {
-      total: "العملاء",
-      active: "النشطون",
-      debtors: "المدينون",
-      due: "الرصيد المستحق",
-    },
-    searchPlaceholder: "ابحث بالعميل أو الرمز أو الهاتف أو البريد أو الملاحظة",
-    filters: "الفلاتر",
-    filtersLabel: "فلاتر متقدمة",
-    filtersApplied: "مفعلة",
-    clear: "مسح",
-    close: "إغلاق",
-    bulk: {
-      selected: "محدد",
-      export: "تصدير المحدد",
-      tag: "وسم المحدد",
-      vip: "تعيين كمميز",
-      archive: "أرشفة",
-      delete: "حذف",
-    },
-    quick: {
-      active: "نشط",
-      debtor: "مدين",
-      vip: "مميز",
-      new: "جديد",
-    },
-    advanced: {
-      title: "تخصيص عرض العملاء",
-      subtitle: "أبق الصفحة مدمجة وأظهر الفلاتر الثانوية فقط عند الحاجة.",
-      status: "الحالة",
-      location: "الموقع",
-      balance: "حالة الرصيد",
-      joined: "تاريخ الانضمام",
-      type: "نوع العميل",
-      tags: "الوسم",
-      credit: "حالة الائتمان",
-      lastOrder: "آخر طلب",
-      lastPayment: "آخر دفعة",
-      allStatuses: "كل الحالات",
-      allLocations: "كل المواقع",
-      allBalances: "كل الأرصدة",
-      allTime: "كل الفترات",
-      anyType: "أي نوع",
-      anyTag: "أي وسم",
-      anyStatus: "أي حالة",
-      anyValue: "أي",
-      debtorsOnly: "المدينون فقط",
-      clearBalance: "رصيد صاف",
-      highBalance: "رصيد مرتفع",
-      last30: "آخر 30 يومًا",
-      last90: "آخر 90 يومًا",
-      last12Months: "آخر 12 شهرًا",
-      nearLimit: "قريب من الحد",
-      overLimit: "متجاوز الحد",
-      noOrders: "لا توجد طلبات",
-      noPayments: "لا توجد دفعات",
-    },
-    table: {
-      title: "دليل العملاء",
-      count: "ضمن العرض الحالي",
-      customer: "العميل",
-      contact: "التواصل",
-      status: "الحالة",
-      balance: "الرصيد",
-      activity: "آخر نشاط",
-      actions: "الإجراءات",
-      customerFallback: "حساب عميل",
-      noEmail: "لا يوجد بريد",
-      noPhone: "لا يوجد هاتف",
-      joined: "انضم",
-      openInvoices: "فواتير مفتوحة",
-      clearBalance: "رصيد صاف",
-      noActivity: "لا يوجد نشاط",
-      noNotes: "لا توجد ملاحظات",
-      noLocation: "لا يوجد موقع",
-      open: "فتح",
-      moreActions: "إجراءات إضافية",
-      selectAll: "تحديد كل العملاء الظاهرين",
-      selectRow: "تحديد",
-    },
-    states: {
-      loadError: "تعذر تحميل العملاء",
-      emptyTitle: "لا يوجد عملاء مطابقون",
-      emptyText: "عدّل الفلاتر أو أضف عميلًا جديدًا.",
-    },
-    statuses: {
-      Active: "نشط",
-      Debtor: "مدين",
-      VIP: "مميز",
-      New: "جديد",
-      Inactive: "غير نشط",
-      Blocked: "محظور",
-      Clear: "صاف",
-      Individual: "فردي",
-      Business: "شركة",
-    },
-  },
-} as const;
-
-function getActivityTimeline(customer: CustomerRecord) {
-  const invoiceEvents = customer.invoices.map((invoice) => ({
-    id: `invoice-${invoice.id}`,
-    type: "invoice" as const,
-    title: `Invoice ${invoice.id} created`,
-    description: `${formatMoney(invoice.total, customer.currency ?? "USD")} • ${invoice.status}`,
-    date: invoice.date,
-  }));
-
-  const paymentEvents = customer.payments.map((payment) => ({
-    id: `payment-${payment.id}`,
-    type: "payment" as const,
-    title: `Payment ${payment.id} recorded`,
-    description: `${formatMoney(payment.amount, customer.currency ?? "USD")} via ${payment.method}`,
-    date: payment.date,
-  }));
-
-  const noteEvents = customer.notesPreview !== "No notes yet"
-    ? [
-        {
-          id: `note-${customer.id}`,
-          type: "note" as const,
-          title: "Customer note updated",
-          description: customer.notesPreview,
-          date: customer.joinedAt ?? new Date().toISOString().split("T")[0],
-        },
-      ]
-    : [];
-
-  return [
-    {
-      id: `created-${customer.id}`,
-      type: "created" as const,
-      title: "Customer profile created",
-      description: `${customer.name} was added to the CRM workspace.`,
-      date: customer.joinedAt ?? new Date().toISOString().split("T")[0],
-    },
-    ...invoiceEvents,
-    ...paymentEvents,
-    ...noteEvents,
-  ].sort((left, right) => new Date(right.date).getTime() - new Date(left.date).getTime());
-}
-
-function CustomerFormModal({
-  mode,
-  values,
-  errors,
-  onChange,
-  onClose,
-  onSubmit,
-}: {
-  mode: "create" | "edit";
-  values: CustomerForm;
-  errors: FormErrors;
-  onChange: (field: keyof CustomerForm, value: string) => void;
-  onClose: () => void;
-  onSubmit: () => void;
-}) {
-  const currency = values.currency || "USD";
-  const openingBalance = Number(values.openingBalance || 0);
-  const creditLimit = Number(values.creditLimit || 0);
-  const tagsPreview = values.tags
-    .split(",")
-    .map((tag) => tag.trim())
-    .filter(Boolean)
-    .slice(0, 4);
-
-  return (
-    <div className="customer-modal-overlay" onClick={onClose}>
-      <div className="customer-form-modal" onClick={(event) => event.stopPropagation()}>
-        <div className="customer-modal-header">
-          <div>
-            <span className="modal-eyebrow">{mode === "create" ? "New Customer" : "Edit Customer"}</span>
-            <h2>{mode === "create" ? "Add Customer" : "Update Customer"}</h2>
-            <p>Create a richer customer profile with contact, financial, and lifecycle details.</p>
-          </div>
-          <button type="button" className="icon-btn subtle" onClick={onClose} aria-label="Close customer form">
-            <X size={18} />
-          </button>
-        </div>
-
-        <div className="customer-form-body">
-          <div className="customer-form-sections">
-            <section className="customer-form-section">
-              <div className="section-title">
-                <h3>Basic information</h3>
-                <p>Define how this customer should appear across invoices and CRM workflows.</p>
-              </div>
-              <div className="customer-form-grid">
-                <label className="field-block">
-                  <span>Customer name</span>
-                  <input value={values.name} onChange={(e) => onChange("name", e.target.value)} placeholder="Enter customer name" />
-                  {errors.name && <small className="field-error">{errors.name}</small>}
-                </label>
-                <label className="field-block">
-                  <span>Customer code</span>
-                  <input value={values.id} onChange={(e) => onChange("id", e.target.value)} placeholder="Auto-generated customer code" />
-                  {errors.id && <small className="field-error">{errors.id}</small>}
-                </label>
-                <label className="field-block">
-                  <span>Status</span>
-                  <select className="app-select-control" value={values.status} onChange={(e) => onChange("status", e.target.value)}>
-                    {["Active", "Inactive", "VIP", "Blocked", "New"].map((status) => (
-                      <option key={status} value={status}>{status}</option>
-                    ))}
-                  </select>
-                </label>
-                <label className="field-block">
-                  <span>Customer type</span>
-                  <select className="app-select-control" value={values.customerType} onChange={(e) => onChange("customerType", e.target.value)}>
-                    {["Individual", "Business", "VIP"].map((type) => (
-                      <option key={type} value={type}>{type}</option>
-                    ))}
-                  </select>
-                </label>
-                <label className="field-block field-span-full">
-                  <span>Company name</span>
-                  <input value={values.companyName} onChange={(e) => onChange("companyName", e.target.value)} placeholder="Optional company or account name" />
-                </label>
-              </div>
-            </section>
-
-            <section className="customer-form-section">
-              <div className="section-title">
-                <h3>Contact information</h3>
-                <p>Capture the contact details used for invoices, collections, and follow-up.</p>
-              </div>
-              <div className="customer-form-grid">
-                <label className="field-block">
-                  <span>Phone</span>
-                  <input value={values.phone} onChange={(e) => onChange("phone", e.target.value)} placeholder="Enter phone number" />
-                  <small className="field-hint">Must start with 059 or 056</small>
-                  {errors.phone && <small className="field-error">{errors.phone}</small>}
-                </label>
-                <label className="field-block">
-                  <span>Email</span>
-                  <input value={values.email} onChange={(e) => onChange("email", e.target.value)} placeholder="Enter email address" />
-                  {errors.email && <small className="field-error">{errors.email}</small>}
-                </label>
-                <label className="field-block">
-                  <span>Preferred contact</span>
-                  <select className="app-select-control" value={values.preferredContactMethod} onChange={(e) => onChange("preferredContactMethod", e.target.value)}>
-                    {["Phone", "Email", "WhatsApp"].map((method) => (
-                      <option key={method} value={method}>{method}</option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-            </section>
-
-            <section className="customer-form-section">
-              <div className="section-title">
-                <h3>Address</h3>
-                <p>Keep location details ready for delivery, billing, and internal notes.</p>
-              </div>
-              <div className="customer-form-grid">
-                <label className="field-block">
-                  <span>City / Area</span>
-                  <input value={values.city} onChange={(e) => onChange("city", e.target.value)} placeholder="Enter city or area" />
-                </label>
-                <label className="field-block field-span-full">
-                  <span>Address</span>
-                  <input value={values.address} onChange={(e) => onChange("address", e.target.value)} placeholder="Enter address" />
-                </label>
-                <label className="field-block field-span-full">
-                  <span>Location notes</span>
-                  <textarea
-                    rows={3}
-                    value={values.locationNotes}
-                    onChange={(e) => onChange("locationNotes", e.target.value)}
-                    placeholder="Optional location notes"
-                  />
-                </label>
-              </div>
-            </section>
-
-            <section className="customer-form-section">
-              <div className="section-title">
-                <h3>Financial information</h3>
-                <p>Define opening balance, credit exposure, and preferred working currency.</p>
-              </div>
-              <div className="customer-form-grid">
-                <label className="field-block">
-                  <span>Opening balance</span>
-                  <input value={values.openingBalance} onChange={(e) => onChange("openingBalance", e.target.value)} placeholder="Enter opening balance" />
-                </label>
-                <label className="field-block">
-                  <span>Credit limit</span>
-                  <input value={values.creditLimit} onChange={(e) => onChange("creditLimit", e.target.value)} placeholder="Enter credit limit" />
-                </label>
-                <label className="field-block">
-                  <span>Currency</span>
-                  <select className="app-select-control" value={values.currency} onChange={(e) => onChange("currency", e.target.value)}>
-                    {["USD", "ILS", "EUR"].map((item) => (
-                      <option key={item} value={item}>{item}</option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-            </section>
-
-            <section className="customer-form-section">
-              <div className="section-title">
-                <h3>Additional information</h3>
-                <p>Use notes and tags to make follow-up and segmentation easier later.</p>
-              </div>
-              <div className="customer-form-grid">
-                <label className="field-block field-span-full">
-                  <span>Notes</span>
-                  <textarea rows={3} value={values.notes} onChange={(e) => onChange("notes", e.target.value)} placeholder="Optional customer notes" />
-                </label>
-                <label className="field-block field-span-full">
-                  <span>Tags</span>
-                  <input value={values.tags} onChange={(e) => onChange("tags", e.target.value)} placeholder="VIP, contractor, retail" />
-                </label>
-                <label className="field-block field-span-full">
-                  <span>Internal notes</span>
-                  <textarea rows={3} value={values.internalNotes} onChange={(e) => onChange("internalNotes", e.target.value)} placeholder="Internal team notes" />
-                </label>
-              </div>
-            </section>
-          </div>
-
-          <aside className="customer-form-summary">
-            <div className="summary-card">
-              <span className="summary-label">Profile preview</span>
-              <strong>{values.name || "Customer name"}</strong>
-              <ul className="summary-list">
-                <li><span>Code</span><b>{values.id || "Auto"}</b></li>
-                <li><span>Status</span><b>{values.status}</b></li>
-                <li><span>Type</span><b>{values.customerType}</b></li>
-                <li><span>Opening balance</span><b>{formatMoney(Number(openingBalance || 0), currency)}</b></li>
-                <li><span>Credit limit</span><b>{formatMoney(Number(creditLimit || 0), currency)}</b></li>
-                <li><span>Preferred contact</span><b>{values.preferredContactMethod}</b></li>
-              </ul>
-            </div>
-            <div className="summary-card subtle-surface">
-              <span className="summary-label">Tags</span>
-              <div className="tag-list">
-                {tagsPreview.length > 0 ? tagsPreview.map((tag) => <span key={tag} className="tag-chip">{tag}</span>) : <span className="muted-text">No tags yet</span>}
-              </div>
-            </div>
-          </aside>
-        </div>
-
-        <div className="customer-modal-footer">
-          <button type="button" className="secondary-btn" onClick={onClose}>Cancel</button>
-          <button type="button" className="secondary-btn" onClick={onSubmit}>Save & add another</button>
-          <button type="button" className="primary-btn" onClick={onSubmit}>
-            {mode === "create" ? "Save customer" : "Save changes"}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function CustomerDetailsModal({
-  customer,
-  activeTab,
-  onChangeTab,
-  onClose,
-  onEdit,
-  onCreateInvoice,
-  onRecordPayment,
-  onAddNote,
-}: {
-  customer: CustomerRecord | null;
-  activeTab: DetailsTab;
-  onChangeTab: (tab: DetailsTab) => void;
-  onClose: () => void;
-  onEdit: () => void;
-  onCreateInvoice: () => void;
-  onRecordPayment: () => void;
-  onAddNote: () => void;
-}) {
-  if (!customer) return null;
-
-  const timeline = getActivityTimeline(customer);
-
-  return (
-    <div className="customer-modal-overlay" onClick={onClose}>
-      <div className="customer-details-modal" onClick={(event) => event.stopPropagation()}>
-        <div className="customer-details-header">
-          <div className="customer-profile-main">
-            <div className="customer-avatar">{customer.name.charAt(0).toUpperCase()}</div>
-            <div className="customer-profile-copy">
-              <div className="customer-title-row">
-                <h2>{customer.name}</h2>
-                <span className={`customer-status-badge ${getStatusTone(customer.statusLabel)}`}>{customer.statusLabel}</span>
-              </div>
-              <p>{customer.companyName || customer.customerType || "Customer account"}</p>
-              <div className="customer-meta-row">
-                <span>{customer.id}</span>
-                <span>{customer.joinedLabel}</span>
-                {customer.phone && <span>{customer.phone}</span>}
-                {customer.email && <span>{customer.email}</span>}
-              </div>
-            </div>
-          </div>
-
-          <div className="customer-profile-actions">
-            <button type="button" className="secondary-btn" onClick={onEdit}>Edit customer</button>
-            <button type="button" className="secondary-btn" onClick={onCreateInvoice}>Create invoice</button>
-            <button type="button" className="secondary-btn" onClick={onRecordPayment}>Record payment</button>
-            <button type="button" className="primary-btn" onClick={onAddNote}>Add note</button>
-          </div>
-        </div>
-
-        <div className="customer-kpi-grid">
-          <article className="mini-kpi-card"><span>Total orders</span><strong>{customer.invoices.length}</strong></article>
-          <article className="mini-kpi-card"><span>Total paid</span><strong>{formatMoney(customer.totalPaid, customer.currency ?? "USD")}</strong></article>
-          <article className="mini-kpi-card"><span>Balance due</span><strong>{formatMoney(customer.outstandingBalance, customer.currency ?? "USD")}</strong></article>
-          <article className="mini-kpi-card"><span>Avg. order value</span><strong>{formatMoney(customer.averageOrderValue, customer.currency ?? "USD")}</strong></article>
-        </div>
-
-        <div className="details-tabs">
-          {(["overview", "orders", "payments", "invoices", "notes", "activity"] as DetailsTab[]).map((tab) => (
-            <button key={tab} type="button" className={`details-tab-btn ${activeTab === tab ? "active" : ""}`} onClick={() => onChangeTab(tab)}>
-              {tab === "overview" && "Overview"}
-              {tab === "orders" && "Orders"}
-              {tab === "payments" && "Payments"}
-              {tab === "invoices" && "Invoices"}
-              {tab === "notes" && "Notes"}
-              {tab === "activity" && "Activity"}
-            </button>
-          ))}
-        </div>
-
-        <div className="details-content-scroll">
-          {activeTab === "overview" && (
-            <div className="details-grid">
-              <section className="details-card">
-                <h3>Contact details</h3>
-                <dl className="key-value-grid">
-                  <div><dt>Customer code</dt><dd>{customer.id}</dd></div>
-                  <div><dt>Phone</dt><dd>{customer.phone || "Not set"}</dd></div>
-                  <div><dt>Email</dt><dd>{customer.email || "Not set"}</dd></div>
-                  <div><dt>Preferred contact</dt><dd>{customer.preferredContactMethod || "Phone"}</dd></div>
-                </dl>
-              </section>
-              <section className="details-card">
-                <h3>Address</h3>
-                <dl className="key-value-grid">
-                  <div><dt>City / Area</dt><dd>{customer.city || customer.location || "Not set"}</dd></div>
-                  <div><dt>Address</dt><dd>{customer.address || "Not set"}</dd></div>
-                  <div><dt>Location notes</dt><dd>{customer.locationNotes || "No location notes"}</dd></div>
-                </dl>
-              </section>
-              <section className="details-card">
-                <h3>Financial summary</h3>
-                <dl className="key-value-grid">
-                  <div><dt>Opening balance</dt><dd>{formatMoney(Number(customer.openingBalance ?? 0), customer.currency ?? "USD")}</dd></div>
-                  <div><dt>Outstanding balance</dt><dd>{formatMoney(customer.outstandingBalance, customer.currency ?? "USD")}</dd></div>
-                  <div><dt>Credit limit</dt><dd>{formatMoney(Number(customer.creditLimit ?? 0), customer.currency ?? "USD")}</dd></div>
-                  <div><dt>Credit usage</dt><dd>{customer.creditUsage}%</dd></div>
-                </dl>
-              </section>
-              <section className="details-card">
-                <h3>Activity summary</h3>
-                <dl className="key-value-grid">
-                  <div><dt>Last order</dt><dd>{customer.lastOrderLabel}</dd></div>
-                  <div><dt>Last payment</dt><dd>{customer.lastPaymentLabel}</dd></div>
-                  <div><dt>Last activity</dt><dd>{customer.lastActivityLabel}</dd></div>
-                  <div><dt>Open invoices</dt><dd>{customer.activeInvoices}</dd></div>
-                </dl>
-              </section>
-              <section className="details-card full-span">
-                <h3>Notes preview</h3>
-                <p className="details-text">{customer.notes || "No customer notes yet."}</p>
-                {customer.internalNotes && <p className="details-text secondary">{customer.internalNotes}</p>}
-              </section>
-            </div>
-          )}
-
-          {activeTab === "orders" && (
-            <section className="details-card">
-              <h3>Orders</h3>
-              {customer.invoices.length === 0 ? (
-                <p className="muted-text">No orders linked yet.</p>
-              ) : (
-                <table className="details-table">
-                  <thead>
-                    <tr><th>Order</th><th>Date</th><th>Total</th><th>Remaining</th><th>Status</th></tr>
-                  </thead>
-                  <tbody>
-                    {customer.invoices.map((invoice) => (
-                      <tr key={invoice.id}>
-                        <td>{invoice.id}</td>
-                        <td>{formatDate(invoice.date)}</td>
-                        <td>{formatMoney(invoice.total, customer.currency ?? "USD")}</td>
-                        <td>{formatMoney(invoice.remaining, customer.currency ?? "USD")}</td>
-                        <td><span className={`table-badge ${invoice.remaining > 0 ? "badge-debtor" : "badge-success"}`}>{invoice.status}</span></td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </section>
-          )}
-
-          {activeTab === "payments" && (
-            <section className="details-card">
-              <h3>Payments</h3>
-              {customer.payments.length === 0 ? (
-                <p className="muted-text">No payments recorded yet.</p>
-              ) : (
-                <table className="details-table">
-                  <thead>
-                    <tr><th>Date</th><th>Amount</th><th>Method</th><th>Reference</th><th>Status</th></tr>
-                  </thead>
-                  <tbody>
-                    {customer.payments.map((payment) => (
-                      <tr key={payment.id}>
-                        <td>{formatDate(payment.date)}</td>
-                        <td>{formatMoney(payment.amount, customer.currency ?? "USD")}</td>
-                        <td>{payment.method}</td>
-                        <td>{payment.reference}</td>
-                        <td><span className={`table-badge ${payment.status === "Completed" || payment.status === "Paid" ? "badge-success" : "badge-warning"}`}>{payment.status}</span></td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </section>
-          )}
-
-          {activeTab === "invoices" && (
-            <section className="details-card">
-              <h3>Invoices</h3>
-              {customer.invoices.length === 0 ? (
-                <p className="muted-text">No invoices recorded.</p>
-              ) : (
-                <table className="details-table">
-                  <thead>
-                    <tr><th>Invoice</th><th>Date</th><th>Total</th><th>Balance</th><th>Status</th></tr>
-                  </thead>
-                  <tbody>
-                    {customer.invoices.map((invoice) => (
-                      <tr key={invoice.id}>
-                        <td>{invoice.id}</td>
-                        <td>{formatDate(invoice.date)}</td>
-                        <td>{formatMoney(invoice.total, customer.currency ?? "USD")}</td>
-                        <td>{formatMoney(invoice.remaining, customer.currency ?? "USD")}</td>
-                        <td><span className={`table-badge ${invoice.remaining > 0 ? "badge-debtor" : "badge-success"}`}>{invoice.status}</span></td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </section>
-          )}
-
-          {activeTab === "notes" && (
-            <section className="details-card">
-              <h3>Notes</h3>
-              <div className="notes-stack">
-                <article className="note-card">
-                  <strong>Customer note</strong>
-                  <p>{customer.notes || "No note yet."}</p>
-                </article>
-                <article className="note-card">
-                  <strong>Internal note</strong>
-                  <p>{customer.internalNotes || "No internal note yet."}</p>
-                </article>
-              </div>
-            </section>
-          )}
-
-          {activeTab === "activity" && (
-            <section className="details-card">
-              <h3>Activity timeline</h3>
-              <div className="activity-timeline">
-                {timeline.map((item) => (
-                  <article key={item.id} className="timeline-item">
-                    <span className={`timeline-icon ${item.type}`}></span>
-                    <div>
-                      <strong>{item.title}</strong>
-                      <p>{item.description}</p>
-                      <span>{formatDate(item.date)} · {getRelativeDate(item.date)}</span>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            </section>
-          )}
-        </div>
-      </div>
-    </div>
-  );
+function typeIcon(type: CustomerType) {
+  if (type === "Business") return <Building2 size={13} />;
+  if (type === "VIP") return <Star size={13} />;
+  return <UserCircle2 size={13} />;
 }
 
 export default function Customers() {
-  const actionMenuRef = useRef<HTMLDivElement | null>(null);
-  const filterPopoverRef = useRef<HTMLDivElement | null>(null);
-  const { language, locale, dir, formatCurrency, formatDate: formatLocaleDate, formatNumber } = useSettings();
-  const pageCopy = CUSTOMER_PAGE_COPY[language];
+  const settings = useSettings();
+  const formatCurrency =
+    settings.formatCurrency ||
+    ((value: number, currency = "USD") =>
+      new Intl.NumberFormat("en-US", {
+        style: "currency",
+        currency,
+      }).format(Number(value || 0)));
+
+  const formatNumber =
+    settings.formatNumber ||
+    ((value: number) => new Intl.NumberFormat("en-US").format(Number(value || 0)));
+
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [loadError, setLoadError] = useState("");
+
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
-  const [locationFilter, setLocationFilter] = useState("");
-  const [balanceFilter, setBalanceFilter] = useState<BalanceFilter>("all");
-  const [joinedFilter, setJoinedFilter] = useState<JoinedFilter>("all");
-  const [moreFilters, setMoreFilters] = useState<MoreFilter>({
-    customerType: "",
-    tag: "",
-    creditStatus: "",
-    lastOrder: "",
-    lastPayment: "",
-  });
-  const [showMoreFilters, setShowMoreFilters] = useState(false);
-  const [quickFilters, setQuickFilters] = useState<QuickFilter[]>([]);
-  const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: SortDirection }>({
-    key: "joinedAt",
-    direction: "desc",
-  });
-  const [selectedRows, setSelectedRows] = useState<string[]>([]);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [sortBy, setSortBy] = useState<SortOption>("newestInvoice");
+  const [invoiceTimeFilter, setInvoiceTimeFilter] = useState<InvoiceTimeFilter>("all");
+  const [debtFilter, setDebtFilter] = useState<DebtFilter>("all");
+  const [orderFilter, setOrderFilter] = useState<OrderFilter>("all");
+  const [showFilters, setShowFilters] = useState(false);
   const [page, setPage] = useState(1);
-  const [showFormModal, setShowFormModal] = useState(false);
-  const [formMode, setFormMode] = useState<"create" | "edit">("create");
+  const rowsPerPage = 10;
+
+  const [showCustomerModal, setShowCustomerModal] = useState(false);
+  const [editingCustomer, setEditingCustomer] = useState<CustomerRow | null>(null);
+  const [viewCustomer, setViewCustomer] = useState<CustomerRow | null>(null);
+  const [generatedCode, setGeneratedCode] = useState("");
   const [formState, setFormState] = useState<CustomerForm>(EMPTY_FORM);
   const [formErrors, setFormErrors] = useState<FormErrors>({});
-  const [editingCustomerId, setEditingCustomerId] = useState<string | null>(null);
-  const [actionMenu, setActionMenu] = useState<ActionMenuState | null>(null);
-  const [activeCustomer, setActiveCustomer] = useState<CustomerRecord | null>(null);
-  const [detailsTab, setDetailsTab] = useState<DetailsTab>("overview");
-  const [toast, setToast] = useState<ToastState>(null);
-  const [deleteTarget, setDeleteTarget] = useState<CustomerRecord | null>(null);
+  const [activeFormTab, setActiveFormTab] = useState<CustomerFormTab>("profile");
+  const [showLocationDropdown, setShowLocationDropdown] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<CustomerRow | null>(null);
   const [deleteCode, setDeleteCode] = useState("");
+  const [toast, setToast] = useState("");
+
+  const filtersRef = useRef<HTMLDivElement | null>(null);
+  const locationRef = useRef<HTMLDivElement | null>(null);
+
+  const isBusinessCustomer = formState.customerType === "Business";
 
   useEffect(() => {
-    const sync = () => {
-      try {
-        setCustomers(getCustomers());
-        setInvoices(getInvoices());
-        setPayments(getPayments());
-        setError("");
-      } catch {
-        setError("Unable to load customers right now.");
-      } finally {
-        window.setTimeout(() => setLoading(false), 120);
-      }
-    };
-
-    sync();
-    window.addEventListener("focus", sync);
-    window.addEventListener("storage", sync);
-    return () => {
-      window.removeEventListener("focus", sync);
-      window.removeEventListener("storage", sync);
-    };
+    try {
+      setCustomers(getCustomers());
+      setInvoices(getInvoices());
+      setPayments(getPayments());
+      setLoadError("");
+    } catch {
+      setLoadError("Unable to load customers.");
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
     if (!toast) return;
-    const timer = window.setTimeout(() => setToast(null), 2600);
+    const timer = window.setTimeout(() => setToast(""), 2400);
     return () => window.clearTimeout(timer);
   }, [toast]);
 
   useEffect(() => {
-    if (!actionMenu) return;
-
-    const handleOutside = (event: MouseEvent) => {
-      if (actionMenuRef.current && !actionMenuRef.current.contains(event.target as Node)) {
-        setActionMenu(null);
+    function handleOutsideClick(event: MouseEvent) {
+      if (showFilters && filtersRef.current && !filtersRef.current.contains(event.target as Node)) {
+        setShowFilters(false);
       }
-    };
 
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setActionMenu(null);
-    };
-
-    const closeMenu = () => setActionMenu(null);
-    document.addEventListener("mousedown", handleOutside);
-    document.addEventListener("keydown", handleEscape);
-    window.addEventListener("resize", closeMenu);
-    window.addEventListener("scroll", closeMenu, true);
-
-    return () => {
-      document.removeEventListener("mousedown", handleOutside);
-      document.removeEventListener("keydown", handleEscape);
-      window.removeEventListener("resize", closeMenu);
-      window.removeEventListener("scroll", closeMenu, true);
-    };
-  }, [actionMenu]);
-
-  useEffect(() => {
-    if (!showMoreFilters) return;
-
-    const handleOutside = (event: MouseEvent) => {
-      if (filterPopoverRef.current && !filterPopoverRef.current.contains(event.target as Node)) {
-        setShowMoreFilters(false);
+      if (showLocationDropdown && locationRef.current && !locationRef.current.contains(event.target as Node)) {
+        setShowLocationDropdown(false);
       }
-    };
+    }
 
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setShowMoreFilters(false);
-    };
-
-    document.addEventListener("mousedown", handleOutside);
-    document.addEventListener("keydown", handleEscape);
-
-    return () => {
-      document.removeEventListener("mousedown", handleOutside);
-      document.removeEventListener("keydown", handleEscape);
-    };
-  }, [showMoreFilters]);
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, [showFilters, showLocationDropdown]);
 
   const customerRows = useMemo(
-    () => normalizeCustomerRecords(customers, invoices, payments, locale, language),
-    [customers, invoices, language, locale, payments]
+    () => normalizeCustomerRows(customers, invoices, payments),
+    [customers, invoices, payments]
   );
 
-  const filteredCustomers = useMemo(() => {
+  const filteredLocations = useMemo(() => {
+    const query = formState.region.trim().toLowerCase();
+
+    return PALESTINE_LOCATIONS.filter((location) => {
+      const haystack = `${location.name} ${location.type} ${location.governorate}`.toLowerCase();
+      return query ? haystack.includes(query) : true;
+    }).slice(0, 80);
+  }, [formState.region]);
+
+  const filteredRows = useMemo(() => {
     const query = searchTerm.trim().toLowerCase();
 
     const result = customerRows.filter((customer) => {
       if (query) {
         const haystack = [
           customer.name,
-          customer.id,
-          customer.email,
+          customer.displayCode,
           customer.phone,
-          customer.city,
-          customer.notes,
-          customer.tagsResolved.join(" "),
+          customer.email,
+          customer.region,
+          customer.customerTypeResolved,
+          customer.statusResolved,
+          customer.noteText,
+          customer.recommendationText,
         ]
           .join(" ")
           .toLowerCase();
+
         if (!haystack.includes(query)) return false;
       }
 
-      if (statusFilter && customer.statusLabel !== statusFilter) return false;
-      if (locationFilter && (customer.city || customer.location || "") !== locationFilter) return false;
-      if (balanceFilter === "debtor" && customer.outstandingBalance <= 0) return false;
-      if (balanceFilter === "clear" && customer.outstandingBalance > 0) return false;
-      if (balanceFilter === "high" && customer.outstandingBalance < 1000) return false;
-
-      if (joinedFilter !== "all" && customer.joinedAt) {
-        const diff = (Date.now() - new Date(customer.joinedAt).getTime()) / 86400000;
-        if (joinedFilter === "30d" && diff > 30) return false;
-        if (joinedFilter === "90d" && diff > 90) return false;
-        if (joinedFilter === "year" && diff > 365) return false;
+      if (invoiceTimeFilter !== "all" && !isWithinInvoiceFilter(customer.lastInvoiceDate, invoiceTimeFilter)) {
+        return false;
       }
 
-      if (moreFilters.customerType && customer.customerType !== moreFilters.customerType) return false;
-      if (moreFilters.tag && !customer.tagsResolved.some((tag) => tag.toLowerCase() === moreFilters.tag.toLowerCase())) return false;
-      if (moreFilters.creditStatus === "over-limit" && customer.creditUsage < 100) return false;
-      if (moreFilters.creditStatus === "near-limit" && (customer.creditUsage < 75 || customer.creditUsage >= 100)) return false;
-      if (moreFilters.lastOrder === "none" && customer.invoices.length > 0) return false;
-      if (moreFilters.lastPayment === "none" && customer.payments.length > 0) return false;
+      if (debtFilter === "hasDebt" && !customer.hasDebt) return false;
+      if (debtFilter === "noDebt" && customer.hasDebt) return false;
 
-      if (quickFilters.includes("active") && customer.statusLabel !== "Active") return false;
-      if (quickFilters.includes("debtor") && customer.outstandingBalance <= 0) return false;
-      if (quickFilters.includes("vip") && customer.statusLabel !== "VIP") return false;
-      if (quickFilters.includes("new") && customer.statusLabel !== "New") return false;
-      if (quickFilters.includes("inactive") && customer.statusLabel !== "Inactive") return false;
+      if (orderFilter === "hasUnreceivedOrder" && !customer.hasUnreceivedOrder) return false;
+      if (orderFilter === "noUnreceivedOrder" && customer.hasUnreceivedOrder) return false;
 
       return true;
     });
 
-    return [...result].sort((left, right) => {
-      const valueFor = (customer: CustomerRecord) => {
-        switch (sortConfig.key) {
-          case "name":
-            return customer.name;
-          case "status":
-            return customer.statusLabel;
-          case "balance":
-            return customer.outstandingBalance;
-          case "lastActivity":
-            return customer.lastActivityDate ?? "";
-          case "joinedAt":
-          default:
-            return customer.joinedAt ?? "";
-        }
-      };
-
-      const leftValue = valueFor(left);
-      const rightValue = valueFor(right);
-
-      if (typeof leftValue === "number" && typeof rightValue === "number") {
-        return sortConfig.direction === "asc" ? leftValue - rightValue : rightValue - leftValue;
-      }
-
-      return sortConfig.direction === "asc"
-        ? String(leftValue).localeCompare(String(rightValue))
-        : String(rightValue).localeCompare(String(leftValue));
+    return [...result].sort((a, b) => {
+      if (sortBy === "nameAsc") return a.name.localeCompare(b.name);
+      if (sortBy === "nameDesc") return b.name.localeCompare(a.name);
+      if (sortBy === "highestBalance") return b.outstandingBalance - a.outstandingBalance;
+      if (sortBy === "lowestBalance") return a.outstandingBalance - b.outstandingBalance;
+      if (sortBy === "newestInvoice") return new Date(b.lastInvoiceDate || 0).getTime() - new Date(a.lastInvoiceDate || 0).getTime();
+      if (sortBy === "oldestInvoice") return new Date(a.lastInvoiceDate || 0).getTime() - new Date(b.lastInvoiceDate || 0).getTime();
+      if (sortBy === "customerType") return a.customerTypeResolved.localeCompare(b.customerTypeResolved);
+      if (sortBy === "debtAmount") return b.debtAmount - a.debtAmount;
+      if (sortBy === "region") return a.region.localeCompare(b.region);
+      return 0;
     });
-  }, [balanceFilter, customerRows, joinedFilter, locationFilter, moreFilters, quickFilters, searchTerm, sortConfig, statusFilter]);
-
-  const totalPages = Math.max(1, Math.ceil(filteredCustomers.length / rowsPerPage));
-  const paginatedCustomers = filteredCustomers.slice((page - 1) * rowsPerPage, page * rowsPerPage);
-
-  useEffect(() => {
-    setPage(1);
-  }, [searchTerm, statusFilter, locationFilter, balanceFilter, joinedFilter, moreFilters, quickFilters, rowsPerPage]);
-
-  useEffect(() => {
-    if (page > totalPages) setPage(totalPages);
-  }, [page, totalPages]);
+  }, [customerRows, searchTerm, invoiceTimeFilter, debtFilter, orderFilter, sortBy]);
 
   const kpis = useMemo(() => {
-    const total = customerRows.length;
-    const active = customerRows.filter(
-      (customer) => customer.statusLabel !== "Inactive" && customer.statusLabel !== "Blocked"
-    ).length;
-    const debtors = customerRows.filter((customer) => customer.outstandingBalance > 0).length;
-    const newThisMonth = customerRows.filter((customer) => {
-      if (!customer.joinedAt) return false;
-      const date = new Date(customer.joinedAt);
-      const now = new Date();
-      return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
-    }).length;
-    const outstanding = customerRows.reduce((sum, customer) => sum + customer.outstandingBalance, 0);
-
-    return { total, active, debtors, newThisMonth, outstanding };
+    return {
+      total: customerRows.length,
+      debtors: customerRows.filter((customer) => customer.hasDebt).length,
+      unreceived: customerRows.filter((customer) => customer.hasUnreceivedOrder).length,
+      outstanding: roundMoney(customerRows.reduce((sum, customer) => sum + customer.outstandingBalance, 0)),
+    };
   }, [customerRows]);
 
-  const activeFilterCount = useMemo(
-    () =>
-      [
-        statusFilter,
-        locationFilter,
-        balanceFilter !== "all" ? balanceFilter : "",
-        joinedFilter !== "all" ? joinedFilter : "",
-        moreFilters.customerType,
-        moreFilters.tag,
-        moreFilters.creditStatus,
-        moreFilters.lastOrder,
-        moreFilters.lastPayment,
-        ...quickFilters,
-      ].filter(Boolean).length,
-    [balanceFilter, joinedFilter, locationFilter, moreFilters, quickFilters, statusFilter]
-  );
+  const totalPages = Math.max(1, Math.ceil(filteredRows.length / rowsPerPage));
+  const safePage = Math.min(page, totalPages);
+  const paginatedRows = filteredRows.slice((safePage - 1) * rowsPerPage, safePage * rowsPerPage);
 
-  const allVisibleSelected =
-    paginatedCustomers.length > 0 &&
-    paginatedCustomers.every((customer) => selectedRows.includes(customer.id));
+  function getCustomerInitials(name: string) {
+    const parts = name.trim().split(/\s+/);
+    if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+    return name.slice(0, 2).toUpperCase();
+  }
 
-  const uniqueCities = Array.from(new Set(customerRows.map((customer) => customer.city || customer.location).filter(Boolean))).sort();
-  const uniqueTags = Array.from(new Set(customerRows.flatMap((customer) => customer.tagsResolved))).sort();
-  const labelStatus = (value: string) =>
-    pageCopy.statuses[value as keyof typeof pageCopy.statuses] ?? value;
-  const quickFiltersList: Array<{ key: QuickFilter; label: string }> = [
-    { key: "active", label: pageCopy.quick.active },
-    { key: "debtor", label: pageCopy.quick.debtor },
-    { key: "vip", label: pageCopy.quick.vip },
-    { key: "new", label: pageCopy.quick.new },
-  ];
+  const AVATAR_COLORS = ["#2563eb","#7c3aed","#0891b2","#059669","#d97706","#dc2626","#db2777","#65a30d"];
+  function getAvatarBg(name: string) {
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) & 0xffffffff;
+    return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+  }
 
-  const clearFilters = () => {
-    setSearchTerm("");
-    setStatusFilter("");
-    setLocationFilter("");
-    setBalanceFilter("all");
-    setJoinedFilter("all");
-    setMoreFilters({
-      customerType: "",
-      tag: "",
-      creditStatus: "",
-      lastOrder: "",
-      lastPayment: "",
-    });
-    setQuickFilters([]);
-  };
+  function updateForm<K extends keyof CustomerForm>(field: K, value: CustomerForm[K]) {
+    setFormState((current) => {
+      const next = { ...current, [field]: value };
 
-  const requestSort = (key: SortKey) => {
-    setSortConfig((current) => {
-      if (current.key === key) {
-        return { key, direction: current.direction === "asc" ? "desc" : "asc" };
+      if (field === "customerType") {
+        const type = value as CustomerType;
+
+        if (type === "Business") {
+          next.status = current.status === "VIP" ? "Active" : current.status;
+          next.invoiceType = current.invoiceType === "VIP Invoice" ? "Company Invoice" : current.invoiceType;
+        } else if (type === "VIP") {
+          next.status = "VIP";
+          next.invoiceType = "VIP Invoice";
+          next.taxEnabled = false;
+          next.taxRate = "0";
+          next.taxNumber = "";
+        } else {
+          next.status = current.status === "VIP" ? "Active" : current.status;
+          next.invoiceType = "Standard Invoice";
+          next.taxEnabled = false;
+          next.taxRate = "0";
+          next.taxNumber = "";
+        }
       }
-      return { key, direction: key === "balance" ? "desc" : "asc" };
+
+      return next;
     });
-  };
 
-  const openCreate = () => {
-    setFormMode("create");
-    setEditingCustomerId(null);
-    setFormState(EMPTY_FORM);
-    setFormErrors({});
-    setShowFormModal(true);
-  };
+    setFormErrors((current) => ({ ...current, [field]: undefined }));
+  }
 
-  const openEdit = (customer: CustomerRecord) => {
-    setFormMode("edit");
-    setEditingCustomerId(customer.id);
-    setFormState({
-      name: customer.name,
-      id: customer.id,
-      status: customer.statusLabel === "Debtor" ? "Active" : customer.statusLabel,
-      customerType: (customer.customerType as CustomerType) ?? "Individual",
-      companyName: customer.companyName ?? "",
-      phone: customer.phone ?? "",
-      email: customer.email ?? "",
-      preferredContactMethod: (customer.preferredContactMethod as PreferredContactMethod) ?? "Phone",
-      city: customer.city ?? customer.location ?? "",
-      address: customer.address ?? "",
-      locationNotes: customer.locationNotes ?? "",
-      openingBalance: String(customer.openingBalance ?? 0),
-      creditLimit: String(customer.creditLimit ?? 0),
-      currency: customer.currency ?? "USD",
-      notes: customer.notes ?? "",
-      tags: customer.tagsResolved.join(", "),
-      internalNotes: customer.internalNotes ?? "",
-    });
-    setFormErrors({});
-    setShowFormModal(true);
-    setActionMenu(null);
-  };
-
-  const openDetails = (customer: CustomerRecord) => {
-    setActiveCustomer(customer);
-    setDetailsTab("overview");
-    setActionMenu(null);
-  };
-
-  const validateForm = () => {
+  function validateForm() {
     const errors: FormErrors = {};
-    if (!formState.name.trim()) errors.name = "Customer name is required.";
-    if (!formState.phone.trim()) {
-      errors.phone = "Phone number is required.";
-    } else if (!validatePhone(formState.phone.trim())) {
-      errors.phone = "Phone must start with 059 or 056.";
-    }
-    if (formState.email.trim() && !validateEmail(formState.email.trim())) {
-      errors.email = "Enter a valid email address.";
+
+    if (!formState.name.trim()) {
+      errors.name = "Customer name is required.";
     }
 
-    if (!formState.id.trim()) errors.id = "Customer code is required.";
-    const phoneExists = customerRows.some(
-      (customer) => customer.phone === formState.phone.trim() && customer.id !== editingCustomerId
-    );
-    if (phoneExists) errors.phone = "This phone number is already used by another customer.";
+    if (!formState.phone.trim() && !formState.email.trim()) {
+      errors.phone = "Phone or email is required.";
+      errors.email = "Phone or email is required.";
+    }
 
-    const emailExists = customerRows.some(
-      (customer) => customer.email?.toLowerCase() === formState.email.trim().toLowerCase() && customer.id !== editingCustomerId
-    );
-    if (formState.email.trim() && emailExists) errors.email = "This email is already used by another customer.";
+    if (formState.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formState.email.trim())) {
+      errors.email = "Invalid email address.";
+    }
+
+    if (Number.isNaN(Number(formState.openingBalance || 0))) {
+      errors.openingBalance = "Opening balance must be numeric.";
+    }
+
+    if (formState.discountType !== "none" && Number.isNaN(Number(formState.discountValue || 0))) {
+      errors.discountValue = "Discount value must be numeric.";
+    }
+
+    if (isBusinessCustomer && formState.taxEnabled && Number.isNaN(Number(formState.taxRate || 0))) {
+      errors.taxRate = "Tax rate must be numeric.";
+    }
 
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
-  };
+  }
 
-  const handleSaveCustomer = () => {
-    if (!validateForm()) return;
+  function openCreateModal() {
+    const nextCode = buildCustomerCode(customers);
+    setGeneratedCode(nextCode);
+    setEditingCustomer(null);
+    setFormState(EMPTY_FORM);
+    setFormErrors({});
+    setActiveFormTab("profile");
+    setShowCustomerModal(true);
+  }
 
-    const parsedTags = formState.tags
-      .split(",")
-      .map((tag) => tag.trim())
-      .filter(Boolean);
+  function openEditModal(customer: CustomerRow) {
+    setGeneratedCode(customer.displayCode);
+    setEditingCustomer(customer);
+    setFormErrors({});
+    setActiveFormTab("profile");
 
-    const payload: Customer = {
-      id: formState.id.trim(),
-      name: formState.name.trim(),
+    setFormState({
+      name: customer.name || "",
+      customerType: customer.customerTypeResolved,
+      status: customer.statusResolved,
+      phone: customer.phone || "",
+      email: customer.email || "",
+      region: customer.region || "",
+      companyName: customer.billingProfile.companyName || "",
+      taxNumber: customer.billingProfile.taxNumber || "",
+      invoiceType: customer.billingProfile.invoiceType || "Standard Invoice",
+      taxEnabled: customer.customerTypeResolved === "Business" ? customer.billingProfile.taxEnabled : false,
+      taxRate: customer.customerTypeResolved === "Business" ? String(customer.billingProfile.taxRate || 0) : "0",
+      discountType: customer.billingProfile.discountType || "none",
+      discountValue: String(customer.billingProfile.discountValue || 0),
+      openingBalance: String((customer as any).openingBalance || 0),
+      hasUnreceivedOrder: customer.hasUnreceivedOrder,
+      noteText: customer.noteText || "",
+      recommendationText: customer.recommendationText || "",
+      customTerms: customer.billingProfile.customTerms || "",
+    });
+
+    setShowCustomerModal(true);
+  }
+
+  function requestCloseModal() {
+    setShowCustomerModal(false);
+    setEditingCustomer(null);
+    setGeneratedCode("");
+    setFormState(EMPTY_FORM);
+    setFormErrors({});
+    setShowLocationDropdown(false);
+  }
+
+  function chooseLocation(location: PalestineLocation) {
+    updateForm("region", location.name);
+    setShowLocationDropdown(false);
+  }
+
+  function buildCustomerPayload(): Customer {
+    const code = editingCustomer?.id || generatedCode || buildCustomerCode(customers);
+    const businessBilling: BillingProfile = {
+      invoiceType: formState.invoiceType,
+      taxEnabled: isBusinessCustomer ? formState.taxEnabled : false,
+      taxRate: isBusinessCustomer ? Number(formState.taxRate || 0) : 0,
+      discountType: formState.discountType,
+      discountValue: Number(formState.discountValue || 0),
       companyName: formState.companyName.trim(),
-      status: formState.status as PersistedCustomerStatus,
-      customerType: formState.customerType as CustomerType,
-      phone: formState.phone.trim(),
-      email: formState.email.trim(),
-      preferredContactMethod: formState.preferredContactMethod as PreferredContactMethod,
-      city: formState.city.trim(),
-      location: formState.city.trim(),
-      address: formState.address.trim(),
-      locationNotes: formState.locationNotes.trim(),
-      openingBalance: Number(formState.openingBalance || 0),
-      creditLimit: Number(formState.creditLimit || 0),
-      currency: formState.currency,
-      notes: formState.notes.trim(),
-      tags: parsedTags,
-      internalNotes: formState.internalNotes.trim(),
-      joinedAt:
-        formMode === "create"
-          ? new Date().toISOString().split("T")[0]
-          : customerRows.find((customer) => customer.id === editingCustomerId)?.joinedAt ?? new Date().toISOString().split("T")[0],
-      isDeleted: false,
+      taxNumber: isBusinessCustomer ? formState.taxNumber.trim() : "",
+      customTerms: formState.customTerms.trim(),
     };
 
-    const next = formMode === "create"
-      ? [payload, ...customers]
-      : customers.map((customer) => (customer.id === editingCustomerId ? { ...customer, ...payload } : customer));
+    return {
+      ...(editingCustomer || {}),
+      id: code,
+      name: formState.name.trim(),
+      phone: formState.phone.trim(),
+      email: formState.email.trim(),
+      city: formState.region.trim(),
+      location: formState.region.trim(),
+      customerType: formState.customerType,
+      status: formState.status,
+      openingBalance: Number(formState.openingBalance || 0),
+      joinedAt: (editingCustomer as any)?.joinedAt || new Date().toISOString().split("T")[0],
+      notes: formState.noteText.trim(),
+      internalNotes: formState.recommendationText.trim(),
+      hasUnreceivedOrder: formState.hasUnreceivedOrder,
+      noteText: formState.noteText.trim(),
+      recommendationText: formState.recommendationText.trim(),
+      billingProfile: businessBilling,
+      isDeleted: false,
+    } as Customer;
+  }
 
-    saveCustomers(next);
-    setCustomers(next);
-    setShowFormModal(false);
-    setToast({
-      type: "success",
-      message: formMode === "create" ? "Customer saved successfully." : "Customer updated successfully.",
-    });
+  function handleSaveCustomer() {
+    if (!validateForm()) return;
 
-    if (formMode === "create") {
-      setFormState({
-        ...EMPTY_FORM,
-        id: buildCustomerCode("", next.length),
-      });
-    }
-  };
+    const payload = buildCustomerPayload();
 
-  const handleDeleteCustomer = () => {
-    if (!deleteTarget) return;
-    const next = customers.map((customer) =>
-      customer.id === deleteTarget.id ? { ...customer, isDeleted: true } : customer
-    );
-    saveCustomers(next);
-    setCustomers(next);
+    const nextCustomers = editingCustomer
+      ? customers.map((customer) => (customer.id === editingCustomer.id ? payload : customer))
+      : [payload, ...customers];
+
+    saveCustomers(nextCustomers);
+    setCustomers(nextCustomers);
+    setToast(editingCustomer ? "Customer updated." : "Customer added.");
+    requestCloseModal();
+  }
+
+  function requestDeleteCustomer(customer: CustomerRow) {
+    setDeleteTarget(customer);
+    setDeleteCode("");
+  }
+
+  function closeDeleteModal() {
     setDeleteTarget(null);
     setDeleteCode("");
-    setToast({ type: "success", message: "Customer archived successfully." });
-    if (activeCustomer?.id === deleteTarget.id) setActiveCustomer(null);
-  };
+  }
 
-  const handleBulkAction = (action: "export" | "vip" | "archive" | "delete" | "tag") => {
-    if (selectedRows.length === 0) return;
+  function confirmDeleteCustomer() {
+    if (!deleteTarget) return;
+    if (deleteCode.trim() !== DELETE_CONFIRMATION_CODE) return;
 
-    if (action === "export" || action === "tag") {
-      setToast({ type: "success", message: action === "export" ? "Selected customers exported." : "Tag workflow ready for selected customers." });
-      return;
-    }
-
-    if (action === "delete") {
-      setToast({ type: "warning", message: "Review deletions individually before removing customers." });
-      return;
-    }
-
-    const next = customers.map((customer) => {
-      if (!selectedRows.includes(customer.id)) return customer;
-      if (action === "vip") return { ...customer, status: "VIP" as PersistedCustomerStatus, customerType: "VIP" as CustomerType };
-      if (action === "archive") return { ...customer, status: "Inactive" as PersistedCustomerStatus };
-      return customer;
-    });
-    saveCustomers(next);
-    setCustomers(next);
-    setToast({ type: "success", message: action === "vip" ? "Selected customers marked as VIP." : "Selected customers archived." });
-  };
-
-  const toggleQuickFilter = (value: QuickFilter) => {
-    setQuickFilters((current) =>
-      current.includes(value) ? current.filter((item) => item !== value) : [...current, value]
+    const nextCustomers = customers.map((customer) =>
+      customer.id === deleteTarget.id ? ({ ...customer, isDeleted: true } as Customer) : customer
     );
-  };
+
+    saveCustomers(nextCustomers);
+    setCustomers(nextCustomers);
+
+    if (viewCustomer?.id === deleteTarget.id) {
+      setViewCustomer(null);
+    }
+
+    closeDeleteModal();
+    setToast("Customer deleted.");
+  }
+
+  function clearFilters() {
+    setInvoiceTimeFilter("all");
+    setDebtFilter("all");
+    setOrderFilter("all");
+    setPage(1);
+  }
+
+  if (loading) {
+    return (
+      <div className="customers-page">
+        <div className="customers-state-card">
+          <AlertCircle size={20} />
+          <p>Loading customers...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="customers-page">
+        <div className="customers-state-card error">
+          <AlertCircle size={20} />
+          <p>{loadError}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <>
-      <div className="customers-workspace">
-        <section className="customers-header">
-          <div className="customers-header-main">
-            <div className="hero-copy">
-              <span className="eyebrow">{pageCopy.eyebrow}</span>
-              <h1>{pageCopy.title}</h1>
-              <p>{pageCopy.subtitle}</p>
-            </div>
-            <div className="hero-actions">
-              <button type="button" className="secondary-btn compact" onClick={() => setToast({ type: "success", message: "Customer export prepared." })}>
-                <Download size={15} />
-                {pageCopy.export}
-              </button>
-              <button type="button" className="primary-btn compact" onClick={openCreate}>
-                <Plus size={15} />
-                {pageCopy.addCustomer}
-              </button>
-            </div>
-          </div>
-          <div className="customers-summary-strip" dir={dir}>
-            <div className="summary-item">
-              <span>{pageCopy.summary.total}</span>
-              <strong>{formatNumber(kpis.total)}</strong>
-            </div>
-            <div className="summary-item">
-              <span>{pageCopy.summary.active}</span>
-              <strong>{formatNumber(kpis.active)}</strong>
-            </div>
-            <div className="summary-item">
-              <span>{pageCopy.summary.debtors}</span>
-              <strong>{formatNumber(kpis.debtors)}</strong>
-            </div>
-            <div className="summary-item emphasis">
-              <span>{pageCopy.summary.due}</span>
-              <strong>{formatCurrency(kpis.outstanding, "USD")}</strong>
-            </div>
-          </div>
-        </section>
+    <div className="customers-page">
+      <section className="customers-topbar">
+        <div>
+          <h1>Customers</h1>
+          <p>Manage customer accounts, balances, billing preferences, and follow-up activity.</p>
+        </div>
 
-        <section className="customers-main compact-surface">
-          <div className="customers-toolbar">
-            <div className="toolbar-primary-row">
-              <div className="search-wrap compact">
-                <Search size={16} />
-                <input
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder={pageCopy.searchPlaceholder}
-                />
-              </div>
+        <Button variant="primary" onClick={openCreateModal} leftIcon={<Plus size={17} />}>
+          Add Customer
+        </Button>
+      </section>
+
+      <section className="customers-kpis">
+        <article>
+          <div className="cust-kpi-icon blue"><UserCircle2 size={20} /></div>
+          <div className="cust-kpi-body">
+            <strong>{formatNumber(kpis.total)}</strong>
+            <span>Customers</span>
+            <small className="cust-kpi-desc">Total customers</small>
+          </div>
+        </article>
+        <article>
+          <div className="cust-kpi-icon amber"><AlertCircle size={20} /></div>
+          <div className="cust-kpi-body">
+            <strong>{formatNumber(kpis.debtors)}</strong>
+            <span>Debtors</span>
+            <small className="cust-kpi-desc">With outstanding</small>
+          </div>
+        </article>
+        <article>
+          <div className="cust-kpi-icon orange"><Truck size={20} /></div>
+          <div className="cust-kpi-body">
+            <strong>{formatNumber(kpis.unreceived)}</strong>
+            <span>Unreceived Orders</span>
+            <small className="cust-kpi-desc">Pending receipt</small>
+          </div>
+        </article>
+        <article>
+          <div className="cust-kpi-icon purple"><Receipt size={20} /></div>
+          <div className="cust-kpi-body">
+            <strong>{formatCurrency(kpis.outstanding, "USD")}</strong>
+            <span>Total Outstanding</span>
+            <small className="cust-kpi-desc">Across all customers</small>
+          </div>
+        </article>
+      </section>
+
+      <section className="customers-card">
+        <div className="customers-controls">
+          <div className="customer-search">
+            <Input
+              variant="search"
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              placeholder="Search by name, code, phone, email, region, note..."
+              leftIcon={<Search size={17} />}
+              fullWidth
+            />
+          </div>
+
+          <div className="customer-control-actions">
+            <label className="customer-sort">
+              <ArrowUpDown size={15} />
+              <Select
+                value={sortBy}
+                onChange={(event) => setSortBy(event.target.value as SortOption)}
+                options={[
+                  { value: "nameAsc", label: "Name A-Z" },
+                  { value: "nameDesc", label: "Name Z-A" },
+                  { value: "highestBalance", label: "Highest Balance" },
+                  { value: "lowestBalance", label: "Lowest Balance" },
+                  { value: "newestInvoice", label: "Newest Invoice" },
+                  { value: "oldestInvoice", label: "Oldest Invoice" },
+                  { value: "customerType", label: "Customer Type" },
+                  { value: "debtAmount", label: "Debt Amount" },
+                  { value: "region", label: "Region" },
+                ]}
+              />
+            </label>
+
+            <div className="customer-filter-anchor" ref={filtersRef}>
               <button
                 type="button"
-                className={`toolbar-btn compact ${showMoreFilters ? "active" : ""}`}
-                onClick={() => setShowMoreFilters((prev) => !prev)}
-                aria-expanded={showMoreFilters}
-                aria-label={pageCopy.filtersLabel}
+                className={`customer-filter-btn ${showFilters ? "active" : ""}`}
+                onClick={() => setShowFilters((current) => !current)}
               >
                 <Filter size={15} />
-                {pageCopy.filters}
-                {activeFilterCount > 0 && <span className="count-pill">{formatNumber(activeFilterCount)}</span>}
+                Filters
+                <ChevronDown size={14} />
               </button>
-            </div>
 
-            <div className="toolbar-secondary-row">
-              <div className="chip-row compact">
-                {quickFiltersList.map((item) => (
-                  <button
-                    key={item.key}
-                    type="button"
-                    className={`quick-chip compact ${quickFilters.includes(item.key) ? "active" : ""}`}
-                    onClick={() => toggleQuickFilter(item.key)}
-                  >
-                    {item.label}
-                  </button>
-                ))}
-              </div>
-              {activeFilterCount > 0 && (
-                <button type="button" className="clear-link-btn" onClick={clearFilters}>
-                  {pageCopy.clear}
-                </button>
-              )}
-            </div>
+              {showFilters && (
+                <div className="customer-filter-dropdown">
+                  <div className="filter-dropdown-head">
+                    <div>
+                      <h3>Filters</h3>
+                      <p>Refine customers without taking over the page.</p>
+                    </div>
 
-            {showMoreFilters && (
-              <div ref={filterPopoverRef} className="advanced-filter-popover" dir={dir}>
-                <div className="advanced-filter-header">
-                  <div>
-                    <strong>{pageCopy.advanced.title}</strong>
-                    <p>{pageCopy.advanced.subtitle}</p>
+                    <button type="button" onClick={() => setShowFilters(false)} aria-label="Close filters">
+                      <X size={15} />
+                    </button>
                   </div>
-                  <button type="button" className="icon-btn subtle quiet" onClick={() => setShowMoreFilters(false)} aria-label={pageCopy.close}>
-                    <X size={15} />
-                  </button>
-                </div>
-                <div className="advanced-filter-grid">
-                  <label className="filter-block compact">
-                    <span>{pageCopy.advanced.status}</span>
-                    <select className="app-select-control" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-                      <option value="">{pageCopy.advanced.allStatuses}</option>
-                      {["Active", "Debtor", "VIP", "New", "Inactive", "Blocked"].map((status) => (
-                        <option key={status} value={status}>{labelStatus(status)}</option>
+
+                  <section>
+                    <h4>Invoice Time</h4>
+                    <div className="filter-options">
+                      {[
+                        ["all", "All Time"],
+                        ["today", "Today"],
+                        ["week", "This Week"],
+                        ["month", "This Month"],
+                        ["year", "This Year"],
+                      ].map(([value, label]) => (
+                        <button
+                          key={value}
+                          type="button"
+                          className={invoiceTimeFilter === value ? "active" : ""}
+                          onClick={() => setInvoiceTimeFilter(value as InvoiceTimeFilter)}
+                        >
+                          {label}
+                        </button>
                       ))}
-                    </select>
-                  </label>
-                  <label className="filter-block compact">
-                    <span>{pageCopy.advanced.location}</span>
-                    <select className="app-select-control" value={locationFilter} onChange={(e) => setLocationFilter(e.target.value)}>
-                      <option value="">{pageCopy.advanced.allLocations}</option>
-                      {uniqueCities.map((city) => <option key={city} value={city}>{city}</option>)}
-                    </select>
-                  </label>
-                  <label className="filter-block compact">
-                    <span>{pageCopy.advanced.balance}</span>
-                    <select className="app-select-control" value={balanceFilter} onChange={(e) => setBalanceFilter(e.target.value as BalanceFilter)}>
-                      <option value="all">{pageCopy.advanced.allBalances}</option>
-                      <option value="debtor">{pageCopy.advanced.debtorsOnly}</option>
-                      <option value="clear">{pageCopy.advanced.clearBalance}</option>
-                      <option value="high">{pageCopy.advanced.highBalance}</option>
-                    </select>
-                  </label>
-                  <label className="filter-block compact">
-                    <span>{pageCopy.advanced.joined}</span>
-                    <select className="app-select-control" value={joinedFilter} onChange={(e) => setJoinedFilter(e.target.value as JoinedFilter)}>
-                      <option value="all">{pageCopy.advanced.allTime}</option>
-                      <option value="30d">{pageCopy.advanced.last30}</option>
-                      <option value="90d">{pageCopy.advanced.last90}</option>
-                      <option value="year">{pageCopy.advanced.last12Months}</option>
-                    </select>
-                  </label>
-                  <label className="filter-block compact">
-                    <span>{pageCopy.advanced.type}</span>
-                    <select className="app-select-control" value={moreFilters.customerType} onChange={(e) => setMoreFilters((prev) => ({ ...prev, customerType: e.target.value }))}>
-                      <option value="">{pageCopy.advanced.anyType}</option>
-                      {["Individual", "Business", "VIP"].map((type) => <option key={type} value={type}>{labelStatus(type)}</option>)}
-                    </select>
-                  </label>
-                  <label className="filter-block compact">
-                    <span>{pageCopy.advanced.tags}</span>
-                    <select className="app-select-control" value={moreFilters.tag} onChange={(e) => setMoreFilters((prev) => ({ ...prev, tag: e.target.value }))}>
-                      <option value="">{pageCopy.advanced.anyTag}</option>
-                      {uniqueTags.map((tag) => <option key={tag} value={tag}>{tag}</option>)}
-                    </select>
-                  </label>
-                  <label className="filter-block compact">
-                    <span>{pageCopy.advanced.credit}</span>
-                    <select className="app-select-control" value={moreFilters.creditStatus} onChange={(e) => setMoreFilters((prev) => ({ ...prev, creditStatus: e.target.value }))}>
-                      <option value="">{pageCopy.advanced.anyStatus}</option>
-                      <option value="near-limit">{pageCopy.advanced.nearLimit}</option>
-                      <option value="over-limit">{pageCopy.advanced.overLimit}</option>
-                    </select>
-                  </label>
-                  <label className="filter-block compact">
-                    <span>{pageCopy.advanced.lastOrder}</span>
-                    <select className="app-select-control" value={moreFilters.lastOrder} onChange={(e) => setMoreFilters((prev) => ({ ...prev, lastOrder: e.target.value }))}>
-                      <option value="">{pageCopy.advanced.anyValue}</option>
-                      <option value="none">{pageCopy.advanced.noOrders}</option>
-                    </select>
-                  </label>
-                  <label className="filter-block compact">
-                    <span>{pageCopy.advanced.lastPayment}</span>
-                    <select className="app-select-control" value={moreFilters.lastPayment} onChange={(e) => setMoreFilters((prev) => ({ ...prev, lastPayment: e.target.value }))}>
-                      <option value="">{pageCopy.advanced.anyValue}</option>
-                      <option value="none">{pageCopy.advanced.noPayments}</option>
-                    </select>
-                  </label>
-                </div>
-                <div className="advanced-filter-footer">
-                  <span>{formatNumber(activeFilterCount)} {pageCopy.filtersApplied}</span>
-                  <button type="button" className="clear-link-btn" onClick={clearFilters}>{pageCopy.clear}</button>
-                </div>
-              </div>
-            )}
-          </div>
+                    </div>
+                  </section>
 
-          {selectedRows.length > 0 && (
-            <div className="bulk-bar compact">
-              <span>{formatNumber(selectedRows.length)} {pageCopy.bulk.selected}</span>
-              <div className="bulk-actions">
-                <button type="button" className="toolbar-btn subtle" onClick={() => handleBulkAction("export")}>{pageCopy.bulk.export}</button>
-                <button type="button" className="toolbar-btn subtle" onClick={() => handleBulkAction("tag")}>{pageCopy.bulk.tag}</button>
-                <button type="button" className="toolbar-btn subtle" onClick={() => handleBulkAction("vip")}>{pageCopy.bulk.vip}</button>
-                <button type="button" className="toolbar-btn subtle" onClick={() => handleBulkAction("archive")}>{pageCopy.bulk.archive}</button>
-                <button type="button" className="toolbar-btn danger-lite" onClick={() => handleBulkAction("delete")}>{pageCopy.bulk.delete}</button>
-              </div>
-            </div>
-          )}
-
-          <div className="table-card premium">
-            <div className="table-card-header">
-              <div>
-                <h2>{pageCopy.table.title}</h2>
-                <p>{formatNumber(filteredCustomers.length)} {pageCopy.table.count}</p>
-              </div>
-            </div>
-
-            {loading ? (
-              <div className="loading-state">
-                {Array.from({ length: 5 }).map((_, index) => <div key={index} className="skeleton-row" />)}
-              </div>
-            ) : error ? (
-              <div className="state-card error">
-                <AlertCircle size={18} />
-                <div><strong>{pageCopy.states.loadError}</strong><p>{error}</p></div>
-              </div>
-            ) : filteredCustomers.length === 0 ? (
-              <div className="state-card empty">
-                <Users size={18} />
-                <div><strong>{pageCopy.states.emptyTitle}</strong><p>{pageCopy.states.emptyText}</p></div>
-              </div>
-            ) : (
-              <>
-                <div className="customers-table-wrap app-table-wrap">
-                  <table className="customers-table-v2 app-data-table">
-                    <colgroup>
-                      <col className="checkbox-col" />
-                      <col className="customer-col" />
-                      <col className="contact-col" />
-                      <col className="status-col" />
-                      <col className="balance-col" />
-                      <col className="activity-col" />
-                      <col className="actions-col" />
-                    </colgroup>
-                    <thead>
-                      <tr>
-                        <th className="checkbox-col">
-                          <input
-                            type="checkbox"
-                            checked={allVisibleSelected}
-                            onChange={(e) => setSelectedRows(e.target.checked ? paginatedCustomers.map((item) => item.id) : [])}
-                            aria-label={pageCopy.table.selectAll}
-                          />
-                        </th>
-                        <th><button type="button" className="sort-btn" onClick={() => requestSort("name")}>{pageCopy.table.customer} <ArrowUpDown size={13} /></button></th>
-                        <th>{pageCopy.table.contact}</th>
-                        <th><button type="button" className="sort-btn" onClick={() => requestSort("status")}>{pageCopy.table.status} <ArrowUpDown size={13} /></button></th>
-                        <th className="align-right"><button type="button" className="sort-btn align-right" onClick={() => requestSort("balance")}>{pageCopy.table.balance} <ArrowUpDown size={13} /></button></th>
-                        <th><button type="button" className="sort-btn" onClick={() => requestSort("lastActivity")}>{pageCopy.table.activity} <ArrowUpDown size={13} /></button></th>
-                        <th className="actions-col">{pageCopy.table.actions}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {paginatedCustomers.map((customer) => (
-                        <tr key={customer.id} onClick={() => openDetails(customer)}>
-                          <td onClick={(e) => e.stopPropagation()}>
-                            <input
-                              type="checkbox"
-                              checked={selectedRows.includes(customer.id)}
-                              onChange={(e) =>
-                                setSelectedRows((current) =>
-                                  e.target.checked ? [...current, customer.id] : current.filter((id) => id !== customer.id)
-                                )
-                              }
-                              aria-label={`${pageCopy.table.selectRow} ${customer.name}`}
-                            />
-                          </td>
-                          <td>
-                            <div className="customer-cell app-cell-stack compact">
-                              <strong>{customer.name}</strong>
-                              <small>{pageCopy.table.joined} {customer.joinedLabel}</small>
-                              <span>{customer.id} | {customer.companyName || labelStatus(customer.customerType || "") || pageCopy.table.customerFallback}</span>
-                            </div>
-                          </td>
-                          <td>
-                            <div className="contact-cell compact">
-                              <span><Mail size={13} /> {customer.email || pageCopy.table.noEmail}</span>
-                              <span><Phone size={13} /> {customer.phone || pageCopy.table.noPhone}</span>
-                            </div>
-                          </td>
-                          <td>
-                            <div className="status-stack compact">
-                              <span className={`customer-status-badge refined ${getStatusTone(customer.statusLabel)}`}>{labelStatus(customer.statusLabel)}</span>
-                              {customer.tagsResolved.slice(0, 2).map((tag) => <small key={tag}>{labelStatus(tag)}</small>)}
-                            </div>
-                          </td>
-                          <td className="align-right">
-                            <div className="balance-cell compact">
-                              <strong className={customer.outstandingBalance > 0 ? "danger-text" : ""}>{formatCurrency(customer.outstandingBalance, customer.currency ?? "USD")}</strong>
-                              <span>
-                                {customer.balanceState === "Debtor"
-                                  ? `${formatNumber(customer.activeInvoices)} ${pageCopy.table.openInvoices}`
-                                  : pageCopy.table.clearBalance}
-                              </span>
-                            </div>
-                          </td>
-                          <td>
-                            <div className="activity-cell app-cell-stack compact">
-                              <strong>{customer.lastActivityDate ? formatLocaleDate(customer.lastActivityDate) : pageCopy.table.noActivity}</strong>
-                              <span>{customer.lastActivityLabel}</span>
-                              <small>{customer.notes?.trim() ? customer.notesPreview : pageCopy.table.noNotes}</small>
-                            </div>
-                          </td>
-                          <td onClick={(e) => e.stopPropagation()}>
-                            <div className="row-actions compact">
-                              <button type="button" className="details-btn compact" onClick={() => openDetails(customer)}>
-                                <Eye size={14} />
-                                {pageCopy.table.open}
-                              </button>
-                              <button
-                                type="button"
-                                className="icon-btn quiet"
-                                aria-label={pageCopy.table.moreActions}
-                                onClick={(event) => {
-                                  const rect = event.currentTarget.getBoundingClientRect();
-                                  const menuWidth = 220;
-                                  const shouldFlip = rect.bottom + 340 > window.innerHeight - 12;
-                                  setActionMenu({
-                                    customerId: customer.id,
-                                    top: shouldFlip ? rect.top - 8 : rect.bottom + 10,
-                                    left: Math.max(12, Math.min(rect.right - menuWidth, window.innerWidth - menuWidth - 12)),
-                                  });
-                                }}
-                              >
-                                <MoreHorizontal size={16} />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
+                  <section>
+                    <h4>Debt</h4>
+                    <div className="filter-options">
+                      {[
+                        ["all", "All Customers"],
+                        ["hasDebt", "Has Debt"],
+                        ["noDebt", "No Debt"],
+                      ].map(([value, label]) => (
+                        <button
+                          key={value}
+                          type="button"
+                          className={debtFilter === value ? "active" : ""}
+                          onClick={() => setDebtFilter(value as DebtFilter)}
+                        >
+                          {label}
+                        </button>
                       ))}
-                    </tbody>
-                  </table>
+                    </div>
+                  </section>
+
+                  <section>
+                    <h4>Orders</h4>
+                    <div className="filter-options">
+                      {[
+                        ["all", "All Customers"],
+                        ["hasUnreceivedOrder", "Has Unreceived Order"],
+                        ["noUnreceivedOrder", "No Unreceived Orders"],
+                      ].map(([value, label]) => (
+                        <button
+                          key={value}
+                          type="button"
+                          className={orderFilter === value ? "active" : ""}
+                          onClick={() => setOrderFilter(value as OrderFilter)}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  </section>
+
+                  <div className="filter-dropdown-actions">
+                    <button type="button" className="secondary-action" onClick={clearFilters}>
+                      Reset
+                    </button>
+                    <button type="button" className="primary-action" onClick={() => setShowFilters(false)}>
+                      Apply
+                    </button>
+                  </div>
                 </div>
-
-                <TableFooter
-                  className="table-footer"
-                  total={filteredCustomers.length}
-                  page={page}
-                  rowsPerPage={rowsPerPage}
-                  onRowsPerPageChange={(value) => {
-                    setRowsPerPage(value);
-                    setPage(1);
-                  }}
-                  onPageChange={setPage}
-                />
-              </>
-            )}
-          </div>
-        </section>
-      </div>
-
-      {showFormModal && (
-        <CustomerFormModal
-          mode={formMode}
-          values={formState}
-          errors={formErrors}
-          onChange={(field, value) => {
-            setFormState((current) => {
-              const next = { ...current, [field]: value };
-              if (field === "name" && !editingCustomerId && !current.id) {
-                next.id = buildCustomerCode(value, customers.length + 1);
-              }
-              return next;
-            });
-            setFormErrors((current) => ({ ...current, [field]: undefined }));
-          }}
-          onClose={() => setShowFormModal(false)}
-          onSubmit={handleSaveCustomer}
-        />
-      )}
-
-      {activeCustomer && (
-        <CustomerDetailsModal
-          customer={activeCustomer}
-          activeTab={detailsTab}
-          onChangeTab={setDetailsTab}
-          onClose={() => setActiveCustomer(null)}
-          onEdit={() => openEdit(activeCustomer)}
-          onCreateInvoice={() => setToast({ type: "info", message: `Open invoice workflow for ${activeCustomer.name}.` })}
-          onRecordPayment={() => setToast({ type: "info", message: `Open payment workflow for ${activeCustomer.name}.` })}
-          onAddNote={() => setToast({ type: "success", message: `Notes opened for ${activeCustomer.name}.` })}
-        />
-      )}
-
-      {deleteTarget && (
-        <div className="customer-modal-overlay" onClick={() => { setDeleteTarget(null); setDeleteCode(""); }}>
-          <div className="delete-modal" onClick={(event) => event.stopPropagation()}>
-            <div className="customer-modal-header">
-              <div>
-                <span className="modal-eyebrow">Archive Customer</span>
-                <h2>Confirm customer archive</h2>
-                <p>To archive {deleteTarget.name}, enter the confirmation code below.</p>
-              </div>
-              <button type="button" className="icon-btn subtle" onClick={() => { setDeleteTarget(null); setDeleteCode(""); }}>
-                <X size={18} />
-              </button>
-            </div>
-            <div className="delete-modal-body">
-              <p>Type <strong>{DELETE_CONFIRMATION_CODE}</strong> to continue.</p>
-              <input value={deleteCode} onChange={(e) => setDeleteCode(e.target.value)} placeholder="Enter confirmation code" />
-            </div>
-            <div className="customer-modal-footer">
-              <button type="button" className="secondary-btn" onClick={() => { setDeleteTarget(null); setDeleteCode(""); }}>Cancel</button>
-              <button type="button" className="danger-btn" disabled={deleteCode !== DELETE_CONFIRMATION_CODE} onClick={handleDeleteCustomer}>Archive customer</button>
+              )}
             </div>
           </div>
         </div>
+
+        <div className="customers-table-wrap">
+          <table className="customers-table">
+            <thead>
+              <tr>
+                <th>Customer</th>
+                <th>Phone</th>
+                <th>Region</th>
+                <th>Type</th>
+                <th>Balance</th>
+                <th>Last Invoice / Activity</th>
+                <th>Status</th>
+                <th>Note</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {paginatedRows.length === 0 ? (
+                <tr>
+                  <td colSpan={9} className="empty-table-cell">
+                    No matching customers found.
+                  </td>
+                </tr>
+              ) : (
+                paginatedRows.map((customer) => (
+                  <tr key={customer.id}>
+                    <td>
+                      <div className="customer-name-cell">
+                        <div
+                          className="cust-avatar"
+                          style={{ background: getAvatarBg(customer.name) }}
+                        >
+                          {getCustomerInitials(customer.name)}
+                        </div>
+                        <div className="customer-name-info">
+                          <strong>{customer.name}</strong>
+                          <span>{customer.displayCode}</span>
+                          {customer.email && (
+                            <small>
+                              <Mail size={13} />
+                              {customer.email}
+                            </small>
+                          )}
+                        </div>
+                      </div>
+                    </td>
+
+                    <td>
+                      {customer.phone ? (
+                        <span className="inline-icon-text">
+                          <Phone size={14} />
+                          {customer.phone}
+                        </span>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
+
+                    <td>
+                      {customer.region ? (
+                        <span className="inline-icon-text">
+                          <MapPin size={14} />
+                          {customer.region}
+                        </span>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
+
+                    <td>
+                      <Badge
+                        variant={customer.customerTypeResolved === "VIP" ? "warning" : customer.customerTypeResolved === "Business" ? "info" : "neutral"}
+                        leftIcon={typeIcon(customer.customerTypeResolved)}
+                        className={`customer-type-pill type-${customer.customerTypeResolved.toLowerCase()}`}
+                      >
+                        {customer.customerTypeResolved}
+                      </Badge>
+                    </td>
+
+                    <td>
+                      <strong>{formatCurrency(customer.outstandingBalance, "USD")}</strong>
+                      <small className={customer.hasDebt ? "debt-text" : "clear-text"}>
+                        {customer.hasDebt ? "Outstanding" : "Clear balance"}
+                      </small>
+                    </td>
+
+                    <td>
+                      <strong>{numericDate(customer.lastInvoiceDate || customer.lastActivityDate)}</strong>
+                      <small>{customer.lastInvoiceDate ? "Last invoice" : "Last activity"}</small>
+                    </td>
+
+                    <td>
+                      <div className="status-stack">
+                        <Badge
+                          variant={
+                            customer.statusResolved === "VIP"
+                              ? "warning"
+                              : customer.statusResolved === "Blocked"
+                              ? "danger"
+                              : customer.statusResolved === "Inactive"
+                              ? "neutral"
+                              : customer.statusResolved === "New"
+                              ? "info"
+                              : "success"
+                          }
+                          className={`status-pill ${statusClass(customer.statusResolved)}`}
+                        >
+                          {customer.statusResolved}
+                        </Badge>
+
+                        {customer.hasUnreceivedOrder ? (
+                          <Badge variant="warning" leftIcon={<Truck size={12} />} className="delivery-pill">
+                            Pending order
+                          </Badge>
+                        ) : (
+                          <Badge variant="success" leftIcon={<CheckCircle2 size={12} />} className="clear-pill">
+                            Clear
+                          </Badge>
+                        )}
+                      </div>
+                    </td>
+
+                    <td>
+                      {customer.noteText || customer.recommendationText ? (
+                        <Badge variant="info" leftIcon={<Receipt size={13} />} className="note-pill">
+                          Note
+                        </Badge>
+                      ) : (
+                        <Badge variant="neutral" className="no-note-pill">No note</Badge>
+                      )}
+                    </td>
+
+                    <td>
+                      <div className="customer-row-actions">
+                        <Button variant="icon" size="sm" title="View customer" onClick={() => setViewCustomer(customer)}>
+                          <Eye size={15} />
+                        </Button>
+                        <Button variant="icon" size="sm" title="Edit customer" onClick={() => openEditModal(customer)}>
+                          <Pencil size={15} />
+                        </Button>
+                        <Button variant="icon" size="sm" title="Delete customer" onClick={() => requestDeleteCustomer(customer)}>
+                          <MoreVertical size={15} />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {filteredRows.length > rowsPerPage && (
+          <div className="cust-pagination">
+            <span className="cust-pagination-info">
+              Showing {(safePage - 1) * rowsPerPage + 1}–{Math.min(safePage * rowsPerPage, filteredRows.length)} of {filteredRows.length} customers
+            </span>
+            <div className="cust-pagination-btns">
+              <button
+                type="button"
+                disabled={safePage === 1}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                className="cust-page-btn"
+              >
+                ‹ Prev
+              </button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1)
+                .filter((p) => p === 1 || p === totalPages || Math.abs(p - safePage) <= 1)
+                .reduce<(number | "…")[]>((acc, p, idx, arr) => {
+                  if (idx > 0 && (p as number) - (arr[idx - 1] as number) > 1) acc.push("…");
+                  acc.push(p);
+                  return acc;
+                }, [])
+                .map((p, idx) =>
+                  p === "…" ? (
+                    <span key={`ellipsis-${idx}`} className="cust-page-ellipsis">…</span>
+                  ) : (
+                    <button
+                      key={p}
+                      type="button"
+                      className={`cust-page-btn${safePage === p ? " active" : ""}`}
+                      onClick={() => setPage(p as number)}
+                    >
+                      {p}
+                    </button>
+                  )
+                )}
+              <button
+                type="button"
+                disabled={safePage === totalPages}
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                className="cust-page-btn"
+              >
+                Next ›
+              </button>
+            </div>
+          </div>
+        )}
+      </section>
+
+      <Modal
+        isOpen={showCustomerModal}
+        onClose={requestCloseModal}
+        title={editingCustomer ? "Edit Customer" : "Add New Customer"}
+        description="Customer code is generated automatically. Add only the details you need."
+        size="lg"
+        className="customer-modal customer-form-modal"
+        footer={
+          <>
+            <Button variant="secondary" onClick={requestCloseModal}>Cancel</Button>
+            <Button variant="primary" onClick={handleSaveCustomer}>
+              {editingCustomer ? "Save Changes" : "Add Customer"}
+            </Button>
+          </>
+        }
+      >
+            <div className="customer-form-tabs">
+              <button
+                type="button"
+                className={activeFormTab === "profile" ? "active" : ""}
+                onClick={() => setActiveFormTab("profile")}
+              >
+                Customer Profile
+              </button>
+
+              <button
+                type="button"
+                className={activeFormTab === "billing" ? "active" : ""}
+                onClick={() => setActiveFormTab("billing")}
+              >
+                Billing & Terms
+              </button>
+            </div>
+
+            <div className="customer-modal-body">
+              {activeFormTab === "profile" && (
+                <>
+                  <section className="form-section">
+                    <div className="form-section-title">
+                      <h3>Basic Information</h3>
+                      <p>Name is required. Phone or email is required.</p>
+                    </div>
+
+                    <div className="form-grid customer-basic-grid">
+                      <div className="field-span-2">
+                        <Input
+                          label="Customer Name *"
+                          value={formState.name}
+                          onChange={(event) => updateForm("name", event.target.value)}
+                          placeholder="Enter customer name"
+                          error={formErrors.name}
+                          fullWidth
+                        />
+                      </div>
+
+                      <Input
+                        label="Customer Code"
+                        value={generatedCode}
+                        readOnly
+                        fullWidth
+                      />
+
+                      <Select
+                        label="Customer Type"
+                        value={formState.customerType}
+                        onChange={(event) => updateForm("customerType", event.target.value as CustomerType)}
+                        options={[
+                          { value: "Individual", label: "Individual" },
+                          { value: "Business", label: "Business" },
+                          { value: "VIP", label: "VIP" },
+                        ]}
+                        fullWidth
+                      />
+
+                      <Select
+                        label="Status"
+                        value={formState.status}
+                        onChange={(event) => updateForm("status", event.target.value as CustomerStatus)}
+                        options={[
+                          { value: "Active", label: "Active" },
+                          { value: "New", label: "New" },
+                          { value: "VIP", label: "VIP" },
+                          { value: "Inactive", label: "Inactive" },
+                          { value: "Blocked", label: "Blocked" },
+                        ]}
+                        fullWidth
+                      />
+                    </div>
+                  </section>
+
+                  <section className="form-section">
+                    <div className="form-section-title">
+                      <h3>Contact & Location</h3>
+                      <p>Email is optional if phone exists. Use smart search for Palestinian locations.</p>
+                    </div>
+
+                    <div className="form-grid">
+                      <Input
+                        label="Phone Number"
+                        variant="tel"
+                        value={formState.phone}
+                        onChange={(event) => updateForm("phone", event.target.value)}
+                        placeholder="059xxxxxxx"
+                        error={formErrors.phone}
+                        fullWidth
+                      />
+
+                      <Input
+                        label="Email Address Optional"
+                        variant="email"
+                        value={formState.email}
+                        onChange={(event) => updateForm("email", event.target.value)}
+                        placeholder="example@email.com"
+                        error={formErrors.email}
+                        fullWidth
+                      />
+
+                      <div className="field-span-2 location-field" ref={locationRef}>
+                        <Input
+                          label="Region / Location"
+                          variant="search"
+                          value={formState.region}
+                          onChange={(event) => {
+                            updateForm("region", event.target.value);
+                            setShowLocationDropdown(true);
+                          }}
+                          onFocus={() => setShowLocationDropdown(true)}
+                          placeholder="Search city, governorate, village, or camp..."
+                          fullWidth
+                        />
+
+                        {showLocationDropdown && (
+                          <div className="location-dropdown">
+                            {filteredLocations.length === 0 ? (
+                              <button type="button" disabled>
+                                No matching location
+                              </button>
+                            ) : (
+                              filteredLocations.map((location) => (
+                                <button
+                                  type="button"
+                                  key={`${location.name}-${location.type}-${location.governorate}`}
+                                  onClick={() => chooseLocation(location)}
+                                >
+                                  <MapPin size={14} />
+                                  <span>{location.name}</span>
+                                  <small>
+                                    {location.type} · {location.governorate}
+                                  </small>
+                                </button>
+                              ))
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </section>
+
+                  <section className="form-section">
+                    <div className="form-section-title">
+                      <h3>Notes & Follow-up</h3>
+                      <p>Mark customers that need attention, recommendations, or unreceived orders.</p>
+                    </div>
+
+                    <div className="form-grid">
+                      <label className="inline-check-card field-span-2">
+                        <input
+                          type="checkbox"
+                          checked={formState.hasUnreceivedOrder}
+                          onChange={(event) => updateForm("hasUnreceivedOrder", event.target.checked)}
+                        />
+                        <span>
+                          Customer has an unreceived order
+                          <small>This flag will appear in the customer status.</small>
+                        </span>
+                      </label>
+
+                      <div className="field-span-2">
+                        <Textarea
+                          label="Note"
+                          value={formState.noteText}
+                          onChange={(event) => updateForm("noteText", event.target.value)}
+                          placeholder="Customer note..."
+                          fullWidth
+                        />
+                      </div>
+
+                      <div className="field-span-2">
+                        <Textarea
+                          label="Recommendation"
+                          value={formState.recommendationText}
+                          onChange={(event) => updateForm("recommendationText", event.target.value)}
+                          placeholder="Recommendation or follow-up..."
+                          fullWidth
+                        />
+                      </div>
+                    </div>
+                  </section>
+                </>
+              )}
+
+              {activeFormTab === "billing" && (
+                <>
+                  <section className="form-section">
+                    <div className="form-section-title">
+                      <h3>Billing Settings</h3>
+                      <p>
+                        Tax settings are shown only for business customers. Individual and VIP customers do not need tax fields.
+                      </p>
+                    </div>
+
+                    <div className="form-grid">
+                      <Input
+                        label={isBusinessCustomer ? "Company Name" : "Account Name Optional"}
+                        value={formState.companyName}
+                        onChange={(event) => updateForm("companyName", event.target.value)}
+                        placeholder={isBusinessCustomer ? "Company legal name" : "Optional display/account name"}
+                        fullWidth
+                      />
+
+                      <Select
+                        label="Invoice Type"
+                        value={formState.invoiceType}
+                        onChange={(event) => updateForm("invoiceType", event.target.value)}
+                        options={[
+                          { value: "Standard Invoice", label: "Standard Invoice" },
+                          ...(isBusinessCustomer ? [{ value: "Company Invoice", label: "Company Invoice" }] : []),
+                          ...(formState.customerType === "VIP" ? [{ value: "VIP Invoice", label: "VIP Invoice" }] : []),
+                        ]}
+                        fullWidth
+                      />
+
+                      <Input
+                        label="Opening Balance"
+                        variant="number"
+                        value={formState.openingBalance}
+                        onChange={(event) => updateForm("openingBalance", event.target.value)}
+                        placeholder="0"
+                        error={formErrors.openingBalance}
+                        fullWidth
+                      />
+
+                      <Select
+                        label="Discount Type"
+                        value={formState.discountType}
+                        onChange={(event) => {
+                          const value = event.target.value as CustomerForm["discountType"];
+                          updateForm("discountType", value);
+                          if (value === "none") updateForm("discountValue", "0");
+                        }}
+                        options={[
+                          { value: "none", label: "None" },
+                          { value: "percentage", label: "Percentage" },
+                          { value: "fixed", label: "Fixed" },
+                        ]}
+                        fullWidth
+                      />
+
+                      <Input
+                        label="Discount Value"
+                        variant="number"
+                        disabled={formState.discountType === "none"}
+                        value={formState.discountValue}
+                        onChange={(event) => updateForm("discountValue", event.target.value)}
+                        placeholder="0"
+                        error={formErrors.discountValue}
+                        fullWidth
+                      />
+
+                      {isBusinessCustomer && (
+                        <div className="settings-card field-span-2">
+                          <div className="settings-card-head">
+                            <h4>Business Tax Settings</h4>
+                            <label className="inline-check">
+                              <input
+                                type="checkbox"
+                                checked={formState.taxEnabled}
+                                onChange={(event) => updateForm("taxEnabled", event.target.checked)}
+                              />
+                              <span>Enable tax</span>
+                            </label>
+                          </div>
+
+                          <div className="settings-grid">
+                            <Input
+                              label="Tax Number"
+                              value={formState.taxNumber}
+                              onChange={(event) => updateForm("taxNumber", event.target.value)}
+                              placeholder="Company tax number"
+                              fullWidth
+                            />
+
+                            <Input
+                              label="Tax Rate"
+                              variant="number"
+                              disabled={!formState.taxEnabled}
+                              value={formState.taxRate}
+                              onChange={(event) => updateForm("taxRate", event.target.value)}
+                              placeholder="0"
+                              error={formErrors.taxRate}
+                              fullWidth
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="field-span-2">
+                        <Textarea
+                          label="Custom Terms"
+                          value={formState.customTerms}
+                          onChange={(event) => updateForm("customTerms", event.target.value)}
+                          placeholder="Payment terms, tax notes, special invoice requirements..."
+                          fullWidth
+                        />
+                      </div>
+                    </div>
+                  </section>
+                </>
+              )}
+            </div>
+
+      </Modal>
+
+      {viewCustomer && (
+        <Modal
+          isOpen={!!viewCustomer}
+          onClose={() => setViewCustomer(null)}
+          title={viewCustomer.name}
+          description={`${viewCustomer.displayCode} · ${viewCustomer.customerTypeResolved} · ${viewCustomer.statusResolved}`}
+          size="lg"
+          className="customer-modal customer-view-modal"
+          footer={
+            <>
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  const target = viewCustomer;
+                  setViewCustomer(null);
+                  openEditModal(target);
+                }}
+              >
+                Edit Customer
+              </Button>
+              <Button variant="danger" onClick={() => requestDeleteCustomer(viewCustomer)}>
+                Delete Customer
+              </Button>
+            </>
+          }
+        >
+            <div className="customer-modal-body">
+              <section className="view-section">
+                <h3>Customer Overview</h3>
+
+                <div className="view-grid">
+                  <div>
+                    <span>Phone</span>
+                    <strong>{viewCustomer.phone || "Not set"}</strong>
+                  </div>
+                  <div>
+                    <span>Email</span>
+                    <strong>{viewCustomer.email || "Not set"}</strong>
+                  </div>
+                  <div>
+                    <span>Region</span>
+                    <strong>{viewCustomer.region || "Not set"}</strong>
+                  </div>
+                  <div>
+                    <span>Balance</span>
+                    <strong>{formatCurrency(viewCustomer.outstandingBalance, "USD")}</strong>
+                  </div>
+                  <div>
+                    <span>Last Invoice</span>
+                    <strong>{numericDate(viewCustomer.lastInvoiceDate)}</strong>
+                  </div>
+                  <div>
+                    <span>Order Status</span>
+                    <strong>{viewCustomer.hasUnreceivedOrder ? "Has unreceived order" : "Clear"}</strong>
+                  </div>
+                </div>
+              </section>
+
+              <section className="view-section">
+                <h3>Billing & Terms</h3>
+
+                <div className="view-grid">
+                  <div>
+                    <span>Invoice Type</span>
+                    <strong>{viewCustomer.billingProfile.invoiceType}</strong>
+                  </div>
+                  <div>
+                    <span>Tax</span>
+                    <strong>
+                      {viewCustomer.customerTypeResolved === "Business" && viewCustomer.billingProfile.taxEnabled
+                        ? `${viewCustomer.billingProfile.taxRate}%`
+                        : "Off"}
+                    </strong>
+                  </div>
+                  <div>
+                    <span>Tax Number</span>
+                    <strong>
+                      {viewCustomer.customerTypeResolved === "Business"
+                        ? viewCustomer.billingProfile.taxNumber || "Not set"
+                        : "Not applicable"}
+                    </strong>
+                  </div>
+                  <div>
+                    <span>Discount</span>
+                    <strong>
+                      {viewCustomer.billingProfile.discountType === "none"
+                        ? "None"
+                        : `${viewCustomer.billingProfile.discountValue}${
+                            viewCustomer.billingProfile.discountType === "percentage" ? "%" : ""
+                          }`}
+                    </strong>
+                  </div>
+                </div>
+
+                <div className="view-note-box">
+                  <span>Custom Terms</span>
+                  <p>{viewCustomer.billingProfile.customTerms || "No custom terms added."}</p>
+                </div>
+              </section>
+
+              <section className="view-section">
+                <h3>Notes & Recommendations</h3>
+
+                <div className="view-note-box">
+                  <span>Note</span>
+                  <p>{viewCustomer.noteText || "No note added."}</p>
+                </div>
+
+                <div className="view-note-box">
+                  <span>Recommendation</span>
+                  <p>{viewCustomer.recommendationText || "No recommendation added."}</p>
+                </div>
+              </section>
+
+            </div>
+        </Modal>
       )}
 
-      {actionMenu &&
-        createPortal(
-          <div
-            ref={actionMenuRef}
-            className="customer-action-menu"
-            style={{
-              top: actionMenu.top,
-              left: actionMenu.left,
-              transform: actionMenu.top > window.innerHeight / 2 ? "translateY(-100%)" : "none",
-            }}
-          >
-            {(() => {
-              const customer = customerRows.find((item) => item.id === actionMenu.customerId);
-              if (!customer) return null;
-              return (
-                <>
-                  <button type="button" onClick={() => openDetails(customer)}><Eye size={15} />View Customer</button>
-                  <button type="button" onClick={() => openEdit(customer)}><UserCircle2 size={15} />Edit Customer</button>
-                  <button type="button" onClick={() => { setToast({ type: "success", message: `Note flow opened for ${customer.name}.` }); setActionMenu(null); }}><StickyNote size={15} />Add Note</button>
-                  <button type="button" onClick={() => { openDetails(customer); setDetailsTab("notes"); }}><Receipt size={15} />View Notes</button>
-                  <button type="button" onClick={() => { setToast({ type: "info", message: `Invoice workflow opened for ${customer.name}.` }); setActionMenu(null); }}><FilePlus2 size={15} />Create Invoice</button>
-                  <button type="button" onClick={() => { setToast({ type: "info", message: `Payment workflow opened for ${customer.name}.` }); setActionMenu(null); }}><CreditCard size={15} />Record Payment</button>
-                  <button type="button" onClick={() => { openDetails(customer); setDetailsTab("orders"); }}><Building2 size={15} />View Orders</button>
-                  <button type="button" onClick={() => {
-                    const next = customers.map((entry) => entry.id === customer.id ? { ...entry, status: "Inactive" as PersistedCustomerStatus } : entry);
-                    saveCustomers(next);
-                    setCustomers(next);
-                    setToast({ type: "success", message: `${customer.name} archived.` });
-                    setActionMenu(null);
-                  }}><Wallet size={15} />Archive</button>
-                  <button type="button" className="danger" onClick={() => { setDeleteTarget(customer); setDeleteCode(""); setActionMenu(null); }}><Trash2 size={15} />Delete</button>
-                </>
-              );
-            })()}
-          </div>,
-          document.body
-        )}
+      {deleteTarget && (
+        <Modal
+          isOpen={!!deleteTarget}
+          onClose={closeDeleteModal}
+          variant="alert"
+          size="sm"
+          title="Delete customer?"
+          className="delete-confirm-card"
+          footer={
+            <>
+              <Button variant="secondary" onClick={closeDeleteModal}>Cancel</Button>
+              <Button
+                variant="danger"
+                disabled={deleteCode.trim() !== DELETE_CONFIRMATION_CODE}
+                onClick={confirmDeleteCustomer}
+              >
+                Delete Customer
+              </Button>
+            </>
+          }
+        >
+          <p>
+            This will delete <strong>{deleteTarget.name}</strong>. To confirm deletion, type{" "}
+            <strong>{DELETE_CONFIRMATION_CODE}</strong>.
+          </p>
 
-      {toast && <div className={`app-toast ${toast.type}`}>{toast.message}</div>}
-    </>
+          <Input
+            label="Confirmation Code"
+            className="delete-code-field"
+            value={deleteCode}
+            onChange={(event) => setDeleteCode(event.target.value)}
+            placeholder="Type 123 to delete"
+            autoFocus
+            fullWidth
+          />
+        </Modal>
+      )}
+
+      {toast && <div className="customers-toast">{toast}</div>}
+    </div>
   );
 }

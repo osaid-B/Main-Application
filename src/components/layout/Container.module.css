@@ -1,0 +1,29 @@
+.container {
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.center {
+  margin-inline: auto;
+}
+
+/* Max widths */
+.maxWidth_sm { max-width: 640px; }
+.maxWidth_md { max-width: 768px; }
+.maxWidth_lg { max-width: 1024px; }
+.maxWidth_xl { max-width: var(--app-content-max); }
+.maxWidth_full { max-width: 100%; }
+
+/* Padding (horizontal) */
+.padding_none { padding-inline: 0; }
+.padding_sm { padding-inline: var(--app-space-3); }
+.padding_md { padding-inline: var(--app-space-5); }
+.padding_lg { padding-inline: var(--app-space-7); }
+
+/* Force "sm" padding on small viewports regardless of prop */
+@media (max-width: 600px) {
+  .padding_md,
+  .padding_lg {
+    padding-inline: var(--app-space-3);
+  }
+}

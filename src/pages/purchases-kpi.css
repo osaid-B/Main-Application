@@ -1,0 +1,83 @@
+.danger-button {
+  background: #fff2f2;
+  color: #c0392b;
+  border: 1px solid #ffd7d7;
+}
+
+.purchase-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.kpi-card {
+  border-radius: 24px;
+  background: #ffffff;
+  border: 1px solid #e5ecf5;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.03);
+  padding: 18px;
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.kpi-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.kpi-icon.blue {
+  background: #eef5ff;
+  color: #2563eb;
+}
+
+.kpi-icon.amber {
+  background: #fff5e8;
+  color: #f59e0b;
+}
+
+.kpi-icon.green {
+  background: #ecfbf3;
+  color: #22a364;
+}
+
+.kpi-icon.red {
+  background: #fff1f1;
+  color: #ef5a5a;
+}
+
+.kpi-content {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.kpi-content span {
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.kpi-content strong {
+  font-size: 17px;
+  letter-spacing: -0.03em;
+}
+
+.kpi-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  color: #64748b;
+}
+
+.kpi-meta small,
+.kpi-meta em {
+  font-style: normal;
+  font-size: 12px;

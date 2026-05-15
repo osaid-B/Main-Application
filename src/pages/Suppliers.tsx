@@ -8,7 +8,6 @@ import {
   BadgeCheck,
   Building2,
   ChevronDown,
-  Download,
   Eye,
   FileText,
   Filter,
@@ -22,11 +21,20 @@ import {
   X,
 } from "lucide-react";
 import OverflowContent from "../components/ui/OverflowContent";
-import TableFooter from "../components/ui/TableFooter";
-import { getPurchases, getSuppliers, saveSuppliers } from "../data/storage";
+import { Button } from "../components/ui/Button";
+import { Input } from "../components/ui/Input";
+import { Select } from "../components/ui/Select";
+import { Badge, type BadgeVariant } from "../components/ui/Badge";
+import {
+  getProductCategories,
+  getPurchases,
+  getSuppliers,
+  saveSuppliers,
+} from "../data/storage";
 import type { Purchase, Supplier } from "../data/types";
 
 type SupplierStatus = "Active" | "Inactive" | "Preferred" | "Blocked";
+
 type DetailTab =
   | "overview"
   | "purchases"
@@ -165,7 +173,10 @@ type SupplierFormState = {
 };
 
 type FormErrors = Partial<
-  Record<"supplierName" | "supplierCode" | "contactPerson" | "phone" | "email", string>
+  Record<
+    "supplierName" | "contactPerson" | "phone" | "email",
+    string
+  >
 >;
 
 type FilterState = {
@@ -186,8 +197,12 @@ type ActionMenuState = {
   id: string;
   top: number;
   left: number;
-  placement: "down" | "up";
 };
+
+type SupplierConfirmAction = {
+  type: "archive" | "delete";
+  supplierId: string;
+} | null;
 
 type SortField =
   | "supplierName"
@@ -201,6 +216,188 @@ type SortField =
 
 const PROFILE_STORAGE_KEY = "dashboard_supplier_profiles_v2";
 const TODAY = new Date().toISOString().split("T")[0];
+const DEFAULT_PRODUCT_CATEGORY = "Uncategorized";
+
+const PALESTINIAN_LOCATIONS = [
+  "Jerusalem",
+  "Ramallah",
+  "Al-Bireh",
+  "Nablus",
+  "Hebron",
+  "Bethlehem",
+  "Jenin",
+  "Tulkarm",
+  "Qalqilya",
+  "Salfit",
+  "Tubas",
+  "Jericho",
+  "Gaza",
+  "Khan Younis",
+  "Rafah",
+  "Deir al-Balah",
+  "Jabalia",
+  "Beit Lahia",
+  "Beit Hanoun",
+  "Yatta",
+  "Dura",
+  "Halhul",
+  "Beit Jala",
+  "Beit Sahour",
+  "Birzeit",
+  "Rawabi",
+  "Anabta",
+  "Azzun",
+  "Ya'bad",
+  "Qabatiya",
+  "Arraba",
+  "Beita",
+  "Huwara",
+  "Asira al-Shamaliya",
+  "Bani Naim",
+  "Idhna",
+  "Tarqumiyah",
+  "Beit Ummar",
+  "Al-Khader",
+  "Dheisheh",
+  "Abu Dis",
+  "Al-Eizariya",
+  "Biddu",
+  "Qatanna",
+  "Silwad",
+  "Al-Mazra'a ash-Sharqiya",
+  "Sinjil",
+  "Deir Dibwan",
+  "Ni'lin",
+  "Bil'in",
+  "Kafr Qaddum",
+  "Zababdeh",
+  "Burqin",
+  "Ajja",
+  "Meithalun",
+  "Tammun",
+  "Aqqaba",
+  "Beit Furik",
+  "Awarta",
+  "Qusra",
+  "Aqraba",
+  "Biddya",
+  "Deir Ballut",
+  "Kifl Haris",
+  "Hizma",
+  "Jaba",
+  "Surif",
+  "Sa'ir",
+  "Al-Dhahiriya",
+  "Beit Awwa",
+  "Al-Samu",
+  "Taffuh",
+  "Bani Suheila",
+  "Abasan al-Kabira",
+  "Al-Qarara",
+  "Al-Maghazi",
+  "Al-Bureij",
+  "Nuseirat",
+].sort((a, b) => a.localeCompare(b));
+
+const LOCATION_AR_LABELS: Record<string, string> = {
+  Jerusalem: "القدس",
+  Ramallah: "رام الله",
+  "Al-Bireh": "البيرة",
+  Nablus: "نابلس",
+  Hebron: "الخليل",
+  Bethlehem: "بيت لحم",
+  Jenin: "جنين",
+  Tulkarm: "طولكرم",
+  Qalqilya: "قلقيلية",
+  Salfit: "سلفيت",
+  Tubas: "طوباس",
+  Jericho: "أريحا",
+  Gaza: "غزة",
+  "Khan Younis": "خان يونس",
+  Rafah: "رفح",
+  "Deir al-Balah": "دير البلح",
+  Jabalia: "جباليا",
+  "Beit Lahia": "بيت لاهيا",
+  "Beit Hanoun": "بيت حانون",
+  Yatta: "يطا",
+  Dura: "دورا",
+  Halhul: "حلحول",
+  "Beit Jala": "بيت جالا",
+  "Beit Sahour": "بيت ساحور",
+  Birzeit: "بيرزيت",
+  Rawabi: "روابي",
+  Anabta: "عنبتا",
+  Azzun: "عزون",
+  "Ya'bad": "يعبد",
+  Qabatiya: "قباطية",
+  Arraba: "عرابة",
+  Beita: "بيتا",
+  Huwara: "حوارة",
+  "Asira al-Shamaliya": "عصيرة الشمالية",
+  "Bani Naim": "بني نعيم",
+  Idhna: "إذنا",
+  Tarqumiyah: "ترقوميا",
+  "Beit Ummar": "بيت أمر",
+  "Al-Khader": "الخضر",
+  Dheisheh: "الدهيشة",
+  "Abu Dis": "أبو ديس",
+  "Al-Eizariya": "العيزرية",
+  Biddu: "بدو",
+  Qatanna: "قطنة",
+  Silwad: "سلواد",
+  "Al-Mazra'a ash-Sharqiya": "المزرعة الشرقية",
+  Sinjil: "سنجل",
+  "Deir Dibwan": "دير دبوان",
+  "Ni'lin": "نعلين",
+  "Bil'in": "بلعين",
+  "Kafr Qaddum": "كفر قدوم",
+  Zababdeh: "الزبابدة",
+  Burqin: "برقين",
+  Ajja: "عجة",
+  Meithalun: "ميثلون",
+  Tammun: "طمون",
+  Aqqaba: "عقابا",
+  "Beit Furik": "بيت فوريك",
+  Awarta: "عورتا",
+  Qusra: "قصرى",
+  Aqraba: "عقربا",
+  Biddya: "بديا",
+  "Deir Ballut": "دير بلوط",
+  "Kifl Haris": "كفل حارس",
+  Hizma: "حزما",
+  Jaba: "جبع",
+  Surif: "صوريف",
+  "Sa'ir": "سعير",
+  "Al-Dhahiriya": "الظاهرية",
+  "Beit Awwa": "بيت عوا",
+  "Al-Samu": "السموع",
+  Taffuh: "تفوح",
+  "Bani Suheila": "بني سهيلا",
+  "Abasan al-Kabira": "عبسان الكبيرة",
+  "Al-Qarara": "القرارة",
+  "Al-Maghazi": "المغازي",
+  "Al-Bureij": "البريج",
+  Nuseirat: "النصيرات",
+};
+
+const formatLocationOption = (location: string) =>
+  `${location} - ${LOCATION_AR_LABELS[location] || location}`;
+
+const PAYMENT_TERM_PRESETS = [
+  "Cash - كاش",
+  "Partial payment - دفع جزئي",
+  "Half payment - دفع نصفي",
+  "Cheque - شيك",
+  "Due on Receipt",
+  "Net 7",
+  "Net 15",
+  "Net 30",
+  "Net 45",
+  "Net 60",
+  "50% upfront / 50% on delivery",
+  "Custom agreement",
+];
+
 const EMPTY_FILTERS: FilterState = {
   status: "",
   paymentTerms: "",
@@ -219,7 +416,7 @@ const EMPTY_FORM: SupplierFormState = {
   supplierName: "",
   supplierCode: "",
   companyName: "",
-  category: "Electronics",
+  category: DEFAULT_PRODUCT_CATEGORY,
   status: "Active",
   contactPerson: "",
   phone: "",
@@ -237,6 +434,25 @@ const EMPTY_FORM: SupplierFormState = {
   attachmentName: "",
 };
 
+function buildNextSupplierCode(suppliers: Supplier[], profiles: SupplierProfile[]) {
+  const maxCodeNumber = [...suppliers.map((supplier) => supplier.id), ...profiles.map((profile) => profile.code)]
+    .reduce((max, value) => {
+      const match = String(value || "").match(/^SUP-(\d+)$/i);
+      return match ? Math.max(max, Number(match[1])) : max;
+    }, 1000);
+
+  return `SUP-${maxCodeNumber + 1}`;
+}
+
+function buildNextRegistrationNumber(profiles: SupplierProfile[]) {
+  const maxRegistrationNumber = profiles.reduce((max, profile) => {
+    const match = String(profile.registrationNumber || "").match(/^REG-(\d+)$/i);
+    return match ? Math.max(max, Number(match[1])) : max;
+  }, 8000);
+
+  return `REG-${maxRegistrationNumber + 1}`;
+}
+
 function money(value: number) {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
@@ -246,11 +462,17 @@ function money(value: number) {
 }
 
 function formatDate(value: string) {
-  return new Intl.DateTimeFormat("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  }).format(new Date(value));
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}/${month}/${day}`;
 }
 
 function addDays(date: string, amount: number) {
@@ -273,11 +495,15 @@ function buildDefaultProfile(
       const paymentStatus = (["Paid", "Partial", "Unpaid"] as const)[
         (purchaseIndex + index) % 3
       ];
-      const receivedPct = status === "Received" ? 100 : status === "Partially Received" ? 56 : 0;
+      const receivedPct =
+        status === "Received" ? 100 : status === "Partially Received" ? 56 : 0;
 
       return {
         id: `${supplier.id}-PO-${purchaseIndex}`,
-        poNumber: `PO-2026-${String(410 + index * 3 + purchaseIndex).padStart(4, "0")}`,
+        poNumber: `PO-2026-${String(410 + index * 3 + purchaseIndex).padStart(
+          4,
+          "0"
+        )}`,
         date: purchase.date,
         total: purchase.totalCost,
         received: `${receivedPct}%`,
@@ -286,14 +512,25 @@ function buildDefaultProfile(
       };
     });
 
-  const totalPurchased = supplierPurchases.reduce((sum, entry) => sum + entry.total, 0);
+  const totalPurchased = supplierPurchases.reduce(
+    (sum, entry) => sum + entry.total,
+    0
+  );
+
   const outstandingBalance = supplierPurchases
     .filter((entry) => entry.paymentStatus !== "Paid")
-    .reduce((sum, entry) => sum + entry.total * (entry.paymentStatus === "Partial" ? 0.45 : 1), 0);
+    .reduce(
+      (sum, entry) =>
+        sum + entry.total * (entry.paymentStatus === "Partial" ? 0.45 : 1),
+      0
+    );
 
   const invoices = supplierPurchases.map((purchase, purchaseIndex) => ({
     id: `${supplier.id}-INV-${purchaseIndex}`,
-    invoiceNumber: `SINV-2026-${String(740 + index * 4 + purchaseIndex).padStart(4, "0")}`,
+    invoiceNumber: `SINV-2026-${String(740 + index * 4 + purchaseIndex).padStart(
+      4,
+      "0"
+    )}`,
     date: purchase.date,
     dueDate: addDays(purchase.date, 15 + ((purchaseIndex + index) % 20)),
     total: purchase.total,
@@ -301,8 +538,8 @@ function buildDefaultProfile(
       purchase.paymentStatus === "Paid"
         ? 0
         : purchase.paymentStatus === "Partial"
-        ? Number((purchase.total * 0.4).toFixed(2))
-        : purchase.total,
+          ? Number((purchase.total * 0.4).toFixed(2))
+          : purchase.total,
     status: purchase.paymentStatus,
   }));
 
@@ -311,7 +548,10 @@ function buildDefaultProfile(
     .map((invoice, paymentIndex) => ({
       id: `${supplier.id}-PAY-${paymentIndex}`,
       paymentDate: addDays(invoice.date, 4 + paymentIndex),
-      amount: invoice.status === "Paid" ? invoice.total : Number((invoice.total * 0.6).toFixed(2)),
+      amount:
+        invoice.status === "Paid"
+          ? invoice.total
+          : Number((invoice.total * 0.6).toFixed(2)),
       method: ["Bank Transfer", "Wire", "Card"][paymentIndex % 3],
       reference: `PAY-${invoice.invoiceNumber.slice(-4)}`,
       notes: invoice.status === "Paid" ? "Paid in full" : "Partially settled",
@@ -321,7 +561,7 @@ function buildDefaultProfile(
   const categories = ["Electronics", "Packaging", "Raw Materials", "Services", "Logistics"];
   const cities = ["Ramallah", "Nablus", "Hebron", "Jerusalem", "Amman"];
   const countries = ["Palestine", "Jordan", "UAE", "Saudi Arabia"];
-  const rating = Number((4.1 + ((index % 6) * 0.15)).toFixed(1));
+  const rating = Number((4.1 + (index % 6) * 0.15).toFixed(1));
 
   return {
     supplierId: supplier.id,
@@ -336,7 +576,9 @@ function buildDefaultProfile(
     city: cities[index % cities.length],
     taxNumber: `TAX-${5000 + index}`,
     registrationNumber: `REG-${8000 + index}`,
-    contactPerson: ["Ahmad Saleh", "Rana Nasser", "Omar Yassin", "Lina Hamed"][index % 4],
+    contactPerson: ["Ahmad Saleh", "Rana Nasser", "Omar Yassin", "Lina Hamed"][
+      index % 4
+    ],
     website: `https://supplier${index + 1}.example.com`,
     outstandingBalance: Number(outstandingBalance.toFixed(2)),
     totalPurchased: Number(totalPurchased.toFixed(2)),
@@ -369,7 +611,9 @@ function buildDefaultProfile(
     contacts: [
       {
         id: `${supplier.id}-contact-1`,
-        name: ["Ahmad Saleh", "Rana Nasser", "Omar Yassin", "Lina Hamed"][index % 4],
+        name: ["Ahmad Saleh", "Rana Nasser", "Omar Yassin", "Lina Hamed"][
+          index % 4
+        ],
         role: "Sales Manager",
         phone: supplier.phone || "0590000000",
         email: supplier.email || "sales@example.com",
@@ -434,7 +678,10 @@ function readProfiles(suppliers: Supplier[], purchases: Purchase[]) {
 
     return suppliers
       .filter((supplier) => !supplier.isDeleted)
-      .map((supplier, index) => map.get(supplier.id) || buildDefaultProfile(supplier, index, purchases));
+      .map(
+        (supplier, index) =>
+          map.get(supplier.id) || buildDefaultProfile(supplier, index, purchases)
+      );
   } catch {
     return suppliers
       .filter((supplier) => !supplier.isDeleted)
@@ -462,13 +709,11 @@ function statusTone(status: SupplierStatus) {
 export default function Suppliers() {
   const [suppliers, setSuppliers] = useState<Supplier[]>(() => getSuppliers());
   const [purchases] = useState<Purchase[]>(() => getPurchases());
+  const [productCategories] = useState<string[]>(() => getProductCategories());
   const [profiles, setProfiles] = useState<SupplierProfile[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [filters, setFilters] = useState<FilterState>(EMPTY_FILTERS);
   const [quickFilters, setQuickFilters] = useState<string[]>([]);
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [page, setPage] = useState(1);
   const [sortField, setSortField] = useState<SortField>("supplierName");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [detailSupplierId, setDetailSupplierId] = useState<string | null>(null);
@@ -476,6 +721,8 @@ export default function Suppliers() {
   const [moreFiltersOpen, setMoreFiltersOpen] = useState(false);
   const [menuState, setMenuState] = useState<ActionMenuState | null>(null);
   const [formOpen, setFormOpen] = useState(false);
+  const [discardConfirmOpen, setDiscardConfirmOpen] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<SupplierConfirmAction>(null);
   const [formMode, setFormMode] = useState<"add" | "edit">("add");
   const [editingSupplierId, setEditingSupplierId] = useState<string | null>(null);
   const [formState, setFormState] = useState<SupplierFormState>(EMPTY_FORM);
@@ -485,6 +732,7 @@ export default function Suppliers() {
   const [viewError, setViewError] = useState<string | null>(null);
 
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const formInitialSnapshotRef = useRef("");
 
   useEffect(() => {
     try {
@@ -507,11 +755,8 @@ export default function Suppliers() {
   }, [suppliers]);
 
   useEffect(() => {
-    setPage(1);
-  }, [filters, quickFilters, rowsPerPage, searchTerm]);
-
-  useEffect(() => {
     if (!toast) return;
+
     const timeout = window.setTimeout(() => setToast(null), 2400);
     return () => window.clearTimeout(timeout);
   }, [toast]);
@@ -537,6 +782,7 @@ export default function Suppliers() {
     document.addEventListener("keydown", handleKeyDown);
     window.addEventListener("resize", closeMenu);
     window.addEventListener("scroll", closeMenu, true);
+
     return () => {
       document.removeEventListener("mousedown", handlePointerDown);
       document.removeEventListener("keydown", handleKeyDown);
@@ -547,8 +793,10 @@ export default function Suppliers() {
 
   const supplierViews = useMemo<SupplierView[]>(() => {
     const supplierMap = new Map(suppliers.map((supplier) => [supplier.id, supplier]));
+
     return profiles.map((profile) => {
       const supplier = supplierMap.get(profile.supplierId);
+
       return {
         ...profile,
         supplierName: supplier?.name || profile.companyName,
@@ -581,37 +829,80 @@ export default function Suppliers() {
       }
 
       if (filters.status && supplier.status !== filters.status) return false;
-      if (filters.paymentTerms && supplier.paymentTerms !== filters.paymentTerms) return false;
+      if (filters.paymentTerms && supplier.paymentTerms !== filters.paymentTerms) {
+        return false;
+      }
       if (filters.currency && supplier.currency !== filters.currency) return false;
       if (filters.category && supplier.category !== filters.category) return false;
+
       if (filters.rating) {
         if (filters.rating === "4plus" && supplier.rating < 4) return false;
         if (filters.rating === "3orless" && supplier.rating > 3) return false;
       }
+
       if (filters.country && supplier.country !== filters.country) return false;
       if (filters.city && supplier.city !== filters.city) return false;
+
       if (filters.taxRegistered) {
         const expected = filters.taxRegistered === "yes";
         if (supplier.taxRegistered !== expected) return false;
       }
+
       if (filters.outstandingBalance) {
-        if (filters.outstandingBalance === "open" && supplier.outstandingBalance <= 0) return false;
-        if (filters.outstandingBalance === "high" && supplier.outstandingBalance < 5000) return false;
+        if (filters.outstandingBalance === "open" && supplier.outstandingBalance <= 0) {
+          return false;
+        }
+
+        if (filters.outstandingBalance === "high" && supplier.outstandingBalance < 5000) {
+          return false;
+        }
       }
+
       if (filters.lastPurchaseDate) {
-        if (filters.lastPurchaseDate === "30d" && supplier.lastPurchaseDate < addDays(TODAY, -30)) return false;
-        if (filters.lastPurchaseDate === "90d" && supplier.lastPurchaseDate < addDays(TODAY, -90)) return false;
+        if (
+          filters.lastPurchaseDate === "30d" &&
+          supplier.lastPurchaseDate < addDays(TODAY, -30)
+        ) {
+          return false;
+        }
+
+        if (
+          filters.lastPurchaseDate === "90d" &&
+          supplier.lastPurchaseDate < addDays(TODAY, -90)
+        ) {
+          return false;
+        }
       }
+
       if (filters.createdDate) {
-        if (filters.createdDate === "30d" && supplier.createdDate < addDays(TODAY, -30)) return false;
-        if (filters.createdDate === "90d" && supplier.createdDate < addDays(TODAY, -90)) return false;
+        if (filters.createdDate === "30d" && supplier.createdDate < addDays(TODAY, -30)) {
+          return false;
+        }
+
+        if (filters.createdDate === "90d" && supplier.createdDate < addDays(TODAY, -90)) {
+          return false;
+        }
       }
 
       if (quickFilters.includes("Active") && supplier.status !== "Active") return false;
-      if (quickFilters.includes("Inactive") && supplier.status !== "Inactive") return false;
-      if (quickFilters.includes("Preferred") && supplier.status !== "Preferred") return false;
-      if (quickFilters.includes("Outstanding Balance") && supplier.outstandingBalance <= 0) return false;
-      if (quickFilters.includes("New Suppliers") && supplier.createdDate < addDays(TODAY, -30)) return false;
+      if (quickFilters.includes("Inactive") && supplier.status !== "Inactive") {
+        return false;
+      }
+      if (quickFilters.includes("Preferred") && supplier.status !== "Preferred") {
+        return false;
+      }
+      if (
+        quickFilters.includes("Outstanding Balance") &&
+        supplier.outstandingBalance <= 0
+      ) {
+        return false;
+      }
+      if (
+        quickFilters.includes("New Suppliers") &&
+        supplier.createdDate < addDays(TODAY, -30)
+      ) {
+        return false;
+      }
 
       return true;
     });
@@ -619,6 +910,7 @@ export default function Suppliers() {
 
   const sortedSuppliers = useMemo(() => {
     const factor = sortDirection === "asc" ? 1 : -1;
+
     return [...filteredSuppliers].sort((a, b) => {
       switch (sortField) {
         case "outstandingBalance":
@@ -626,28 +918,40 @@ export default function Suppliers() {
         case "rating":
           return (a.rating - b.rating) * factor;
         case "lastPurchaseDate":
-          return (new Date(a.lastPurchaseDate).getTime() - new Date(b.lastPurchaseDate).getTime()) * factor;
+          return (
+            (new Date(a.lastPurchaseDate).getTime() -
+              new Date(b.lastPurchaseDate).getTime()) *
+            factor
+          );
         default:
           return String(a[sortField]).localeCompare(String(b[sortField])) * factor;
       }
     });
   }, [filteredSuppliers, sortDirection, sortField]);
 
-  const safePage = Math.min(page, Math.max(1, Math.ceil(sortedSuppliers.length / rowsPerPage)));
-  const pagedSuppliers = sortedSuppliers.slice((safePage - 1) * rowsPerPage, safePage * rowsPerPage);
+  const visibleSuppliers = sortedSuppliers;
+
   const detailSupplier = detailSupplierId
     ? supplierViews.find((supplier) => supplier.supplierId === detailSupplierId) || null
     : null;
 
   const summary = useMemo(() => {
     const totalSuppliers = supplierViews.length;
-    const activeSuppliers = supplierViews.filter((supplier) => supplier.status === "Active" || supplier.status === "Preferred").length;
-    const outstandingPayables = supplierViews.reduce((sum, supplier) => sum + supplier.outstandingBalance, 0);
-    const topRatedSuppliers = supplierViews.filter((supplier) => supplier.rating >= 4.6).length;
-    const preferred = supplierViews.filter((supplier) => supplier.status === "Preferred").length;
-    const blocked = supplierViews.filter((supplier) => supplier.status === "Blocked").length;
-    const riskAlerts = supplierViews.filter(
-      (supplier) => supplier.status === "Blocked" || supplier.rating < 4 || supplier.outstandingBalance > 7000
+    const activeSuppliers = supplierViews.filter(
+      (supplier) => supplier.status === "Active" || supplier.status === "Preferred"
+    ).length;
+    const outstandingPayables = supplierViews.reduce(
+      (sum, supplier) => sum + supplier.outstandingBalance,
+      0
+    );
+    const topRatedSuppliers = supplierViews.filter(
+      (supplier) => supplier.rating >= 4.6
+    ).length;
+    const preferred = supplierViews.filter(
+      (supplier) => supplier.status === "Preferred"
+    ).length;
+    const blocked = supplierViews.filter(
+      (supplier) => supplier.status === "Blocked"
     ).length;
 
     return {
@@ -657,12 +961,15 @@ export default function Suppliers() {
       topRatedSuppliers,
       preferred,
       blocked,
-      riskAlerts,
     };
   }, [supplierViews]);
 
   const topSuppliers = useMemo(() => {
-    const maxPurchased = Math.max(...supplierViews.map((supplier) => supplier.totalPurchased), 1);
+    const maxPurchased = Math.max(
+      ...supplierViews.map((supplier) => supplier.totalPurchased),
+      1
+    );
+
     return [...supplierViews]
       .sort((a, b) => b.totalPurchased - a.totalPurchased)
       .slice(0, 5)
@@ -687,14 +994,30 @@ export default function Suppliers() {
       lastPurchaseDate: "Last Purchase",
       createdDate: "Created",
     };
+
     (Object.keys(filters) as Array<keyof FilterState>).forEach((key) => {
-      if (filters[key]) entries.push({ key, label: labels[key], value: filters[key] });
+      if (filters[key]) {
+        entries.push({ key, label: labels[key], value: filters[key] });
+      }
     });
+
     return entries;
   }, [filters]);
 
+  const categoryOptions = useMemo(() => {
+    const fromProfiles = supplierViews.map((supplier) => supplier.category).filter(Boolean);
+    const merged = Array.from(
+      new Set([...productCategories, ...fromProfiles, DEFAULT_PRODUCT_CATEGORY])
+    );
+    return merged.sort((a, b) => a.localeCompare(b));
+  }, [productCategories, supplierViews]);
+
   const menuSupplier = menuState
     ? supplierViews.find((supplier) => supplier.supplierId === menuState.id) || null
+    : null;
+
+  const confirmSupplier = confirmAction
+    ? supplierViews.find((supplier) => supplier.supplierId === confirmAction.supplierId) || null
     : null;
 
   function clearFilters() {
@@ -711,21 +1034,30 @@ export default function Suppliers() {
 
     const rect = trigger.getBoundingClientRect();
     const menuWidth = 220;
-    const menuHeight = 250;
     const gap = 8;
-    const placeUp = window.innerHeight - rect.bottom < menuHeight && rect.top > menuHeight;
+
     setMenuState({
       id,
-      left: Math.min(window.innerWidth - menuWidth - 12, Math.max(12, rect.right - menuWidth)),
-      top: placeUp ? rect.top - menuHeight - gap : rect.bottom + gap,
-      placement: placeUp ? "up" : "down",
+      top: rect.bottom + gap,
+      left: Math.min(
+        window.innerWidth - menuWidth - 12,
+        Math.max(12, rect.right - menuWidth)
+      ),
     });
   }
 
   function openAddModal() {
+    const nextCode = buildNextSupplierCode(suppliers, profiles);
+    const nextForm = {
+      ...EMPTY_FORM,
+      supplierCode: nextCode,
+      category: categoryOptions[0] || DEFAULT_PRODUCT_CATEGORY,
+    };
+
     setFormMode("add");
     setEditingSupplierId(null);
-    setFormState(EMPTY_FORM);
+    setFormState(nextForm);
+    formInitialSnapshotRef.current = JSON.stringify(nextForm);
     setFormErrors({});
     setFormOpen(true);
   }
@@ -736,7 +1068,7 @@ export default function Suppliers() {
 
     setFormMode("edit");
     setEditingSupplierId(supplierId);
-    setFormState({
+    const nextForm = {
       supplierName: supplier.supplierName,
       supplierCode: supplier.code,
       companyName: supplier.companyName,
@@ -745,31 +1077,58 @@ export default function Suppliers() {
       contactPerson: supplier.contactPerson,
       phone: supplier.phone,
       email: supplier.email,
-      website: supplier.website,
+      website: "",
       country: supplier.country,
       city: supplier.city,
-      address: supplier.address,
+      address: "",
       paymentTerms: supplier.paymentTerms,
       currency: supplier.currency,
       taxNumber: supplier.taxNumber,
       registrationNumber: supplier.registrationNumber,
       notes: supplier.notes[0]?.text || "",
-      tags: supplier.tags.join(", "),
-      attachmentName: supplier.documents[0]?.fileName || "",
-    });
+      tags: "",
+      attachmentName: "",
+    };
+
+    setFormState(nextForm);
+    formInitialSnapshotRef.current = JSON.stringify(nextForm);
     setFormErrors({});
     setFormOpen(true);
     setMenuState(null);
   }
 
+  function requestCloseForm() {
+    const isDirty = JSON.stringify(formState) !== formInitialSnapshotRef.current;
+
+    if (isDirty) {
+      setDiscardConfirmOpen(true);
+      return;
+    }
+
+    closeFormNow();
+  }
+
+  function closeFormNow() {
+    setFormOpen(false);
+    setDiscardConfirmOpen(false);
+    setFormErrors({});
+  }
+
   function validateSupplierForm() {
     const nextErrors: FormErrors = {};
 
-    if (!formState.supplierName.trim()) nextErrors.supplierName = "Supplier name is required.";
-    if (!formState.supplierCode.trim() && !editingSupplierId) {
-      nextErrors.supplierCode = "Supplier code is required.";
+    if (!formState.supplierName.trim()) {
+      nextErrors.supplierName = "Supplier name is required.";
     }
-    if (formState.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formState.email.trim())) {
+
+    if (!formState.phone.trim() && !formState.email.trim()) {
+      nextErrors.phone = "Enter a phone number or email address.";
+    }
+
+    if (
+      formState.email.trim() &&
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formState.email.trim())
+    ) {
       nextErrors.email = "Enter a valid email address.";
     }
 
@@ -780,18 +1139,23 @@ export default function Suppliers() {
   function saveSupplierForm(saveAsDraft = false) {
     if (!validateSupplierForm()) return;
 
-    const code = formState.supplierCode.trim() || `SUP-${Date.now().toString().slice(-4)}`;
+    const code = editingSupplierId
+      ? formState.supplierCode.trim()
+      : buildNextSupplierCode(suppliers, profiles);
     const supplierId = editingSupplierId || code;
+    const registrationNumber =
+      formState.companyName.trim() && !editingSupplierId
+        ? buildNextRegistrationNumber(profiles)
+        : formState.registrationNumber.trim();
 
-    const nextSupplier: Supplier = {
+    const nextSupplier = {
       id: supplierId,
       name: formState.supplierName.trim() || "Supplier",
       phone: formState.phone.trim(),
       email: formState.email.trim(),
-      address: formState.address.trim(),
-      notes: formState.notes.trim(),
+      address: formState.city.trim(),
       isDeleted: false,
-    };
+    } as Supplier;
 
     const profile: SupplierProfile = {
       supplierId,
@@ -805,9 +1169,9 @@ export default function Suppliers() {
       country: formState.country.trim() || "Palestine",
       city: formState.city.trim(),
       taxNumber: formState.taxNumber.trim(),
-      registrationNumber: formState.registrationNumber.trim(),
-      contactPerson: formState.contactPerson.trim(),
-      website: formState.website.trim(),
+      registrationNumber,
+      contactPerson: "",
+      website: "",
       outstandingBalance: 0,
       totalPurchased: 0,
       rating: 4.4,
@@ -821,10 +1185,7 @@ export default function Suppliers() {
       lastPurchaseDate: TODAY,
       lastPaymentDate: TODAY,
       createdDate: TODAY,
-      tags: formState.tags
-        .split(",")
-        .map((tag) => tag.trim())
-        .filter(Boolean),
+      tags: [],
       notes: formState.notes.trim()
         ? [
             {
@@ -838,24 +1199,14 @@ export default function Suppliers() {
       contacts: [
         {
           id: `${supplierId}-contact`,
-          name: formState.contactPerson.trim() || "Primary Contact",
+          name: formState.supplierName.trim() || "Primary Contact",
           role: "Primary Contact",
           phone: formState.phone.trim(),
           email: formState.email.trim(),
           notes: "",
         },
       ],
-      documents: formState.attachmentName.trim()
-        ? [
-            {
-              id: `${supplierId}-doc`,
-              fileName: formState.attachmentName.trim(),
-              type: "Attachment",
-              uploadedDate: TODAY,
-              uploadedBy: "Admin",
-            },
-          ]
-        : [],
+      documents: [],
       history: [
         {
           id: `${supplierId}-history-create`,
@@ -871,34 +1222,70 @@ export default function Suppliers() {
 
     setSuppliers((current) => {
       const exists = current.some((supplier) => supplier.id === supplierId);
+
       if (exists) {
-        return current.map((supplier) => (supplier.id === supplierId ? nextSupplier : supplier));
+        return current.map((supplier) =>
+          supplier.id === supplierId ? nextSupplier : supplier
+        );
       }
+
       return [nextSupplier, ...current];
     });
 
     setProfiles((current) => {
       const exists = current.some((item) => item.supplierId === supplierId);
+
       if (exists) {
-        return current.map((item) => (item.supplierId === supplierId ? { ...item, ...profile } : item));
+        return current.map((item) =>
+          item.supplierId === supplierId ? { ...item, ...profile } : item
+        );
       }
+
       return [profile, ...current];
     });
 
     setFormOpen(false);
-    setToast(saveAsDraft ? "Supplier saved as draft" : editingSupplierId ? "Supplier updated" : "Supplier added");
+    setToast(
+      saveAsDraft
+        ? "Supplier saved as draft"
+        : editingSupplierId
+          ? "Supplier updated"
+          : "Supplier added"
+    );
   }
 
   function deleteSupplierItem(supplierId: string) {
     setSuppliers((current) => current.filter((supplier) => supplier.id !== supplierId));
-    setProfiles((current) => current.filter((profile) => profile.supplierId !== supplierId));
+    setProfiles((current) =>
+      current.filter((profile) => profile.supplierId !== supplierId)
+    );
     setMenuState(null);
+    setConfirmAction(null);
     setToast("Supplier deleted");
+  }
+
+  function confirmSupplierAction() {
+    if (!confirmAction) return;
+
+    const supplier = supplierViews.find(
+      (item) => item.supplierId === confirmAction.supplierId
+    );
+
+    if (confirmAction.type === "delete") {
+      deleteSupplierItem(confirmAction.supplierId);
+      return;
+    }
+
+    setConfirmAction(null);
+    setMenuState(null);
+    setToast(`${supplier?.supplierName || "Supplier"} archived`);
   }
 
   function toggleQuickFilter(value: string) {
     setQuickFilters((current) =>
-      current.includes(value) ? current.filter((item) => item !== value) : [...current, value]
+      current.includes(value)
+        ? current.filter((item) => item !== value)
+        : [...current, value]
     );
   }
 
@@ -907,6 +1294,7 @@ export default function Suppliers() {
       setSortDirection((current) => (current === "asc" ? "desc" : "asc"));
       return;
     }
+
     setSortField(field);
     setSortDirection("asc");
   }
@@ -921,52 +1309,57 @@ export default function Suppliers() {
               Suppliers
             </div>
             <h1>Suppliers</h1>
-            <p>Manage supplier profiles, purchase history, payment terms, and vendor performance</p>
+            <p>
+              Manage supplier profiles, purchase history, payment terms, and vendor
+              performance
+            </p>
           </div>
 
           <div className="suppliers-header-actions">
-            <button className="suppliers-primary-btn" type="button" onClick={openAddModal}>
-              <Plus size={16} />
+            <Button variant="primary" size="md" type="button" onClick={openAddModal} leftIcon={<Plus size={16} />}>
               Add Supplier
-            </button>
-            <button className="suppliers-secondary-btn" type="button" onClick={() => setToast("Import flow is ready")}>
-              <Download size={16} />
-              Import
-            </button>
-            <button className="suppliers-secondary-btn" type="button" onClick={() => setToast("Export prepared")}>
-              <Download size={16} />
-              Export
-            </button>
+            </Button>
           </div>
         </section>
 
         <section className="suppliers-kpi-grid">
           <article className="suppliers-kpi-card">
-            <div className="kpi-icon blue"><Building2 size={18} /></div>
+            <div className="kpi-icon blue">
+              <Building2 size={18} />
+            </div>
             <div>
               <span>Total Suppliers</span>
               <strong>{summary.totalSuppliers}</strong>
               <small>This month</small>
             </div>
           </article>
+
           <article className="suppliers-kpi-card">
-            <div className="kpi-icon green"><BadgeCheck size={18} /></div>
+            <div className="kpi-icon green">
+              <BadgeCheck size={18} />
+            </div>
             <div>
               <span>Active Suppliers</span>
               <strong>{summary.activeSuppliers}</strong>
               <small>Updated today</small>
             </div>
           </article>
+
           <article className="suppliers-kpi-card">
-            <div className="kpi-icon amber"><Wallet size={18} /></div>
+            <div className="kpi-icon amber">
+              <Wallet size={18} />
+            </div>
             <div>
               <span>Outstanding Payables</span>
               <strong>{money(summary.outstandingPayables)}</strong>
               <small>Across all vendors</small>
             </div>
           </article>
+
           <article className="suppliers-kpi-card">
-            <div className="kpi-icon slate"><Star size={18} /></div>
+            <div className="kpi-icon slate">
+              <Star size={18} />
+            </div>
             <div>
               <span>Top Rated Suppliers</span>
               <strong>{summary.topRatedSuppliers}</strong>
@@ -979,174 +1372,131 @@ export default function Suppliers() {
           <section className="suppliers-main-column">
             <div className={`suppliers-filter-card ${moreFiltersOpen ? "filters-open" : ""}`}>
               <div className="supplier-toolbar">
-                <label className="supplier-search-field">
-                  <Search size={18} />
-                  <input
-                    value={searchTerm}
-                    onChange={(event) => setSearchTerm(event.target.value)}
-                    placeholder="Search by supplier name, code, phone, email, product, or note"
-                  />
-                </label>
+                <Input
+                  variant="search"
+                  size="md"
+                  leftIcon={<Search size={18} />}
+                  className="supplier-search-field"
+                  value={searchTerm}
+                  onChange={(event) => setSearchTerm(event.target.value)}
+                  placeholder="Search by supplier name, code, phone, email, product, or note"
+                />
 
                 <div className="supplier-toolbar-actions">
-                  <button
+                  <Button
+                    variant="secondary"
+                    size="sm"
                     className={`supplier-toolbar-btn ${moreFiltersOpen ? "active" : ""}`}
                     type="button"
                     onClick={() => setMoreFiltersOpen((current) => !current)}
                     aria-expanded={moreFiltersOpen}
+                    leftIcon={<Filter size={15} />}
+                    rightIcon={<ChevronDown size={15} />}
                   >
-                    <Filter size={15} />
                     Filters
-                  </button>
-                  <button
-                    className={`supplier-toolbar-btn subtle ${moreFiltersOpen ? "active" : ""}`}
-                    type="button"
-                    onClick={() => setMoreFiltersOpen((current) => !current)}
-                    aria-expanded={moreFiltersOpen}
-                  >
-                    More Filters
-                    {activeFilterEntries.filter((entry) =>
-                      ["country", "city", "taxRegistered", "outstandingBalance", "lastPurchaseDate", "createdDate"].includes(entry.key)
-                    ).length > 0 && (
-                      <span className="toolbar-count">
-                        {
-                          activeFilterEntries.filter((entry) =>
-                            ["country", "city", "taxRegistered", "outstandingBalance", "lastPurchaseDate", "createdDate"].includes(entry.key)
-                          ).length
-                        }
-                      </span>
-                    )}
-                    <ChevronDown size={15} />
-                  </button>
+                  </Button>
                 </div>
-              </div>
-
-              <div className="supplier-primary-filters">
-                <label className="supplier-field">
-                  <span>Status</span>
-                  <select className="app-select-control" value={filters.status} onChange={(e) => setFilters((c) => ({ ...c, status: e.target.value }))}>
-                    <option value="">All</option>
-                    <option value="Active">Active</option>
-                    <option value="Inactive">Inactive</option>
-                    <option value="Preferred">Preferred</option>
-                    <option value="Blocked">Blocked</option>
-                  </select>
-                </label>
-                <label className="supplier-field">
-                  <span>Payment Terms</span>
-                  <select className="app-select-control" value={filters.paymentTerms} onChange={(e) => setFilters((c) => ({ ...c, paymentTerms: e.target.value }))}>
-                    <option value="">All</option>
-                    <option value="Net 7">Net 7</option>
-                    <option value="Net 15">Net 15</option>
-                    <option value="Net 30">Net 30</option>
-                    <option value="Due on Receipt">Due on Receipt</option>
-                  </select>
-                </label>
-                <label className="supplier-field">
-                  <span>Currency</span>
-                  <select className="app-select-control" value={filters.currency} onChange={(e) => setFilters((c) => ({ ...c, currency: e.target.value }))}>
-                    <option value="">All</option>
-                    <option value="USD">USD</option>
-                    <option value="EUR">EUR</option>
-                    <option value="ILS">ILS</option>
-                  </select>
-                </label>
-                <label className="supplier-field">
-                  <span>Category</span>
-                  <select className="app-select-control" value={filters.category} onChange={(e) => setFilters((c) => ({ ...c, category: e.target.value }))}>
-                    <option value="">All</option>
-                    <option value="Electronics">Electronics</option>
-                    <option value="Packaging">Packaging</option>
-                    <option value="Raw Materials">Raw Materials</option>
-                    <option value="Services">Services</option>
-                    <option value="Logistics">Logistics</option>
-                  </select>
-                </label>
-                <label className="supplier-field">
-                  <span>Rating</span>
-                  <select className="app-select-control" value={filters.rating} onChange={(e) => setFilters((c) => ({ ...c, rating: e.target.value }))}>
-                    <option value="">All</option>
-                    <option value="4plus">4+ / 5</option>
-                    <option value="3orless">3 or less</option>
-                  </select>
-                </label>
-                {(activeFilterEntries.length > 0 || quickFilters.length > 0 || searchTerm) && (
-                  <button className="supplier-clear-btn" type="button" onClick={clearFilters}>
-                    Clear
-                  </button>
-                )}
               </div>
 
               {moreFiltersOpen && (
-                <div className="supplier-primary-filters secondary">
-                  <label className="supplier-field">
-                    <span>Country</span>
-                    <select className="app-select-control" value={filters.country} onChange={(e) => setFilters((c) => ({ ...c, country: e.target.value }))}>
-                      <option value="">All</option>
-                      <option value="Palestine">Palestine</option>
-                      <option value="Jordan">Jordan</option>
-                      <option value="UAE">UAE</option>
-                      <option value="Saudi Arabia">Saudi Arabia</option>
-                    </select>
-                  </label>
-                  <label className="supplier-field">
-                    <span>City</span>
-                    <select className="app-select-control" value={filters.city} onChange={(e) => setFilters((c) => ({ ...c, city: e.target.value }))}>
-                      <option value="">All</option>
-                      <option value="Ramallah">Ramallah</option>
-                      <option value="Nablus">Nablus</option>
-                      <option value="Hebron">Hebron</option>
-                      <option value="Jerusalem">Jerusalem</option>
-                      <option value="Amman">Amman</option>
-                    </select>
-                  </label>
-                  <label className="supplier-field">
-                    <span>Tax Registered</span>
-                    <select className="app-select-control" value={filters.taxRegistered} onChange={(e) => setFilters((c) => ({ ...c, taxRegistered: e.target.value }))}>
-                      <option value="">All</option>
-                      <option value="yes">Yes</option>
-                      <option value="no">No</option>
-                    </select>
-                  </label>
-                  <label className="supplier-field">
-                    <span>Outstanding Balance</span>
-                    <select className="app-select-control" value={filters.outstandingBalance} onChange={(e) => setFilters((c) => ({ ...c, outstandingBalance: e.target.value }))}>
-                      <option value="">All</option>
-                      <option value="open">Outstanding only</option>
-                      <option value="high">High balance</option>
-                    </select>
-                  </label>
-                  <label className="supplier-field">
-                    <span>Last Purchase Date</span>
-                    <select className="app-select-control" value={filters.lastPurchaseDate} onChange={(e) => setFilters((c) => ({ ...c, lastPurchaseDate: e.target.value }))}>
-                      <option value="">All</option>
-                      <option value="30d">Last 30 days</option>
-                      <option value="90d">Last 90 days</option>
-                    </select>
-                  </label>
-                  <label className="supplier-field">
-                    <span>Created Date</span>
-                    <select className="app-select-control" value={filters.createdDate} onChange={(e) => setFilters((c) => ({ ...c, createdDate: e.target.value }))}>
-                      <option value="">All</option>
-                      <option value="30d">Last 30 days</option>
-                      <option value="90d">Last 90 days</option>
-                    </select>
-                  </label>
+                <div className="supplier-filter-popover">
+                  <div className="supplier-filter-popover-head">
+                    <div>
+                      <strong>Filters</strong>
+                      <span>Keep the list focused with essential supplier fields.</span>
+                    </div>
+                    <Button
+                      variant="icon"
+                      size="sm"
+                      type="button"
+                      onClick={() => setMoreFiltersOpen(false)}
+                      aria-label="Close filters"
+                    >
+                      <X size={16} />
+                    </Button>
+                  </div>
+
+                  <div className="supplier-filter-popover-grid">
+                    <div className="supplier-field">
+                      <span>Status</span>
+                      <Select
+                        size="md"
+                        fullWidth
+                        value={filters.status}
+                        onChange={(event) =>
+                          setFilters((current) => ({
+                            ...current,
+                            status: event.target.value,
+                          }))
+                        }
+                        options={[
+                          { value: "", label: "All statuses" },
+                          { value: "Active", label: "Active" },
+                          { value: "Inactive", label: "Inactive" },
+                          { value: "Preferred", label: "Preferred" },
+                          { value: "Blocked", label: "Blocked" },
+                        ]}
+                      />
+                    </div>
+
+                    <div className="supplier-field">
+                      <span>Category</span>
+                      <Select
+                        size="md"
+                        fullWidth
+                        value={filters.category}
+                        onChange={(event) =>
+                          setFilters((current) => ({
+                            ...current,
+                            category: event.target.value,
+                          }))
+                        }
+                        options={[
+                          { value: "", label: "All categories" },
+                          ...categoryOptions.map((category) => ({
+                            value: category,
+                            label: category,
+                          })),
+                        ]}
+                      />
+                    </div>
+
+                    <div className="supplier-field">
+                      <span>Balance</span>
+                      <Select
+                        size="md"
+                        fullWidth
+                        value={filters.outstandingBalance}
+                        onChange={(event) =>
+                          setFilters((current) => ({
+                            ...current,
+                            outstandingBalance: event.target.value,
+                          }))
+                        }
+                        options={[
+                          { value: "", label: "All balances" },
+                          { value: "open", label: "Outstanding only" },
+                          { value: "high", label: "High balance" },
+                        ]}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="supplier-filter-popover-footer">
+                    <Button variant="secondary" size="md" type="button" onClick={clearFilters}>
+                      Reset
+                    </Button>
+                    <Button
+                      variant="primary"
+                      size="md"
+                      type="button"
+                      onClick={() => setMoreFiltersOpen(false)}
+                    >
+                      Apply
+                    </Button>
+                  </div>
                 </div>
               )}
-
-              <div className="supplier-quick-filters">
-                {["Active", "Inactive", "Preferred", "Outstanding Balance", "New Suppliers"].map((chip) => (
-                  <button
-                    key={chip}
-                    type="button"
-                    className={`supplier-quick-chip ${quickFilters.includes(chip) ? "active" : ""}`}
-                    onClick={() => toggleQuickFilter(chip)}
-                  >
-                    {chip}
-                  </button>
-                ))}
-              </div>
 
               {(activeFilterEntries.length > 0 || quickFilters.length > 0) && (
                 <div className="active-filter-row">
@@ -1155,12 +1505,15 @@ export default function Suppliers() {
                       key={`${entry.key}-${entry.value}`}
                       type="button"
                       className="active-filter-chip"
-                      onClick={() => setFilters((current) => ({ ...current, [entry.key]: "" }))}
+                      onClick={() =>
+                        setFilters((current) => ({ ...current, [entry.key]: "" }))
+                      }
                     >
                       {entry.label}: {entry.value}
                       <X size={12} />
                     </button>
                   ))}
+
                   {quickFilters.map((filter) => (
                     <button
                       key={filter}
@@ -1177,17 +1530,6 @@ export default function Suppliers() {
             </div>
 
             <div className="suppliers-table-card">
-              {selectedIds.length > 0 && (
-                <div className="supplier-bulk-bar">
-                  <span>{selectedIds.length} selected</span>
-                  <div>
-                    <button type="button" onClick={() => setToast("Selected suppliers exported")}>Export selected</button>
-                    <button type="button" onClick={() => setToast("Selected suppliers archived")}>Archive selected</button>
-                    <button type="button" onClick={() => setToast("Selected suppliers marked as preferred")}>Mark as Preferred</button>
-                  </div>
-                </div>
-              )}
-
               {isLoading ? (
                 <div className="supplier-loading-state">
                   {Array.from({ length: 5 }).map((_, index) => (
@@ -1203,138 +1545,171 @@ export default function Suppliers() {
               ) : filteredSuppliers.length === 0 ? (
                 <div className="supplier-empty-state">
                   <Building2 size={28} />
-                  <h3>{searchTerm || activeFilterEntries.length > 0 || quickFilters.length > 0 ? "No results found" : "No suppliers yet"}</h3>
+                  <h3>
+                    {searchTerm || activeFilterEntries.length > 0 || quickFilters.length > 0
+                      ? "No results found"
+                      : "No suppliers yet"}
+                  </h3>
                   <p>
                     {searchTerm || activeFilterEntries.length > 0 || quickFilters.length > 0
                       ? "Try changing your filters or search."
                       : "Create your first supplier profile to start procurement workflows."}
                   </p>
+
                   {searchTerm || activeFilterEntries.length > 0 || quickFilters.length > 0 ? (
-                    <button className="suppliers-secondary-btn" type="button" onClick={clearFilters}>
+                    <Button
+                      variant="secondary"
+                      size="md"
+                      type="button"
+                      onClick={clearFilters}
+                    >
                       Clear Filters
-                    </button>
+                    </Button>
                   ) : (
-                    <button className="suppliers-primary-btn" type="button" onClick={openAddModal}>
-                      <Plus size={16} />
+                    <Button
+                      variant="primary"
+                      size="md"
+                      type="button"
+                      onClick={openAddModal}
+                      leftIcon={<Plus size={16} />}
+                    >
                       Add Supplier
-                    </button>
+                    </Button>
                   )}
                 </div>
               ) : (
                 <div className="suppliers-table-wrap app-table-wrap">
                   <table className="suppliers-table app-data-table">
+                    <colgroup>
+                      <col className="supplier-col" />
+                      <col className="phone-col" />
+                      <col className="location-col" />
+                      <col className="balance-col" />
+                      <col className="status-col" />
+                      <col className="actions-col" />
+                    </colgroup>
+
                     <thead>
                       <tr>
                         <th>
-                          <input
-                            type="checkbox"
-                            checked={pagedSuppliers.length > 0 && pagedSuppliers.every((supplier) => selectedIds.includes(supplier.supplierId))}
-                            onChange={(event) =>
-                              setSelectedIds(event.target.checked ? pagedSuppliers.map((supplier) => supplier.supplierId) : [])
-                            }
-                          />
+                          <button
+                            type="button"
+                            className="table-sort-btn"
+                            onClick={() => handleSort("supplierName")}
+                          >
+                            Supplier <ArrowUpDown size={13} />
+                          </button>
                         </th>
-                        <th><button type="button" className="table-sort-btn" onClick={() => handleSort("supplierName")}>Supplier <ArrowUpDown size={13} /></button></th>
-                        <th><button type="button" className="table-sort-btn" onClick={() => handleSort("contactPerson")}>Contact <ArrowUpDown size={13} /></button></th>
-                        <th><button type="button" className="table-sort-btn" onClick={() => handleSort("paymentTerms")}>Payment Terms <ArrowUpDown size={13} /></button></th>
-                        <th><button type="button" className="table-sort-btn" onClick={() => handleSort("outstandingBalance")}>Outstanding Balance <ArrowUpDown size={13} /></button></th>
-                        <th><button type="button" className="table-sort-btn" onClick={() => handleSort("rating")}>Rating <ArrowUpDown size={13} /></button></th>
-                        <th><button type="button" className="table-sort-btn" onClick={() => handleSort("status")}>Status <ArrowUpDown size={13} /></button></th>
+
+                        <th>Phone</th>
+
+                        <th>Location</th>
+
+                        <th>
+                          <button
+                            type="button"
+                            className="table-sort-btn"
+                            onClick={() => handleSort("outstandingBalance")}
+                          >
+                            Balance <ArrowUpDown size={13} />
+                          </button>
+                        </th>
+
+                        <th>
+                          <button
+                            type="button"
+                            className="table-sort-btn"
+                            onClick={() => handleSort("status")}
+                          >
+                            Status <ArrowUpDown size={13} />
+                          </button>
+                        </th>
+
                         <th>Actions</th>
                       </tr>
                     </thead>
+
                     <tbody>
-                      {pagedSuppliers.map((supplier) => (
-                        <tr key={supplier.supplierId} onClick={() => { setDetailSupplierId(supplier.supplierId); setDetailTab("overview"); }}>
+                      {visibleSuppliers.map((supplier) => (
+                        <tr
+                          key={supplier.supplierId}
+                          onClick={() => {
+                            setDetailSupplierId(supplier.supplierId);
+                            setDetailTab("overview");
+                          }}
+                        >
                           <td>
-                            <input
-                              type="checkbox"
-                              checked={selectedIds.includes(supplier.supplierId)}
-                              onClick={(event) => event.stopPropagation()}
-                              onChange={() =>
-                                setSelectedIds((current) =>
-                                  current.includes(supplier.supplierId)
-                                    ? current.filter((id) => id !== supplier.supplierId)
-                                    : [...current, supplier.supplierId]
-                                )
-                              }
-                            />
-                          </td>
-                          <td>
-                            <div className="supplier-main-cell app-cell-stack">
+                            <div className="supplier-table-cell supplier-main-cell">
                               <strong>{supplier.supplierName}</strong>
-                              <span>{supplier.code} · {supplier.companyType}</span>
+                              <span>
+                                {supplier.code} · {supplier.companyType}
+                              </span>
                               <small>{supplier.category}</small>
-                              <OverflowContent
-                                title={supplier.supplierName}
-                                subtitle={supplier.code}
-                                preview={supplier.notes[0]?.text || "No recent notes"}
-                                content={supplier.notes.map((item) => item.text).join("\n\n")}
-                                meta={[
-                                  { label: "Contact", value: supplier.contactPerson },
-                                  { label: "Last purchase", value: formatDate(supplier.lastPurchaseDate) },
-                                ]}
-                              />
                             </div>
                           </td>
+
                           <td>
-                            <div className="contact-stack app-cell-stack">
-                              <strong>{supplier.contactPerson}</strong>
-                              <span>{supplier.phone || "-"}</span>
-                              <small>{supplier.email || "-"}</small>
+                            <div className="supplier-table-cell phone-stack">
+                              <strong>{supplier.phone || "No phone"}</strong>
                             </div>
                           </td>
+
                           <td>
-                            <div className="status-stack app-cell-stack supplier-terms-cell">
-                              <strong>{supplier.paymentTerms}</strong>
-                              <small>{supplier.currency}</small>
+                            <div className="supplier-table-cell location-stack">
+                              <strong>{supplier.city || "No location"}</strong>
                             </div>
                           </td>
+
                           <td>
-                            <div className="balance-stack app-cell-stack">
-                              <strong className="balance-cell">{money(supplier.outstandingBalance)}</strong>
-                              <small>Last purchase {formatDate(supplier.lastPurchaseDate)}</small>
+                            <div className="supplier-table-cell balance-stack">
+                              <strong className="balance-cell">
+                                {money(supplier.outstandingBalance)}
+                              </strong>
                             </div>
                           </td>
+
                           <td>
-                            <div className="rating-cell">
-                              <Star size={14} />
-                              <span>{supplier.rating.toFixed(1)} / 5</span>
-                            </div>
-                          </td>
-                          <td>
-                            <div className="status-stack">
-                              <span className={`supplier-status-badge ${statusTone(supplier.status)}`}>{supplier.status}</span>
-                              <div className="meta-badges">
-                                {supplier.verified && <span className="meta-badge">Verified</span>}
-                                {supplier.taxRegistered && <span className="meta-badge">Tax Registered</span>}
-                              </div>
-                            </div>
-                          </td>
-                          <td>
-                            <div className="row-actions">
-                              <button
-                                type="button"
-                                className="row-view-btn"
-                                onClick={(event) => {
-                                  event.stopPropagation();
-                                  setDetailSupplierId(supplier.supplierId);
-                                  setDetailTab("overview");
-                                }}
+                            <div className="supplier-table-cell status-stack">
+                              <Badge
+                                variant={
+                                  (
+                                    {
+                                      positive: "success",
+                                      info: "info",
+                                      danger: "danger",
+                                      neutral: "neutral",
+                                    } as const
+                                  )[statusTone(supplier.status)] as BadgeVariant
+                                }
+                                size="sm"
+                                className={`supplier-status-badge ${statusTone(
+                                  supplier.status
+                                )}`}
                               >
-                                <Eye size={15} />
-                                Open
-                              </button>
-                              <button
+                                {supplier.status}
+                              </Badge>
+
+                            </div>
+                          </td>
+
+                          <td className="supplier-actions-cell">
+                            <div className="supplier-actions-menu-wrap">
+                              <Button
+                                variant="ghost"
+                                size="sm"
                                 type="button"
-                                className="row-menu-btn"
+                                className={`supplier-sticker-action ${
+                                  menuState?.id === supplier.supplierId ? "active" : ""
+                                }`}
                                 onClick={(event) => {
                                   event.stopPropagation();
                                   openMenu(supplier.supplierId, event.currentTarget);
                                 }}
+                                aria-label="Open supplier actions"
+                                title="Actions"
                               >
-                                <MoreHorizontal size={15} />
-                              </button>
+                                <MoreHorizontal size={17} />
+                              </Button>
                             </div>
                           </td>
                         </tr>
@@ -1344,17 +1719,9 @@ export default function Suppliers() {
                 </div>
               )}
 
-              <TableFooter
-                className="suppliers-table-footer"
-                total={filteredSuppliers.length}
-                page={safePage}
-                rowsPerPage={rowsPerPage}
-                onRowsPerPageChange={(value) => {
-                  setRowsPerPage(value);
-                  setPage(1);
-                }}
-                onPageChange={setPage}
-              />
+              <div className="simple-suppliers-footer">
+                <span>Showing all {filteredSuppliers.length} suppliers</span>
+              </div>
             </div>
           </section>
 
@@ -1364,11 +1731,24 @@ export default function Suppliers() {
                 <h3>Supplier Summary</h3>
                 <span>This month</span>
               </div>
+
               <div className="side-stat-list">
-                <div><span>Total suppliers</span><strong>{summary.totalSuppliers}</strong></div>
-                <div><span>Preferred</span><strong>{summary.preferred}</strong></div>
-                <div><span>Blocked</span><strong>{summary.blocked}</strong></div>
-                <div><span>Outstanding payables</span><strong>{money(summary.outstandingPayables)}</strong></div>
+                <div>
+                  <span>Total suppliers</span>
+                  <strong>{summary.totalSuppliers}</strong>
+                </div>
+                <div>
+                  <span>Preferred</span>
+                  <strong>{summary.preferred}</strong>
+                </div>
+                <div>
+                  <span>Blocked</span>
+                  <strong>{summary.blocked}</strong>
+                </div>
+                <div>
+                  <span>Outstanding payables</span>
+                  <strong>{money(summary.outstandingPayables)}</strong>
+                </div>
               </div>
             </section>
 
@@ -1377,6 +1757,7 @@ export default function Suppliers() {
                 <h3>Top Suppliers</h3>
                 <span>By purchase value</span>
               </div>
+
               <div className="top-suppliers-list">
                 {topSuppliers.map((supplier) => (
                   <div key={supplier.supplierId} className="top-supplier-item">
@@ -1391,42 +1772,88 @@ export default function Suppliers() {
                 ))}
               </div>
             </section>
-
           </aside>
         </div>
       </div>
 
-      {menuState && menuSupplier && createPortal(
-        <div ref={menuRef} className="supplier-action-menu" style={{ top: menuState.top, left: menuState.left }}>
-          <button type="button" onClick={() => { setDetailSupplierId(menuSupplier.supplierId); setDetailTab("overview"); setMenuState(null); }}>
-            <Eye size={15} />
-            Open
-          </button>
-          <button type="button" onClick={() => openEditModal(menuSupplier.supplierId)}>
-            <FileText size={15} />
-            Edit
-          </button>
-          <button type="button" onClick={() => setToast(`Ready to add purchase for ${menuSupplier.supplierName}`)}>
-            <Plus size={15} />
-            Add Purchase
-          </button>
-          <button type="button" onClick={() => { setDetailSupplierId(menuSupplier.supplierId); setDetailTab("purchases"); setMenuState(null); }}>
-            <ArrowUpDown size={15} />
-            View Purchases
-          </button>
-          <button type="button" onClick={() => { setToast("Supplier archived"); setMenuState(null); }}>
-            <Archive size={15} />
-            Archive
-          </button>
-          <button type="button" className="danger" onClick={() => deleteSupplierItem(menuSupplier.supplierId)}>
-            <X size={15} />
-            Delete
-          </button>
-        </div>,
-        document.body
-      )}
+      {menuState &&
+        menuSupplier &&
+        createPortal(
+          <div
+            ref={menuRef}
+            className="supplier-action-menu"
+            style={{ top: menuState.top, left: menuState.left }}
+          >
+            <div className="supplier-action-menu-head">
+              <strong>Supplier Actions</strong>
+              <span>{menuSupplier.supplierName}</span>
+            </div>
 
-      {detailSupplier && (
+            <Button
+              variant="ghost"
+              size="sm"
+              type="button"
+              className="view"
+              leftIcon={<Eye size={15} />}
+              onClick={() => {
+                setDetailSupplierId(menuSupplier.supplierId);
+                setDetailTab("overview");
+                setMenuState(null);
+              }}
+            >
+              View Supplier
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              type="button"
+              className="edit"
+              leftIcon={<FileText size={15} />}
+              onClick={() => openEditModal(menuSupplier.supplierId)}
+            >
+              Edit Supplier
+            </Button>
+
+            <Button
+              variant="secondary"
+              size="sm"
+              type="button"
+              className="archive"
+              leftIcon={<Archive size={15} />}
+              onClick={() => {
+                setConfirmAction({
+                  type: "archive",
+                  supplierId: menuSupplier.supplierId,
+                });
+                setMenuState(null);
+              }}
+            >
+              Archive Supplier
+            </Button>
+
+            <Button
+              variant="danger"
+              size="sm"
+              type="button"
+              className="danger"
+              leftIcon={<X size={15} />}
+              onClick={() => {
+                setConfirmAction({
+                  type: "delete",
+                  supplierId: menuSupplier.supplierId,
+                });
+                setMenuState(null);
+              }}
+            >
+              Delete Supplier
+            </Button>
+          </div>,
+          document.body
+        )}
+
+      {detailSupplier &&
+        createPortal(
         <div className="supplier-overlay" onClick={() => setDetailSupplierId(null)}>
           <aside className="supplier-drawer" onClick={(event) => event.stopPropagation()}>
             <div className="supplier-drawer-head">
@@ -1435,14 +1862,36 @@ export default function Suppliers() {
                 <h2>{detailSupplier.supplierName}</h2>
                 <p>{detailSupplier.companyType}</p>
               </div>
-              <button type="button" className="drawer-icon-btn" onClick={() => setDetailSupplierId(null)}>
+              <Button
+                variant="icon"
+                size="sm"
+                type="button"
+                onClick={() => setDetailSupplierId(null)}
+                aria-label="Close supplier details"
+              >
                 <X size={18} />
-              </button>
+              </Button>
             </div>
 
             <div className="supplier-drawer-tabs">
-              {(["overview", "purchases", "invoices", "payments", "contacts", "notes", "documents", "history"] as DetailTab[]).map((tab) => (
-                <button key={tab} type="button" className={detailTab === tab ? "active" : ""} onClick={() => setDetailTab(tab)}>
+              {(
+                [
+                  "overview",
+                  "purchases",
+                  "invoices",
+                  "payments",
+                  "contacts",
+                  "notes",
+                  "documents",
+                  "history",
+                ] as DetailTab[]
+              ).map((tab) => (
+                <button
+                  key={tab}
+                  type="button"
+                  className={detailTab === tab ? "active" : ""}
+                  onClick={() => setDetailTab(tab)}
+                >
                   {tab}
                 </button>
               ))}
@@ -1454,46 +1903,108 @@ export default function Suppliers() {
                   <section className="detail-card">
                     <h3>Basic Information</h3>
                     <dl>
-                      <div><dt>Supplier Name</dt><dd>{detailSupplier.supplierName}</dd></div>
-                      <div><dt>Supplier Code</dt><dd>{detailSupplier.code}</dd></div>
-                      <div><dt>Company Name</dt><dd>{detailSupplier.companyName}</dd></div>
-                      <div><dt>Category</dt><dd>{detailSupplier.category}</dd></div>
-                      <div><dt>Tax Number</dt><dd>{detailSupplier.taxNumber}</dd></div>
-                      <div><dt>Registration Number</dt><dd>{detailSupplier.registrationNumber}</dd></div>
-                      <div><dt>Status</dt><dd>{detailSupplier.status}</dd></div>
-                      <div><dt>Rating</dt><dd>{detailSupplier.rating.toFixed(1)} / 5</dd></div>
+                      <div>
+                        <dt>Supplier Name</dt>
+                        <dd>{detailSupplier.supplierName}</dd>
+                      </div>
+                      <div>
+                        <dt>Supplier Code</dt>
+                        <dd>{detailSupplier.code}</dd>
+                      </div>
+                      <div>
+                        <dt>Company Name</dt>
+                        <dd>{detailSupplier.companyName}</dd>
+                      </div>
+                      <div>
+                        <dt>Category</dt>
+                        <dd>{detailSupplier.category}</dd>
+                      </div>
+                      <div>
+                        <dt>Tax Number</dt>
+                        <dd>{detailSupplier.taxNumber}</dd>
+                      </div>
+                      <div>
+                        <dt>Registration Number</dt>
+                        <dd>{detailSupplier.registrationNumber}</dd>
+                      </div>
+                      <div>
+                        <dt>Status</dt>
+                        <dd>{detailSupplier.status}</dd>
+                      </div>
+                      <div>
+                        <dt>Rating</dt>
+                        <dd>{detailSupplier.rating.toFixed(1)} / 5</dd>
+                      </div>
                     </dl>
                   </section>
+
                   <section className="detail-card">
                     <h3>Contact Information</h3>
                     <dl>
-                      <div><dt>Contact Person</dt><dd>{detailSupplier.contactPerson}</dd></div>
-                      <div><dt>Phone</dt><dd>{detailSupplier.phone || "-"}</dd></div>
-                      <div><dt>Email</dt><dd>{detailSupplier.email || "-"}</dd></div>
-                      <div><dt>Website</dt><dd>{detailSupplier.website || "-"}</dd></div>
-                      <div><dt>Address</dt><dd>{detailSupplier.address || "-"}</dd></div>
-                      <div><dt>Country</dt><dd>{detailSupplier.country}</dd></div>
-                      <div><dt>City</dt><dd>{detailSupplier.city}</dd></div>
+                      <div>
+                        <dt>Phone</dt>
+                        <dd>{detailSupplier.phone || "-"}</dd>
+                      </div>
+                      <div>
+                        <dt>Email</dt>
+                        <dd>{detailSupplier.email || "-"}</dd>
+                      </div>
+                      <div>
+                        <dt>Location</dt>
+                        <dd>{detailSupplier.city || detailSupplier.country || "-"}</dd>
+                      </div>
                     </dl>
                   </section>
+
                   <section className="detail-card">
                     <h3>Financial Information</h3>
                     <dl>
-                      <div><dt>Payment Terms</dt><dd>{detailSupplier.paymentTerms}</dd></div>
-                      <div><dt>Preferred Currency</dt><dd>{detailSupplier.currency}</dd></div>
-                      <div><dt>Outstanding Balance</dt><dd>{money(detailSupplier.outstandingBalance)}</dd></div>
-                      <div><dt>Total Purchased</dt><dd>{money(detailSupplier.totalPurchased)}</dd></div>
-                      <div><dt>Last Payment</dt><dd>{formatDate(detailSupplier.lastPaymentDate)}</dd></div>
-                      <div><dt>Last Purchase</dt><dd>{formatDate(detailSupplier.lastPurchaseDate)}</dd></div>
+                      <div>
+                        <dt>Payment Terms</dt>
+                        <dd>{detailSupplier.paymentTerms}</dd>
+                      </div>
+                      <div>
+                        <dt>Preferred Currency</dt>
+                        <dd>{detailSupplier.currency}</dd>
+                      </div>
+                      <div>
+                        <dt>Outstanding Balance</dt>
+                        <dd>{money(detailSupplier.outstandingBalance)}</dd>
+                      </div>
+                      <div>
+                        <dt>Total Purchased</dt>
+                        <dd>{money(detailSupplier.totalPurchased)}</dd>
+                      </div>
+                      <div>
+                        <dt>Last Payment</dt>
+                        <dd>{formatDate(detailSupplier.lastPaymentDate)}</dd>
+                      </div>
+                      <div>
+                        <dt>Last Purchase</dt>
+                        <dd>{formatDate(detailSupplier.lastPurchaseDate)}</dd>
+                      </div>
                     </dl>
                   </section>
+
                   <section className="detail-card">
                     <h3>Performance Summary</h3>
                     <dl>
-                      <div><dt>On-time delivery rate</dt><dd>{detailSupplier.onTimeRate}%</dd></div>
-                      <div><dt>Quality score</dt><dd>{detailSupplier.qualityScore}%</dd></div>
-                      <div><dt>Return rate</dt><dd>{detailSupplier.returnRate}%</dd></div>
-                      <div><dt>Reliability level</dt><dd>{detailSupplier.reliabilityLevel}</dd></div>
+                      <div>
+                        <dt>On-time delivery rate</dt>
+                        <dd>{detailSupplier.onTimeRate}%</dd>
+                      </div>
+                      <div>
+                        <dt>Quality score</dt>
+                        <dd>{detailSupplier.qualityScore}%</dd>
+                      </div>
+                      <div>
+                        <dt>Return rate</dt>
+                        <dd>{detailSupplier.returnRate}%</dd>
+                      </div>
+                      <div>
+                        <dt>Reliability level</dt>
+                        <dd>{detailSupplier.reliabilityLevel}</dd>
+                      </div>
                     </dl>
                   </section>
                 </div>
@@ -1503,14 +2014,30 @@ export default function Suppliers() {
                 <div className="detail-table-card">
                   <div className="detail-card-head">
                     <h3>Purchases</h3>
-                    <button type="button" className="drawer-primary-btn">Add Purchase</button>
+                    <Button variant="primary" size="md" type="button" className="drawer-primary-btn">
+                      Add Purchase
+                    </Button>
                   </div>
                   <table className="detail-table">
-                    <thead><tr><th>PO Number</th><th>Date</th><th>Total</th><th>Received</th><th>Payment Status</th><th>Status</th></tr></thead>
+                    <thead>
+                      <tr>
+                        <th>PO Number</th>
+                        <th>Date</th>
+                        <th>Total</th>
+                        <th>Received</th>
+                        <th>Payment Status</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
                     <tbody>
                       {detailSupplier.purchases.map((item) => (
                         <tr key={item.id}>
-                          <td>{item.poNumber}</td><td>{formatDate(item.date)}</td><td>{money(item.total)}</td><td>{item.received}</td><td>{item.paymentStatus}</td><td>{item.status}</td>
+                          <td>{item.poNumber}</td>
+                          <td>{formatDate(item.date)}</td>
+                          <td>{money(item.total)}</td>
+                          <td>{item.received}</td>
+                          <td>{item.paymentStatus}</td>
+                          <td>{item.status}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -1522,11 +2049,25 @@ export default function Suppliers() {
                 <div className="detail-table-card">
                   <h3>Invoices</h3>
                   <table className="detail-table">
-                    <thead><tr><th>Invoice Number</th><th>Date</th><th>Due Date</th><th>Total</th><th>Remaining</th><th>Status</th></tr></thead>
+                    <thead>
+                      <tr>
+                        <th>Invoice Number</th>
+                        <th>Date</th>
+                        <th>Due Date</th>
+                        <th>Total</th>
+                        <th>Remaining</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
                     <tbody>
                       {detailSupplier.invoices.map((item) => (
                         <tr key={item.id}>
-                          <td>{item.invoiceNumber}</td><td>{formatDate(item.date)}</td><td>{formatDate(item.dueDate)}</td><td>{money(item.total)}</td><td>{money(item.remaining)}</td><td>{item.status}</td>
+                          <td>{item.invoiceNumber}</td>
+                          <td>{formatDate(item.date)}</td>
+                          <td>{formatDate(item.dueDate)}</td>
+                          <td>{money(item.total)}</td>
+                          <td>{money(item.remaining)}</td>
+                          <td>{item.status}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -1538,11 +2079,29 @@ export default function Suppliers() {
                 <div className="detail-table-card">
                   <h3>Payments</h3>
                   <table className="detail-table">
-                    <thead><tr><th>Payment Date</th><th>Amount</th><th>Method</th><th>Reference</th><th>Notes</th></tr></thead>
+                    <thead>
+                      <tr>
+                        <th>Payment Date</th>
+                        <th>Amount</th>
+                        <th>Method</th>
+                        <th>Reference</th>
+                        <th>Notes</th>
+                      </tr>
+                    </thead>
                     <tbody>
                       {detailSupplier.payments.map((item) => (
                         <tr key={item.id}>
-                          <td>{formatDate(item.paymentDate)}</td><td>{money(item.amount)}</td><td>{item.method}</td><td>{item.reference}</td><td><OverflowContent title={item.reference} preview={item.notes} content={item.notes} /></td>
+                          <td>{formatDate(item.paymentDate)}</td>
+                          <td>{money(item.amount)}</td>
+                          <td>{item.method}</td>
+                          <td>{item.reference}</td>
+                          <td>
+                            <OverflowContent
+                              title={item.reference}
+                              preview={item.notes}
+                              content={item.notes}
+                            />
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -1554,14 +2113,35 @@ export default function Suppliers() {
                 <div className="detail-table-card">
                   <div className="detail-card-head">
                     <h3>Contacts</h3>
-                    <button type="button" className="drawer-secondary-btn">Add Contact</button>
+                    <Button variant="secondary" size="md" type="button" className="drawer-secondary-btn">
+                      Add Contact
+                    </Button>
                   </div>
                   <table className="detail-table">
-                    <thead><tr><th>Name</th><th>Role</th><th>Phone</th><th>Email</th><th>Notes</th></tr></thead>
+                    <thead>
+                      <tr>
+                        <th>Name</th>
+                        <th>Role</th>
+                        <th>Phone</th>
+                        <th>Email</th>
+                        <th>Notes</th>
+                      </tr>
+                    </thead>
                     <tbody>
                       {detailSupplier.contacts.map((item) => (
                         <tr key={item.id}>
-                          <td>{item.name}</td><td>{item.role}</td><td>{item.phone}</td><td>{item.email}</td><td><OverflowContent title={item.name} subtitle={item.role} preview={item.notes} content={item.notes} /></td>
+                          <td>{item.name}</td>
+                          <td>{item.role}</td>
+                          <td>{item.phone}</td>
+                          <td>{item.email}</td>
+                          <td>
+                            <OverflowContent
+                              title={item.name}
+                              subtitle={item.role}
+                              preview={item.notes}
+                              content={item.notes}
+                            />
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -1587,11 +2167,23 @@ export default function Suppliers() {
                 <div className="detail-table-card">
                   <h3>Documents</h3>
                   <table className="detail-table">
-                    <thead><tr><th>File Name</th><th>Type</th><th>Uploaded Date</th><th>Uploaded By</th><th>Action</th></tr></thead>
+                    <thead>
+                      <tr>
+                        <th>File Name</th>
+                        <th>Type</th>
+                        <th>Uploaded Date</th>
+                        <th>Uploaded By</th>
+                        <th>Action</th>
+                      </tr>
+                    </thead>
                     <tbody>
                       {detailSupplier.documents.map((document) => (
                         <tr key={document.id}>
-                          <td>{document.fileName}</td><td>{document.type}</td><td>{formatDate(document.uploadedDate)}</td><td>{document.uploadedBy}</td><td>Download</td>
+                          <td>{document.fileName}</td>
+                          <td>{document.type}</td>
+                          <td>{formatDate(document.uploadedDate)}</td>
+                          <td>{document.uploadedBy}</td>
+                          <td>Download</td>
                         </tr>
                       ))}
                     </tbody>
@@ -1614,11 +2206,12 @@ export default function Suppliers() {
               )}
             </div>
           </aside>
-        </div>
+        </div>,
+        document.body
       )}
 
-      {formOpen && (
-        <div className="supplier-overlay" onClick={() => setFormOpen(false)}>
+      {formOpen && createPortal(
+        <div className="supplier-overlay" onClick={requestCloseForm}>
           <div className="supplier-modal" onClick={(event) => event.stopPropagation()}>
             <div className="supplier-drawer-head">
               <div>
@@ -1626,70 +2219,393 @@ export default function Suppliers() {
                 <h2>{formMode === "add" ? "New Supplier" : "Update Supplier"}</h2>
                 <p>Supplier profile, terms, contacts, and finance details</p>
               </div>
-              <button type="button" className="drawer-icon-btn" onClick={() => setFormOpen(false)}>
+              <Button
+                variant="icon"
+                size="sm"
+                type="button"
+                onClick={requestCloseForm}
+                aria-label="Close supplier form"
+              >
                 <X size={18} />
-              </button>
+              </Button>
             </div>
 
             <div className="supplier-form-body">
               <section className="supplier-form-section">
                 <h3>Basic Information</h3>
                 <div className="supplier-form-grid">
-                  <label className="supplier-field"><span>Supplier Name *</span><input placeholder="Enter supplier name" value={formState.supplierName} onChange={(e) => { const value = e.target.value; setFormState((c) => ({ ...c, supplierName: value })); setFormErrors((c) => ({ ...c, supplierName: undefined })); }} />{formErrors.supplierName && <small className="field-error-text">{formErrors.supplierName}</small>}</label>
-                  <label className="supplier-field"><span>Supplier Code {editingSupplierId ? "" : "*"}</span><input placeholder="Enter supplier code" value={formState.supplierCode} onChange={(e) => { const value = e.target.value; setFormState((c) => ({ ...c, supplierCode: value })); setFormErrors((c) => ({ ...c, supplierCode: undefined })); }} />{formErrors.supplierCode && <small className="field-error-text">{formErrors.supplierCode}</small>}</label>
-                  <label className="supplier-field"><span>Company Name</span><input placeholder="Enter company name" value={formState.companyName} onChange={(e) => setFormState((c) => ({ ...c, companyName: e.target.value }))} /></label>
-                  <label className="supplier-field"><span>Category</span><input placeholder="e.g. Electronics" value={formState.category} onChange={(e) => setFormState((c) => ({ ...c, category: e.target.value }))} /></label>
-                  <label className="supplier-field"><span>Status</span><select className="app-select-control" value={formState.status} onChange={(e) => setFormState((c) => ({ ...c, status: e.target.value as SupplierStatus }))}><option>Active</option><option>Inactive</option><option>Preferred</option><option>Blocked</option></select></label>
+                  <label className="supplier-field">
+                    <span>Supplier Name *</span>
+                    <input
+                      placeholder="Enter supplier name"
+                      value={formState.supplierName}
+                      onChange={(event) => {
+                        const value = event.target.value;
+                        setFormState((current) => ({
+                          ...current,
+                          supplierName: value,
+                        }));
+                        setFormErrors((current) => ({
+                          ...current,
+                          supplierName: undefined,
+                        }));
+                      }}
+                    />
+                    {formErrors.supplierName && (
+                      <small className="field-error-text">
+                        {formErrors.supplierName}
+                      </small>
+                    )}
+                  </label>
+
+                  <label className="supplier-field">
+                    <span>Supplier Code</span>
+                    <input
+                      placeholder="Auto-generated"
+                      value={formState.supplierCode}
+                      readOnly
+                    />
+                  </label>
+
+                  <label className="supplier-field">
+                    <span>Company Name Optional</span>
+                    <input
+                      placeholder="Optional company name"
+                      value={formState.companyName}
+                      onChange={(event) =>
+                        setFormState((current) => ({
+                          ...current,
+                          companyName: event.target.value,
+                          registrationNumber:
+                            !editingSupplierId && event.target.value.trim()
+                              ? current.registrationNumber || buildNextRegistrationNumber(profiles)
+                              : current.registrationNumber,
+                        }))
+                      }
+                    />
+                  </label>
+
+                  <label className="supplier-field">
+                    <span>Category</span>
+                    <select
+                      className="app-select-control"
+                      value={formState.category}
+                      onChange={(event) =>
+                        setFormState((current) => ({
+                          ...current,
+                          category: event.target.value,
+                        }))
+                      }
+                    >
+                      {categoryOptions.map((category) => (
+                        <option key={category} value={category}>
+                          {category}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="supplier-field">
+                    <span>Status</span>
+                    <select
+                      className="app-select-control"
+                      value={formState.status}
+                      onChange={(event) =>
+                        setFormState((current) => ({
+                          ...current,
+                          status: event.target.value as SupplierStatus,
+                        }))
+                      }
+                    >
+                      <option>Active</option>
+                      <option>Inactive</option>
+                      <option>Preferred</option>
+                      <option>Blocked</option>
+                    </select>
+                  </label>
                 </div>
               </section>
 
               <section className="supplier-form-section">
                 <h3>Contact Information</h3>
                 <div className="supplier-form-grid">
-                  <label className="supplier-field"><span>Contact Person</span><input placeholder="Primary contact name" value={formState.contactPerson} onChange={(e) => setFormState((c) => ({ ...c, contactPerson: e.target.value }))} /></label>
-                  <label className="supplier-field"><span>Phone</span><input placeholder="Supplier phone number" value={formState.phone} onChange={(e) => setFormState((c) => ({ ...c, phone: e.target.value }))} /></label>
-                  <label className="supplier-field"><span>Email</span><input placeholder="contact@supplier.com" value={formState.email} onChange={(e) => { const value = e.target.value; setFormState((c) => ({ ...c, email: value })); setFormErrors((c) => ({ ...c, email: undefined })); }} />{formErrors.email && <small className="field-error-text">{formErrors.email}</small>}</label>
-                  <label className="supplier-field"><span>Website</span><input placeholder="https://supplier.com" value={formState.website} onChange={(e) => setFormState((c) => ({ ...c, website: e.target.value }))} /></label>
+                  <label className="supplier-field">
+                    <span>Phone or Email *</span>
+                    <input
+                      placeholder="Supplier phone number"
+                      value={formState.phone}
+                      onChange={(event) => {
+                        const value = event.target.value;
+                        setFormState((current) => ({
+                          ...current,
+                          phone: value,
+                        }));
+                        setFormErrors((current) => ({
+                          ...current,
+                          phone: undefined,
+                        }));
+                      }}
+                    />
+                    {formErrors.phone && (
+                      <small className="field-error-text">{formErrors.phone}</small>
+                    )}
+                  </label>
+
+                  <label className="supplier-field">
+                    <span>Email Optional</span>
+                    <input
+                      placeholder="Optional email address"
+                      value={formState.email}
+                      onChange={(event) => {
+                        const value = event.target.value;
+                        setFormState((current) => ({
+                          ...current,
+                          email: value,
+                        }));
+                        setFormErrors((current) => ({
+                          ...current,
+                          email: undefined,
+                          phone: undefined,
+                        }));
+                      }}
+                    />
+                    {formErrors.email && (
+                      <small className="field-error-text">{formErrors.email}</small>
+                    )}
+                  </label>
+
                 </div>
               </section>
 
               <section className="supplier-form-section">
-                <h3>Address</h3>
+                <h3>Location</h3>
                 <div className="supplier-form-grid">
-                  <label className="supplier-field"><span>Country</span><input placeholder="Country" value={formState.country} onChange={(e) => setFormState((c) => ({ ...c, country: e.target.value }))} /></label>
-                  <label className="supplier-field"><span>City</span><input placeholder="City" value={formState.city} onChange={(e) => setFormState((c) => ({ ...c, city: e.target.value }))} /></label>
-                  <label className="supplier-field full"><span>Address</span><input placeholder="Business address" value={formState.address} onChange={(e) => setFormState((c) => ({ ...c, address: e.target.value }))} /></label>
+                  <label className="supplier-field full">
+                    <span>Location</span>
+                    <input
+                      list="supplier-location-options"
+                      placeholder="Search Palestinian city or village"
+                      value={formState.city}
+                      onChange={(event) =>
+                        setFormState((current) => ({
+                          ...current,
+                          country: "Palestine",
+                          city: event.target.value,
+                        }))
+                      }
+                    />
+                    <datalist id="supplier-location-options">
+                      {PALESTINIAN_LOCATIONS.map((location) => (
+                        <option key={location} value={formatLocationOption(location)} />
+                      ))}
+                    </datalist>
+                  </label>
                 </div>
               </section>
 
               <section className="supplier-form-section">
                 <h3>Financial Details</h3>
                 <div className="supplier-form-grid">
-                  <label className="supplier-field"><span>Payment Terms</span><select className="app-select-control" value={formState.paymentTerms} onChange={(e) => setFormState((c) => ({ ...c, paymentTerms: e.target.value }))}><option>Net 7</option><option>Net 15</option><option>Net 30</option><option>Due on Receipt</option></select></label>
-                  <label className="supplier-field"><span>Currency</span><select className="app-select-control" value={formState.currency} onChange={(e) => setFormState((c) => ({ ...c, currency: e.target.value }))}><option>USD</option><option>EUR</option><option>ILS</option></select></label>
-                  <label className="supplier-field"><span>Tax Number</span><input placeholder="Tax registration number" value={formState.taxNumber} onChange={(e) => setFormState((c) => ({ ...c, taxNumber: e.target.value }))} /></label>
-                  <label className="supplier-field"><span>Registration Number</span><input placeholder="Company registration number" value={formState.registrationNumber} onChange={(e) => setFormState((c) => ({ ...c, registrationNumber: e.target.value }))} /></label>
+                  <label className="supplier-field">
+                    <span>Payment Terms</span>
+                    <input
+                      list="supplier-payment-term-options"
+                      placeholder="Cash, partial payment, cheque, or custom terms"
+                      value={formState.paymentTerms}
+                      onChange={(event) =>
+                        setFormState((current) => ({
+                          ...current,
+                          paymentTerms: event.target.value,
+                        }))
+                      }
+                    />
+                    <datalist id="supplier-payment-term-options">
+                      {PAYMENT_TERM_PRESETS.map((term) => (
+                        <option key={term} value={term} />
+                      ))}
+                    </datalist>
+                  </label>
+
+                  <label className="supplier-field">
+                    <span>Currency</span>
+                    <select
+                      className="app-select-control"
+                      value={formState.currency}
+                      onChange={(event) =>
+                        setFormState((current) => ({
+                          ...current,
+                          currency: event.target.value,
+                        }))
+                      }
+                    >
+                      <option>USD</option>
+                      <option>EUR</option>
+                      <option>ILS</option>
+                    </select>
+                  </label>
+
+                  <label className="supplier-field">
+                    <span>Tax Number</span>
+                    <input
+                      placeholder="Tax registration number"
+                      value={formState.taxNumber}
+                      onChange={(event) =>
+                        setFormState((current) => ({
+                          ...current,
+                          taxNumber: event.target.value,
+                        }))
+                      }
+                    />
+                  </label>
+
+                  <label className="supplier-field">
+                    <span>Registration Number</span>
+                    <input
+                      placeholder="Auto-generated for company suppliers"
+                      value={
+                        formState.registrationNumber ||
+                        (!editingSupplierId && formState.companyName.trim()
+                          ? buildNextRegistrationNumber(profiles)
+                          : "")
+                      }
+                      readOnly
+                    />
+                  </label>
                 </div>
               </section>
 
               <section className="supplier-form-section">
-                <h3>Additional Information</h3>
+                <h3>Notes</h3>
                 <div className="supplier-form-grid">
-                  <label className="supplier-field full"><span>Notes</span><textarea placeholder="Optional internal notes" rows={4} value={formState.notes} onChange={(e) => setFormState((c) => ({ ...c, notes: e.target.value }))} /></label>
-                  <label className="supplier-field"><span>Tags</span><input placeholder="Preferred, Tax Registered" value={formState.tags} onChange={(e) => setFormState((c) => ({ ...c, tags: e.target.value }))} /></label>
-                  <label className="supplier-field"><span>Attachment</span><input placeholder="Contract.pdf" value={formState.attachmentName} onChange={(e) => setFormState((c) => ({ ...c, attachmentName: e.target.value }))} /></label>
+                  <label className="supplier-field full">
+                    <span>Notes</span>
+                    <textarea
+                      placeholder="Optional internal notes"
+                      rows={4}
+                      value={formState.notes}
+                      onChange={(event) =>
+                        setFormState((current) => ({
+                          ...current,
+                          notes: event.target.value,
+                        }))
+                      }
+                    />
+                  </label>
                 </div>
               </section>
             </div>
 
             <div className="supplier-form-footer">
-              <button className="suppliers-secondary-btn" type="button" onClick={() => setFormOpen(false)}>Cancel</button>
-              <button className="suppliers-secondary-btn" type="button" onClick={() => saveSupplierForm(true)}>Save as Draft</button>
-              <button className="suppliers-primary-btn" type="button" onClick={() => saveSupplierForm(false)}>Save Supplier</button>
+              <Button
+                variant="secondary"
+                size="md"
+                type="button"
+                onClick={requestCloseForm}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="secondary"
+                size="md"
+                type="button"
+                onClick={() => saveSupplierForm(true)}
+              >
+                Save as Draft
+              </Button>
+              <Button
+                variant="primary"
+                size="md"
+                type="button"
+                onClick={() => saveSupplierForm(false)}
+              >
+                Save Supplier
+              </Button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
+
+      {discardConfirmOpen &&
+        createPortal(
+          <div className="supplier-overlay supplier-confirm-overlay" onClick={() => setDiscardConfirmOpen(false)}>
+            <div className="supplier-confirm-modal" onClick={(event) => event.stopPropagation()}>
+              <div className="supplier-confirm-icon">
+                <AlertTriangle size={22} />
+              </div>
+              <div>
+                <span>Unsaved changes</span>
+                <h3>Discard supplier information?</h3>
+                <p>
+                  You have entered supplier details that have not been saved yet.
+                  Closing now will remove those changes.
+                </p>
+              </div>
+              <div className="supplier-confirm-actions">
+                <Button
+                  variant="secondary"
+                  size="md"
+                  type="button"
+                  onClick={() => setDiscardConfirmOpen(false)}
+                >
+                  Keep Editing
+                </Button>
+                <Button variant="danger" size="md" type="button" className="supplier-danger-btn" onClick={closeFormNow}>
+                  Discard Changes
+                </Button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
+
+      {confirmAction &&
+        createPortal(
+          <div className="supplier-overlay supplier-confirm-overlay" onClick={() => setConfirmAction(null)}>
+            <div className="supplier-confirm-modal" onClick={(event) => event.stopPropagation()}>
+              <div className="supplier-confirm-icon">
+                {confirmAction.type === "delete" ? <X size={22} /> : <Archive size={22} />}
+              </div>
+              <div>
+                <span>Supplier action</span>
+                <h3>
+                  {confirmAction.type === "delete"
+                    ? "Delete this supplier?"
+                    : "Archive this supplier?"}
+                </h3>
+                <p>
+                  {confirmAction.type === "delete"
+                    ? `This will remove ${confirmSupplier?.supplierName || "this supplier"} from the suppliers table.`
+                    : `${confirmSupplier?.supplierName || "This supplier"} will be marked as archived for your workflow.`}
+                </p>
+              </div>
+              <div className="supplier-confirm-actions">
+                <Button
+                  variant="secondary"
+                  size="md"
+                  type="button"
+                  onClick={() => setConfirmAction(null)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant={confirmAction.type === "delete" ? "danger" : "primary"}
+                  size="md"
+                  type="button"
+                  className={
+                    confirmAction.type === "delete"
+                      ? "supplier-danger-btn"
+                      : "suppliers-primary-btn"
+                  }
+                  onClick={confirmSupplierAction}
+                >
+                  {confirmAction.type === "delete" ? "Delete Supplier" : "Archive Supplier"}
+                </Button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
 
       {toast && (
         <div className="supplier-toast">

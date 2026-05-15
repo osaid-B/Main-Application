@@ -1,88 +1,52 @@
 import "./Invoices.css";
+import { Button } from "../components/ui/Button";
+import { Input } from "../components/ui/Input";
+import { Select } from "../components/ui/Select";
+import { Modal } from "../components/ui/Modal";
+import { Badge } from "../components/ui/Badge";
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { ChangeEvent } from "react";
+import type { ChangeEvent, FormEvent, ReactNode } from "react";
 import { createPortal } from "react-dom";
 import {
   BadgeDollarSign,
   Building2,
   Check,
   Clock3,
-  Copy,
-  Download,
   Eye,
   FileText,
   Filter,
-  MoreHorizontal,
   Pencil,
   Plus,
-  Printer,
-  Save,
   Search,
-  StickyNote,
   Trash2,
   Truck,
   Users,
   X,
 } from "lucide-react";
-import OverflowContent from "../components/ui/OverflowContent";
-import TableFooter from "../components/ui/TableFooter";
 import {
   getCustomers,
   getEmployees,
   getProducts,
-  getPurchases,
   getSuppliers,
 } from "../data/storage";
-import type { Customer, Employee, Product, Purchase, Supplier } from "../data/types";
+import type { Customer, Employee, Product, Supplier } from "../data/types";
 
-type TabKey = "customer" | "internal" | "supplier";
-type InvoiceStatus =
-  | "Paid"
-  | "Partial"
-  | "Unpaid";
-type PaymentMethod =
-  | "Bank Transfer"
-  | "Cash"
-  | "Card"
-  | "Wire"
-  | "Credit"
-  | "Internal Transfer";
+type TabKey = "customer" | "supplier" | "internal";
+type InvoiceStatus = "Paid" | "Partial" | "Unpaid";
+type PaymentMethod = "Cash" | "Card" | "Bank Transfer";
 type Priority = "Low" | "Medium" | "High" | "Critical";
-type Confidentiality = "Standard" | "Sensitive" | "Restricted";
-type DetailTab = "overview" | "items" | "payments" | "notes" | "attachments" | "history";
-
-type ActionMenuState = {
-  id: string;
-  top: number;
-  left: number;
-  placement: "down" | "up";
-};
-
-type NoteEntry = {
-  id: string;
-  author: string;
-  createdAt: string;
-  content: string;
-};
-
-type PaymentEntry = {
-  id: string;
-  date: string;
-  amount: number;
-  method: PaymentMethod;
-  status: "Paid" | "Partial" | "Pending";
-  reference: string;
-};
-
-type ActivityEntry = {
-  id: string;
-  actor: string;
-  action: string;
-  timestamp: string;
-};
+type DueFilter = "all" | "late" | "today" | "week";
+type SortKey =
+  | "newest"
+  | "oldest"
+  | "dueSoon"
+  | "amountHigh"
+  | "amountLow"
+  | "amountDueHigh";
 
 type InvoiceLine = {
   id: string;
+  productId: string;
   label: string;
   quantity: number;
   unitPrice: number;
@@ -92,311 +56,327 @@ type InvoiceLine = {
 type InvoiceRecord = {
   id: string;
   type: TabKey;
+  title: string;
+  partyName: string;
+  partySubtext: string;
   customerId?: string;
   supplierId?: string;
-  title: string;
-  status: InvoiceStatus;
   issueDate: string;
   dueDate: string;
   currency: string;
-  subtotal: number;
-  discount: number;
-  tax: number;
-  shipping: number;
+  status: InvoiceStatus;
+  paymentMethod: PaymentMethod;
   totalAmount: number;
   paidAmount: number;
   remainingAmount: number;
-  paymentMethod: PaymentMethod;
-  lastUpdated: string;
-  createdBy: string;
-  updatedBy: string;
-  attachments: string[];
-  notesPreview: string;
-  notesList: NoteEntry[];
   items: InvoiceLine[];
-  paymentHistory: PaymentEntry[];
-  activity: ActivityEntry[];
+  notes: string;
   linkedRecord: string;
-  description: string;
-  salesRepresentative?: string;
-  customerName?: string;
-  customerPhone?: string;
-  customerEmail?: string;
-  billingAddress?: string;
-  linkedOrderNumber?: string;
-  vendor?: string;
   department?: string;
   category?: string;
-  requester?: string;
-  approvedBy?: string;
-  relatedProject?: string;
-  costCenter?: string;
   priority?: Priority;
-  confidentiality?: Confidentiality;
-  internalNotes?: string;
-  supplierName?: string;
-  supplierCode?: string;
-  supplierCompanyName?: string;
-  supplierContactPerson?: string;
-  supplierPhone?: string;
-  supplierEmail?: string;
-  supplierAddress?: string;
-  taxNumber?: string;
-  purchaseOrderReference?: string;
-  deliveryNoteReference?: string;
-  paymentTerms?: string;
-  supplierRating?: number;
-  latestNote?: string;
+  approvedBy?: string;
+  createdAt: string;
+  updatedAt: string;
 };
 
 type InvoiceFormState = {
   id?: string;
   type: TabKey;
+  title: string;
+  partyName: string;
+  partySubtext: string;
   customerId: string;
   supplierId: string;
-  title: string;
   issueDate: string;
   dueDate: string;
   currency: string;
-  status: InvoiceStatus;
   paymentMethod: PaymentMethod;
-  itemsText: string;
+  productId: string;
   quantity: string;
   unitPrice: string;
-  discount: string;
-  tax: string;
-  shipping: string;
   paidAmount: string;
+  notes: string;
   linkedRecord: string;
-  description: string;
-  customerName: string;
-  customerPhone: string;
-  customerEmail: string;
-  billingAddress: string;
-  salesRepresentative: string;
-  linkedOrderNumber: string;
   department: string;
   category: string;
-  requester: string;
-  approvedBy: string;
-  relatedProject: string;
-  vendor: string;
-  costCenter: string;
   priority: Priority;
-  confidentiality: Confidentiality;
-  internalNotes: string;
-  supplierName: string;
-  supplierCode: string;
-  supplierCompanyName: string;
-  supplierContactPerson: string;
-  supplierPhone: string;
-  supplierEmail: string;
-  supplierAddress: string;
-  taxNumber: string;
-  purchaseOrderReference: string;
-  deliveryNoteReference: string;
-  paymentTerms: string;
-  supplierRating: string;
+  approvedBy: string;
 };
 
 type FilterState = {
   search: string;
-  status: string;
-  paymentMethod: string;
-  dateRange: string;
-  dueDate: string;
-  amountRange: string;
-  overdueOnly: boolean;
-  incompleteOnly: boolean;
-  customer: string;
-  salesRepresentative: string;
-  department: string;
-  category: string;
-  priority: string;
-  confidentiality: string;
-  approvalStatus: string;
-  paymentStatus: string;
-  costCenter: string;
-  relatedProject: string;
-  supplier: string;
-  supplierCode: string;
-  paymentTerms: string;
-  currency: string;
-  linkedPurchaseRecord: string;
-  supplierRating: string;
+  status: "all" | InvoiceStatus;
+  due: DueFilter;
+  paymentMethod: "all" | PaymentMethod;
+  minAmount: string;
+  maxAmount: string;
+  sortBy: SortKey;
 };
 
-type PendingSaveState = {
-  mode: "add" | "edit";
-  title: string;
-  message: string;
-} | null;
-
-type FilterKey = keyof FilterState;
-
-const STORAGE_KEY = "dashboard_advanced_invoice_management_v1";
-const DEFAULT_ITEMS_PER_PAGE = 5;
+const STORAGE_KEY = "dashboard_invoice_management_final_v10";
 const TODAY = new Date().toISOString().split("T")[0];
+
+const EMPTY_FILTERS: FilterState = {
+  search: "",
+  status: "all",
+  due: "all",
+  paymentMethod: "all",
+  minAmount: "",
+  maxAmount: "",
+  sortBy: "newest",
+};
+
+const EMPTY_FORM: InvoiceFormState = {
+  type: "customer",
+  title: "",
+  partyName: "",
+  partySubtext: "",
+  customerId: "",
+  supplierId: "",
+  issueDate: TODAY,
+  dueDate: TODAY,
+  currency: "ILS",
+  paymentMethod: "Bank Transfer",
+  productId: "",
+  quantity: "1",
+  unitPrice: "0",
+  paidAmount: "0",
+  notes: "",
+  linkedRecord: "",
+  department: "",
+  category: "",
+  priority: "Medium",
+  approvedBy: "",
+};
+
+const TAB_ORDER: TabKey[] = ["customer", "supplier", "internal"];
 
 const TAB_CONFIG: Record<
   TabKey,
   {
     label: string;
-    subtitle: string;
+    tableTitle: string;
     icon: typeof Users;
-    accent: string;
   }
 > = {
   customer: {
     label: "Customer Invoices",
-    subtitle: "Track receivables, follow up collections, and review customer notes.",
+    tableTitle: "Customer Invoices",
     icon: Users,
-    accent: "blue",
-  },
-  internal: {
-    label: "Internal Invoices",
-    subtitle: "Review internal costs, approvals, and company expense requests.",
-    icon: Building2,
-    accent: "slate",
   },
   supplier: {
     label: "Supplier Invoices",
-    subtitle: "Manage payables, supplier terms, and linked purchase records.",
+    tableTitle: "Supplier Invoices",
     icon: Truck,
-    accent: "amber",
+  },
+  internal: {
+    label: "Internal Invoices",
+    tableTitle: "Internal Invoices",
+    icon: Building2,
   },
 };
 
-const EMPTY_FILTERS: FilterState = {
-  search: "",
-  status: "",
-  paymentMethod: "",
-  dateRange: "",
-  dueDate: "",
-  amountRange: "",
-  overdueOnly: false,
-  incompleteOnly: false,
-  customer: "",
-  salesRepresentative: "",
-  department: "",
-  category: "",
-  priority: "",
-  confidentiality: "",
-  approvalStatus: "",
-  paymentStatus: "",
-  costCenter: "",
-  relatedProject: "",
-  supplier: "",
-  supplierCode: "",
-  paymentTerms: "",
-  currency: "",
-  linkedPurchaseRecord: "",
-  supplierRating: "",
-};
+function ModalPortal({ children }: { children: ReactNode }) {
+  if (typeof document === "undefined") return null;
+  return createPortal(children, document.body);
+}
 
-const EMPTY_FORM: InvoiceFormState = {
-  type: "customer",
-  customerId: "",
-  supplierId: "",
-  title: "",
-  issueDate: TODAY,
-  dueDate: TODAY,
-  currency: "USD",
-  status: "Unpaid",
-  paymentMethod: "Bank Transfer",
-  itemsText: "",
-  quantity: "1",
-  unitPrice: "0",
-  discount: "0",
-  tax: "0",
-  shipping: "0",
-  paidAmount: "0",
-  linkedRecord: "",
-  description: "",
-  customerName: "",
-  customerPhone: "",
-  customerEmail: "",
-  billingAddress: "",
-  salesRepresentative: "",
-  linkedOrderNumber: "",
-  department: "",
-  category: "",
-  requester: "",
-  approvedBy: "",
-  relatedProject: "",
-  vendor: "",
-  costCenter: "",
-  priority: "Medium",
-  confidentiality: "Standard",
-  internalNotes: "",
-  supplierName: "",
-  supplierCode: "",
-  supplierCompanyName: "",
-  supplierContactPerson: "",
-  supplierPhone: "",
-  supplierEmail: "",
-  supplierAddress: "",
-  taxNumber: "",
-  purchaseOrderReference: "",
-  deliveryNoteReference: "",
-  paymentTerms: "",
-  supplierRating: "4",
-};
-
-function money(value: number, currency = "USD") {
+function money(value: number, currency = "ILS") {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency,
     maximumFractionDigits: 2,
-  }).format(value || 0);
+  }).format(Number.isFinite(value) ? value : 0);
 }
 
-function normalizeNumber(value: string) {
+function normalizeNumber(value: string | number) {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-function titleForType(type: TabKey) {
-  if (type === "customer") return "Customer Invoice";
-  if (type === "internal") return "Internal Invoice";
-  return "Supplier Invoice";
+function normalizePaymentMethod(value: unknown): PaymentMethod {
+  if (value === "Cash" || value === "Card" || value === "Bank Transfer") {
+    return value;
+  }
+
+  return "Bank Transfer";
 }
 
-function statusFromAmounts(paid: number, total: number) {
-  if (paid >= total && total > 0) return "Paid";
-  if (paid > 0 && paid < total) return "Partial";
+function paymentLabel(method: PaymentMethod) {
+  if (method === "Cash") return "كاش";
+  if (method === "Card") return "بطاقة";
+  return "حوالة بنكية";
+}
+
+function formatDate(value: string) {
+  if (!value) return "-";
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) return value;
+
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}/${month}/${day}`;
+}
+
+function isLate(invoice: InvoiceRecord) {
+  return invoice.remainingAmount > 0 && invoice.status !== "Paid" && invoice.dueDate < TODAY;
+}
+
+function isDueToday(invoice: InvoiceRecord) {
+  return invoice.remainingAmount > 0 && invoice.status !== "Paid" && invoice.dueDate === TODAY;
+}
+
+function isDueThisWeek(invoice: InvoiceRecord) {
+  if (invoice.remainingAmount <= 0 || invoice.status === "Paid") return false;
+
+  const diffDays = Math.ceil(
+    (new Date(invoice.dueDate).getTime() - new Date(TODAY).getTime()) /
+      (1000 * 60 * 60 * 24)
+  );
+
+  return diffDays >= 0 && diffDays <= 7;
+}
+
+
+function statusFromAmounts(paidAmount: number, totalAmount: number): InvoiceStatus {
+  if (totalAmount > 0 && paidAmount >= totalAmount) return "Paid";
+  if (paidAmount > 0 && paidAmount < totalAmount) return "Partial";
   return "Unpaid";
 }
 
-function buildLines(itemsText: string, quantity: number, unitPrice: number) {
-  return itemsText
-    .split(",")
-    .map((item) => item.trim())
-    .filter(Boolean)
-    .map((label, index) => ({
-      id: `line-${index + 1}-${label.replace(/\s+/g, "-").toLowerCase()}`,
-      label,
-      quantity,
-      unitPrice,
-      total: quantity * unitPrice,
-    }));
+function buildInvoiceId(type: TabKey) {
+  const prefix =
+    type === "customer"
+      ? "CINV"
+      : type === "supplier"
+      ? "SINV"
+      : "IINV";
+
+  return `${prefix}-${Math.floor(Math.random() * 900000) + 100000}`;
 }
 
-function makeNote(author: string, content: string, id: string): NoteEntry {
+function buildLinkedRecord(type: TabKey, invoiceId: string) {
+  const prefix =
+    type === "customer" ? "AUTO-CUST" : type === "supplier" ? "AUTO-SUP" : "AUTO-INT";
+  const numericPart = invoiceId.match(/\d+/)?.[0] ?? String(Date.now()).slice(-6);
+
+  return `${prefix}-${numericPart}`;
+}
+
+function normalizeInvoiceRecord(invoice: InvoiceRecord): InvoiceRecord {
   return {
-    id,
-    author,
-    createdAt: new Date().toISOString(),
-    content,
+    ...invoice,
+    dueDate: invoice.dueDate || invoice.issueDate || TODAY,
+    issueDate: invoice.issueDate || invoice.dueDate || TODAY,
+    currency: invoice.currency || "ILS",
+    paymentMethod: normalizePaymentMethod(invoice.paymentMethod),
+    linkedRecord: invoice.linkedRecord || buildLinkedRecord(invoice.type, invoice.id),
   };
 }
 
-function makeActivity(actor: string, action: string, id: string): ActivityEntry {
+function getDefaultTitle(type: TabKey) {
+  if (type === "customer") return "Customer Invoice";
+  if (type === "supplier") return "Supplier Invoice";
+  return "Internal Invoice";
+}
+
+function getPartyLabel(type: TabKey) {
+  if (type === "customer") return "Customer";
+  if (type === "supplier") return "Supplier";
+  return "Department";
+}
+
+function getCustomerId(customer: Customer, index: number) {
+  const item = customer as Customer & Record<string, unknown>;
+  return String(item.id ?? item.customerId ?? `customer-${index}`);
+}
+
+function getCustomerName(customer: Customer) {
+  const item = customer as Customer & Record<string, unknown>;
+  return String(item.name ?? item.customerName ?? item.fullName ?? "Unnamed Customer");
+}
+
+function getCustomerEmail(customer: Customer) {
+  const item = customer as Customer & Record<string, unknown>;
+  return String(item.email ?? item.customerEmail ?? "");
+}
+
+function getCustomerPhone(customer: Customer) {
+  const item = customer as Customer & Record<string, unknown>;
+  return String(item.phone ?? item.customerPhone ?? item.mobile ?? "");
+}
+
+function getSupplierId(supplier: Supplier, index: number) {
+  const item = supplier as Supplier & Record<string, unknown>;
+  return String(item.id ?? item.supplierId ?? `supplier-${index}`);
+}
+
+function getSupplierName(supplier: Supplier) {
+  const item = supplier as Supplier & Record<string, unknown>;
+  return String(item.name ?? item.supplierName ?? item.companyName ?? "Unnamed Supplier");
+}
+
+function getSupplierEmail(supplier: Supplier) {
+  const item = supplier as Supplier & Record<string, unknown>;
+  return String(item.email ?? item.supplierEmail ?? "");
+}
+
+function getProductName(product: Product) {
+  const item = product as Product & Record<string, unknown>;
+
+  return String(
+    item.name ??
+      item.productName ??
+      item.title ??
+      item.label ??
+      "Unnamed Product"
+  );
+}
+
+function getProductPrice(product: Product) {
+  const item = product as Product & Record<string, unknown>;
+
+  const possiblePrice =
+    item.price ??
+    item.sellingPrice ??
+    item.salePrice ??
+    item.unitPrice ??
+    item.costPrice ??
+    item.totalCost ??
+    0;
+
+  return normalizeNumber(String(possiblePrice));
+}
+
+function getProductId(product: Product, index: number) {
+  const item = product as Product & Record<string, unknown>;
+  return String(item.id ?? item.productId ?? `product-${index}`);
+}
+
+function getProductById(products: Product[], productId: string) {
+  return products.find((product, index) => getProductId(product, index) === productId);
+}
+
+function buildLine(
+  product: Product | undefined,
+  productId: string,
+  quantity: number,
+  unitPrice: number
+): InvoiceLine {
+  const label = product ? getProductName(product) : "General item";
+
   return {
-    id,
-    actor,
-    action,
-    timestamp: new Date().toISOString(),
+    id: `line-${Date.now()}`,
+    productId,
+    label,
+    quantity,
+    unitPrice,
+    total: quantity * unitPrice,
   };
 }
 
@@ -406,2014 +386,1058 @@ function seedInvoices(
   products: Product[],
   employees: Employee[]
 ): InvoiceRecord[] {
+  const firstProduct = products[0];
+  const secondProduct = products[1] ?? products[0];
+  const thirdProduct = products[2] ?? products[0];
+
   const customerA = customers[0];
   const customerB = customers[1] ?? customers[0];
   const supplierA = suppliers[0];
   const supplierB = suppliers[1] ?? suppliers[0];
-  const seller = employees[0]?.name ?? "Sales Desk";
   const approver = employees[1]?.name ?? employees[0]?.name ?? "Finance Manager";
-  const requester = employees[2]?.name ?? "Operations Team";
 
-  const customerItemsA = buildLines(
-    `${products[0]?.name ?? "Premium Package"}, ${products[1]?.name ?? "Support Plan"}`,
-    2,
-    180
-  );
-  const customerItemsB = buildLines(
-    `${products[2]?.name ?? "Consulting Session"}, ${products[3]?.name ?? "Hardware Upgrade"}`,
-    1,
-    240
-  );
-  const internalItems = buildLines("Cloud Subscription, Office Maintenance", 1, 420);
-  const supplierItemsA = buildLines(
-    `${products[0]?.name ?? "Inventory Batch"}, Packaging Materials`,
-    4,
-    95
-  );
-  const supplierItemsB = buildLines("Shipping Services, Spare Parts", 3, 130);
+  const firstPrice = firstProduct ? getProductPrice(firstProduct) || 743 : 743;
+  const secondPrice = secondProduct ? getProductPrice(secondProduct) || 543 : 543;
+  const thirdPrice = thirdProduct ? getProductPrice(thirdProduct) || 807 : 807;
 
   return [
     {
       id: "CINV-2401",
       type: "customer",
-      customerId: customerA?.id,
-      title: "Enterprise onboarding package",
-      status: "Partial",
+      title: "Customer Invoice",
+      partyName: customerA ? getCustomerName(customerA) : "Osid Barakat",
+      partySubtext: customerA ? getCustomerEmail(customerA) : "customer@email.com",
+      customerId: customerA ? getCustomerId(customerA, 0) : "",
       issueDate: "2026-04-08",
-      dueDate: "2026-04-24",
-      currency: "USD",
-      subtotal: 720,
-      discount: 35,
-      tax: 58,
-      shipping: 0,
-      totalAmount: 743,
-      paidAmount: 420,
-      remainingAmount: 323,
+      dueDate: "2026-04-08",
+      currency: "ILS",
+      status: "Partial",
       paymentMethod: "Bank Transfer",
-      lastUpdated: "2026-04-21T09:40:00.000Z",
-      createdBy: seller,
-      updatedBy: "Finance Team",
-      attachments: ["contract.pdf", "delivery-note.pdf"],
-      notesPreview: "Client requested split payment and priority onboarding.",
-      latestNote: "Awaiting final transfer after implementation sign-off.",
-      notesList: [
-        makeNote("Nour", "Client requested split payment and priority onboarding.", "n1"),
-        makeNote("Finance Team", "Awaiting final transfer after implementation sign-off.", "n2"),
-      ],
-      items: customerItemsA,
-      paymentHistory: [
+      totalAmount: firstPrice,
+      paidAmount: Math.min(420, firstPrice),
+      remainingAmount: Math.max(firstPrice - 420, 0),
+      items: [
         {
-          id: "pay-1",
-          date: "2026-04-10",
-          amount: 220,
-          method: "Bank Transfer",
-          status: "Paid",
-          reference: "BT-20991",
-        },
-        {
-          id: "pay-2",
-          date: "2026-04-16",
-          amount: 200,
-          method: "Card",
-          status: "Partial",
-          reference: "CC-44092",
+          id: "line-customer-1",
+          productId: firstProduct ? getProductId(firstProduct, 0) : "",
+          label: firstProduct ? getProductName(firstProduct) : "Laptop",
+          quantity: 1,
+          unitPrice: firstPrice,
+          total: firstPrice,
         },
       ],
-      activity: [
-        makeActivity(seller, "Created invoice", "a1"),
-        makeActivity("Finance Team", "Recorded first payment", "a2"),
-        makeActivity("Finance Team", "Added client follow-up note", "a3"),
-      ],
-      linkedRecord: "SO-55391",
-      description: "Full customer invoice with onboarding, setup, and support items.",
-      customerName: customerA?.name ?? "Blue Horizon LLC",
-      customerPhone: customerA?.phone ?? "+970 599 000 221",
-      customerEmail: customerA?.email ?? "finance@bluehorizon.com",
-      billingAddress: customerA?.address ?? "Ramallah, Al-Masyoun district",
-      salesRepresentative: seller,
-      linkedOrderNumber: "ORD-10812",
+      notes: "Awaiting payment.",
+      linkedRecord: buildLinkedRecord("customer", "CINV-2401"),
+      createdAt: "2026-04-08T09:00:00.000Z",
+      updatedAt: "2026-04-21T09:40:00.000Z",
     },
     {
       id: "CINV-2402",
       type: "customer",
-      customerId: customerB?.id,
-      title: "Retail branch upgrade",
-      status: "Unpaid",
+      title: "Customer Invoice",
+      partyName: customerB ? getCustomerName(customerB) : "Mahmoud Kharouf",
+      partySubtext: customerB ? getCustomerEmail(customerB) : "customer@email.com",
+      customerId: customerB ? getCustomerId(customerB, 1) : "",
       issueDate: "2026-03-28",
-      dueDate: "2026-04-12",
-      currency: "USD",
-      subtotal: 480,
-      discount: 0,
-      tax: 38,
-      shipping: 25,
-      totalAmount: 543,
+      dueDate: "2026-03-28",
+      currency: "ILS",
+      status: "Unpaid",
+      paymentMethod: "Card",
+      totalAmount: secondPrice,
       paidAmount: 0,
-      remainingAmount: 543,
-      paymentMethod: "Credit",
-      lastUpdated: "2026-04-20T13:10:00.000Z",
-      createdBy: seller,
-      updatedBy: "Collections Team",
-      attachments: ["quotation.pdf"],
-      notesPreview: "Customer promised settlement next week.",
-      latestNote: "Marked overdue and escalated to collections team.",
-      notesList: [
-        makeNote("Maya", "Customer promised settlement next week.", "n3"),
-        makeNote("Collections Team", "Marked overdue and escalated to collections team.", "n4"),
-      ],
-      items: customerItemsB,
-      paymentHistory: [],
-      activity: [
-        makeActivity(seller, "Created invoice", "a4"),
-        makeActivity("Collections Team", "Flagged overdue", "a5"),
-      ],
-      linkedRecord: "SO-55392",
-      description: "Hardware and consulting services delivered to retail branch.",
-      customerName: customerB?.name ?? "Atlas Retail",
-      customerPhone: customerB?.phone ?? "+970 599 100 772",
-      customerEmail: customerB?.email ?? "ap@atlasretail.com",
-      billingAddress: customerB?.address ?? "Nablus, Business Center",
-      salesRepresentative: seller,
-      linkedOrderNumber: "ORD-10831",
-    },
-    {
-      id: "IINV-1107",
-      type: "internal",
-      title: "Q2 cloud and maintenance allocation",
-      status: "Partial",
-      issueDate: "2026-04-03",
-      dueDate: "2026-04-29",
-      currency: "USD",
-      subtotal: 840,
-      discount: 0,
-      tax: 67,
-      shipping: 0,
-      totalAmount: 907,
-      paidAmount: 450,
-      remainingAmount: 457,
-      paymentMethod: "Internal Transfer",
-      lastUpdated: "2026-04-21T08:05:00.000Z",
-      createdBy: requester,
-      updatedBy: approver,
-      attachments: ["approval.pdf", "service-agreement.pdf"],
-      notesPreview: "Sensitive operational cost approved in two tranches.",
-      latestNote: "Second tranche scheduled with treasury on April 25.",
-      notesList: [
-        makeNote("Operations", "Sensitive operational cost approved in two tranches.", "n5"),
-        makeNote("Treasury", "Second tranche scheduled with treasury on April 25.", "n6"),
-      ],
-      items: internalItems,
-      paymentHistory: [
+      remainingAmount: secondPrice,
+      items: [
         {
-          id: "pay-3",
-          date: "2026-04-07",
-          amount: 450,
-          method: "Internal Transfer",
-          status: "Partial",
-          reference: "TR-3304",
+          id: "line-customer-2",
+          productId: secondProduct ? getProductId(secondProduct, 1) : "",
+          label: secondProduct ? getProductName(secondProduct) : "Monitor",
+          quantity: 1,
+          unitPrice: secondPrice,
+          total: secondPrice,
         },
       ],
-      activity: [
-        makeActivity(requester, "Submitted internal expense", "a6"),
-        makeActivity(approver, "Approved expense", "a7"),
-      ],
-      linkedRecord: "OPS-2026-44",
-      description: "Infrastructure and office services allocated to operations and IT.",
-      department: "Operations",
-      category: "Technical",
-      requester,
-      approvedBy: approver,
-      relatedProject: "ERP Expansion",
-      vendor: "Northern Cloud Services",
-      costCenter: "CC-OPS-17",
-      priority: "High",
-      confidentiality: "Sensitive",
-      internalNotes: "Budget approved under infrastructure uplift plan.",
-    },
-    {
-      id: "IINV-1108",
-      type: "internal",
-      title: "Marketing launch media plan",
-      status: "Unpaid",
-      issueDate: "2026-04-18",
-      dueDate: "2026-05-03",
-      currency: "USD",
-      subtotal: 530,
-      discount: 20,
-      tax: 41,
-      shipping: 0,
-      totalAmount: 551,
-      paidAmount: 0,
-      remainingAmount: 551,
-      paymentMethod: "Bank Transfer",
-      lastUpdated: "2026-04-21T15:40:00.000Z",
-      createdBy: requester,
-      updatedBy: "Marketing Lead",
-      attachments: ["brief.docx"],
-      notesPreview: "Awaiting final approval from brand committee.",
-      latestNote: "Need confirmation on campaign channels before payment.",
-      notesList: [
-        makeNote("Marketing", "Awaiting final approval from brand committee.", "n7"),
-        makeNote("Brand Office", "Need confirmation on campaign channels before payment.", "n8"),
-      ],
-      items: buildLines("Campaign Media Buying, Creative Production", 1, 265),
-      paymentHistory: [],
-      activity: [
-        makeActivity(requester, "Prepared draft invoice", "a8"),
-      ],
-      linkedRecord: "MKT-INIT-12",
-      description: "Internal launch cost draft awaiting approval.",
-      department: "Marketing",
-      category: "Marketing",
-      requester: "Brand Office",
-      approvedBy: "",
-      relatedProject: "Summer Launch",
-      vendor: "Media House",
-      costCenter: "CC-MKT-12",
-      priority: "Medium",
-      confidentiality: "Standard",
-      internalNotes: "Will move to approved status once committee signs off.",
+      notes: "Not paid yet.",
+      linkedRecord: buildLinkedRecord("customer", "CINV-2402"),
+      createdAt: "2026-03-28T11:00:00.000Z",
+      updatedAt: "2026-04-20T13:10:00.000Z",
     },
     {
       id: "SINV-8801",
       type: "supplier",
-      supplierId: supplierA?.id,
-      title: "Inventory replenishment batch",
-      status: "Unpaid",
+      title: "Supplier Invoice",
+      partyName: supplierA ? getSupplierName(supplierA) : "Tech Source",
+      partySubtext: supplierA ? getSupplierEmail(supplierA) : "billing@supplier.com",
+      supplierId: supplierA ? getSupplierId(supplierA, 0) : "",
       issueDate: "2026-04-11",
-      dueDate: "2026-04-27",
-      currency: "USD",
-      subtotal: 760,
-      discount: 40,
-      tax: 52,
-      shipping: 35,
-      totalAmount: 807,
+      dueDate: "2026-04-11",
+      currency: "ILS",
+      status: "Unpaid",
+      paymentMethod: "Bank Transfer",
+      totalAmount: thirdPrice,
       paidAmount: 0,
-      remainingAmount: 807,
-      paymentMethod: "Wire",
-      lastUpdated: "2026-04-20T11:50:00.000Z",
-      createdBy: "Procurement Team",
-      updatedBy: "Procurement Team",
-      attachments: ["po-4407.pdf", "customs.pdf"],
-      notesPreview: "Supplier requested earlier release due to shipment schedule.",
-      latestNote: "Vendor rating remains high, delivery on track.",
-      notesList: [
-        makeNote("Procurement", "Supplier requested earlier release due to shipment schedule.", "n9"),
-        makeNote("Procurement", "Vendor rating remains high, delivery on track.", "n10"),
+      remainingAmount: thirdPrice,
+      items: [
+        {
+          id: "line-supplier-1",
+          productId: thirdProduct ? getProductId(thirdProduct, 2) : "",
+          label: thirdProduct ? getProductName(thirdProduct) : "Inventory Item",
+          quantity: 1,
+          unitPrice: thirdPrice,
+          total: thirdPrice,
+        },
       ],
-      items: supplierItemsA,
-      paymentHistory: [],
-      activity: [
-        makeActivity("Procurement Team", "Registered supplier invoice", "a9"),
-      ],
-      linkedRecord: "PUR-2026-4407",
-      description: "Procurement invoice linked to replenishment stock order.",
-      supplierName: supplierA?.name ?? "East Supply",
-      supplierCode: "SUP-101",
-      supplierCompanyName: "East Supply Co.",
-      supplierContactPerson: "Lina Dawoud",
-      supplierPhone: supplierA?.phone ?? "+970 599 670 220",
-      supplierEmail: supplierA?.email ?? "accounting@eastsupply.com",
-      supplierAddress: supplierA?.address ?? "Hebron Industrial Zone",
-      taxNumber: "VAT-998210",
-      purchaseOrderReference: "PO-4407",
-      deliveryNoteReference: "DN-7781",
-      paymentTerms: "Net 15",
-      supplierRating: 4.8,
+      notes: "Supplier invoice waiting for payment.",
+      linkedRecord: buildLinkedRecord("supplier", "SINV-8801"),
+      createdAt: "2026-04-11T10:00:00.000Z",
+      updatedAt: "2026-04-20T11:50:00.000Z",
     },
     {
       id: "SINV-8802",
       type: "supplier",
-      supplierId: supplierB?.id,
-      title: "Logistics and spare parts",
-      status: "Paid",
+      title: "Supplier Invoice",
+      partyName: supplierB ? getSupplierName(supplierB) : "Digital Hub",
+      partySubtext: supplierB ? getSupplierEmail(supplierB) : "billing@digitalhub.com",
+      supplierId: supplierB ? getSupplierId(supplierB, 1) : "",
       issueDate: "2026-04-02",
-      dueDate: "2026-04-15",
-      currency: "USD",
-      subtotal: 780,
-      discount: 0,
-      tax: 59,
-      shipping: 20,
+      dueDate: "2026-04-02",
+      currency: "ILS",
+      status: "Paid",
+      paymentMethod: "Cash",
       totalAmount: 859,
       paidAmount: 859,
       remainingAmount: 0,
-      paymentMethod: "Bank Transfer",
-      lastUpdated: "2026-04-18T10:10:00.000Z",
-      createdBy: "Procurement Team",
-      updatedBy: "Accounts Payable",
-      attachments: ["invoice.pdf", "delivery-confirmation.pdf", "receipt.pdf"],
-      notesPreview: "Payment completed after delivery validation.",
-      latestNote: "Reliable supplier with consistent lead times.",
-      notesList: [
-        makeNote("Accounts Payable", "Payment completed after delivery validation.", "n11"),
-        makeNote("Procurement", "Reliable supplier with consistent lead times.", "n12"),
-      ],
-      items: supplierItemsB,
-      paymentHistory: [
+      items: [
         {
-          id: "pay-4",
-          date: "2026-04-14",
-          amount: 859,
-          method: "Bank Transfer",
-          status: "Paid",
-          reference: "BT-99120",
+          id: "line-supplier-2",
+          productId: "",
+          label: "Logistics Service",
+          quantity: 1,
+          unitPrice: 859,
+          total: 859,
         },
       ],
-      activity: [
-        makeActivity("Procurement Team", "Registered supplier invoice", "a10"),
-        makeActivity("Accounts Payable", "Closed invoice as paid", "a11"),
+      notes: "Paid.",
+      linkedRecord: buildLinkedRecord("supplier", "SINV-8802"),
+      createdAt: "2026-04-02T10:00:00.000Z",
+      updatedAt: "2026-04-18T10:10:00.000Z",
+    },
+    {
+      id: "IINV-1107",
+      type: "internal",
+      title: "Internal Invoice",
+      partyName: "Operations",
+      partySubtext: "Technical",
+      issueDate: "2026-04-03",
+      dueDate: "2026-04-03",
+      currency: "ILS",
+      status: "Partial",
+      paymentMethod: "Bank Transfer",
+      totalAmount: 907,
+      paidAmount: 450,
+      remainingAmount: 457,
+      items: [
+        {
+          id: "line-internal-1",
+          productId: "",
+          label: "Maintenance",
+          quantity: 1,
+          unitPrice: 907,
+          total: 907,
+        },
       ],
-      linkedRecord: "PUR-2026-4409",
-      description: "Supplier invoice for delivered logistics and spare parts.",
-      supplierName: supplierB?.name ?? "Prime Logistics",
-      supplierCode: "SUP-102",
-      supplierCompanyName: "Prime Logistics Ltd.",
-      supplierContactPerson: "Omar Salem",
-      supplierPhone: supplierB?.phone ?? "+970 599 450 711",
-      supplierEmail: supplierB?.email ?? "billing@primelogistics.com",
-      supplierAddress: supplierB?.address ?? "Jerusalem Road",
-      taxNumber: "VAT-918822",
-      purchaseOrderReference: "PO-4409",
-      deliveryNoteReference: "DN-7795",
-      paymentTerms: "Net 10",
-      supplierRating: 4.3,
+      notes: "Partly settled.",
+      linkedRecord: buildLinkedRecord("internal", "IINV-1107"),
+      department: "Operations",
+      category: "Technical",
+      priority: "High",
+      approvedBy: approver,
+      createdAt: "2026-04-03T08:00:00.000Z",
+      updatedAt: "2026-04-21T08:05:00.000Z",
+    },
+    {
+      id: "IINV-1108",
+      type: "internal",
+      title: "Internal Invoice",
+      partyName: "Marketing",
+      partySubtext: "Marketing",
+      issueDate: "2026-04-18",
+      dueDate: "2026-04-18",
+      currency: "ILS",
+      status: "Unpaid",
+      paymentMethod: "Bank Transfer",
+      totalAmount: 551,
+      paidAmount: 0,
+      remainingAmount: 551,
+      items: [
+        {
+          id: "line-internal-2",
+          productId: "",
+          label: "Marketing Campaign",
+          quantity: 1,
+          unitPrice: 551,
+          total: 551,
+        },
+      ],
+      notes: "Needs approval.",
+      linkedRecord: buildLinkedRecord("internal", "IINV-1108"),
+      department: "Marketing",
+      category: "Marketing",
+      priority: "Medium",
+      approvedBy: "",
+      createdAt: "2026-04-18T14:00:00.000Z",
+      updatedAt: "2026-04-21T15:40:00.000Z",
     },
   ];
-}
-
-function buildFormFromRecord(invoice: InvoiceRecord): InvoiceFormState {
-  const firstItem = invoice.items[0];
-  return {
-    id: invoice.id,
-    type: invoice.type,
-    customerId: invoice.customerId ?? "",
-    supplierId: invoice.supplierId ?? "",
-    title: invoice.title,
-    issueDate: invoice.issueDate,
-    dueDate: invoice.dueDate,
-    currency: invoice.currency,
-    status: invoice.status,
-    paymentMethod: invoice.paymentMethod,
-    itemsText: invoice.items.map((item) => item.label).join(", "),
-    quantity: String(firstItem?.quantity ?? 1),
-    unitPrice: String(firstItem?.unitPrice ?? 0),
-    discount: String(invoice.discount),
-    tax: String(invoice.tax),
-    shipping: String(invoice.shipping),
-    paidAmount: String(invoice.paidAmount),
-    linkedRecord: invoice.linkedRecord,
-    description: invoice.description,
-    customerName: invoice.customerName ?? "",
-    customerPhone: invoice.customerPhone ?? "",
-    customerEmail: invoice.customerEmail ?? "",
-    billingAddress: invoice.billingAddress ?? "",
-    salesRepresentative: invoice.salesRepresentative ?? "",
-    linkedOrderNumber: invoice.linkedOrderNumber ?? "",
-    department: invoice.department ?? "",
-    category: invoice.category ?? "",
-    requester: invoice.requester ?? "",
-    approvedBy: invoice.approvedBy ?? "",
-    relatedProject: invoice.relatedProject ?? "",
-    vendor: invoice.vendor ?? "",
-    costCenter: invoice.costCenter ?? "",
-    priority: invoice.priority ?? "Medium",
-    confidentiality: invoice.confidentiality ?? "Standard",
-    internalNotes: invoice.internalNotes ?? "",
-    supplierName: invoice.supplierName ?? "",
-    supplierCode: invoice.supplierCode ?? "",
-    supplierCompanyName: invoice.supplierCompanyName ?? "",
-    supplierContactPerson: invoice.supplierContactPerson ?? "",
-    supplierPhone: invoice.supplierPhone ?? "",
-    supplierEmail: invoice.supplierEmail ?? "",
-    supplierAddress: invoice.supplierAddress ?? "",
-    taxNumber: invoice.taxNumber ?? "",
-    purchaseOrderReference: invoice.purchaseOrderReference ?? "",
-    deliveryNoteReference: invoice.deliveryNoteReference ?? "",
-    paymentTerms: invoice.paymentTerms ?? "",
-    supplierRating: String(invoice.supplierRating ?? 4),
-  };
-}
-
-function formatDate(value: string) {
-  if (!value) return "-";
-  return new Intl.DateTimeFormat("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  }).format(new Date(value));
-}
-
-function formatDateTime(value: string) {
-  if (!value) return "-";
-  return new Intl.DateTimeFormat("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(value));
-}
-
-function dueStateLabel(dueDate: string, remainingAmount: number, status: InvoiceStatus) {
-  if (!dueDate) return "-";
-  if (status === "Paid" || remainingAmount <= 0) return "Settled";
-
-  const diffDays = Math.ceil(
-    (new Date(dueDate).getTime() - new Date(TODAY).getTime()) / (1000 * 60 * 60 * 24)
-  );
-
-  if (diffDays < 0) return `Overdue by ${Math.abs(diffDays)} day${Math.abs(diffDays) === 1 ? "" : "s"}`;
-  if (diffDays === 0) return "Due today";
-  if (diffDays === 1) return "Due tomorrow";
-  return `Due in ${diffDays} day${diffDays === 1 ? "" : "s"}`;
-}
-
-function dueStateTone(dueDate: string, remainingAmount: number, status: InvoiceStatus) {
-  if (!dueDate || status === "Paid" || remainingAmount <= 0) return "settled";
-
-  const diffDays = Math.ceil(
-    (new Date(dueDate).getTime() - new Date(TODAY).getTime()) / (1000 * 60 * 60 * 24)
-  );
-
-  if (diffDays < 0) return "overdue";
-  if (diffDays <= 2) return "soon";
-  return "normal";
 }
 
 export default function Invoices() {
   const [customers] = useState<Customer[]>(() => getCustomers());
   const [suppliers] = useState<Supplier[]>(() => getSuppliers());
   const [products] = useState<Product[]>(() => getProducts());
-  const [purchases] = useState<Purchase[]>(() => getPurchases());
   const [employees] = useState<Employee[]>(() => getEmployees());
 
   const [records, setRecords] = useState<InvoiceRecord[]>([]);
+  const [hasLoaded, setHasLoaded] = useState(false);
+
   const [activeTab, setActiveTab] = useState<TabKey>("customer");
-  const [filtersByTab, setFiltersByTab] = useState<Record<TabKey, FilterState>>({
-    customer: { ...EMPTY_FILTERS },
-    internal: { ...EMPTY_FILTERS },
-    supplier: { ...EMPTY_FILTERS },
-  });
-  const [showMoreFilters, setShowMoreFilters] = useState(false);
-  const [page, setPage] = useState(1);
-  const [rowsPerPage, setRowsPerPage] = useState(DEFAULT_ITEMS_PER_PAGE);
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [actionMenu, setActionMenu] = useState<ActionMenuState | null>(null);
-  const [detailInvoice, setDetailInvoice] = useState<InvoiceRecord | null>(null);
-  const [detailTab, setDetailTab] = useState<DetailTab>("overview");
+  const [filters, setFilters] = useState<FilterState>(EMPTY_FILTERS);
+  const [showFilterMenu, setShowFilterMenu] = useState(false);
+
   const [formOpen, setFormOpen] = useState(false);
   const [formMode, setFormMode] = useState<"add" | "edit">("add");
   const [formState, setFormState] = useState<InvoiceFormState>(EMPTY_FORM);
-  const [allowOverpayment, setAllowOverpayment] = useState(false);
-  const [pendingSave, setPendingSave] = useState<PendingSaveState>(null);
-  const [deleteTarget, setDeleteTarget] = useState<InvoiceRecord | null>(null);
-  const [deleteCode, setDeleteCode] = useState("");
-  const [deleteError, setDeleteError] = useState("");
-  const [noteTarget, setNoteTarget] = useState<InvoiceRecord | null>(null);
-  const [noteText, setNoteText] = useState("");
-  const [toast, setToast] = useState<{ id: number; message: string } | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [viewError, setViewError] = useState<string | null>(null);
-  const actionMenuRef = useRef<HTMLDivElement | null>(null);
 
-  useEffect(() => {
-    try {
-      const stored = window.localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        try {
-          const parsed = JSON.parse(stored) as InvoiceRecord[];
-          setRecords(parsed);
-        } catch {
-          window.localStorage.removeItem(STORAGE_KEY);
-          setRecords(seedInvoices(customers, suppliers, products, employees));
-        }
-      } else {
-        setRecords(seedInvoices(customers, suppliers, products, employees));
-      }
-      setViewError(null);
-    } catch {
-      setViewError("The invoice workspace could not be loaded. Please refresh and try again.");
-    } finally {
-      setIsLoading(false);
-    }
-  }, [customers, employees, products, suppliers]);
+  const [customerSearch, setCustomerSearch] = useState("");
+  const [showCustomerMenu, setShowCustomerMenu] = useState(false);
+  const customerMenuRef = useRef<HTMLDivElement | null>(null);
 
-  useEffect(() => {
-    if (records.length === 0) return;
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
-  }, [records]);
+  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
 
-  useEffect(() => {
-    setPage(1);
-    setSelectedIds([]);
-    setActionMenu(null);
-    setShowMoreFilters(false);
-  }, [activeTab, filtersByTab]);
+  const [editDeleteCode, setEditDeleteCode] = useState("");
+  const [editDeleteError, setEditDeleteError] = useState("");
 
-  useEffect(() => {
-    if (!toast) return;
-    const timeout = window.setTimeout(() => setToast(null), 2600);
-    return () => window.clearTimeout(timeout);
-  }, [toast]);
-
-  useEffect(() => {
-    if (!actionMenu) return;
-
-    function handlePointerDown(event: MouseEvent) {
-      const target = event.target as Node | null;
-      if (actionMenuRef.current?.contains(target)) return;
-      setActionMenu(null);
-    }
-
-    function handleEscape(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        setActionMenu(null);
-      }
-    }
-
-    function handleViewportChange() {
-      setActionMenu(null);
-    }
-
-    document.addEventListener("mousedown", handlePointerDown);
-    document.addEventListener("keydown", handleEscape);
-    window.addEventListener("resize", handleViewportChange);
-    window.addEventListener("scroll", handleViewportChange, true);
-
-    return () => {
-      document.removeEventListener("mousedown", handlePointerDown);
-      document.removeEventListener("keydown", handleEscape);
-      window.removeEventListener("resize", handleViewportChange);
-      window.removeEventListener("scroll", handleViewportChange, true);
-    };
-  }, [actionMenu]);
-
-  const typedRecords = useMemo(
-    () => records.filter((record) => record.type === activeTab),
-    [activeTab, records]
-  );
-
-  const filters = filtersByTab[activeTab];
-
-  const filteredRecords = useMemo(() => {
-    return typedRecords.filter((record) => {
-      const searchValue = filters.search.trim().toLowerCase();
-      const isOverdue =
-        record.remainingAmount > 0 &&
-        record.dueDate < TODAY &&
-        record.status !== "Paid";
-
-      if (searchValue) {
-        const haystack = [
-          record.id,
-          record.title,
-          record.customerName,
-          record.customerPhone,
-          record.customerEmail,
-          record.supplierName,
-          record.supplierCompanyName,
-          record.department,
-          record.category,
-          record.status,
-          record.description,
-          record.notesPreview,
-          record.linkedRecord,
-          record.linkedOrderNumber,
-          record.purchaseOrderReference,
-          record.taxNumber,
-          record.items.map((item) => item.label).join(" "),
-          record.latestNote ?? "",
-        ]
-          .join(" ")
-          .toLowerCase();
-
-        if (!haystack.includes(searchValue)) return false;
-      }
-
-      if (filters.status && record.status !== filters.status) return false;
-      if (filters.paymentMethod && record.paymentMethod !== filters.paymentMethod) return false;
-      if (filters.customer && record.customerName !== filters.customer) return false;
-      if (filters.salesRepresentative && record.salesRepresentative !== filters.salesRepresentative) return false;
-      if (filters.supplier && record.supplierName !== filters.supplier) return false;
-      if (filters.supplierCode && record.supplierCode !== filters.supplierCode) return false;
-      if (filters.department && record.department !== filters.department) return false;
-      if (filters.category && record.category !== filters.category) return false;
-      if (filters.priority && record.priority !== filters.priority) return false;
-      if (filters.confidentiality && record.confidentiality !== filters.confidentiality) return false;
-      if (
-        filters.approvalStatus &&
-        (filters.approvalStatus === "Approved" ? !record.approvedBy : Boolean(record.approvedBy))
-      ) {
-        return false;
-      }
-      if (filters.paymentStatus && record.status !== filters.paymentStatus) return false;
-      if (filters.costCenter && record.costCenter !== filters.costCenter) return false;
-      if (filters.relatedProject && record.relatedProject !== filters.relatedProject) return false;
-      if (filters.paymentTerms && record.paymentTerms !== filters.paymentTerms) return false;
-      if (filters.currency && record.currency !== filters.currency) return false;
-      if (filters.linkedPurchaseRecord && record.linkedRecord !== filters.linkedPurchaseRecord) return false;
-      if (filters.supplierRating) {
-        const rating = Number(record.supplierRating || 0);
-        if (filters.supplierRating === "4plus" && rating < 4) return false;
-        if (filters.supplierRating === "3orless" && rating > 3) return false;
-      }
-      if (filters.overdueOnly && !isOverdue) return false;
-      if (filters.incompleteOnly && record.remainingAmount <= 0) return false;
-
-      if (filters.dateRange === "7d") {
-        const sevenDaysAgo = new Date();
-        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-        if (new Date(record.issueDate) < sevenDaysAgo) return false;
-      }
-
-      if (filters.dateRange === "30d") {
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-        if (new Date(record.issueDate) < thirtyDaysAgo) return false;
-      }
-
-      if (filters.dueDate === "overdue" && !isOverdue) return false;
-      if (filters.dueDate === "7d") {
-        const inSevenDays = new Date();
-        inSevenDays.setDate(inSevenDays.getDate() + 7);
-        if (new Date(record.dueDate) > inSevenDays) return false;
-      }
-      if (filters.dueDate === "30d") {
-        const inThirtyDays = new Date();
-        inThirtyDays.setDate(inThirtyDays.getDate() + 30);
-        if (new Date(record.dueDate) > inThirtyDays) return false;
-      }
-
-      if (filters.amountRange === "lt500" && record.totalAmount >= 500) return false;
-      if (
-        filters.amountRange === "500to1000" &&
-        (record.totalAmount < 500 || record.totalAmount > 1000)
-      ) {
-        return false;
-      }
-      if (filters.amountRange === "gt1000" && record.totalAmount <= 1000) return false;
-
-      return true;
-    });
-  }, [filters, typedRecords]);
-
-  const pageCount = Math.max(1, Math.ceil(filteredRecords.length / rowsPerPage));
-  const safePage = Math.min(page, pageCount);
-  const paginatedRecords = filteredRecords.slice(
-    (safePage - 1) * rowsPerPage,
-    safePage * rowsPerPage
-  );
-
-  const summary = useMemo(() => {
-    const total = typedRecords.reduce((sum, record) => sum + record.totalAmount, 0);
-    const remaining = typedRecords.reduce((sum, record) => sum + record.remainingAmount, 0);
-    const overdue = typedRecords.filter(
-      (record) =>
-        record.remainingAmount > 0 &&
-        record.dueDate < TODAY &&
-        record.status !== "Paid"
-    ).length;
-
-    return {
-      totalInvoices: typedRecords.length,
-      totalAmount: total,
-      remainingAmount: remaining,
-      overdueInvoices: overdue,
-    };
-  }, [typedRecords]);
-
-  const kpiCards = useMemo(() => {
-    if (activeTab === "customer") {
-      const collectedThisPeriod = typedRecords
-        .filter((record) => {
-          const thirtyDaysAgo = new Date();
-          thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-          return new Date(record.issueDate) >= thirtyDaysAgo;
-        })
-        .reduce((sum, record) => sum + record.paidAmount, 0);
-
-      return [
-        {
-          title: "Total Receivables",
-          value: money(summary.remainingAmount),
-          helper: "",
-          tone: "blue",
-          icon: FileText,
-        },
-        {
-          title: "Overdue Customer Invoices",
-          value: String(summary.overdueInvoices),
-          helper: "",
-          tone: "amber",
-          icon: Clock3,
-        },
-        {
-          title: "Collected This Period",
-          value: money(collectedThisPeriod),
-          helper: "",
-          tone: "green",
-          icon: BadgeDollarSign,
-        },
-      ] as const;
-    }
-
-    if (activeTab === "internal") {
-      const pendingApprovals = typedRecords.filter((record) => !record.approvedBy).length;
-      const approvedAmount = typedRecords
-        .filter((record) => Boolean(record.approvedBy))
-        .reduce((sum, record) => sum + record.totalAmount, 0);
-
-      return [
-        {
-          title: "Pending Approvals",
-          value: String(pendingApprovals),
-          helper: "",
-          tone: "amber",
-          icon: Clock3,
-        },
-        {
-          title: "Approved Amount",
-          value: money(approvedAmount),
-          helper: "",
-          tone: "green",
-          icon: BadgeDollarSign,
-        },
-        {
-          title: "Open Internal Expenses",
-          value: money(summary.remainingAmount),
-          helper: "",
-          tone: "blue",
-          icon: Building2,
-        },
-      ] as const;
-    }
-
-    const dueThisWeek = typedRecords.filter((record) => {
-      if (record.remainingAmount <= 0 || record.status === "Paid") return false;
-      const diffDays = Math.ceil(
-        (new Date(record.dueDate).getTime() - new Date(TODAY).getTime()) / (1000 * 60 * 60 * 24)
-      );
-      return diffDays >= 0 && diffDays <= 7;
-    }).length;
-
-    return [
-      {
-        title: "Total Payables",
-        value: money(summary.remainingAmount),
-        helper: "",
-        tone: "blue",
-        icon: Truck,
-      },
-      {
-        title: "Due This Week",
-        value: String(dueThisWeek),
-        helper: "",
-        tone: "amber",
-        icon: Clock3,
-      },
-      {
-        title: "Overdue Supplier Invoices",
-        value: String(summary.overdueInvoices),
-        helper: "",
-        tone: "green",
-        icon: BadgeDollarSign,
-      },
-    ] as const;
-  }, [activeTab, summary.overdueInvoices, summary.remainingAmount, typedRecords]);
-
-  const searchPlaceholder = useMemo(() => {
-    if (activeTab === "customer") {
-      return "Search by invoice number, customer, status, or note";
-    }
-    if (activeTab === "internal") {
-      return "Search by invoice number, department, category, or note";
-    }
-    return "Search by invoice number, supplier, payment status, or note";
-  }, [activeTab]);
-
-  const decisionSummary = useMemo(() => {
-    const dueSoonCount = typedRecords.filter((record) => {
-      if (record.remainingAmount <= 0 || record.status === "Paid") return false;
-      const diffDays = Math.ceil(
-        (new Date(record.dueDate).getTime() - new Date(TODAY).getTime()) / (1000 * 60 * 60 * 24)
-      );
-      return diffDays >= 0 && diffDays <= 1;
-    }).length;
-
-    if (activeTab === "customer") {
-      if (summary.overdueInvoices > 0) {
-        return `${summary.overdueInvoices} overdue invoice${summary.overdueInvoices === 1 ? "" : "s"}`;
-      }
-      if (dueSoonCount > 0) {
-        return dueSoonCount === 1 ? "1 invoice due tomorrow" : `${dueSoonCount} invoices due within 24h`;
-      }
-      return `${money(summary.remainingAmount)} open balance`;
-    }
-    if (activeTab === "internal") {
-      const pendingApprovals = typedRecords.filter((record) => !record.approvedBy).length;
-      if (pendingApprovals > 0) {
-        return `${pendingApprovals} pending approval`;
-      }
-      return `${money(summary.remainingAmount)} open expenses`;
-    }
-
-    const dueThisWeek = typedRecords.filter((record) => {
-      if (record.remainingAmount <= 0 || record.status === "Paid") return false;
-      const diffDays = Math.ceil(
-        (new Date(record.dueDate).getTime() - new Date(TODAY).getTime()) / (1000 * 60 * 60 * 24)
-      );
-      return diffDays >= 0 && diffDays <= 7;
-    }).length;
-
-    if (summary.overdueInvoices > 0) {
-      return `${summary.overdueInvoices} overdue supplier invoice${summary.overdueInvoices === 1 ? "" : "s"}`;
-    }
-    if (dueThisWeek > 0) {
-      return `${dueThisWeek} due this week`;
-    }
-    return `${money(summary.remainingAmount)} open payables`;
-  }, [activeTab, summary.overdueInvoices, summary.remainingAmount, typedRecords]);
-
-  const customerNames = useMemo(
-    () =>
-      Array.from(new Set(records.map((record) => record.customerName).filter(Boolean))).sort(),
-    [records]
-  );
-  const supplierNames = useMemo(
-    () =>
-      Array.from(new Set(records.map((record) => record.supplierName).filter(Boolean))).sort(),
-    [records]
-  );
-  const departments = useMemo(
-    () =>
-      Array.from(new Set(records.map((record) => record.department).filter(Boolean))).sort(),
-    [records]
-  );
-  const categories = useMemo(
-    () =>
-      Array.from(new Set(records.map((record) => record.category).filter(Boolean))).sort(),
-    [records]
-  );
-  const costCenters = useMemo(
-    () =>
-      Array.from(new Set(records.map((record) => record.costCenter).filter(Boolean))).sort(),
-    [records]
-  );
-  const relatedProjects = useMemo(
-    () =>
-      Array.from(new Set(records.map((record) => record.relatedProject).filter(Boolean))).sort(),
-    [records]
-  );
-  const linkedPurchaseRecords = useMemo(
-    () =>
-      Array.from(
-        new Set(
-          records
-            .filter((record) => record.type === "supplier")
-            .map((record) => record.linkedRecord)
-            .filter(Boolean)
-        )
-      ).sort(),
-    [records]
-  );
-
-  const activeEmployees = useMemo(
-    () => employees.filter((employee) => !employee.isDeleted),
-    [employees]
-  );
+  const [detailInvoice, setDetailInvoice] = useState<InvoiceRecord | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
 
   const customerOptions = useMemo(
     () =>
-      customers
-        .filter((customer) => !customer.isDeleted)
-        .sort((a, b) => a.name.localeCompare(b.name)),
+      customers.map((customer, index) => ({
+        id: getCustomerId(customer, index),
+        name: getCustomerName(customer),
+        email: getCustomerEmail(customer),
+        phone: getCustomerPhone(customer),
+      })),
     [customers]
   );
 
   const supplierOptions = useMemo(
     () =>
-      suppliers
-        .filter((supplier) => !supplier.isDeleted)
-        .sort((a, b) => a.name.localeCompare(b.name)),
+      suppliers.map((supplier, index) => ({
+        id: getSupplierId(supplier, index),
+        name: getSupplierName(supplier),
+        email: getSupplierEmail(supplier),
+      })),
     [suppliers]
   );
 
-  const productsById = useMemo(
-    () => new Map(products.map((product) => [product.id, product])),
+  const productOptions = useMemo(
+    () =>
+      products.map((product, index) => ({
+        id: getProductId(product, index),
+        name: getProductName(product),
+        price: getProductPrice(product),
+      })),
     [products]
   );
 
-  const customerByName = useMemo(
-    () => new Map(customerOptions.map((customer) => [customer.name, customer])),
-    [customerOptions]
+  const filteredCustomerOptions = useMemo(() => {
+    const search = customerSearch.trim().toLowerCase();
+
+    if (!search) return customerOptions;
+
+    return customerOptions.filter((customer) =>
+      [customer.name, customer.email, customer.phone]
+        .join(" ")
+        .toLowerCase()
+        .includes(search)
+    );
+  }, [customerOptions, customerSearch]);
+
+  useEffect(() => {
+    const stored = window.localStorage.getItem(STORAGE_KEY);
+
+    if (stored) {
+      try {
+        const parsedRecords = JSON.parse(stored) as InvoiceRecord[];
+        setRecords(parsedRecords.map(normalizeInvoiceRecord));
+      } catch {
+        window.localStorage.removeItem(STORAGE_KEY);
+        setRecords(seedInvoices(customers, suppliers, products, employees).map(normalizeInvoiceRecord));
+      }
+    } else {
+      setRecords(seedInvoices(customers, suppliers, products, employees).map(normalizeInvoiceRecord));
+    }
+
+    setHasLoaded(true);
+  }, [customers, suppliers, products, employees]);
+
+  useEffect(() => {
+    if (!hasLoaded) return;
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+  }, [hasLoaded, records]);
+
+  useEffect(() => {
+    if (!toast) return;
+
+    const timeout = window.setTimeout(() => setToast(null), 2400);
+    return () => window.clearTimeout(timeout);
+  }, [toast]);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        customerMenuRef.current &&
+        !customerMenuRef.current.contains(event.target as Node)
+      ) {
+        setShowCustomerMenu(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  const visibleByTab = useMemo(
+    () => records.filter((invoice) => invoice.type === activeTab),
+    [records, activeTab]
   );
 
-  const supplierByName = useMemo(
-    () => new Map(supplierOptions.map((supplier) => [supplier.name, supplier])),
-    [supplierOptions]
-  );
+  const filteredRecords = useMemo(() => {
+    const search = filters.search.trim().toLowerCase();
+    const minAmount = filters.minAmount.trim() ? normalizeNumber(filters.minAmount) : null;
+    const maxAmount = filters.maxAmount.trim() ? normalizeNumber(filters.maxAmount) : null;
+
+    const filtered = visibleByTab.filter((invoice) => {
+      if (filters.status !== "all" && invoice.status !== filters.status) return false;
+      if (filters.paymentMethod !== "all" && invoice.paymentMethod !== filters.paymentMethod) return false;
+      if (filters.due === "late" && !isLate(invoice)) return false;
+      if (filters.due === "today" && !isDueToday(invoice)) return false;
+      if (filters.due === "week" && !isDueThisWeek(invoice)) return false;
+      if (minAmount !== null && invoice.totalAmount < minAmount) return false;
+      if (maxAmount !== null && invoice.totalAmount > maxAmount) return false;
+
+      if (search) {
+        const haystack = [
+          invoice.id,
+          invoice.title,
+          invoice.partyName,
+          invoice.partySubtext,
+          invoice.status,
+          invoice.paymentMethod,
+          invoice.notes,
+          invoice.linkedRecord,
+          invoice.department,
+          invoice.category,
+          invoice.priority,
+          invoice.items.map((item) => item.label).join(" "),
+        ]
+          .join(" ")
+          .toLowerCase();
+
+        if (!haystack.includes(search)) return false;
+      }
+
+      return true;
+    });
+
+    return [...filtered].sort((a, b) => {
+      if (filters.sortBy === "oldest") {
+        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      }
+
+      if (filters.sortBy === "dueSoon") {
+        return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+      }
+
+      if (filters.sortBy === "amountHigh") {
+        return b.totalAmount - a.totalAmount;
+      }
+
+      if (filters.sortBy === "amountLow") {
+        return a.totalAmount - b.totalAmount;
+      }
+
+      if (filters.sortBy === "amountDueHigh") {
+        return b.remainingAmount - a.remainingAmount;
+      }
+
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
+  }, [filters, visibleByTab]);
+
+  const summary = useMemo(() => {
+    const amountDue = visibleByTab.reduce((sum, invoice) => sum + invoice.remainingAmount, 0);
+    const lateCount = visibleByTab.filter(isLate).length;
+    const pendingApprovals = visibleByTab.filter(
+      (invoice) => invoice.type === "internal" && !invoice.approvedBy
+    ).length;
+
+    return {
+      amountDue,
+      lateCount,
+      pendingApprovals,
+      count: visibleByTab.length,
+    };
+  }, [visibleByTab]);
+
+  const kpiCards = useMemo(() => {
+    if (activeTab === "customer") {
+      return [
+        { title: "Amount Due", value: money(summary.amountDue), icon: BadgeDollarSign, tone: "blue" },
+        { title: "Late", value: String(summary.lateCount), icon: Clock3, tone: "amber" },
+        { title: "Invoices", value: String(summary.count), icon: FileText, tone: "green" },
+      ] as const;
+    }
+
+    if (activeTab === "supplier") {
+      return [
+        { title: "To Pay", value: money(summary.amountDue), icon: Truck, tone: "blue" },
+        { title: "Late", value: String(summary.lateCount), icon: Clock3, tone: "amber" },
+        { title: "Invoices", value: String(summary.count), icon: FileText, tone: "green" },
+      ] as const;
+    }
+
+    return [
+      { title: "Open Costs", value: money(summary.amountDue), icon: Building2, tone: "blue" },
+      { title: "Need Approval", value: String(summary.pendingApprovals), icon: Clock3, tone: "amber" },
+      { title: "Invoices", value: String(summary.count), icon: FileText, tone: "green" },
+    ] as const;
+  }, [activeTab, summary]);
+
+  const activeFilterCount = [
+    filters.status !== "all",
+    filters.due !== "all",
+    filters.paymentMethod !== "all",
+    filters.minAmount.trim() !== "",
+    filters.maxAmount.trim() !== "",
+    filters.sortBy !== "newest",
+  ].filter(Boolean).length;
 
   function pushToast(message: string) {
-    setToast({ id: Date.now(), message });
+    setToast(message);
   }
 
-  function clearActiveFilters() {
-    setFiltersByTab((current) => ({
-      ...current,
-      [activeTab]: { ...EMPTY_FILTERS },
-    }));
+  function resetFilters() {
+    setFilters(EMPTY_FILTERS);
+    setShowFilterMenu(false);
   }
 
   function updateFilter<K extends keyof FilterState>(key: K, value: FilterState[K]) {
-    setFiltersByTab((current) => ({
+    setFilters((current) => ({
       ...current,
-      [activeTab]: {
-        ...current[activeTab],
-        [key]: value,
-      },
+      [key]: value,
     }));
   }
 
-  function clearSingleFilter(key: FilterKey) {
-    updateFilter(key, typeof EMPTY_FILTERS[key] === "boolean" ? false as FilterState[FilterKey] : "" as FilterState[FilterKey]);
+  function hasUnsavedInvoiceData() {
+    if (formMode === "edit") return true;
+
+    const fieldsToCheck: Array<keyof InvoiceFormState> = [
+      "partyName",
+      "partySubtext",
+      "customerId",
+      "supplierId",
+      "productId",
+      "notes",
+      "department",
+      "category",
+      "approvedBy",
+    ];
+
+    const hasTextData = fieldsToCheck.some((key) => {
+      const value = String(formState[key] ?? "").trim();
+      return value !== "";
+    });
+
+    const hasChangedNumbers =
+      formState.quantity !== "1" ||
+      formState.unitPrice !== "0" ||
+      formState.paidAmount !== "0";
+
+    const hasChangedDates =
+      formState.issueDate !== TODAY ||
+      formState.dueDate !== TODAY;
+
+    return hasTextData || hasChangedNumbers || hasChangedDates;
   }
 
-  function toggleSelect(id: string) {
-    setSelectedIds((current) =>
-      current.includes(id) ? current.filter((item) => item !== id) : [...current, id]
-    );
-  }
-
-  function toggleSelectAll(checked: boolean) {
-    setSelectedIds(checked ? paginatedRecords.map((record) => record.id) : []);
-  }
-
-  function fillCustomerDetails(customerId: string, current: InvoiceFormState): InvoiceFormState {
-    const customer =
-      customerOptions.find((item) => item.id === customerId) ??
-      customerByName.get(current.customerName);
-
-    if (!customer) {
-      return {
-        ...current,
-        customerId,
-      };
+  function requestCloseFormModal() {
+    if (hasUnsavedInvoiceData()) {
+      setShowDiscardConfirm(true);
+      return;
     }
 
-    const preferredRep = current.salesRepresentative || activeEmployees[0]?.name || "";
-    const billingAddress = customer.address || customer.location || "";
+    closeFormModal();
+  }
 
-    return {
+  function keepEditing() {
+    setShowDiscardConfirm(false);
+  }
+
+  function confirmDiscardChanges() {
+    setShowDiscardConfirm(false);
+    closeFormModal();
+  }
+
+  function selectCustomer(customer: {
+    id: string;
+    name: string;
+    email: string;
+    phone: string;
+  }) {
+    setFormState((current) => ({
       ...current,
-      type: "customer",
       customerId: customer.id,
-      customerName: customer.name,
-      customerPhone: customer.phone || "",
-      customerEmail: customer.email || "",
-      billingAddress,
-      salesRepresentative: preferredRep,
+      partyName: customer.name,
+      partySubtext: customer.email || customer.phone,
       title:
-        current.title.trim() === "" || current.title === titleForType("customer")
+        current.title.trim() === "" || current.title === getDefaultTitle("customer")
           ? `${customer.name} Invoice`
           : current.title,
-    };
+    }));
+
+    setCustomerSearch(customer.name);
+    setShowCustomerMenu(false);
   }
 
-  function fillSupplierDetails(supplierId: string, current: InvoiceFormState): InvoiceFormState {
-    const supplier =
-      supplierOptions.find((item) => item.id === supplierId) ??
-      supplierByName.get(current.supplierName);
-
-    if (!supplier) {
-      return {
-        ...current,
-        supplierId,
-      };
-    }
-
-    const supplierPurchases = purchases
-      .filter((purchase) => purchase.supplierId === supplier.id)
-      .sort((a, b) => b.date.localeCompare(a.date));
-    const recentPurchase = supplierPurchases[0];
-    const suggestedQuantity =
-      current.quantity === "1" && recentPurchase?.quantity
-        ? String(recentPurchase.quantity)
-        : current.quantity;
-    const suggestedUnitPrice =
-      (current.unitPrice === "0" || current.unitPrice.trim() === "") &&
-      recentPurchase?.quantity
-        ? String(Math.round((recentPurchase.totalCost / recentPurchase.quantity) * 100) / 100)
-        : current.unitPrice;
-    const productNames = Array.from(
-      new Set(
-        supplierPurchases
-          .slice(0, 3)
-          .map((purchase) => productsById.get(purchase.productId)?.name)
-          .filter((name): name is string => Boolean(name))
-      )
-    );
-
-    return {
-      ...current,
-      type: "supplier",
-      supplierId: supplier.id,
-      supplierName: supplier.name,
-      supplierCode: supplier.id,
-      supplierCompanyName: supplier.name,
-      supplierContactPerson: supplier.name,
-      supplierPhone: supplier.phone || "",
-      supplierEmail: supplier.email || "",
-      supplierAddress: supplier.address || "",
-      purchaseOrderReference: current.purchaseOrderReference || recentPurchase?.id || "",
-      linkedRecord: current.linkedRecord || recentPurchase?.id || "",
-      quantity: suggestedQuantity,
-      unitPrice: suggestedUnitPrice,
-      itemsText:
-        current.itemsText.trim() !== "" || productNames.length === 0
-          ? current.itemsText
-          : productNames.join(", "),
-      title:
-        current.title.trim() === "" || current.title === titleForType("supplier")
-          ? `${supplier.name} Invoice`
-          : current.title,
-    };
-  }
-
-  function openAddModal(type = activeTab) {
+  function openAddModal(type: TabKey = activeTab) {
     setFormMode("add");
-    const base = { ...EMPTY_FORM, type, title: titleForType(type) };
-    const withDefaults =
-      type === "customer"
-        ? { ...base, salesRepresentative: activeEmployees[0]?.name || "" }
-        : base;
-    setAllowOverpayment(false);
-    setFormState(withDefaults);
+    setFormState({
+      ...EMPTY_FORM,
+      type,
+      title: getDefaultTitle(type),
+      issueDate: TODAY,
+      dueDate: TODAY,
+      currency: "ILS",
+      paymentMethod: "Bank Transfer",
+    });
+
+    setCustomerSearch("");
+    setShowCustomerMenu(false);
+    setEditDeleteCode("");
+    setEditDeleteError("");
+    setShowDiscardConfirm(false);
     setFormOpen(true);
   }
 
-  function openEditModal(record: InvoiceRecord) {
+  function openEditModal(invoice: InvoiceRecord) {
+    const firstLine = invoice.items[0];
+
     setFormMode("edit");
-    let nextForm = buildFormFromRecord(record);
+    setFormState({
+      id: invoice.id,
+      type: invoice.type,
+      title: invoice.title,
+      partyName: invoice.partyName,
+      partySubtext: invoice.partySubtext,
+      customerId: invoice.customerId ?? "",
+      supplierId: invoice.supplierId ?? "",
+      issueDate: invoice.issueDate,
+      dueDate: invoice.dueDate,
+      currency: invoice.currency || "ILS",
+      paymentMethod: normalizePaymentMethod(invoice.paymentMethod),
+      productId: firstLine?.productId ?? "",
+      quantity: String(firstLine?.quantity ?? 1),
+      unitPrice: String(firstLine?.unitPrice ?? invoice.totalAmount),
+      paidAmount: String(invoice.paidAmount),
+      notes: invoice.notes,
+      linkedRecord: invoice.linkedRecord,
+      department: invoice.department ?? "",
+      category: invoice.category ?? "",
+      priority: invoice.priority ?? "Medium",
+      approvedBy: invoice.approvedBy ?? "",
+    });
 
-    if (record.type === "customer" && !nextForm.customerId && record.customerName) {
-      const linkedCustomer = customerByName.get(record.customerName);
-      if (linkedCustomer) {
-        nextForm = fillCustomerDetails(linkedCustomer.id, nextForm);
-      }
-    }
-
-    if (record.type === "supplier" && !nextForm.supplierId && record.supplierName) {
-      const linkedSupplier = supplierByName.get(record.supplierName);
-      if (linkedSupplier) {
-        nextForm = fillSupplierDetails(linkedSupplier.id, nextForm);
-      }
-    }
-
-    const firstItemTotal = nextForm.itemsText.trim()
-      ? buildLines(
-          nextForm.itemsText,
-          Math.max(1, normalizeNumber(nextForm.quantity)),
-          Math.max(0, normalizeNumber(nextForm.unitPrice))
-        ).reduce((sum, item) => sum + item.total, 0)
-      : 0;
-    const estimatedTotal = Math.max(
-      firstItemTotal - Math.max(0, normalizeNumber(nextForm.discount)) + Math.max(0, normalizeNumber(nextForm.tax)) + Math.max(0, normalizeNumber(nextForm.shipping)),
-      0
-    );
-    setAllowOverpayment(normalizeNumber(nextForm.paidAmount) > estimatedTotal && estimatedTotal > 0);
-    setFormState(nextForm);
+    setCustomerSearch(invoice.type === "customer" ? invoice.partyName : "");
+    setShowCustomerMenu(false);
+    setEditDeleteCode("");
+    setEditDeleteError("");
+    setShowDiscardConfirm(false);
+    setDetailInvoice(null);
     setFormOpen(true);
-    setActionMenu(null);
   }
 
   function closeFormModal() {
     setFormOpen(false);
     setFormState(EMPTY_FORM);
-    setAllowOverpayment(false);
-    setPendingSave(null);
+    setCustomerSearch("");
+    setShowCustomerMenu(false);
+    setEditDeleteCode("");
+    setEditDeleteError("");
+  }
+
+  function handleProductChange(productId: string) {
+    const selectedProduct = getProductById(products, productId);
+    const price = selectedProduct ? getProductPrice(selectedProduct) : 0;
+
+    setFormState((current) => ({
+      ...current,
+      productId,
+      unitPrice: String(price),
+    }));
   }
 
   function handleFormChange(
     event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) {
     const { name, value } = event.target;
+
+    if (name === "productId") {
+      handleProductChange(value);
+      return;
+    }
+
     setFormState((current) => {
       if (name === "type") {
+        const nextType = value as TabKey;
+
+        setCustomerSearch("");
+        setShowCustomerMenu(false);
+
         return {
           ...current,
-          type: value as TabKey,
+          type: nextType,
           title:
-            current.title.trim() === "" ||
-            current.title === titleForType(current.type)
-              ? titleForType(value as TabKey)
+            current.title.trim() === "" || current.title === getDefaultTitle(current.type)
+              ? getDefaultTitle(nextType)
               : current.title,
+          paymentMethod: "Bank Transfer",
+          customerId: nextType === "customer" ? current.customerId : "",
+          supplierId: nextType === "supplier" ? current.supplierId : "",
+          partyName: "",
+          partySubtext: "",
+          linkedRecord: "",
         };
       }
 
-      if (name === "customerId") {
-        return fillCustomerDetails(value, current);
+      if (name === "issueDate") {
+        return {
+          ...current,
+          issueDate: value,
+          dueDate: value,
+        };
       }
 
-      if (name === "supplierId") {
-        return fillSupplierDetails(value, current);
-      }
-
-      return { ...current, [name]: value };
+      return {
+        ...current,
+        [name]: value,
+      };
     });
   }
 
-  function requestSaveConfirmation() {
-    setPendingSave({
-      mode: formMode,
-      title: formMode === "add" ? "Confirm New Invoice" : "Confirm Invoice Update",
-      message:
-        formMode === "add"
-          ? "Are you sure you want to create this invoice with the current data?"
-          : "Are you sure you want to save these changes to the invoice?",
-    });
-  }
+  function saveInvoice(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
 
-  function saveForm() {
     const quantity = Math.max(1, normalizeNumber(formState.quantity));
     const unitPrice = Math.max(0, normalizeNumber(formState.unitPrice));
-    const discount = Math.max(0, normalizeNumber(formState.discount));
-    const tax = Math.max(0, normalizeNumber(formState.tax));
-    const shipping = Math.max(0, normalizeNumber(formState.shipping));
-    const items = buildLines(formState.itemsText, quantity, unitPrice);
-    const subtotal = items.reduce((sum, item) => sum + item.total, 0);
-    const totalAmount = Math.max(subtotal - discount + tax + shipping, 0);
-    const requestedPaidAmount = Math.max(0, normalizeNumber(formState.paidAmount));
-    const paidAmount = allowOverpayment
-      ? requestedPaidAmount
-      : Math.min(requestedPaidAmount, totalAmount);
+    const totalAmount = quantity * unitPrice;
+    const paidAmount = Math.min(Math.max(0, normalizeNumber(formState.paidAmount)), totalAmount);
     const remainingAmount = Math.max(totalAmount - paidAmount, 0);
     const status = statusFromAmounts(paidAmount, totalAmount);
+    const product = getProductById(products, formState.productId);
+    const item = buildLine(product, formState.productId, quantity, unitPrice);
 
-    if (requestedPaidAmount > totalAmount && !allowOverpayment) {
-      pushToast("Paid amount cannot exceed the invoice total unless overpayment approval is enabled.");
-    }
+    const partyName =
+      formState.partyName.trim() ||
+      formState.department.trim() ||
+      getPartyLabel(formState.type);
 
-    const baseRecord: InvoiceRecord = {
-      id:
-        formMode === "edit" && formState.id
-          ? formState.id
-          : `${formState.type.toUpperCase().slice(0, 1)}INV-${Math.floor(Math.random() * 9000) + 1000}`,
+    const partySubtext =
+      formState.type === "internal"
+        ? formState.category.trim()
+        : formState.partySubtext.trim();
+
+    const nextId =
+      formMode === "edit" && formState.id ? formState.id : buildInvoiceId(formState.type);
+
+    const nextRecord: InvoiceRecord = {
+      id: nextId,
       type: formState.type,
-      customerId: formState.customerId || undefined,
-      supplierId: formState.supplierId || undefined,
-      title: formState.title || titleForType(formState.type),
-      status,
+      title: formState.title.trim() || getDefaultTitle(formState.type),
+      partyName,
+      partySubtext,
+      customerId: formState.type === "customer" ? formState.customerId : undefined,
+      supplierId: formState.type === "supplier" ? formState.supplierId : undefined,
       issueDate: formState.issueDate,
-      dueDate: formState.dueDate,
-      currency: formState.currency,
-      subtotal,
-      discount,
-      tax,
-      shipping,
+      dueDate: formState.dueDate || formState.issueDate,
+      currency: formState.currency || "ILS",
+      status,
+      paymentMethod: formState.paymentMethod,
       totalAmount,
       paidAmount,
       remainingAmount,
-      paymentMethod: formState.paymentMethod,
-      lastUpdated: new Date().toISOString(),
-      createdBy: formMode === "edit" ? records.find((record) => record.id === formState.id)?.createdBy ?? "Current User" : "Current User",
-      updatedBy: "Current User",
-      attachments: formMode === "edit"
-        ? records.find((record) => record.id === formState.id)?.attachments ?? []
-        : [],
-      notesPreview: formState.description || "No notes yet.",
-      latestNote: formState.description || "No notes yet.",
-      notesList:
+      items: [item],
+      notes: formState.notes.trim(),
+      linkedRecord: buildLinkedRecord(formState.type, nextId),
+      department: formState.type === "internal" ? partyName : undefined,
+      category: formState.type === "internal" ? formState.category.trim() : undefined,
+      priority: formState.type === "internal" ? formState.priority : undefined,
+      approvedBy: formState.type === "internal" ? formState.approvedBy.trim() : undefined,
+      createdAt:
         formMode === "edit"
-          ? records.find((record) => record.id === formState.id)?.notesList ?? []
-          : [],
-      items,
-      paymentHistory:
-        formMode === "edit"
-          ? records.find((record) => record.id === formState.id)?.paymentHistory ?? []
-          : [],
-      activity: [
-        makeActivity(
-          "Current User",
-          formMode === "edit" ? "Updated invoice details" : "Created invoice",
-          `act-${Date.now()}`
-        ),
-        ...(
-          formMode === "edit"
-            ? records.find((record) => record.id === formState.id)?.activity ?? []
-            : []
-        ),
-      ],
-      linkedRecord: formState.linkedRecord,
-      description: formState.description,
-      customerName: formState.customerName,
-      customerPhone: formState.customerPhone,
-      customerEmail: formState.customerEmail,
-      billingAddress: formState.billingAddress,
-      salesRepresentative: formState.salesRepresentative,
-      linkedOrderNumber: formState.linkedOrderNumber,
-      department: formState.department,
-      category: formState.category,
-      requester: formState.requester,
-      approvedBy: formState.approvedBy,
-      relatedProject: formState.relatedProject,
-      vendor: formState.vendor,
-      costCenter: formState.costCenter,
-      priority: formState.priority,
-      confidentiality: formState.confidentiality,
-      internalNotes: formState.internalNotes,
-      supplierName: formState.supplierName,
-      supplierCode: formState.supplierCode,
-      supplierCompanyName: formState.supplierCompanyName,
-      supplierContactPerson: formState.supplierContactPerson,
-      supplierPhone: formState.supplierPhone,
-      supplierEmail: formState.supplierEmail,
-      supplierAddress: formState.supplierAddress,
-      taxNumber: formState.taxNumber,
-      purchaseOrderReference: formState.purchaseOrderReference,
-      deliveryNoteReference: formState.deliveryNoteReference,
-      paymentTerms: formState.paymentTerms,
-      supplierRating: normalizeNumber(formState.supplierRating),
+          ? records.find((invoice) => invoice.id === formState.id)?.createdAt ??
+            new Date().toISOString()
+          : new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
 
     setRecords((current) => {
       if (formMode === "edit" && formState.id) {
-        return current.map((record) => (record.id === formState.id ? baseRecord : record));
+        return current.map((invoice) =>
+          invoice.id === formState.id ? nextRecord : invoice
+        );
       }
 
-      return [baseRecord, ...current];
+      return [nextRecord, ...current];
     });
 
-    pushToast(formMode === "edit" ? "Invoice updated successfully." : "Invoice created successfully.");
-    setPendingSave(null);
+    pushToast(formMode === "edit" ? "Invoice updated." : "Invoice created.");
     closeFormModal();
   }
 
-  function updateRecord(id: string, updater: (record: InvoiceRecord) => InvoiceRecord, message: string) {
-    setRecords((current) => current.map((record) => (record.id === id ? updater(record) : record)));
-    pushToast(message);
-    setActionMenu(null);
-  }
+  function requestDeleteFromEdit() {
+    if (!formState.id) return;
 
-  function addNote() {
-    if (!noteTarget || !noteText.trim()) return;
-
-    updateRecord(
-      noteTarget.id,
-      (record) => {
-        const note = makeNote("Current User", noteText.trim(), `note-${Date.now()}`);
-        return {
-          ...record,
-          notesPreview: note.content,
-          latestNote: note.content,
-          notesList: [note, ...record.notesList],
-          lastUpdated: new Date().toISOString(),
-          activity: [
-            makeActivity("Current User", "Added note", `act-${Date.now()}`),
-            ...record.activity,
-          ],
-        };
-      },
-      "Note added successfully."
-    );
-
-    setNoteTarget(null);
-    setNoteText("");
-  }
-
-  function removeRecord() {
-    if (!deleteTarget) return;
-    if (deleteCode.trim() !== "123") {
-      setDeleteError("Please type 123 to confirm deletion.");
+    if (editDeleteCode.trim() !== "123") {
+      setEditDeleteError("Type 123 to confirm deletion.");
       return;
     }
-    setRecords((current) => current.filter((record) => record.id !== deleteTarget.id));
-    setDeleteTarget(null);
-    setDeleteCode("");
-    setDeleteError("");
+
+    setRecords((current) => current.filter((record) => record.id !== formState.id));
     pushToast("Invoice deleted.");
+    closeFormModal();
   }
 
-  function performBulk(action: "paid" | "delete") {
-    if (selectedIds.length === 0) return;
+  function markAsPaid(invoice: InvoiceRecord) {
+    setRecords((current) =>
+      current.map((record) =>
+        record.id === invoice.id
+          ? {
+              ...record,
+              status: "Paid",
+              paidAmount: record.totalAmount,
+              remainingAmount: 0,
+              updatedAt: new Date().toISOString(),
+            }
+          : record
+      )
+    );
 
-    if (action === "delete") {
-      setRecords((current) => current.filter((record) => !selectedIds.includes(record.id)));
-      pushToast("Selected invoices deleted.");
-    } else {
-      setRecords((current) =>
-        current.map((record) => {
-          if (!selectedIds.includes(record.id)) return record;
-          return {
-            ...record,
+    setDetailInvoice((current) =>
+      current?.id === invoice.id
+        ? {
+            ...current,
             status: "Paid",
-            paidAmount: record.totalAmount,
+            paidAmount: current.totalAmount,
             remainingAmount: 0,
-            lastUpdated: new Date().toISOString(),
-          };
-        })
-      );
-      pushToast("Selected invoices marked as paid.");
-    }
-
-    setSelectedIds([]);
-  }
-
-  function exportCurrentView() {
-    const header = ["ID", "Type", "Title", "Status", "Issue Date", "Due Date", "Total", "Remaining"];
-    const lines = filteredRecords.map((record) =>
-      [
-        record.id,
-        record.type,
-        record.title,
-        record.status,
-        record.issueDate,
-        record.dueDate,
-        record.totalAmount,
-        record.remainingAmount,
-      ].join(",")
+            updatedAt: new Date().toISOString(),
+          }
+        : current
     );
-    const blob = new Blob([[header.join(","), ...lines].join("\n")], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = `${activeTab}-invoices.csv`;
-    anchor.click();
-    URL.revokeObjectURL(url);
-    pushToast("Current invoice view exported.");
-  }
 
-  const allPageSelected =
-    paginatedRecords.length > 0 &&
-    paginatedRecords.every((record) => selectedIds.includes(record.id));
-
-  const activeFilterEntries = useMemo(() => {
-    const entries: Array<{ key: FilterKey; label: string; value: string }> = [];
-    const labelMap: Partial<Record<FilterKey, string>> = {
-      status: "Status",
-      paymentMethod: "Payment Method",
-      dateRange: "Date",
-      dueDate: "Due Date",
-      amountRange: "Amount",
-      customer: "Customer",
-      salesRepresentative: "Sales Rep",
-      department: "Department",
-      category: "Category",
-      priority: "Priority",
-      confidentiality: "Confidentiality",
-      approvalStatus: "Approval",
-      paymentStatus: "Payment Status",
-      costCenter: "Cost Center",
-      relatedProject: "Project",
-      supplier: "Supplier",
-      supplierCode: "Supplier Code",
-      paymentTerms: "Payment Terms",
-      currency: "Currency",
-      linkedPurchaseRecord: "Purchase Record",
-      supplierRating: "Supplier Rating",
-      overdueOnly: "Overdue",
-      incompleteOnly: "Incomplete",
-    };
-
-    (Object.keys(filters) as FilterKey[]).forEach((key) => {
-      if (key === "search") return;
-      const raw = filters[key];
-      if (typeof raw === "boolean") {
-        if (raw) entries.push({ key, label: labelMap[key] || key, value: "On" });
-        return;
-      }
-      if (raw) entries.push({ key, label: labelMap[key] || key, value: String(raw) });
-    });
-
-    return entries;
-  }, [filters]);
-
-  const activeFilterCount = activeFilterEntries.length;
-  const actionMenuRecord = actionMenu ? records.find((record) => record.id === actionMenu.id) ?? null : null;
-
-  function openActionMenu(recordId: string, trigger: HTMLButtonElement) {
-    if (actionMenu?.id === recordId) {
-      setActionMenu(null);
-      return;
-    }
-
-    const rect = trigger.getBoundingClientRect();
-    const menuWidth = 224;
-    const estimatedHeight = 360;
-    const gap = 8;
-    const viewportPadding = 12;
-    const placeUp = window.innerHeight - rect.bottom < estimatedHeight && rect.top > estimatedHeight / 2;
-    const left = Math.min(
-      Math.max(viewportPadding, rect.right - menuWidth),
-      window.innerWidth - viewportPadding - menuWidth
-    );
-    const top = placeUp
-      ? Math.max(viewportPadding, rect.top - estimatedHeight - gap)
-      : Math.max(
-          viewportPadding,
-          Math.min(window.innerHeight - viewportPadding - estimatedHeight, rect.bottom + gap)
-        );
-
-    setActionMenu({
-      id: recordId,
-      left,
-      top,
-      placement: placeUp ? "up" : "down",
-    });
+    pushToast("Invoice marked as paid.");
   }
 
   return (
     <>
-      <div className="invoice-management-page">
-        <section className="invoice-hero-card">
-          <div className="invoice-hero-top">
-            <div className="invoice-hero-main">
-              <div className="invoice-hero-badge">
-                <FileText size={20} />
-              </div>
-              <div className="invoice-hero-text">
-                <h1>Invoice Management</h1>
-                <p>Customer, internal, and supplier invoices.</p>
-              </div>
+      <div className="invoice-page">
+        {/* ── Page header ─────────────────────────── */}
+        <div className="inv-page-header">
+          <div className="inv-header-left">
+            <div className="inv-page-icon">
+              <FileText size={22} />
             </div>
-
-            <div className="invoice-hero-actions">
-              <button className="primary-action" type="button" onClick={() => openAddModal()}>
-                <Plus size={16} />
-                New Invoice
-              </button>
-              <button className="secondary-action" type="button" onClick={exportCurrentView}>
-                <Download size={16} />
-                Export
-              </button>
+            <div className="inv-header-copy">
+              <h1>Invoice Management</h1>
+              <p>Create, track, and manage all your customer, supplier, and internal invoices.</p>
             </div>
           </div>
+          <Button variant="primary" onClick={() => openAddModal(activeTab)} leftIcon={<Plus size={16} />} className="inv-new-btn">
+            New Invoice
+          </Button>
+        </div>
 
-          <div className="hero-summary-inline">
-            {kpiCards.map((card) => {
-              const Icon = card.icon;
-              return (
-                <div key={card.title} className={`hero-summary-card ${card.tone === "amber" ? "warning" : ""}`}>
-                  <div className={`hero-summary-icon ${card.tone}`}>
-                    <Icon size={20} />
-                  </div>
-                  <div>
-                    <small>{card.title}</small>
-                    <strong>{card.value}</strong>
-                    {card.helper ? <em>{card.helper}</em> : null}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </section>
+        {/* ── Invoice type tabs ───────────────────── */}
+        <div className="inv-type-grid">
+          {TAB_ORDER.map((tab) => {
+            const config = TAB_CONFIG[tab];
+            const Icon = config.icon;
+            const count = records.filter((invoice) => invoice.type === tab).length;
 
-        <section className={`invoice-workspace ${showMoreFilters ? "filters-open" : ""}`}>
-          <div className="workspace-topbar">
-            <div className="invoice-tabs">
-              {(Object.keys(TAB_CONFIG) as TabKey[]).map((tab) => {
-                const config = TAB_CONFIG[tab];
-                const Icon = config.icon;
-                const count = records.filter((record) => record.type === tab).length;
-
-                return (
-                  <button
-                    key={tab}
-                    type="button"
-                    className={`invoice-tab ${activeTab === tab ? "active" : ""}`}
-                    onClick={() => setActiveTab(tab)}
-                  >
-                    <Icon size={18} />
-                    <div>
-                      <strong>{config.label}</strong>
-                      <span>{count}</span>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className="workspace-topbar-side">
-              <div className="result-hint">
-                <strong>{filteredRecords.length}</strong>
-                <span>{filteredRecords.length === 1 ? "result" : "results"}</span>
-                <i />
-              </div>
-            </div>
-          </div>
-
-          <div className="workspace-toolbar">
-            <div className="search-shell">
-              <Search size={17} />
-              <input
-                type="text"
-                value={filters.search}
-                onChange={(event) => updateFilter("search", event.target.value)}
-                placeholder={searchPlaceholder}
-              />
-            </div>
-
-            <div className="toolbar-actions">
+            return (
               <button
-                className={`toolbar-chip subtle ${showMoreFilters ? "active" : ""}`}
+                key={tab}
                 type="button"
-                onClick={() => setShowMoreFilters((current) => !current)}
-                aria-expanded={showMoreFilters}
+                className={`inv-type-card ${activeTab === tab ? "active" : ""}`}
+                onClick={() => setActiveTab(tab)}
+              >
+                <div className={`inv-type-icon ${tab}`}>
+                  <Icon size={22} />
+                </div>
+                <div>
+                  <span>{config.label}</span>
+                  <strong>{count}</strong>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* ── Search + filter ─────────────────────── */}
+        <div className="inv-search-row">
+          <div className="inv-search-box">
+            <Input
+              variant="search"
+              value={filters.search}
+              onChange={(event) => updateFilter("search", event.target.value)}
+              placeholder="Search invoice, name, product, or status"
+              leftIcon={<Search size={17} />}
+              fullWidth
+            />
+          </div>
+
+          <div className="invoice-filter-menu-wrap">
+              <button
+                className={`toolbar-chip ${showFilterMenu ? "active" : ""}`}
+                type="button"
+                onClick={() => setShowFilterMenu((current) => !current)}
               >
                 <Filter size={15} />
-                Filters
+                Filter
+                {activeFilterCount > 0 && (
+                  <span className="toolbar-chip-count">{activeFilterCount}</span>
+                )}
               </button>
-              <button
-                className={`toolbar-chip ${showMoreFilters ? "active" : ""}`}
-                type="button"
-                onClick={() => setShowMoreFilters((current) => !current)}
-                aria-expanded={showMoreFilters}
-              >
-                More Filters
-                {activeFilterCount > 0 && <span className="toolbar-chip-count">{activeFilterCount}</span>}
-              </button>
-            </div>
-          </div>
 
-          <div className="contextual-filters-bar">
-            <div className="contextual-filters-scroll">
-              {activeTab === "customer" && (
-                <>
-                  <select className="compact-filter-select app-select-control" value={filters.status} onChange={(e) => updateFilter("status", e.target.value)}>
-                    <option value="">Status</option>
-                    <option value="Paid">Paid</option>
-                    <option value="Partial">Partial</option>
-                    <option value="Unpaid">Unpaid</option>
-                  </select>
-                  <select className="compact-filter-select app-select-control" value={filters.customer} onChange={(e) => updateFilter("customer", e.target.value)}>
-                    <option value="">Customer</option>
-                    {customerNames.map((name) => <option key={name} value={name}>{name}</option>)}
-                  </select>
-                  <select className="compact-filter-select app-select-control" value={filters.dateRange} onChange={(e) => updateFilter("dateRange", e.target.value)}>
-                    <option value="">Date</option>
-                    <option value="7d">Last 7 days</option>
-                    <option value="30d">Last 30 days</option>
-                  </select>
-                </>
-              )}
+              {showFilterMenu && (
+                <div className="invoice-filter-dropdown professional-filter-dropdown">
+                  <Select
+                    label="Status"
+                    value={filters.status}
+                    onChange={(event) =>
+                      updateFilter("status", event.target.value as FilterState["status"])
+                    }
+                    options={[
+                      { value: "all", label: "All Statuses" },
+                      { value: "Paid", label: "Paid" },
+                      { value: "Partial", label: "Partial" },
+                      { value: "Unpaid", label: "Unpaid" },
+                    ]}
+                    fullWidth
+                  />
 
-              {activeTab === "internal" && (
-                <>
-                  <select className="compact-filter-select app-select-control" value={filters.department} onChange={(e) => updateFilter("department", e.target.value)}>
-                    <option value="">Department</option>
-                    {departments.map((name) => <option key={name} value={name}>{name}</option>)}
-                  </select>
-                  <select className="compact-filter-select app-select-control" value={filters.category} onChange={(e) => updateFilter("category", e.target.value)}>
-                    <option value="">Category</option>
-                    {categories.map((name) => <option key={name} value={name}>{name}</option>)}
-                  </select>
-                  <select className="compact-filter-select app-select-control" value={filters.priority} onChange={(e) => updateFilter("priority", e.target.value)}>
-                    <option value="">Priority</option>
-                    <option value="Low">Low</option>
-                    <option value="Medium">Medium</option>
-                    <option value="High">High</option>
-                    <option value="Critical">Critical</option>
-                  </select>
-                  <select className="compact-filter-select app-select-control" value={filters.confidentiality} onChange={(e) => updateFilter("confidentiality", e.target.value)}>
-                    <option value="">Confidentiality</option>
-                    <option value="Standard">Standard</option>
-                    <option value="Sensitive">Sensitive</option>
-                    <option value="Restricted">Restricted</option>
-                  </select>
-                  <select className="compact-filter-select app-select-control" value={filters.paymentStatus} onChange={(e) => updateFilter("paymentStatus", e.target.value)}>
-                    <option value="">Payment Status</option>
-                    <option value="Paid">Paid</option>
-                    <option value="Partial">Partial</option>
-                    <option value="Unpaid">Unpaid</option>
-                  </select>
-                </>
-              )}
+                  <Select
+                    label="Due"
+                    value={filters.due}
+                    onChange={(event) =>
+                      updateFilter("due", event.target.value as DueFilter)
+                    }
+                    options={[
+                      { value: "all", label: "All Due Dates" },
+                      { value: "late", label: "Late" },
+                      { value: "today", label: "Due Today" },
+                      { value: "week", label: "Due This Week" },
+                    ]}
+                    fullWidth
+                  />
 
-              {activeTab === "supplier" && (
-                <>
-                  <select className="compact-filter-select app-select-control" value={filters.supplier} onChange={(e) => updateFilter("supplier", e.target.value)}>
-                    <option value="">Supplier</option>
-                    {supplierNames.map((name) => <option key={name} value={name}>{name}</option>)}
-                  </select>
-                  <select className="compact-filter-select app-select-control" value={filters.paymentStatus} onChange={(e) => updateFilter("paymentStatus", e.target.value)}>
-                    <option value="">Payment Status</option>
-                    <option value="Paid">Paid</option>
-                    <option value="Partial">Partial</option>
-                    <option value="Unpaid">Unpaid</option>
-                  </select>
-                  <select className="compact-filter-select app-select-control" value={filters.dueDate} onChange={(e) => updateFilter("dueDate", e.target.value)}>
-                    <option value="">Due Date</option>
-                    <option value="overdue">Overdue</option>
-                    <option value="7d">Next 7 days</option>
-                    <option value="30d">Next 30 days</option>
-                  </select>
-                </>
-              )}
-            </div>
+                  <Select
+                    label="Payment Method"
+                    value={filters.paymentMethod}
+                    onChange={(event) =>
+                      updateFilter(
+                        "paymentMethod",
+                        event.target.value as FilterState["paymentMethod"]
+                      )
+                    }
+                    options={[
+                      { value: "all", label: "All Methods" },
+                      { value: "Cash", label: "كاش" },
+                      { value: "Card", label: "بطاقة" },
+                      { value: "Bank Transfer", label: "حوالة بنكية" },
+                    ]}
+                    fullWidth
+                  />
 
-            <div className="quick-filter-chips">
-              <button type="button" className={`quick-chip ${filters.overdueOnly ? "active" : ""}`} onClick={() => updateFilter("overdueOnly", !filters.overdueOnly)}>
-                Overdue
-              </button>
-              <button type="button" className={`quick-chip ${filters.status === "Unpaid" ? "active" : ""}`} onClick={() => updateFilter("status", filters.status === "Unpaid" ? "" : "Unpaid")}>
-                Unpaid
-              </button>
-              <button type="button" className={`quick-chip ${filters.status === "Partial" || filters.paymentStatus === "Partial" ? "active" : ""}`} onClick={() => updateFilter(activeTab === "customer" ? "status" : "paymentStatus", (activeTab === "customer" ? filters.status : filters.paymentStatus) === "Partial" ? "" : "Partial")}>
-                Partial
-              </button>
-              {(activeTab === "customer" || activeTab === "supplier") && (
-                <button type="button" className={`quick-chip ${activeTab === "customer" ? filters.status === "Paid" : filters.paymentStatus === "Paid" ? true : false}`} onClick={() => updateFilter(activeTab === "customer" ? "status" : "paymentStatus", (activeTab === "customer" ? filters.status : filters.paymentStatus) === "Paid" ? "" : "Paid")}>
-                  Paid
-                </button>
-              )}
-              {activeTab === "internal" && (
-                <button type="button" className={`quick-chip ${filters.priority === "High" ? "active" : ""}`} onClick={() => updateFilter("priority", filters.priority === "High" ? "" : "High")}>
-                  High Priority
-                </button>
-              )}
-              {activeFilterCount > 0 && (
-                <button className="clear-filters-link" type="button" onClick={clearActiveFilters}>
-                  Clear Filters
-                </button>
-              )}
-            </div>
+                  <div className="filter-two-cols">
+                    <Input
+                      label="Min Amount"
+                      variant="number"
+                      min="0"
+                      value={filters.minAmount}
+                      onChange={(event) => updateFilter("minAmount", event.target.value)}
+                      placeholder="0"
+                      fullWidth
+                    />
 
-            {showMoreFilters && (
-              <div className="more-filters-popover">
-                <div className="more-filters-grid">
-                  {activeTab === "customer" && (
-                    <>
-                      <label className="compact-filter-field">
-                        <span>Due Date</span>
-                        <select value={filters.dueDate} onChange={(e) => updateFilter("dueDate", e.target.value)}>
-                          <option value="">Any</option>
-                          <option value="overdue">Overdue</option>
-                          <option value="7d">Next 7 days</option>
-                          <option value="30d">Next 30 days</option>
-                        </select>
-                      </label>
-                      <label className="compact-filter-field">
-                        <span>Amount</span>
-                        <select value={filters.amountRange} onChange={(e) => updateFilter("amountRange", e.target.value)}>
-                          <option value="">All amounts</option>
-                          <option value="lt500">Under 500</option>
-                          <option value="500to1000">500 - 1000</option>
-                          <option value="gt1000">Above 1000</option>
-                        </select>
-                      </label>
-                      <label className="compact-filter-field">
-                        <span>Quick State</span>
-                        <select value={filters.incompleteOnly ? "incomplete" : ""} onChange={(e) => updateFilter("incompleteOnly", e.target.value === "incomplete")}>
-                          <option value="">Any</option>
-                          <option value="incomplete">Incomplete only</option>
-                        </select>
-                      </label>
-                    </>
-                  )}
+                    <Input
+                      label="Max Amount"
+                      variant="number"
+                      min="0"
+                      value={filters.maxAmount}
+                      onChange={(event) => updateFilter("maxAmount", event.target.value)}
+                      placeholder="Any"
+                      fullWidth
+                    />
+                  </div>
 
-                  {activeTab === "internal" && (
-                    <>
-                      <label className="compact-filter-field">
-                        <span>Approval Status</span>
-                        <select value={filters.approvalStatus} onChange={(e) => updateFilter("approvalStatus", e.target.value)}>
-                          <option value="">All</option>
-                          <option value="Approved">Approved</option>
-                          <option value="Pending">Pending</option>
-                        </select>
-                      </label>
-                      <label className="compact-filter-field">
-                        <span>Date</span>
-                        <select value={filters.dateRange} onChange={(e) => updateFilter("dateRange", e.target.value)}>
-                          <option value="">Any date</option>
-                          <option value="7d">Last 7 days</option>
-                          <option value="30d">Last 30 days</option>
-                        </select>
-                      </label>
-                      <label className="compact-filter-field">
-                        <span>Amount</span>
-                        <select value={filters.amountRange} onChange={(e) => updateFilter("amountRange", e.target.value)}>
-                          <option value="">All amounts</option>
-                          <option value="lt500">Under 500</option>
-                          <option value="500to1000">500 - 1000</option>
-                          <option value="gt1000">Above 1000</option>
-                        </select>
-                      </label>
-                      <label className="compact-filter-field">
-                        <span>Cost Center</span>
-                        <select value={filters.costCenter} onChange={(e) => updateFilter("costCenter", e.target.value)}>
-                          <option value="">All cost centers</option>
-                          {costCenters.map((item) => <option key={item} value={item}>{item}</option>)}
-                        </select>
-                      </label>
-                      <label className="compact-filter-field">
-                        <span>Related Project</span>
-                        <select value={filters.relatedProject} onChange={(e) => updateFilter("relatedProject", e.target.value)}>
-                          <option value="">All projects</option>
-                          {relatedProjects.map((item) => <option key={item} value={item}>{item}</option>)}
-                        </select>
-                      </label>
-                    </>
-                  )}
+                  <Select
+                    label="Sort By"
+                    value={filters.sortBy}
+                    onChange={(event) =>
+                      updateFilter("sortBy", event.target.value as SortKey)
+                    }
+                    options={[
+                      { value: "newest", label: "Newest Created" },
+                      { value: "oldest", label: "Oldest Created" },
+                      { value: "dueSoon", label: "Due Soon First" },
+                      { value: "amountHigh", label: "Total: High to Low" },
+                      { value: "amountLow", label: "Total: Low to High" },
+                      { value: "amountDueHigh", label: "Amount Due: High to Low" },
+                    ]}
+                    fullWidth
+                  />
 
-                  {activeTab === "supplier" && (
-                    <>
-                      <label className="compact-filter-field">
-                        <span>Due Date</span>
-                        <select value={filters.dueDate} onChange={(e) => updateFilter("dueDate", e.target.value)}>
-                          <option value="">Any</option>
-                          <option value="overdue">Overdue</option>
-                          <option value="7d">Next 7 days</option>
-                          <option value="30d">Next 30 days</option>
-                        </select>
-                      </label>
-                      <label className="compact-filter-field">
-                        <span>Date</span>
-                        <select value={filters.dateRange} onChange={(e) => updateFilter("dateRange", e.target.value)}>
-                          <option value="">Any date</option>
-                          <option value="7d">Last 7 days</option>
-                          <option value="30d">Last 30 days</option>
-                        </select>
-                      </label>
-                      <label className="compact-filter-field">
-                        <span>Amount</span>
-                        <select value={filters.amountRange} onChange={(e) => updateFilter("amountRange", e.target.value)}>
-                          <option value="">All amounts</option>
-                          <option value="lt500">Under 500</option>
-                          <option value="500to1000">500 - 1000</option>
-                          <option value="gt1000">Above 1000</option>
-                        </select>
-                      </label>
-                      <label className="compact-filter-field">
-                        <span>Linked Purchase</span>
-                        <select value={filters.linkedPurchaseRecord} onChange={(e) => updateFilter("linkedPurchaseRecord", e.target.value)}>
-                          <option value="">All records</option>
-                          {linkedPurchaseRecords.map((item) => <option key={item} value={item}>{item}</option>)}
-                        </select>
-                      </label>
-                      <label className="compact-filter-field">
-                        <span>Supplier Rating</span>
-                        <select value={filters.supplierRating} onChange={(e) => updateFilter("supplierRating", e.target.value)}>
-                          <option value="">Any rating</option>
-                          <option value="4plus">4 and above</option>
-                          <option value="3orless">3 or less</option>
-                        </select>
-                      </label>
-                    </>
-                  )}
+                  <div className="invoice-filter-actions">
+                    <Button variant="secondary" onClick={resetFilters}>Reset</Button>
+                    <Button variant="primary" onClick={() => setShowFilterMenu(false)}>Apply</Button>
+                  </div>
                 </div>
-              </div>
-            )}
-
-            {activeFilterCount > 0 && (
-              <div className="active-filter-chips">
-                {activeFilterEntries.map((entry) => (
-                  <button key={`${entry.key}-${entry.value}`} type="button" className="active-filter-chip" onClick={() => clearSingleFilter(entry.key)}>
-                    <span>{entry.label}: {entry.value}</span>
-                    <X size={12} />
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {selectedIds.length > 0 && (
-            <div className="bulk-bar">
-              <span>{selectedIds.length} invoices selected</span>
-              <div className="bulk-actions">
-                <button type="button" onClick={() => performBulk("paid")}>
-                  Mark Paid
-                </button>
-                <button type="button" onClick={exportCurrentView}>
-                  Export
-                </button>
-                <button type="button" onClick={() => pushToast("Selected invoices archived.")}>
-                  Archive
-                </button>
-                <button type="button" className="danger" onClick={() => performBulk("delete")}>
-                  Delete
-                </button>
-              </div>
+              )}
             </div>
-          )}
+        </div>
 
-          <div className="decision-summary-strip">
-            <span>{decisionSummary}</span>
-            <button type="button" onClick={() => {
-              if (activeTab === "internal") {
-                updateFilter("approvalStatus", "Pending");
-              } else if (activeTab === "supplier") {
-                updateFilter("dueDate", "7d");
-              } else {
-                updateFilter("overdueOnly", true);
-              }
-            }}>
-              Review now
-            </button>
+        {/* ── Table card ──────────────────────────── */}
+        <div className="inv-table-card">
+          <div className="inv-table-header">
+            <h2>{TAB_CONFIG[activeTab].tableTitle}</h2>
+            <span className="inv-table-total">{money(summary.amountDue)}</span>
           </div>
-
-          <div className="table-card">
-            <div className="table-headline">
-              <div>
-                <h2>{TAB_CONFIG[activeTab].label}</h2>
-                <p>{filteredRecords.length} result{filteredRecords.length === 1 ? "" : "s"}</p>
-              </div>
-
-              <div className="table-headline-meta">
-                <span>{money(summary.remainingAmount)}</span>
-              </div>
-            </div>
 
             <div className="invoice-table-wrap app-table-wrap">
               <table className="invoice-table app-data-table">
                 <thead>
                   <tr>
-                    <th>
-                      <input
-                        type="checkbox"
-                        checked={allPageSelected}
-                        onChange={(e) => toggleSelectAll(e.target.checked)}
-                      />
-                    </th>
                     <th>Invoice</th>
-                    <th>{activeTab === "customer" ? "Client" : activeTab === "internal" ? "Department" : "Supplier"}</th>
-                    <th>{activeTab === "customer" ? "Items" : activeTab === "internal" ? "Category / Priority" : "Terms / Code"}</th>
-                    <th>Due Date</th>
+                    <th>{getPartyLabel(activeTab)}</th>
+                    <th>Product</th>
+                    <th>Issue Date</th>
                     <th>Total</th>
-                    <th>Remaining</th>
-                    <th>{activeTab === "internal" ? "Approval / Status" : "Status"}</th>
+                    <th>Amount Due</th>
+                    <th>{activeTab === "internal" ? "Approval" : "Status"}</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
 
                 <tbody>
-                  {isLoading ? (
-                    Array.from({ length: rowsPerPage }).map((_, index) => (
-                      <tr key={`skeleton-${index}`} className="skeleton-row">
-                        <td colSpan={9}>
-                          <div className="table-skeleton">
-                            <span />
-                            <span />
-                            <span />
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  ) : viewError ? (
-                    <tr>
-                      <td colSpan={9}>
-                        <div className="empty-state">
-                          <FileText size={34} />
-                          <h3>Something went wrong</h3>
-                          <p>{viewError}</p>
-                        </div>
-                      </td>
-                    </tr>
-                  ) : paginatedRecords.length > 0 ? (
-                    paginatedRecords.map((record) => {
-                      const overdue =
-                        record.remainingAmount > 0 &&
-                        record.dueDate < TODAY &&
-                        record.status !== "Paid";
-                      const dueTone = dueStateTone(record.dueDate, record.remainingAmount, record.status);
+                  {filteredRecords.length > 0 ? (
+                    filteredRecords.map((invoice) => {
+                      const late = isLate(invoice);
+                      const firstItem = invoice.items[0];
 
                       return (
                         <tr
-                          key={record.id}
-                          className={`${overdue ? "is-overdue" : ""} row-clickable`}
-                          onClick={() => {
-                            setDetailInvoice(record);
-                            setDetailTab("overview");
-                          }}
+                          key={invoice.id}
+                          className={`${late ? "is-overdue" : ""} row-clickable`}
                         >
                           <td>
-                            <input
-                              type="checkbox"
-                              checked={selectedIds.includes(record.id)}
-                              onClick={(e) => e.stopPropagation()}
-                              onChange={() => toggleSelect(record.id)}
-                            />
-                          </td>
-                          <td>
                             <div className="invoice-id-cell app-cell-stack">
-                              <strong>{record.id}</strong>
-                              <span>{record.title || "Invoice"}</span>
-                              <OverflowContent
-                                title={record.id}
-                                subtitle="Latest note"
-                                preview={record.latestNote || "No notes"}
-                                content={record.latestNote || "No notes"}
-                                meta={[
-                                  { label: "Status", value: record.status },
-                                  { label: "Updated", value: formatDate(record.lastUpdated) },
-                                ]}
-                              />
-                              <div className="mini-doc-pill">PDF</div>
+                              <strong>{invoice.id}</strong>
                             </div>
                           </td>
+
                           <td>
                             <div className="party-cell">
-                              <strong>
-                                {record.type === "customer"
-                                  ? record.customerName
-                                  : record.type === "internal"
-                                  ? record.department
-                                  : record.supplierName}
-                              </strong>
-                              <span>
-                                {record.type === "customer"
-                                  ? record.customerEmail || "-"
-                                  : record.type === "internal"
-                                  ? `${record.category} - ${record.priority}`
-                                  : record.supplierCompanyName || "-"}
-                              </span>
+                              <strong>{invoice.partyName}</strong>
                             </div>
                           </td>
+
                           <td>
-                            {activeTab === "customer" && (
-                              <div className="party-cell">
-                                <strong>{record.items[0]?.label || "No items"}</strong>
-                                <span>
-                                  {record.items.length > 1
-                                    ? `+${record.items.length - 1} more item${record.items.length > 2 ? "s" : ""}`
-                                    : `${record.items.length || 0} item`}
-                                </span>
-                              </div>
-                            )}
-                            {activeTab === "internal" && (
-                              <div className="party-cell">
-                                <strong>{record.category || "Uncategorized"}</strong>
-                                <span>{record.priority || "Normal"} priority</span>
-                              </div>
-                            )}
-                            {activeTab === "supplier" && (
-                              <div className="party-cell">
-                                <strong>{record.paymentTerms || "No terms"}</strong>
-                                <span>{record.supplierCode || "No code"}</span>
-                              </div>
-                            )}
+                            <div className="party-cell">
+                              <strong>{firstItem?.label ?? "No product"}</strong>
+                            </div>
                           </td>
+
                           <td>
                             <div className="due-date-cell">
-                              <strong>{formatDate(record.dueDate)}</strong>
-                              <span className={`due-text ${dueTone}`}>
-                                {dueStateLabel(record.dueDate, record.remainingAmount, record.status)}
-                              </span>
+                              <strong>{formatDate(invoice.issueDate)}</strong>
                             </div>
                           </td>
+
                           <td>
                             <div className="amount-cell">
-                              <strong>{money(record.totalAmount, record.currency)}</strong>
-                              <span>{record.currency}</span>
+                              <strong>{money(invoice.totalAmount, invoice.currency)}</strong>
                             </div>
                           </td>
-                          <td className="remaining-cell">
+
+                          <td>
                             <div className="amount-cell amount-cell-emphasis">
-                              <strong>{money(record.remainingAmount, record.currency)}</strong>
-                              <span>{record.status === "Paid" ? "Closed" : record.currency}</span>
+                              <strong>{money(invoice.remainingAmount, invoice.currency)}</strong>
                             </div>
                           </td>
+
                           <td>
                             {activeTab === "internal" ? (
                               <div className="status-stack">
-                                <span className={`status-pill ${record.approvedBy ? "approved" : "pending-approval"}`}>
-                                  {record.approvedBy ? "Approved" : "Pending Approval"}
-                                </span>
-                                <small>{record.status}</small>
+                                <Badge
+                                  variant={invoice.approvedBy ? "success" : "warning"}
+                                  className={`status-pill ${invoice.approvedBy ? "approved" : "pending-approval"}`}
+                                >
+                                  {invoice.approvedBy ? "Approved" : "Needs Approval"}
+                                </Badge>
                               </div>
                             ) : (
-                              <span className={`status-pill ${overdue ? "overdue" : record.status.toLowerCase()}`}>
-                                {overdue ? "Overdue" : record.status}
-                              </span>
+                              <Badge
+                                variant={
+                                  late
+                                    ? "danger"
+                                    : invoice.status === "Paid"
+                                    ? "success"
+                                    : invoice.status === "Partial"
+                                    ? "info"
+                                    : "warning"
+                                }
+                                className={`status-pill ${late ? "overdue" : invoice.status.toLowerCase()}`}
+                              >
+                                {late ? "Late" : invoice.status}
+                              </Badge>
                             )}
                           </td>
+
                           <td>
                             <div className="row-actions">
-                              <button
-                                type="button"
-                                className="view-button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setDetailInvoice(record);
-                                  setDetailTab("overview");
-                                }}
+                              <Button
+                                variant="icon"
+                                size="sm"
+                                className="inv-action-btn view"
+                                title="View"
+                                onClick={() => setDetailInvoice(invoice)}
                               >
                                 <Eye size={15} />
-                                Open
-                              </button>
+                              </Button>
 
-                              <div className="menu-shell">
-                                <button
-                                  type="button"
-                                  className="menu-button"
-                                  aria-label={`Open actions for ${record.id}`}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    openActionMenu(record.id, e.currentTarget);
-                                  }}
-                                  aria-expanded={actionMenu?.id === record.id}
-                                  aria-haspopup="menu"
-                                >
-                                  <MoreHorizontal size={15} />
-                                </button>
-                              </div>
+                              <Button
+                                variant="icon"
+                                size="sm"
+                                className="inv-action-btn edit"
+                                title="Edit"
+                                onClick={() => openEditModal(invoice)}
+                              >
+                                <Pencil size={15} />
+                              </Button>
                             </div>
                           </td>
                         </tr>
@@ -2421,19 +1445,19 @@ export default function Invoices() {
                     })
                   ) : (
                     <tr>
-                      <td colSpan={10}>
+                      <td colSpan={8}>
                         <div className="empty-state">
                           <FileText size={34} />
-                          <h3>{activeFilterCount > 0 || filters.search ? "No results found" : "No invoices found"}</h3>
-                          <p>
-                            {activeFilterCount > 0 || filters.search
-                              ? "Try changing the search or filters to broaden this view."
-                              : "Create a new invoice to start working in this section."}
-                          </p>
-                          <button type="button" className="primary-action" onClick={() => openAddModal(activeTab)}>
-                            <Plus size={16} />
+                          <h3>No invoices found</h3>
+
+                          <Button
+                            variant="primary"
+                            onClick={() => openAddModal(activeTab)}
+                            leftIcon={<Plus size={16} />}
+                            className="primary-action"
+                          >
                             Add Invoice
-                          </button>
+                          </Button>
                         </div>
                       </td>
                     </tr>
@@ -2442,888 +1466,595 @@ export default function Invoices() {
               </table>
             </div>
 
-            <TableFooter
-              className={`pagination-bar ${pageCount <= 1 ? "single-page" : ""}`}
-              total={filteredRecords.length}
-              page={safePage}
-              rowsPerPage={rowsPerPage}
-              rowsPerPageOptions={[5, 10, 15]}
-              onRowsPerPageChange={(value) => {
-                setRowsPerPage(value);
-                setPage(1);
-              }}
-              onPageChange={setPage}
-            />
-
-            <div className="table-tip-bar">
-              <FileText size={16} />
-              <span>Use filters to narrow this view.</span>
-            </div>
+          <div className="inv-table-footer">
+            <span>
+              Showing {filteredRecords.length} invoice{filteredRecords.length === 1 ? "" : "s"}
+            </span>
           </div>
-        </section>
+        </div>
       </div>
 
-      {actionMenu && actionMenuRecord && createPortal(
-        <div
-          ref={actionMenuRef}
-          className={`actions-menu portal-actions-menu ${actionMenu.placement === "up" ? "is-upward" : ""}`}
-          style={{ top: actionMenu.top, left: actionMenu.left }}
-          role="menu"
-        >
-          <button
-            type="button"
-            onClick={() => {
-              setDetailInvoice(actionMenuRecord);
-              setDetailTab("overview");
-              setActionMenu(null);
-            }}
-          >
-            <Eye size={15} />
-            Open
-          </button>
-          <button type="button" onClick={() => openEditModal(actionMenuRecord)}>
-            <Pencil size={15} />
-            Edit Invoice
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setNoteTarget(actionMenuRecord);
-              setActionMenu(null);
-            }}
-          >
-            <StickyNote size={15} />
-            Add Note
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setDetailInvoice(actionMenuRecord);
-              setDetailTab("notes");
-              setActionMenu(null);
-            }}
-          >
-            <FileText size={15} />
-            View Notes
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              const cloned = {
-                ...actionMenuRecord,
-                id: `${actionMenuRecord.id}-COPY`,
-                title: `${actionMenuRecord.title} Copy`,
-                status: "Unpaid" as InvoiceStatus,
-                lastUpdated: new Date().toISOString(),
-              };
-              setRecords((current) => [cloned, ...current]);
-              setActionMenu(null);
-              pushToast("Invoice duplicated.");
-            }}
-          >
-            <Copy size={15} />
-            Duplicate
-          </button>
-          <button
-            type="button"
-            onClick={() =>
-              updateRecord(
-                actionMenuRecord.id,
-                (current) => ({
-                  ...current,
-                  status: "Paid",
-                  paidAmount: current.totalAmount,
-                  remainingAmount: 0,
-                  lastUpdated: new Date().toISOString(),
-                }),
-                "Invoice marked as paid."
-              )
-            }
-          >
-            <Check size={15} />
-            Mark as Paid
-          </button>
-          <button
-            type="button"
-            onClick={() =>
-              updateRecord(
-                actionMenuRecord.id,
-                (current) => ({
-                  ...current,
-                  status: "Partial",
-                  paidAmount: Math.max(current.paidAmount, current.totalAmount * 0.5),
-                  remainingAmount: Math.max(
-                    current.totalAmount - Math.max(current.paidAmount, current.totalAmount * 0.5),
-                    0
-                  ),
-                  lastUpdated: new Date().toISOString(),
-                }),
-                "Invoice marked as partial."
-              )
-            }
-          >
-            <Check size={15} />
-            Mark as Partial
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setActionMenu(null);
-              pushToast("PDF download prepared.");
-            }}
-          >
-            <Download size={15} />
-            Download PDF
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setActionMenu(null);
-              pushToast("Print command opened.");
-            }}
-          >
-            <Printer size={15} />
-            Print Invoice
-          </button>
-          <div className="menu-divider" />
-          <button
-            type="button"
-            onClick={() => {
-              setActionMenu(null);
-              pushToast("Invoice archived.");
-            }}
-          >
-            <FileText size={15} />
-            Archive
-          </button>
-          <button
-            type="button"
-            className="danger-item"
-            onClick={() => {
-              setDeleteTarget(actionMenuRecord);
-              setDeleteCode("");
-              setDeleteError("");
-              setActionMenu(null);
-            }}
-          >
-            <Trash2 size={15} />
-            Delete
-          </button>
-        </div>,
-        document.body
-      )}
+      <Modal
+        isOpen={formOpen}
+        onClose={requestCloseFormModal}
+        title={formMode === "add" ? "Create Invoice" : "Edit Invoice"}
+        size="lg"
+        className="modal-card invoice-centered-modal"
+        footer={
+          <>
+            <Button variant="secondary" onClick={requestCloseFormModal} className="secondary-action">
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              type="submit"
+              form="invoice-form"
+              leftIcon={<Check size={16} />}
+              className="primary-action"
+            >
+              Save
+            </Button>
+          </>
+        }
+      >
+              <form id="invoice-form" onSubmit={saveInvoice} autoComplete="off">
+                <Input
+                  variant="text"
+                  name="fakeInvoiceUserField"
+                  autoComplete="username"
+                  tabIndex={-1}
+                  className="browser-autofill-decoy"
+                />
 
-      {formOpen && (
-        <div className="overlay-shell" onClick={closeFormModal}>
-          <div className="modal-card large" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <div>
-                <h2>{formMode === "add" ? "Add New Invoice" : "Edit Invoice"}</h2>
-                <p>Invoice form.</p>
-              </div>
-              <button type="button" className="icon-close" onClick={closeFormModal}>
-                <X size={18} />
-              </button>
-            </div>
+                <Input
+                  variant="password"
+                  name="fakeInvoicePasswordField"
+                  autoComplete="new-password"
+                  tabIndex={-1}
+                  className="browser-autofill-decoy"
+                />
 
-            <div className="modal-body">
-              <div className="invoice-form-layout">
-                <div className="invoice-form-main">
-                  <section className="form-cluster">
-                    <div className="form-cluster-head">
-                      <div>
-                        <h3>Invoice Setup</h3>
-                      </div>
-                    </div>
-
-                    <div className="form-grid form-grid-top">
-                      <label className="field-stack">
-                        <span>Invoice Type</span>
-                        <select name="type" value={formState.type} onChange={handleFormChange}>
-                          <option value="customer">Customer Invoice</option>
-                          <option value="internal">Internal Invoice</option>
-                          <option value="supplier">Supplier Invoice</option>
-                        </select>
-                      </label>
-                      <label className="field-stack">
-                        <span>Title</span>
-                        <input name="title" value={formState.title} onChange={handleFormChange} />
-                      </label>
-                      <label className="field-stack">
-                        <span>Issue Date</span>
-                        <input type="date" name="issueDate" value={formState.issueDate} onChange={handleFormChange} />
-                      </label>
-                      <label className="field-stack">
-                        <span>Due Date</span>
-                        <input type="date" name="dueDate" value={formState.dueDate} onChange={handleFormChange} />
-                      </label>
-                    </div>
-
-                    <div className="form-grid form-grid-inline">
-                      <label className="field-stack">
-                        <span>Status</span>
-                        <select name="status" value={formState.status} onChange={handleFormChange}>
-                          <option value="Unpaid">Unpaid</option>
-                          <option value="Partial">Partial</option>
-                          <option value="Paid">Paid</option>
-                        </select>
-                      </label>
-                      <label className="field-stack">
-                        <span>Payment Method</span>
-                        <select name="paymentMethod" value={formState.paymentMethod} onChange={handleFormChange}>
-                          <option value="Bank Transfer">Bank Transfer</option>
-                          <option value="Cash">Cash</option>
-                          <option value="Card">Card</option>
-                          <option value="Wire">Wire</option>
-                          <option value="Credit">Credit</option>
-                          <option value="Internal Transfer">Internal Transfer</option>
-                        </select>
-                      </label>
-                      <label className="field-stack">
-                        <span>Linked Record</span>
-                        <input name="linkedRecord" value={formState.linkedRecord} onChange={handleFormChange} />
-                      </label>
-                    </div>
-                  </section>
-
-                  <section className="form-cluster">
-                    <div className="form-cluster-head">
-                      <div>
-                        <h3>Items and Amounts</h3>
-                      </div>
-                    </div>
-
-                    <div className="form-grid">
-                      <label className="field-stack full">
-                        <span>Items / Products</span>
-                        <textarea
-                          name="itemsText"
-                          value={formState.itemsText}
-                          onChange={handleFormChange}
-                          placeholder="Separate items with commas"
-                          rows={3}
-                        />
-                      </label>
-                    </div>
-
-                    <div className="form-grid form-grid-financial">
-                      <label className="field-stack">
-                        <span>Quantity</span>
-                        <input name="quantity" value={formState.quantity} onChange={handleFormChange} />
-                      </label>
-                      <label className="field-stack">
-                        <span>Unit Price</span>
-                        <input name="unitPrice" value={formState.unitPrice} onChange={handleFormChange} />
-                      </label>
-                      <label className="field-stack">
-                        <span>Discount</span>
-                        <input name="discount" value={formState.discount} onChange={handleFormChange} />
-                      </label>
-                      <label className="field-stack">
-                        <span>Tax / VAT</span>
-                        <input name="tax" value={formState.tax} onChange={handleFormChange} />
-                      </label>
-                      <label className="field-stack">
-                        <span>Shipping / Charges</span>
-                        <input name="shipping" value={formState.shipping} onChange={handleFormChange} />
-                      </label>
-                      <label className="field-stack">
-                        <span>Paid Amount</span>
-                        <input name="paidAmount" value={formState.paidAmount} onChange={handleFormChange} />
-                      </label>
-                    </div>
-
-                    <div className="special-control-row">
-                      <label className="special-approval-toggle">
-                        <input
-                          type="checkbox"
-                          checked={allowOverpayment}
-                          onChange={(e) => setAllowOverpayment(e.target.checked)}
-                        />
-                        <div>
-                          <strong>Allow overpayment with special approval</strong>
-                          <span>Use only for approved exceptions.</span>
-                        </div>
-                      </label>
-                    </div>
-
-                    <div className="form-grid">
-                      <label className="field-stack full">
-                        <span>Description / Notes</span>
-                        <textarea
-                          name="description"
-                          value={formState.description}
-                          onChange={handleFormChange}
-                          rows={3}
-                        />
-                      </label>
-                    </div>
-                  </section>
-
-                  {formState.type === "customer" && (
-                    <div className="form-section">
-                      <div className="form-cluster-head">
-                        <div>
-                          <h3>Customer Information</h3>
-                        </div>
-                      </div>
-                      <div className="form-grid">
+                <div className="modal-body">
+                  <div className="invoice-form-main">
+                    <section className="form-cluster">
+                      <div className="form-grid form-grid-top">
                         <label className="field-stack">
-                          <span>Customer</span>
-                          <select name="customerId" value={formState.customerId} onChange={handleFormChange}>
-                            <option value="">Select customer</option>
-                            {customerOptions.map((customer) => (
-                              <option key={customer.id} value={customer.id}>
-                                {customer.name}
+                          <span>Type</span>
+                          <select
+                            name="type"
+                            value={formState.type}
+                            onChange={handleFormChange}
+                            autoComplete="off"
+                          >
+                            <option value="customer">Customer Invoices</option>
+                            <option value="supplier">Supplier Invoices</option>
+                            <option value="internal">Internal Invoices</option>
+                          </select>
+                        </label>
+
+                        <label className="field-stack">
+                          <span>Title</span>
+                          <input
+                            name="invoiceTitleNoAutofill"
+                            autoComplete="off"
+                            value={formState.title}
+                            onChange={(event) =>
+                              setFormState((current) => ({
+                                ...current,
+                                title: event.target.value,
+                              }))
+                            }
+                            required
+                          />
+                        </label>
+
+                        <label className="field-stack">
+                          <span>Issue Date</span>
+                          <input
+                            type="date"
+                            name="issueDate"
+                            value={formState.issueDate}
+                            onChange={handleFormChange}
+                            autoComplete="off"
+                            required
+                          />
+                        </label>
+                      </div>
+
+                      <div className="form-grid form-grid-inline">
+                        {formState.type === "customer" ? (
+                          <div className="field-stack smart-customer-field" ref={customerMenuRef}>
+                            <span>Customer</span>
+
+                            <div className="smart-combobox">
+                              <Search size={15} />
+                              <input
+                                id="invoiceCustomerSearchBox"
+                                name="customerPickerNoBrowserAutofillV10"
+                                type="search"
+                                inputMode="search"
+                                autoComplete="new-password"
+                                autoCorrect="off"
+                                autoCapitalize="off"
+                                spellCheck={false}
+                                value={customerSearch}
+                                onChange={(event) => {
+                                  setCustomerSearch(event.target.value);
+                                  setShowCustomerMenu(true);
+                                  setFormState((current) => ({
+                                    ...current,
+                                    customerId: "",
+                                    partyName: event.target.value,
+                                    partySubtext: "",
+                                  }));
+                                }}
+                                onFocus={() => setShowCustomerMenu(true)}
+                                placeholder="Search customer by name, email, or phone"
+                                required
+                              />
+                            </div>
+
+                            {showCustomerMenu && (
+                              <div className="smart-customer-menu">
+                                {filteredCustomerOptions.length > 0 ? (
+                                  filteredCustomerOptions.map((customer) => (
+                                    <button
+                                      key={customer.id}
+                                      type="button"
+                                      onClick={() => selectCustomer(customer)}
+                                    >
+                                      <strong>{customer.name}</strong>
+                                      <span>
+                                        {customer.email || customer.phone || "No contact info"}
+                                      </span>
+                                    </button>
+                                  ))
+                                ) : (
+                                  <div className="smart-customer-empty">
+                                    No customers found
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        ) : formState.type === "supplier" ? (
+                          <label className="field-stack">
+                            <span>Supplier</span>
+                            <select
+                              name="supplierPickerNoBrowserAutofill"
+                              value={formState.supplierId}
+                              autoComplete="off"
+                              onChange={(event) => {
+                                const supplier = supplierOptions.find(
+                                  (item) => item.id === event.target.value
+                                );
+
+                                setFormState((current) => ({
+                                  ...current,
+                                  supplierId: event.target.value,
+                                  partyName: supplier?.name ?? "",
+                                  partySubtext: supplier?.email ?? "",
+                                }));
+                              }}
+                              required
+                            >
+                              <option value="">Select supplier</option>
+                              {supplierOptions.map((supplier) => (
+                                <option key={supplier.id} value={supplier.id}>
+                                  {supplier.name}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                        ) : (
+                          <label className="field-stack">
+                            <span>Department</span>
+                            <input
+                              name="partyName"
+                              value={formState.partyName}
+                              onChange={handleFormChange}
+                              autoComplete="off"
+                              required
+                            />
+                          </label>
+                        )}
+                      </div>
+                    </section>
+
+                    <section className="form-cluster">
+                      <div className="form-grid form-grid-financial">
+                        <label className="field-stack">
+                          <span>Product</span>
+                          <select
+                            name="productId"
+                            value={formState.productId}
+                            onChange={handleFormChange}
+                            autoComplete="off"
+                            required
+                          >
+                            <option value="">Select product</option>
+                            {productOptions.map((product) => (
+                              <option key={product.id} value={product.id}>
+                                {product.name} - {money(product.price, formState.currency)}
                               </option>
                             ))}
                           </select>
                         </label>
+
                         <label className="field-stack">
-                          <span>Customer Phone</span>
+                          <span>Quantity</span>
                           <input
-                            name="customerPhone"
-                            value={formState.customerPhone}
+                            name="quantity"
+                            type="number"
+                            min="1"
+                            value={formState.quantity}
                             onChange={handleFormChange}
-                            readOnly={Boolean(formState.customerId)}
-                            className={formState.customerId ? "readonly-field" : ""}
+                            autoComplete="off"
+                            required
                           />
                         </label>
+
                         <label className="field-stack">
-                          <span>Customer Email</span>
+                          <span>Unit Price</span>
                           <input
-                            name="customerEmail"
-                            value={formState.customerEmail}
-                            onChange={handleFormChange}
-                            readOnly={Boolean(formState.customerId)}
-                            className={formState.customerId ? "readonly-field" : ""}
+                            name="unitPrice"
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={formState.unitPrice}
+                            readOnly
+                            className="readonly-field"
+                            autoComplete="off"
                           />
                         </label>
+
                         <label className="field-stack">
-                          <span>Sales Representative</span>
-                          <input name="salesRepresentative" value={formState.salesRepresentative} onChange={handleFormChange} />
-                        </label>
-                        <label className="field-stack">
-                          <span>Linked Order Number</span>
-                          <input name="linkedOrderNumber" value={formState.linkedOrderNumber} onChange={handleFormChange} />
-                        </label>
-                        <label className="field-stack full">
-                          <span>Billing Address</span>
-                          <textarea
-                            name="billingAddress"
-                            value={formState.billingAddress}
+                          <span>Paid Amount</span>
+                          <input
+                            name="paidAmount"
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={formState.paidAmount}
                             onChange={handleFormChange}
-                            rows={2}
-                            readOnly={Boolean(formState.customerId)}
-                            className={formState.customerId ? "readonly-field" : ""}
+                            autoComplete="off"
                           />
+                        </label>
+
+                        <label className="field-stack">
+                          <span>Currency</span>
+                          <select
+                            name="currency"
+                            value={formState.currency}
+                            onChange={handleFormChange}
+                            autoComplete="off"
+                          >
+                            <option value="ILS">ILS</option>
+                            <option value="USD">USD</option>
+                            <option value="JOD">JOD</option>
+                            <option value="EUR">EUR</option>
+                          </select>
+                        </label>
+
+                        <label className="field-stack">
+                          <span>Payment Method</span>
+                          <select
+                            name="paymentMethod"
+                            value={formState.paymentMethod}
+                            onChange={handleFormChange}
+                            autoComplete="off"
+                          >
+                            <option value="Cash">كاش</option>
+                            <option value="Card">بطاقة</option>
+                            <option value="Bank Transfer">حوالة بنكية</option>
+                          </select>
                         </label>
                       </div>
-                    </div>
-                  )}
 
-                  {formState.type === "internal" && (
-                    <div className="form-section">
-                      <div className="form-cluster-head">
+                      <div className="invoice-auto-price-box">
                         <div>
-                          <h3>Internal Invoice Data</h3>
+                          <span>Total</span>
+                          <strong>
+                            {money(
+                              normalizeNumber(formState.quantity) *
+                                normalizeNumber(formState.unitPrice),
+                              formState.currency
+                            )}
+                          </strong>
+                        </div>
+
+                        <div>
+                          <span>Paid</span>
+                          <strong>{money(normalizeNumber(formState.paidAmount), formState.currency)}</strong>
+                        </div>
+
+                        <div>
+                          <span>Amount Due</span>
+                          <strong>
+                            {money(
+                              Math.max(
+                                normalizeNumber(formState.quantity) *
+                                  normalizeNumber(formState.unitPrice) -
+                                  normalizeNumber(formState.paidAmount),
+                                0
+                              ),
+                              formState.currency
+                            )}
+                          </strong>
                         </div>
                       </div>
-                      <div className="form-grid">
-                        <label className="field-stack">
-                          <span>Department</span>
-                          <input name="department" value={formState.department} onChange={handleFormChange} />
-                        </label>
-                        <label className="field-stack">
-                          <span>Category</span>
-                          <input name="category" value={formState.category} onChange={handleFormChange} />
-                        </label>
-                        <label className="field-stack">
-                          <span>Requester</span>
-                          <input name="requester" value={formState.requester} onChange={handleFormChange} />
-                        </label>
-                        <label className="field-stack">
-                          <span>Approved By</span>
-                          <input name="approvedBy" value={formState.approvedBy} onChange={handleFormChange} />
-                        </label>
-                        <label className="field-stack">
-                          <span>Related Project</span>
-                          <input name="relatedProject" value={formState.relatedProject} onChange={handleFormChange} />
-                        </label>
-                        <label className="field-stack">
-                          <span>Vendor</span>
-                          <input name="vendor" value={formState.vendor} onChange={handleFormChange} />
-                        </label>
-                        <label className="field-stack">
-                          <span>Cost Center</span>
-                          <input name="costCenter" value={formState.costCenter} onChange={handleFormChange} />
-                        </label>
-                        <label className="field-stack">
-                          <span>Priority</span>
-                          <select name="priority" value={formState.priority} onChange={handleFormChange}>
-                            <option value="Low">Low</option>
-                            <option value="Medium">Medium</option>
-                            <option value="High">High</option>
-                            <option value="Critical">Critical</option>
-                          </select>
-                        </label>
-                        <label className="field-stack">
-                          <span>Confidentiality</span>
-                          <select name="confidentiality" value={formState.confidentiality} onChange={handleFormChange}>
-                            <option value="Standard">Standard</option>
-                            <option value="Sensitive">Sensitive</option>
-                            <option value="Restricted">Restricted</option>
-                          </select>
-                        </label>
-                        <label className="field-stack full">
-                          <span>Internal Notes</span>
-                          <textarea name="internalNotes" value={formState.internalNotes} onChange={handleFormChange} rows={3} />
-                        </label>
-                      </div>
-                    </div>
-                  )}
+                    </section>
 
-                  {formState.type === "supplier" && (
-                    <div className="form-section">
-                      <div className="form-cluster-head">
-                        <div>
-                          <h3>Supplier Details</h3>
+                    {formState.type === "internal" && (
+                      <section className="form-cluster">
+                        <div className="form-grid">
+                          <label className="field-stack">
+                            <span>Department</span>
+                            <input
+                              name="department"
+                              value={formState.department}
+                              onChange={handleFormChange}
+                              autoComplete="off"
+                            />
+                          </label>
+
+                          <label className="field-stack">
+                            <span>Category</span>
+                            <input
+                              name="category"
+                              value={formState.category}
+                              onChange={handleFormChange}
+                              autoComplete="off"
+                            />
+                          </label>
+
+                          <label className="field-stack">
+                            <span>Priority</span>
+                            <select
+                              name="priority"
+                              value={formState.priority}
+                              onChange={handleFormChange}
+                              autoComplete="off"
+                            >
+                              <option value="Low">Low</option>
+                              <option value="Medium">Medium</option>
+                              <option value="High">High</option>
+                              <option value="Critical">Critical</option>
+                            </select>
+                          </label>
+
+                          <label className="field-stack">
+                            <span>Approved By</span>
+                            <input
+                              name="approvedBy"
+                              value={formState.approvedBy}
+                              onChange={handleFormChange}
+                              autoComplete="off"
+                            />
+                          </label>
                         </div>
-                      </div>
-                      <div className="form-grid">
-                        <label className="field-stack">
-                          <span>Supplier</span>
-                          <select name="supplierId" value={formState.supplierId} onChange={handleFormChange}>
-                            <option value="">Select supplier</option>
-                            {supplierOptions.map((supplier) => (
-                              <option key={supplier.id} value={supplier.id}>
-                                {supplier.name}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
-                        <label className="field-stack">
-                          <span>Supplier Code</span>
-                          <input
-                            name="supplierCode"
-                            value={formState.supplierCode}
-                            onChange={handleFormChange}
-                            readOnly={Boolean(formState.supplierId)}
-                            className={formState.supplierId ? "readonly-field" : ""}
-                          />
-                        </label>
-                        <label className="field-stack">
-                          <span>Company Name</span>
-                          <input
-                            name="supplierCompanyName"
-                            value={formState.supplierCompanyName}
-                            onChange={handleFormChange}
-                            readOnly={Boolean(formState.supplierId)}
-                            className={formState.supplierId ? "readonly-field" : ""}
-                          />
-                        </label>
-                        <label className="field-stack">
-                          <span>Contact Person</span>
-                          <input
-                            name="supplierContactPerson"
-                            value={formState.supplierContactPerson}
-                            onChange={handleFormChange}
-                            readOnly={Boolean(formState.supplierId)}
-                            className={formState.supplierId ? "readonly-field" : ""}
-                          />
-                        </label>
-                        <label className="field-stack">
-                          <span>Phone</span>
-                          <input
-                            name="supplierPhone"
-                            value={formState.supplierPhone}
-                            onChange={handleFormChange}
-                            readOnly={Boolean(formState.supplierId)}
-                            className={formState.supplierId ? "readonly-field" : ""}
-                          />
-                        </label>
-                        <label className="field-stack">
-                          <span>Email</span>
-                          <input
-                            name="supplierEmail"
-                            value={formState.supplierEmail}
-                            onChange={handleFormChange}
-                            readOnly={Boolean(formState.supplierId)}
-                            className={formState.supplierId ? "readonly-field" : ""}
-                          />
-                        </label>
-                        <label className="field-stack">
-                          <span>VAT Number</span>
-                          <input name="taxNumber" value={formState.taxNumber} onChange={handleFormChange} />
-                        </label>
-                        <label className="field-stack">
-                          <span>Purchase Order Ref</span>
-                          <input name="purchaseOrderReference" value={formState.purchaseOrderReference} onChange={handleFormChange} />
-                        </label>
-                        <label className="field-stack">
-                          <span>Delivery Note Ref</span>
-                          <input name="deliveryNoteReference" value={formState.deliveryNoteReference} onChange={handleFormChange} />
-                        </label>
-                        <label className="field-stack">
-                          <span>Payment Terms</span>
-                          <input name="paymentTerms" value={formState.paymentTerms} onChange={handleFormChange} />
-                        </label>
-                        <label className="field-stack">
-                          <span>Supplier Rating</span>
-                          <input name="supplierRating" value={formState.supplierRating} onChange={handleFormChange} />
-                        </label>
-                        <label className="field-stack full">
-                          <span>Address</span>
-                          <textarea
-                            name="supplierAddress"
-                            value={formState.supplierAddress}
-                            onChange={handleFormChange}
-                            rows={2}
-                            readOnly={Boolean(formState.supplierId)}
-                            className={formState.supplierId ? "readonly-field" : ""}
-                          />
-                        </label>
-                      </div>
-                    </div>
-                  )}
-                </div>
+                      </section>
+                    )}
 
-                <aside className="invoice-form-aside">
-                  <div className="form-aside-card">
-                    <span className="form-aside-label">Quick Summary</span>
-                    <strong>{titleForType(formState.type)}</strong>
-                    <p>
-                      Use the primary section for the core invoice data, then fill
-                      only the relevant details for the selected invoice type.
-                    </p>
-                    <div className="form-aside-list">
-                      <div>
-                        <span>Status</span>
-                        <b>{formState.status}</b>
+                    <section className="form-cluster">
+                      <div className="form-grid">
+                        <label className="field-stack full">
+                          <span>Notes</span>
+                          <textarea
+                            name="notes"
+                            value={formState.notes}
+                            onChange={handleFormChange}
+                            rows={3}
+                            autoComplete="off"
+                          />
+                        </label>
                       </div>
-                      <div>
-                        <span>Payment Cap</span>
-                        <b>{allowOverpayment ? "Special approval" : "Invoice total only"}</b>
-                      </div>
-                      <div>
-                        <span>Method</span>
-                        <b>{formState.paymentMethod}</b>
-                      </div>
-                      <div>
-                        <span>Issue Date</span>
-                        <b>{formState.issueDate}</b>
-                      </div>
-                      <div>
-                        <span>Due Date</span>
-                        <b>{formState.dueDate}</b>
-                      </div>
-                    </div>
+                    </section>
+
+                    {formMode === "edit" && (
+                      <section className="form-cluster edit-delete-zone">
+                        <div className="edit-delete-zone-head">
+                          <div>
+                            <h3>Delete Invoice</h3>
+                            <p>Type 123 to confirm deletion.</p>
+                          </div>
+                        </div>
+
+                        <div className="edit-delete-grid">
+                          <input
+                            value={editDeleteCode}
+                            onChange={(event) => {
+                              setEditDeleteCode(event.target.value);
+                              setEditDeleteError("");
+                            }}
+                            placeholder="Type 123"
+                            autoComplete="off"
+                          />
+
+                          <button type="button" className="danger-action" onClick={requestDeleteFromEdit}>
+                            <Trash2 size={16} />
+                            Delete
+                          </button>
+                        </div>
+
+                        {editDeleteError && <p className="confirm-error">{editDeleteError}</p>}
+                      </section>
+                    )}
                   </div>
-                </aside>
-              </div>
-            </div>
-
-            <div className="modal-footer">
-              <button type="button" className="secondary-action" onClick={closeFormModal}>
-                Cancel
-              </button>
-              <button type="button" className="primary-action" onClick={requestSaveConfirmation}>
-                <Save size={16} />
-                Save Invoice
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+                </div>
+              </form>
+      </Modal>
 
       {detailInvoice && (
-        <div className="overlay-shell drawer-shell" onClick={() => setDetailInvoice(null)}>
-          <aside className="details-drawer" onClick={(e) => e.stopPropagation()}>
-            <div className="drawer-header">
-              <div>
-                <span className="drawer-id">{detailInvoice.id}</span>
-                <h2>{detailInvoice.title}</h2>
-              </div>
-              <button type="button" className="icon-close" onClick={() => setDetailInvoice(null)}>
-                <X size={18} />
-              </button>
-            </div>
+        <ModalPortal>
+          <div className="overlay-shell modal-center-shell" onClick={() => setDetailInvoice(null)}>
+            <div
+              className="modal-card invoice-detail-modal"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="modal-header">
+                <div>
+                  <h2>{detailInvoice.id}</h2>
+                </div>
 
-            <div className="drawer-tabs">
-              {(["overview", "items", "payments", "notes", "attachments", "history"] as DetailTab[]).map((tab) => (
                 <button
-                  key={tab}
                   type="button"
-                  className={detailTab === tab ? "active" : ""}
-                  onClick={() => setDetailTab(tab)}
+                  className="icon-close"
+                  onClick={() => setDetailInvoice(null)}
                 >
-                  {tab}
+                  <X size={18} />
                 </button>
-              ))}
-            </div>
+              </div>
 
-            <div className="drawer-content">
-              {detailTab === "overview" && (
+              <div className="modal-body">
                 <div className="drawer-grid">
-                  <div className="info-card">
-                    <h3>Basic Information</h3>
+                  <section className="info-card">
+                    <h3>Invoice</h3>
+
                     <dl>
-                      <div><dt>Status</dt><dd><span className={`status-pill ${detailInvoice.status.toLowerCase()}`}>{detailInvoice.status}</span></dd></div>
-                      <div><dt>Issue Date</dt><dd>{formatDate(detailInvoice.issueDate)}</dd></div>
-                      <div><dt>Due Date</dt><dd>{formatDate(detailInvoice.dueDate)}</dd></div>
-                      <div><dt>Payment Method</dt><dd>{detailInvoice.paymentMethod}</dd></div>
-                      <div><dt>Linked Record</dt><dd>{detailInvoice.linkedRecord || "-"}</dd></div>
-                    </dl>
-                  </div>
-
-                  <div className="info-card">
-                    <h3>Financial Summary</h3>
-                    <dl>
-                      <div><dt>Subtotal</dt><dd>{money(detailInvoice.subtotal, detailInvoice.currency)}</dd></div>
-                      <div><dt>Tax</dt><dd>{money(detailInvoice.tax, detailInvoice.currency)}</dd></div>
-                      <div><dt>Total</dt><dd>{money(detailInvoice.totalAmount, detailInvoice.currency)}</dd></div>
-                      <div><dt>Paid</dt><dd>{money(detailInvoice.paidAmount, detailInvoice.currency)}</dd></div>
-                      <div><dt>Remaining</dt><dd>{money(detailInvoice.remainingAmount, detailInvoice.currency)}</dd></div>
-                    </dl>
-                  </div>
-
-                  <div className="info-card">
-                    <h3>Party Details</h3>
-                    <dl>
-                      {detailInvoice.type === "customer" && (
-                        <>
-                          <div><dt>Customer</dt><dd>{detailInvoice.customerName || "-"}</dd></div>
-                          <div><dt>Phone</dt><dd>{detailInvoice.customerPhone || "-"}</dd></div>
-                          <div><dt>Email</dt><dd>{detailInvoice.customerEmail || "-"}</dd></div>
-                          <div><dt>Address</dt><dd>{detailInvoice.billingAddress || "-"}</dd></div>
-                        </>
-                      )}
-                      {detailInvoice.type === "internal" && (
-                        <>
-                          <div><dt>Department</dt><dd>{detailInvoice.department || "-"}</dd></div>
-                          <div><dt>Category</dt><dd>{detailInvoice.category || "-"}</dd></div>
-                          <div><dt>Requester</dt><dd>{detailInvoice.requester || "-"}</dd></div>
-                          <div><dt>Confidentiality</dt><dd>{detailInvoice.confidentiality || "-"}</dd></div>
-                        </>
-                      )}
-                      {detailInvoice.type === "supplier" && (
-                        <>
-                          <div><dt>Supplier</dt><dd>{detailInvoice.supplierName || "-"}</dd></div>
-                          <div><dt>Company</dt><dd>{detailInvoice.supplierCompanyName || "-"}</dd></div>
-                          <div><dt>Contact</dt><dd>{detailInvoice.supplierContactPerson || "-"}</dd></div>
-                          <div><dt>Rating</dt><dd>{detailInvoice.supplierRating || "-"}</dd></div>
-                        </>
-                      )}
-                    </dl>
-                  </div>
-
-                  <div className="info-card full">
-                    <h3>Description</h3>
-                    <p>{detailInvoice.description || "No additional description."}</p>
-                  </div>
-                </div>
-              )}
-
-              {detailTab === "items" && (
-                <div className="stack-list">
-                  {detailInvoice.items.map((item) => (
-                    <div key={item.id} className="stack-card">
-                      <strong>{item.label}</strong>
-                        <span>{item.quantity} x {money(item.unitPrice, detailInvoice.currency)}</span>
-                      <span>{money(item.total, detailInvoice.currency)}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {detailTab === "payments" && (
-                <div className="stack-list">
-                  {detailInvoice.paymentHistory.length > 0 ? (
-                    detailInvoice.paymentHistory.map((payment) => (
-                      <div key={payment.id} className="stack-card">
-                        <strong>{payment.reference}</strong>
-                        <span>{formatDate(payment.date)} - {payment.method}</span>
-                        <span>{money(payment.amount, detailInvoice.currency)}</span>
+                      <div>
+                        <dt>Type</dt>
+                        <dd>{TAB_CONFIG[detailInvoice.type].label}</dd>
                       </div>
-                    ))
-                  ) : (
-                    <div className="stack-card empty">No payment records yet.</div>
+
+                      <div>
+                        <dt>{getPartyLabel(detailInvoice.type)}</dt>
+                        <dd>{detailInvoice.partyName}</dd>
+                      </div>
+
+                      <div>
+                        <dt>Status</dt>
+                        <dd>{isLate(detailInvoice) ? "Late" : detailInvoice.status}</dd>
+                      </div>
+
+                      <div>
+                        <dt>Issue Date</dt>
+                        <dd>{formatDate(detailInvoice.issueDate)}</dd>
+                      </div>
+
+                      <div>
+                        <dt>Payment</dt>
+                        <dd>{paymentLabel(detailInvoice.paymentMethod)}</dd>
+                      </div>
+                    </dl>
+                  </section>
+
+                  <section className="info-card">
+                    <h3>Amounts</h3>
+
+                    <dl>
+                      <div>
+                        <dt>Total</dt>
+                        <dd>{money(detailInvoice.totalAmount, detailInvoice.currency)}</dd>
+                      </div>
+
+                      <div>
+                        <dt>Paid</dt>
+                        <dd>{money(detailInvoice.paidAmount, detailInvoice.currency)}</dd>
+                      </div>
+
+                      <div>
+                        <dt>Amount Due</dt>
+                        <dd>{money(detailInvoice.remainingAmount, detailInvoice.currency)}</dd>
+                      </div>
+
+                      <div>
+                        <dt>Linked Record</dt>
+                        <dd>{detailInvoice.linkedRecord}</dd>
+                      </div>
+                    </dl>
+                  </section>
+
+                  <section className="info-card full">
+                    <h3>Product</h3>
+
+                    <dl>
+                      {detailInvoice.items.map((item) => (
+                        <div key={item.id}>
+                          <dt>{item.label}</dt>
+                          <dd>
+                            {item.quantity} × {money(item.unitPrice, detailInvoice.currency)}
+                          </dd>
+                        </div>
+                      ))}
+                    </dl>
+                  </section>
+
+                  {detailInvoice.notes && (
+                    <section className="info-card full">
+                      <h3>Notes</h3>
+                      <p>{detailInvoice.notes}</p>
+                    </section>
                   )}
                 </div>
-              )}
-
-              {detailTab === "notes" && (
-                <div className="stack-list">
-                  {detailInvoice.notesList.length > 0 ? (
-                    detailInvoice.notesList.map((note) => (
-                      <div key={note.id} className="stack-card">
-                        <strong>{note.author}</strong>
-                        <span>{formatDateTime(note.createdAt)}</span>
-                        <p>{note.content}</p>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="stack-card empty">No notes added yet.</div>
-                  )}
-                </div>
-              )}
-
-              {detailTab === "attachments" && (
-                <div className="stack-list">
-                  {detailInvoice.attachments.length > 0 ? (
-                    detailInvoice.attachments.map((attachment) => (
-                      <div key={attachment} className="stack-card">
-                        <strong>{attachment}</strong>
-                        <span>Available attachment</span>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="stack-card empty">No attachments available.</div>
-                  )}
-                </div>
-              )}
-
-              {detailTab === "history" && (
-                <div className="stack-list">
-                  {detailInvoice.activity.map((entry) => (
-                    <div key={entry.id} className="stack-card">
-                      <strong>{entry.action}</strong>
-                      <span>{entry.actor}</span>
-                      <span>{formatDateTime(entry.timestamp)}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </aside>
-        </div>
-      )}
-
-      {noteTarget && (
-        <div className="overlay-shell" onClick={() => setNoteTarget(null)}>
-          <div className="modal-card small" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <div>
-                <h2>Add Note</h2>
-                <p>{noteTarget.id} - Store an internal note for this invoice.</p>
               </div>
-              <button type="button" className="icon-close" onClick={() => setNoteTarget(null)}>
-                <X size={18} />
-              </button>
-            </div>
 
-            <div className="modal-body">
-              <textarea
-                rows={5}
-                value={noteText}
-                onChange={(e) => setNoteText(e.target.value)}
-                placeholder="Write the note here..."
-              />
-            </div>
+              <div className="modal-footer">
+                <button
+                  type="button"
+                  className="secondary-action"
+                  onClick={() => setDetailInvoice(null)}
+                >
+                  Close
+                </button>
 
-            <div className="modal-footer">
-              <button type="button" className="secondary-action" onClick={() => setNoteTarget(null)}>
-                Cancel
-              </button>
-              <button type="button" className="primary-action" onClick={addNote}>
-                <StickyNote size={16} />
-                Save Note
-              </button>
+                {detailInvoice.status !== "Paid" && (
+                  <button
+                    type="button"
+                    className="primary-action"
+                    onClick={() => markAsPaid(detailInvoice)}
+                  >
+                    <Check size={16} />
+                    Mark Paid
+                  </button>
+                )}
+              </div>
             </div>
           </div>
-        </div>
+        </ModalPortal>
       )}
 
-      {deleteTarget && (
-        <div className="overlay-shell" onClick={() => setDeleteTarget(null)}>
-          <div className="modal-card small" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <div>
-                <h2>Delete Invoice</h2>
-                <p>This action cannot be undone.</p>
+      {showDiscardConfirm && (
+        <ModalPortal>
+          <div className="overlay-shell modal-center-shell" onClick={keepEditing}>
+            <div
+              className="modal-card discard-confirm-modal"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="discard-confirm-icon">
+                <X size={22} />
               </div>
-              <button type="button" className="icon-close" onClick={() => setDeleteTarget(null)}>
-                <X size={18} />
-              </button>
-            </div>
 
-            <div className="modal-body confirmation delete-confirmation-body">
-              <Trash2 size={28} />
-              <p>
-                Are you sure you want to delete <strong>{deleteTarget.id}</strong>?
-              </p>
-              <div className="confirm-code-box">
-                <label className="confirm-code-label">
-                  <span>Type confirmation code</span>
-                  <input
-                    type="text"
-                    value={deleteCode}
-                    onChange={(e) => {
-                      setDeleteCode(e.target.value);
-                      setDeleteError("");
-                    }}
-                    placeholder="Enter 123"
-                  />
-                </label>
-                {deleteError && <p className="confirm-error">{deleteError}</p>}
+              <div className="discard-confirm-content">
+                <h2>Discard changes?</h2>
+                <p>
+                  You have unsaved invoice data. If you close this window, your changes will be lost.
+                </p>
               </div>
-            </div>
 
-            <div className="modal-footer">
-              <button type="button" className="secondary-action" onClick={() => setDeleteTarget(null)}>
-                Cancel
-              </button>
-              <button type="button" className="danger-action" onClick={removeRecord}>
-                <Trash2 size={16} />
-                Delete
-              </button>
+              <div className="discard-confirm-actions">
+                <button type="button" className="secondary-action" onClick={keepEditing}>
+                  Continue Editing
+                </button>
+
+                <button type="button" className="danger-action" onClick={confirmDiscardChanges}>
+                  Discard
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
-
-      {pendingSave && (
-        <div className="overlay-shell" onClick={() => setPendingSave(null)}>
-          <div className="modal-card small" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <div>
-                <h2>{pendingSave.title}</h2>
-                <p>{pendingSave.message}</p>
-              </div>
-              <button type="button" className="icon-close" onClick={() => setPendingSave(null)}>
-                <X size={18} />
-              </button>
-            </div>
-
-            <div className="modal-body confirmation">
-              <Save size={28} />
-              <p>
-                {pendingSave.mode === "add"
-                  ? "The invoice will be created and linked to the current workflow data."
-                  : "The current invoice data will be updated with your latest changes."}
-              </p>
-            </div>
-
-            <div className="modal-footer">
-              <button type="button" className="secondary-action" onClick={() => setPendingSave(null)}>
-                Cancel
-              </button>
-              <button type="button" className="primary-action" onClick={saveForm}>
-                <Save size={16} />
-                Confirm Save
-              </button>
-            </div>
-          </div>
-        </div>
+        </ModalPortal>
       )}
 
       {toast && (
-        <div className="toast-shell">
-          <div className="toast-card">
-            <Check size={16} />
-            <span>{toast.message}</span>
+        <ModalPortal>
+          <div className="toast-shell">
+            <div className="toast-card">
+              <Check size={18} />
+              <span>{toast}</span>
+            </div>
           </div>
-        </div>
+        </ModalPortal>
       )}
     </>
   );

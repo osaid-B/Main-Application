@@ -1,0 +1,16 @@
+node_modules
+dist
+dist-ssr
+build
+.next
+out
+.cache
+.vite
+coverage
+*.tsbuildinfo
+package-lock.json
+src/foundation.css
+src/index.css
+src/enterprise-redesign.css
+src/responsive.css
+src/pages-normalize.css

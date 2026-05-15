@@ -3,10 +3,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertCircle,
   ArrowUpDown,
+  BarChart2,
   Banknote,
+  Calendar,
   CalendarRange,
   CheckCircle2,
   ChevronDown,
+  ChevronRight,
   CreditCard,
   Download,
   Eye,
@@ -14,18 +17,25 @@ import {
   Filter,
   Landmark,
   MoreHorizontal,
+  Pencil,
   Plus,
   Printer,
   Receipt,
   RotateCcw,
   Search,
+  Sparkles,
+  TrendingDown,
+  TrendingUp,
   Trash2,
   Wallet,
   X,
+  XCircle,
 } from "lucide-react";
 import "./Payments.css";
-import OverflowContent from "../components/ui/OverflowContent";
-import TableFooter from "../components/ui/TableFooter";
+import { Button } from "../components/ui/Button";
+import { Input } from "../components/ui/Input";
+import { Select } from "../components/ui/Select";
+import { Modal } from "../components/ui/Modal";
 import { getCustomers, getInvoices, getPayments, savePayments } from "../data/storage";
 import {
   calculateInvoiceRemainingAmount,
@@ -91,33 +101,11 @@ type FilterState = {
   createdBy: string;
 };
 
-type MenuState = {
-  paymentId: string;
-  top: number;
-  left: number;
-};
+type MenuState = { paymentId: string; top: number; left: number };
+type ToastState = { type: "success" | "error" | "warning" | "info"; message: string } | null;
 
-type ToastState = {
-  type: "success" | "error" | "warning" | "info";
-  message: string;
-} | null;
-
-const PAYMENT_METHODS: PaymentMethod[] = [
-  "Cash",
-  "Card",
-  "Bank Transfer",
-  "Wallet",
-  "Cheque",
-];
-
-const PAYMENT_STATUSES: PaymentStatus[] = [
-  "Completed",
-  "Pending",
-  "Failed",
-  "Refunded",
-  "Partial",
-  "Cancelled",
-];
+const PAYMENT_METHODS: PaymentMethod[] = ["Cash", "Card", "Bank Transfer", "Wallet", "Cheque"];
+const PAYMENT_STATUSES: PaymentStatus[] = ["Completed", "Pending", "Failed", "Refunded", "Partial", "Cancelled"];
 
 const EMPTY_FORM: PaymentForm = {
   invoiceId: "",
@@ -133,72 +121,38 @@ const EMPTY_FORM: PaymentForm = {
 
 const DELETE_CONFIRMATION_CODE = "123";
 
-function buildPaymentId(index: number) {
-  return `PAY-${2001 + index}`;
-}
+function buildPaymentId(index: number) { return `PAY-${2001 + index}`; }
 
 function normalizeMethod(method?: string): PaymentMethod {
-  if (
-    method === "Cash" ||
-    method === "Card" ||
-    method === "Bank Transfer" ||
-    method === "Wallet" ||
-    method === "Cheque"
-  ) {
-    return method;
-  }
-
+  if (method === "Cash" || method === "Card" || method === "Bank Transfer" || method === "Wallet" || method === "Cheque") return method;
   return "Cash";
 }
 
 function normalizeStatus(status?: string): PaymentStatus {
-  if (
-    status === "Paid" ||
-    status === "Pending" ||
-    status === "Partial" ||
-    status === "Completed" ||
-    status === "Failed" ||
-    status === "Refunded" ||
-    status === "Cancelled"
-  ) {
-    return status;
-  }
-
+  if (status === "Paid" || status === "Pending" || status === "Partial" || status === "Completed" || status === "Failed" || status === "Refunded" || status === "Cancelled") return status;
   return "Completed";
 }
 
 function formatMoney(value: number) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 2,
-  }).format(roundMoney(value));
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2 }).format(roundMoney(value));
 }
 
 function formatDate(value: string) {
   if (!value) return "No date";
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) return value;
-
-  return new Intl.DateTimeFormat("en-US", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  }).format(parsed);
+  return new Intl.DateTimeFormat("en-US", { day: "2-digit", month: "short", year: "numeric" }).format(parsed);
 }
 
 function getRelativeDateLabel(value: string) {
   if (!value) return "";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
-
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const target = new Date(date);
   target.setHours(0, 0, 0, 0);
-
   const diffDays = Math.round((target.getTime() - today.getTime()) / 86400000);
-
   if (diffDays === 0) return "Today";
   if (diffDays === -1) return "Yesterday";
   if (diffDays === 1) return "Tomorrow";
@@ -218,35 +172,21 @@ function formatMethod(method: PaymentMethod) {
 
 function getMethodIcon(method: PaymentMethod) {
   switch (method) {
-    case "Card":
-      return <CreditCard size={14} />;
-    case "Bank Transfer":
-      return <Landmark size={14} />;
-    case "Wallet":
-      return <Wallet size={14} />;
-    case "Cheque":
-      return <FileText size={14} />;
-    default:
-      return <Banknote size={14} />;
+    case "Card": return <CreditCard size={14} />;
+    case "Bank Transfer": return <Landmark size={14} />;
+    case "Wallet": return <Wallet size={14} />;
+    case "Cheque": return <FileText size={14} />;
+    default: return <Banknote size={14} />;
   }
 }
 
 function getStatusTone(status: PaymentStatus) {
   switch (status) {
-    case "Completed":
-    case "Paid":
-      return "status-success";
-    case "Pending":
-    case "Partial":
-      return "status-warning";
-    case "Failed":
-      return "status-danger";
-    case "Refunded":
-      return "status-info";
-    case "Cancelled":
-      return "status-muted";
-    default:
-      return "status-muted";
+    case "Completed": case "Paid": return "status-success";
+    case "Pending": case "Partial": return "status-warning";
+    case "Failed": return "status-danger";
+    case "Refunded": return "status-info";
+    default: return "status-muted";
   }
 }
 
@@ -260,37 +200,19 @@ function normalizePaymentList(payments: Payment[], invoices: Invoice[], customer
 
     const paidByOthers = roundMoney(
       payments
-        .filter(
-          (entry) =>
-            entry.invoiceId === payment.invoiceId &&
-            entry.id !== payment.id &&
-            entry.paymentId !== payment.paymentId &&
-            isSuccessfulPaymentStatus(entry.status)
-        )
+        .filter((entry) => entry.invoiceId === payment.invoiceId && entry.id !== payment.id && entry.paymentId !== payment.paymentId && isSuccessfulPaymentStatus(entry.status))
         .reduce((sum, entry) => sum + Number(entry.amount ?? 0), 0)
     );
 
     const remainingAfterPayment = invoice
-      ? roundMoney(
-          Math.max(
-            invoiceTotal -
-              paidByOthers -
-              (isSuccessfulPaymentStatus(normalizedStatus) ? Number(payment.amount ?? 0) : 0),
-            0
-          )
-        )
+      ? roundMoney(Math.max(invoiceTotal - paidByOthers - (isSuccessfulPaymentStatus(normalizedStatus) ? Number(payment.amount ?? 0) : 0), 0))
       : 0;
 
     let linkState: ExtendedPayment["linkState"] = "Unlinked";
-
     if (invoice) {
-      if (!isSuccessfulPaymentStatus(normalizedStatus)) {
-        linkState = "Not applied";
-      } else if (remainingAfterPayment <= 0) {
-        linkState = "Fully applied";
-      } else {
-        linkState = "Partially applied";
-      }
+      if (!isSuccessfulPaymentStatus(normalizedStatus)) linkState = "Not applied";
+      else if (remainingAfterPayment <= 0) linkState = "Fully applied";
+      else linkState = "Partially applied";
     }
 
     return {
@@ -317,66 +239,111 @@ function normalizePaymentList(payments: Payment[], invoices: Invoice[], customer
   });
 }
 
-function validatePaymentForm(
-  values: PaymentForm,
-  invoices: Invoice[],
-  payments: Payment[],
-  editingPaymentId?: string
-) {
+function validatePaymentForm(values: PaymentForm, invoices: Invoice[], payments: Payment[], editingPaymentId?: string) {
   const errors: PaymentFormErrors = {};
-
   if (!values.invoiceId.trim()) errors.invoiceId = "Invoice is required.";
-
   const invoice = invoices.find((entry) => entry.id === values.invoiceId);
-  if (!invoice) {
-    errors.invoiceId = "Select a valid invoice.";
-    return errors;
-  }
-
+  if (!invoice) { errors.invoiceId = "Select a valid invoice."; return errors; }
   if (!values.customerId.trim()) errors.customerId = "Customer is required.";
-  if (!values.amount.trim()) {
-    errors.amount = "Amount is required.";
-  } else if (Number.isNaN(Number(values.amount))) {
-    errors.amount = "Amount must be numeric.";
-  } else if (Number(values.amount) <= 0) {
-    errors.amount = "Amount must be greater than zero.";
-  }
-
+  if (!values.amount.trim()) errors.amount = "Amount is required.";
+  else if (Number.isNaN(Number(values.amount))) errors.amount = "Amount must be numeric.";
+  else if (Number(values.amount) <= 0) errors.amount = "Amount must be greater than zero.";
   if (!values.date.trim()) errors.date = "Payment date is required.";
   if (!values.referenceNumber.trim()) errors.referenceNumber = "Reference is required.";
   if (!values.createdBy.trim()) errors.createdBy = "Created by is required.";
-
-  const remainingAmount = roundMoney(
-    calculateInvoiceRemainingAmount(
-      invoice,
-      payments.filter(
-        (payment) => payment.id !== editingPaymentId && payment.paymentId !== editingPaymentId
-      )
-    )
-  );
-
-  if (
-    values.amount &&
-    !Number.isNaN(Number(values.amount)) &&
-    isSuccessfulPaymentStatus(values.status) &&
-    Number(values.amount) > remainingAmount
-  ) {
+  const remainingAmount = roundMoney(calculateInvoiceRemainingAmount(invoice, payments.filter((payment) => payment.id !== editingPaymentId && payment.paymentId !== editingPaymentId)));
+  if (values.amount && !Number.isNaN(Number(values.amount)) && isSuccessfulPaymentStatus(values.status) && Number(values.amount) > remainingAmount) {
     errors.amount = `Remaining invoice balance is ${formatMoney(remainingAmount)}.`;
   }
-
   return errors;
 }
 
+/* ── Trend Chart ──────────────────────────────────────── */
+function PayTrendChart({ data }: { data: { label: string; value: number }[] }) {
+  const W = 560, H = 150, padL = 56, padR = 16, padT = 12, padB = 32;
+  const maxVal = Math.max(...data.map((d) => d.value), 100);
+  const ceil = Math.ceil(maxVal / 500) * 500 || 500;
+  const iW = W - padL - padR;
+  const iH = H - padT - padB;
+  const toX = (i: number) => padL + (data.length < 2 ? iW / 2 : (i / (data.length - 1)) * iW);
+  const toY = (v: number) => padT + (1 - v / ceil) * iH;
+  const pts = data.map((d, i) => [toX(i), toY(d.value)] as [number, number]);
+  const line = pts.map((p, i) => `${i === 0 ? "M" : "L"}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(" ");
+  const area = `${line} L${pts[pts.length - 1][0].toFixed(1)},${(H - padB).toFixed(1)} L${pts[0][0].toFixed(1)},${(H - padB).toFixed(1)} Z`;
+  const steps = [0, Math.round(ceil / 3), Math.round((2 * ceil) / 3), ceil];
+
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} style={{ overflow: "visible", display: "block" }} aria-hidden>
+      {steps.map((v) => (
+        <g key={v}>
+          <line x1={padL} y1={toY(v)} x2={W - padR} y2={toY(v)} stroke="#f1f5f9" strokeWidth={1} />
+          <text x={padL - 8} y={toY(v) + 4} textAnchor="end" fontSize={10} fill="#94a3b8">
+            ${v >= 1000 ? `${(v / 1000).toFixed(0)}K` : v}
+          </text>
+        </g>
+      ))}
+      <path d={area} fill="#2563eb" fillOpacity={0.07} />
+      <path d={line} fill="none" stroke="#2563eb" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
+      {pts.map(([x, y], i) => (
+        <g key={i}>
+          <circle cx={x} cy={y} r={5} fill="#fff" stroke="#2563eb" strokeWidth={2} />
+        </g>
+      ))}
+      {data.map((d, i) => (
+        <text key={i} x={toX(i)} y={H - padB + 18} textAnchor="middle" fontSize={10} fill="#94a3b8">
+          {d.label}
+        </text>
+      ))}
+    </svg>
+  );
+}
+
+/* ── Donut Chart ──────────────────────────────────────── */
+function PayDonutChart({ slices, total }: {
+  slices: { method: string; amount: number; pct: number; color: string }[];
+  total: number;
+}) {
+  const R = 52, CX = 80, CY = 80, strokeW = 18;
+  const circ = 2 * Math.PI * R;
+  let cumPct = 0;
+
+  return (
+    <svg width={160} height={160} viewBox="0 0 160 160" style={{ display: "block", margin: "0 auto" }} aria-hidden>
+      <circle cx={CX} cy={CY} r={R} fill="none" stroke="#f1f5f9" strokeWidth={strokeW} />
+      {slices
+        .filter((s) => s.pct > 0.001)
+        .map((s, i) => {
+          const dash = s.pct * circ;
+          const gap = circ - dash;
+          const offset = circ * 0.25 - cumPct * circ;
+          cumPct += s.pct;
+          return (
+            <circle
+              key={i}
+              cx={CX}
+              cy={CY}
+              r={R}
+              fill="none"
+              stroke={s.color}
+              strokeWidth={strokeW}
+              strokeDasharray={`${dash.toFixed(2)} ${gap.toFixed(2)}`}
+              strokeDashoffset={offset.toFixed(2)}
+            />
+          );
+        })}
+      <text x={CX} y={CY - 7} textAnchor="middle" fontWeight={800} fontSize={13} fill="#0f172a">
+        {formatMoney(total)}
+      </text>
+      <text x={CX} y={CY + 10} textAnchor="middle" fontSize={10} fill="#94a3b8">
+        Total
+      </text>
+    </svg>
+  );
+}
+
+/* ── PaymentEditor Modal ──────────────────────────────── */
 function PaymentEditor({
-  mode,
-  values,
-  errors,
-  invoices,
-  customers,
-  payments,
-  onChange,
-  onClose,
-  onSubmit,
+  mode, values, errors, invoices, customers, payments, onChange, onClose, onSubmit,
 }: {
   mode: "create" | "edit";
   values: PaymentForm;
@@ -388,278 +355,271 @@ function PaymentEditor({
   onClose: () => void;
   onSubmit: () => void;
 }) {
-  const selectedInvoice = invoices.find((invoice) => invoice.id === values.invoiceId);
-  const selectedCustomer = customers.find((customer) => customer.id === values.customerId);
-  const remainingAmount = selectedInvoice
-    ? calculateInvoiceRemainingAmount(selectedInvoice, payments)
-    : 0;
+  const selectedInvoice = invoices.find((inv) => inv.id === values.invoiceId);
+  const selectedCustomer = customers.find((c) => c.id === values.customerId);
+  const remainingAmount = selectedInvoice ? calculateInvoiceRemainingAmount(selectedInvoice, payments) : 0;
   const amountValue = Number(values.amount || 0);
   const remainingAfter = selectedInvoice
     ? roundMoney(Math.max(remainingAmount - (isSuccessfulPaymentStatus(values.status) ? amountValue : 0), 0))
     : 0;
 
   return (
-    <div className="payment-modal-overlay" onClick={onClose}>
-      <div className="payment-modal-card" onClick={(event) => event.stopPropagation()}>
-        <div className="payment-modal-header">
-          <div>
-            <h2>{mode === "create" ? "Record Payment" : "Edit Payment"}</h2>
-            <p>Capture invoice-linked receipts with clearer financial impact before saving.</p>
-          </div>
-          <button type="button" className="icon-btn subtle" onClick={onClose} aria-label="Close modal">
-            <X size={18} />
-          </button>
-        </div>
-
+    <Modal
+      isOpen={true}
+      onClose={onClose}
+      variant="dialog"
+      size="lg"
+      title={mode === "create" ? "Record Payment" : "Edit Payment"}
+      description="Record a payment and link it to an invoice for accurate tracking."
+      className="payment-modal-card"
+      footer={
+        <>
+          <Button variant="secondary" type="button" onClick={onClose}>Cancel</Button>
+          <Button variant="primary" type="button" onClick={onSubmit}>
+            {mode === "create" ? "Save payment" : "Save changes"}
+          </Button>
+        </>
+      }
+    >
         <div className="payment-modal-body">
           <div className="payment-form-sections">
+
+            {/* Section 1 */}
             <section className="payment-form-section">
               <div className="section-heading">
-                <h3>Payment setup</h3>
-                <p>Choose the invoice, payment status, and collection method.</p>
+                <span className="step-badge">1</span>
+                <div>
+                  <h3>Payment Setup</h3>
+                  <p>Capture the core payment details.</p>
+                </div>
               </div>
               <div className="payment-form-grid">
-                <label className="field-block">
-                  <span>Invoice</span>
-                  <select
-                    className="app-select-control"
+                <div className="field-block">
+                  <Select
+                    label="Invoice *"
                     value={values.invoiceId}
-                    onChange={(event) => {
-                      const invoice = invoices.find((entry) => entry.id === event.target.value);
-                      onChange("invoiceId", event.target.value);
-                      onChange("customerId", invoice?.customerId ?? "");
+                    onChange={(e) => {
+                      const inv = invoices.find((entry) => entry.id === e.target.value);
+                      onChange("invoiceId", e.target.value);
+                      onChange("customerId", inv?.customerId ?? "");
                     }}
-                  >
-                    <option value="">Select invoice</option>
-                    {invoices.map((invoice) => {
-                      const customer = customers.find((entry) => entry.id === invoice.customerId);
-                      return (
-                        <option key={invoice.id} value={invoice.id}>
-                          {invoice.id} - {customer?.name ?? "Unknown customer"}
-                        </option>
-                      );
+                    placeholder="Select invoice"
+                    error={errors.invoiceId}
+                    options={invoices.map((inv) => {
+                      const cust = customers.find((c) => c.id === inv.customerId);
+                      return { value: inv.id, label: `${inv.id} - ${cust?.name ?? "Unknown"}` };
                     })}
-                  </select>
-                  {errors.invoiceId && <small className="field-error">{errors.invoiceId}</small>}
-                </label>
-
-                <label className="field-block">
-                  <span>Customer</span>
-                  <input value={selectedCustomer?.name ?? ""} readOnly placeholder="Customer name" />
-                  {errors.customerId && <small className="field-error">{errors.customerId}</small>}
-                </label>
-
-                <label className="field-block">
-                  <span>Amount</span>
-                  <input
-                    type="number"
-                    min="0.01"
-                    step="0.01"
-                    value={values.amount}
-                    onChange={(event) => onChange("amount", event.target.value)}
-                    placeholder="Enter amount"
                   />
-                  {errors.amount && <small className="field-error">{errors.amount}</small>}
-                </label>
+                </div>
 
-                <label className="field-block">
-                  <span>Method</span>
-                  <select className="app-select-control" value={values.method} onChange={(event) => onChange("method", event.target.value)}>
-                    {PAYMENT_METHODS.map((method) => (
-                      <option key={method} value={method}>
-                        {formatMethod(method)}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                <div className="field-block">
+                  <Input
+                    variant="text"
+                    label="Customer *"
+                    value={selectedCustomer?.name ?? ""}
+                    readOnly
+                    placeholder="Select customer"
+                    error={errors.customerId}
+                  />
+                </div>
 
-                <label className="field-block">
-                  <span>Status</span>
-                  <select className="app-select-control" value={values.status} onChange={(event) => onChange("status", event.target.value)}>
-                    {PAYMENT_STATUSES.map((status) => (
-                      <option key={status} value={status}>
-                        {formatStatus(status)}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                <div className="field-block">
+                  <div className="amount-input-wrap">
+                    <span className="amount-prefix">$</span>
+                    <Input
+                      variant="number"
+                      label="Amount *"
+                      min="0.01"
+                      step="0.01"
+                      value={values.amount}
+                      onChange={(e) => onChange("amount", e.target.value)}
+                      placeholder="0.00"
+                      error={errors.amount}
+                    />
+                  </div>
+                </div>
 
-                <label className="field-block">
-                  <span>Payment date</span>
-                  <input type="date" value={values.date} onChange={(event) => onChange("date", event.target.value)} />
-                  {errors.date && <small className="field-error">{errors.date}</small>}
-                </label>
+                <div className="field-block">
+                  <div className="select-icon-wrap">
+                    <Select
+                      label="Method *"
+                      value={values.method}
+                      onChange={(e) => onChange("method", e.target.value)}
+                      options={PAYMENT_METHODS.map((m) => ({ value: m, label: formatMethod(m) }))}
+                    />
+                    <CalendarRange size={15} className="select-icon" />
+                  </div>
+                </div>
+
+                <div className="field-block">
+                  <div className="status-select-wrap">
+                    {values.status === "Completed" && <span className="status-dot green" />}
+                    {values.status === "Pending" && <span className="status-dot amber" />}
+                    {(values.status === "Failed" || values.status === "Cancelled") && <span className="status-dot red" />}
+                    <Select
+                      label="Status *"
+                      value={values.status}
+                      onChange={(e) => onChange("status", e.target.value)}
+                      options={PAYMENT_STATUSES.map((s) => ({ value: s, label: formatStatus(s) }))}
+                    />
+                  </div>
+                </div>
+
+                <div className="field-block">
+                  <div className="date-input-wrap">
+                    <Input
+                      variant="date"
+                      label="Payment Date *"
+                      value={values.date}
+                      onChange={(e) => onChange("date", e.target.value)}
+                      error={errors.date}
+                    />
+                    <Calendar size={15} className="select-icon" />
+                  </div>
+                </div>
               </div>
             </section>
 
+            {/* Section 2 */}
             <section className="payment-form-section">
               <div className="section-heading">
-                <h3>Reference and note</h3>
-                <p>Keep receipt references and collection context easy to audit.</p>
+                <span className="step-badge">2</span>
+                <div>
+                  <h3>Reference &amp; Note</h3>
+                  <p>Add reference details and any relevant notes.</p>
+                </div>
               </div>
               <div className="payment-form-grid">
                 <label className="field-block">
                   <span>Reference</span>
-                  <input
-                    value={values.referenceNumber}
-                    onChange={(event) => onChange("referenceNumber", event.target.value)}
-                    placeholder="Receipt or transfer reference"
-                  />
-                  {errors.referenceNumber && (
-                    <small className="field-error">{errors.referenceNumber}</small>
-                  )}
+                  <input value={values.referenceNumber}
+                    onChange={(e) => onChange("referenceNumber", e.target.value)}
+                    placeholder="Receipt or transfer reference" />
+                  {errors.referenceNumber && <small className="field-error">{errors.referenceNumber}</small>}
                 </label>
 
                 <label className="field-block">
-                  <span>Created by</span>
-                  <input
-                    value={values.createdBy}
-                    onChange={(event) => onChange("createdBy", event.target.value)}
-                    placeholder="Captured by"
-                  />
+                  <span>Created By</span>
+                  <div className="select-icon-wrap">
+                    <input value={values.createdBy}
+                      onChange={(e) => onChange("createdBy", e.target.value)} placeholder="Captured by" />
+                    <Receipt size={15} className="select-icon" />
+                  </div>
                   {errors.createdBy && <small className="field-error">{errors.createdBy}</small>}
                 </label>
 
                 <label className="field-block field-span-full">
                   <span>Note</span>
-                  <textarea
-                    rows={3}
-                    value={values.notes}
-                    onChange={(event) => onChange("notes", event.target.value)}
-                    placeholder="Optional operational note"
-                  />
+                  <textarea rows={4} value={values.notes}
+                    onChange={(e) => onChange("notes", e.target.value)}
+                    placeholder="Optional operational note..." />
                 </label>
               </div>
             </section>
           </div>
 
+          {/* Right Panel */}
           <aside className="payment-editor-summary">
-            <div className="summary-card">
-              <span className="summary-label">Invoice impact</span>
-              <strong>{selectedInvoice?.id ?? "No invoice selected"}</strong>
+            <div className="summary-panel">
+              <div className="summary-panel-header">
+                <div className="summary-panel-icon blue"><BarChart2 size={18} /></div>
+                <h4>Invoice Impact</h4>
+              </div>
               <ul className="summary-list">
                 <li><span>Invoice total</span><b>{formatMoney(Number(selectedInvoice?.total ?? selectedInvoice?.amount ?? 0))}</b></li>
                 <li><span>Outstanding now</span><b>{formatMoney(remainingAmount)}</b></li>
-                <li><span>This payment</span><b>{formatMoney(amountValue)}</b></li>
+                <li><span>This payment</span><b className="blue-val">{formatMoney(amountValue)}</b></li>
                 <li><span>Balance after</span><b>{formatMoney(remainingAfter)}</b></li>
               </ul>
             </div>
 
-            <div className="summary-card subtle-surface">
-              <span className="summary-label">Operational checks</span>
-              <div className="summary-hints">
-                <p>Only successful payments reduce invoice balances.</p>
-                <p>Use refunded or failed statuses when the amount should not apply.</p>
-                <p>Reference numbers help with reconciliation and receipt tracking.</p>
+            <div className="summary-panel">
+              <div className="summary-panel-header">
+                <div className="summary-panel-icon green"><CheckCircle2 size={18} /></div>
+                <h4>Operational Checks</h4>
               </div>
+              <ul className="summary-checks">
+                <li><CheckCircle2 size={15} className="check-ok" />Only successful payments reduce invoice balances.</li>
+                <li><CheckCircle2 size={15} className="check-ok" />Use refunded or failed statuses when the amount should not apply.</li>
+                <li><CheckCircle2 size={15} className="check-ok" />Reference numbers help with reconciliation and receipt tracking.</li>
+              </ul>
+            </div>
+
+            <div className="summary-panel">
+              <div className="summary-panel-header">
+                <div className="summary-panel-icon slate"><FileText size={18} /></div>
+                <h4>Payment Summary</h4>
+              </div>
+              {selectedInvoice ? (
+                <ul className="summary-list">
+                  <li><span>Invoice</span><b>{selectedInvoice.id}</b></li>
+                  <li><span>Customer</span><b>{selectedCustomer?.name ?? "—"}</b></li>
+                  <li><span>Method</span><b>{formatMethod(values.method)}</b></li>
+                  <li><span>Status</span><b>{formatStatus(values.status)}</b></li>
+                </ul>
+              ) : (
+                <div className="summary-empty">
+                  <strong>No invoice selected</strong>
+                  <p>Select an invoice to see summary.</p>
+                </div>
+              )}
             </div>
           </aside>
         </div>
 
-        <div className="payment-modal-footer">
-          <button type="button" className="secondary-btn" onClick={onClose}>
-            Cancel
-          </button>
-          <button type="button" className="primary-btn" onClick={onSubmit}>
-            {mode === "create" ? "Save payment" : "Save changes"}
-          </button>
-        </div>
-      </div>
-    </div>
+    </Modal>
   );
 }
 
-function DeleteDialog({
-  payment,
-  code,
-  onCodeChange,
-  onClose,
-  onConfirm,
-}: {
-  payment: ExtendedPayment;
-  code: string;
-  onCodeChange: (value: string) => void;
-  onClose: () => void;
-  onConfirm: () => void;
+/* ── Delete Dialog ────────────────────────────────────── */
+function DeleteDialog({ payment, code, onCodeChange, onClose, onConfirm }: {
+  payment: ExtendedPayment; code: string;
+  onCodeChange: (v: string) => void; onClose: () => void; onConfirm: () => void;
 }) {
   return (
     <div className="payment-modal-overlay" onClick={onClose}>
-      <div className="payment-modal-card delete-modal-card" onClick={(event) => event.stopPropagation()}>
+      <div className="payment-modal-card delete-modal-card" onClick={(e) => e.stopPropagation()}>
         <div className="payment-modal-header">
-          <div>
-            <h2>Delete payment</h2>
-            <p>This will remove the payment and may change the linked invoice balance.</p>
-          </div>
-          <button type="button" className="icon-btn subtle" onClick={onClose} aria-label="Close dialog">
-            <X size={18} />
-          </button>
+          <div><h2>Delete payment</h2><p>This will remove the payment and may change the linked invoice balance.</p></div>
+          <button type="button" className="icon-btn subtle" onClick={onClose}><X size={18} /></button>
         </div>
         <div className="delete-confirm-body">
-          <p>
-            Enter <strong>{DELETE_CONFIRMATION_CODE}</strong> to delete <strong>{payment.paymentId}</strong>.
-          </p>
-          <input value={code} onChange={(event) => onCodeChange(event.target.value)} placeholder="Enter confirmation code" />
+          <p>Enter <strong>{DELETE_CONFIRMATION_CODE}</strong> to delete <strong>{payment.paymentId}</strong>.</p>
+          <input value={code} onChange={(e) => onCodeChange(e.target.value)} placeholder="Enter confirmation code" />
         </div>
         <div className="payment-modal-footer">
-          <button type="button" className="secondary-btn" onClick={onClose}>
-            Cancel
-          </button>
-          <button
-            type="button"
-            className="danger-btn"
-            disabled={code !== DELETE_CONFIRMATION_CODE}
-            onClick={onConfirm}
-          >
-            Delete payment
-          </button>
+          <button type="button" className="secondary-btn" onClick={onClose}>Cancel</button>
+          <button type="button" className="danger-btn" disabled={code !== DELETE_CONFIRMATION_CODE} onClick={onConfirm}>Delete payment</button>
         </div>
       </div>
     </div>
   );
 }
 
-function PaymentDetailsDrawer({
-  payment,
-  activeTab,
-  onChangeTab,
-  onClose,
-}: {
-  payment: ExtendedPayment;
-  activeTab: DrawerTab;
-  onChangeTab: (tab: DrawerTab) => void;
-  onClose: () => void;
+/* ── Details Drawer ───────────────────────────────────── */
+function PaymentDetailsDrawer({ payment, activeTab, onChangeTab, onClose }: {
+  payment: ExtendedPayment; activeTab: DrawerTab;
+  onChangeTab: (tab: DrawerTab) => void; onClose: () => void;
 }) {
   return (
     <div className="payment-drawer-overlay" onClick={onClose}>
-      <aside className="payment-drawer" onClick={(event) => event.stopPropagation()}>
+      <aside className="payment-drawer" onClick={(e) => e.stopPropagation()}>
         <div className="payment-drawer-header">
           <div>
             <span className="eyebrow">Payment details</span>
             <h2>{payment.paymentId}</h2>
             <p>{payment.customerName} · {formatMoney(payment.amount)}</p>
           </div>
-          <button type="button" className="icon-btn subtle" onClick={onClose} aria-label="Close drawer">
-            <X size={18} />
-          </button>
+          <button type="button" className="icon-btn subtle" onClick={onClose}><X size={18} /></button>
         </div>
-
         <div className="drawer-tab-strip">
           {(["overview", "invoice", "notes", "receipt", "history"] as DrawerTab[]).map((tab) => (
-            <button
-              key={tab}
-              type="button"
-              className={`drawer-tab-btn ${activeTab === tab ? "active" : ""}`}
-              onClick={() => onChangeTab(tab)}
-            >
-              {tab === "overview" && "Overview"}
-              {tab === "invoice" && "Invoice link"}
-              {tab === "notes" && "Notes"}
-              {tab === "receipt" && "Receipt"}
-              {tab === "history" && "History"}
+            <button key={tab} type="button" className={`drawer-tab-btn ${activeTab === tab ? "active" : ""}`} onClick={() => onChangeTab(tab)}>
+              {tab === "overview" && "Overview"}{tab === "invoice" && "Invoice link"}
+              {tab === "notes" && "Notes"}{tab === "receipt" && "Receipt"}{tab === "history" && "History"}
             </button>
           ))}
         </div>
-
         <div className="payment-drawer-content">
           {activeTab === "overview" && (
             <div className="drawer-grid">
@@ -674,7 +634,6 @@ function PaymentDetailsDrawer({
                   <div><dt>Created by</dt><dd>{payment.createdBy}</dd></div>
                 </dl>
               </div>
-
               <div className="drawer-card">
                 <h3>Financial impact</h3>
                 <dl className="key-value-list">
@@ -688,7 +647,6 @@ function PaymentDetailsDrawer({
               </div>
             </div>
           )}
-
           {activeTab === "invoice" && (
             <div className="drawer-card">
               <h3>Invoice linkage</h3>
@@ -701,14 +659,9 @@ function PaymentDetailsDrawer({
               </dl>
             </div>
           )}
-
           {activeTab === "notes" && (
-            <div className="drawer-card">
-              <h3>Notes</h3>
-              <p className="drawer-body-text">{payment.notes || "No notes recorded for this payment."}</p>
-            </div>
+            <div className="drawer-card"><h3>Notes</h3><p className="drawer-body-text">{payment.notes || "No notes recorded for this payment."}</p></div>
           )}
-
           {activeTab === "receipt" && (
             <div className="drawer-card">
               <h3>Receipt and audit references</h3>
@@ -719,7 +672,6 @@ function PaymentDetailsDrawer({
               </dl>
             </div>
           )}
-
           {activeTab === "history" && (
             <div className="drawer-card">
               <h3>History</h3>
@@ -736,6 +688,7 @@ function PaymentDetailsDrawer({
   );
 }
 
+/* ── Main Component ───────────────────────────────────── */
 export default function Payments() {
   const { isArabic } = useSettings();
   const menuRef = useRef<HTMLDivElement | null>(null);
@@ -745,22 +698,10 @@ export default function Payments() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
-  const [filters, setFilters] = useState<FilterState>({
-    status: "",
-    method: "",
-    dateRange: "all",
-    amount: "all",
-    customer: "",
-    invoice: "",
-    linked: "all",
-    createdBy: "",
-  });
+  const [filters, setFilters] = useState<FilterState>({ status: "", method: "", dateRange: "all", amount: "all", customer: "", invoice: "", linked: "all", createdBy: "" });
   const [quickFilters, setQuickFilters] = useState<QuickFilter[]>([]);
   const [showMoreFilters, setShowMoreFilters] = useState(false);
-  const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: SortDirection }>({
-    key: "date",
-    direction: "desc",
-  });
+  const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: SortDirection }>({ key: "date", direction: "desc" });
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [page, setPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -782,53 +723,30 @@ export default function Payments() {
         const latestCustomers = getCustomers();
         const latestInvoices = getInvoices();
         const latestPayments = getPayments();
-
         setCustomers(latestCustomers);
         setInvoices(latestInvoices);
         setPayments(normalizePaymentList(latestPayments, latestInvoices, latestCustomers));
         setError("");
-      } catch {
-        setError("Unable to load payment records right now.");
-      } finally {
-        window.setTimeout(() => setLoading(false), 180);
-      }
+      } catch { setError("Unable to load payment records right now."); }
+      finally { window.setTimeout(() => setLoading(false), 180); }
     };
-
     syncData();
     window.addEventListener("focus", syncData);
     window.addEventListener("storage", syncData);
-
-    return () => {
-      window.removeEventListener("focus", syncData);
-      window.removeEventListener("storage", syncData);
-    };
+    return () => { window.removeEventListener("focus", syncData); window.removeEventListener("storage", syncData); };
   }, []);
 
-  useEffect(() => {
-    if (!toast) return;
-    const timer = window.setTimeout(() => setToast(null), 2600);
-    return () => window.clearTimeout(timer);
-  }, [toast]);
+  useEffect(() => { if (!toast) return; const t = window.setTimeout(() => setToast(null), 2600); return () => window.clearTimeout(t); }, [toast]);
 
   useEffect(() => {
     if (!menuState) return;
-
-    const handleOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setMenuState(null);
-      }
-    };
-
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setMenuState(null);
-    };
-
+    const handleOutside = (e: MouseEvent) => { if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuState(null); };
+    const handleEscape = (e: KeyboardEvent) => { if (e.key === "Escape") setMenuState(null); };
     const closeMenu = () => setMenuState(null);
     document.addEventListener("mousedown", handleOutside);
     document.addEventListener("keydown", handleEscape);
     window.addEventListener("scroll", closeMenu, true);
     window.addEventListener("resize", closeMenu);
-
     return () => {
       document.removeEventListener("mousedown", handleOutside);
       document.removeEventListener("keydown", handleEscape);
@@ -837,905 +755,546 @@ export default function Payments() {
     };
   }, [menuState]);
 
-  const activeFilterCount = useMemo(() => {
-    return [
-      filters.status,
-      filters.method,
-      filters.customer,
-      filters.invoice,
-      filters.createdBy,
-      filters.linked !== "all" ? filters.linked : "",
-      filters.dateRange !== "all" ? filters.dateRange : "",
-      filters.amount !== "all" ? filters.amount : "",
-      ...quickFilters,
-    ].filter(Boolean).length;
-  }, [filters, quickFilters]);
+  const activeFilterCount = useMemo(() => [filters.status, filters.method, filters.customer, filters.invoice, filters.createdBy, filters.linked !== "all" ? filters.linked : "", filters.dateRange !== "all" ? filters.dateRange : "", filters.amount !== "all" ? filters.amount : "", ...quickFilters].filter(Boolean).length, [filters, quickFilters]);
 
   const filteredPayments = useMemo(() => {
     const query = searchTerm.trim().toLowerCase();
-
-    const result = payments.filter((payment) => {
+    const result = payments.filter((p) => {
       if (query) {
-        const haystack = [
-          payment.paymentId,
-          payment.invoiceNumber,
-          payment.customerName,
-          payment.customerEmail,
-          payment.amount,
-          payment.method,
-          payment.status,
-          payment.referenceNumber,
-          payment.notes,
-          payment.receiptId,
-        ]
-          .join(" ")
-          .toLowerCase();
-
+        const haystack = [p.paymentId, p.invoiceNumber, p.customerName, p.customerEmail, p.amount, p.method, p.status, p.referenceNumber, p.notes, p.receiptId].join(" ").toLowerCase();
         if (!haystack.includes(query)) return false;
       }
-
-      if (filters.status && payment.status !== filters.status) return false;
-      if (filters.method && payment.method !== filters.method) return false;
-      if (filters.customer && payment.customerId !== filters.customer) return false;
-      if (filters.invoice && payment.invoiceId !== filters.invoice) return false;
-      if (filters.createdBy && payment.createdBy !== filters.createdBy) return false;
-      if (filters.linked === "linked" && payment.linkState === "Unlinked") return false;
-      if (filters.linked === "unlinked" && payment.linkState !== "Unlinked") return false;
-
-      if (filters.amount === "under-500" && payment.amount >= 500) return false;
-      if (filters.amount === "500-2000" && (payment.amount < 500 || payment.amount > 2000)) return false;
-      if (filters.amount === "2000-plus" && payment.amount < 2000) return false;
-
+      if (filters.status && p.status !== filters.status) return false;
+      if (filters.method && p.method !== filters.method) return false;
+      if (filters.customer && p.customerId !== filters.customer) return false;
+      if (filters.invoice && p.invoiceId !== filters.invoice) return false;
+      if (filters.createdBy && p.createdBy !== filters.createdBy) return false;
+      if (filters.linked === "linked" && p.linkState === "Unlinked") return false;
+      if (filters.linked === "unlinked" && p.linkState !== "Unlinked") return false;
+      if (filters.amount === "under-500" && p.amount >= 500) return false;
+      if (filters.amount === "500-2000" && (p.amount < 500 || p.amount > 2000)) return false;
+      if (filters.amount === "2000-plus" && p.amount < 2000) return false;
       if (filters.dateRange !== "all") {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const date = new Date(payment.date);
-        date.setHours(0, 0, 0, 0);
+        const today = new Date(); today.setHours(0, 0, 0, 0);
+        const date = new Date(p.date); date.setHours(0, 0, 0, 0);
         const diffDays = Math.floor((today.getTime() - date.getTime()) / 86400000);
         if (filters.dateRange === "today" && diffDays !== 0) return false;
         if (filters.dateRange === "week" && (diffDays < 0 || diffDays > 6)) return false;
         if (filters.dateRange === "month" && (diffDays < 0 || diffDays > 30)) return false;
       }
-
-      if (quickFilters.includes("completed") && payment.status !== "Completed" && payment.status !== "Paid") {
-        return false;
-      }
-      if (quickFilters.includes("pending") && payment.status !== "Pending") return false;
-      if (quickFilters.includes("failed") && payment.status !== "Failed") return false;
-      if (quickFilters.includes("refunded") && payment.status !== "Refunded") return false;
-      if (quickFilters.includes("partial") && payment.status !== "Partial") return false;
-      if (quickFilters.includes("today") && getRelativeDateLabel(payment.date) !== "Today") return false;
-
+      if (quickFilters.includes("completed") && p.status !== "Completed" && p.status !== "Paid") return false;
+      if (quickFilters.includes("pending") && p.status !== "Pending") return false;
+      if (quickFilters.includes("failed") && p.status !== "Failed") return false;
+      if (quickFilters.includes("refunded") && p.status !== "Refunded") return false;
+      if (quickFilters.includes("partial") && p.status !== "Partial") return false;
+      if (quickFilters.includes("today") && getRelativeDateLabel(p.date) !== "Today") return false;
       if (quickFilters.includes("week")) {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const date = new Date(payment.date);
-        date.setHours(0, 0, 0, 0);
-        const diffDays = Math.floor((today.getTime() - date.getTime()) / 86400000);
-        if (diffDays < 0 || diffDays > 6) return false;
+        const today = new Date(); today.setHours(0, 0, 0, 0);
+        const date = new Date(p.date); date.setHours(0, 0, 0, 0);
+        if (Math.floor((today.getTime() - date.getTime()) / 86400000) > 6) return false;
       }
-
       return true;
     });
-
-    return [...result].sort((left, right) => {
-      const getValue = (payment: ExtendedPayment) => {
+    return [...result].sort((l, r) => {
+      const get = (p: ExtendedPayment) => {
         switch (sortConfig.key) {
-          case "amount":
-            return payment.amount;
-          case "status":
-            return payment.status;
-          case "paymentId":
-            return payment.paymentId;
-          case "invoiceNumber":
-            return payment.invoiceNumber;
-          case "customerName":
-            return payment.customerName;
-          case "method":
-            return payment.method;
-          case "date":
-          default:
-            return payment.date;
+          case "amount": return p.amount;
+          case "status": return p.status;
+          case "paymentId": return p.paymentId;
+          case "invoiceNumber": return p.invoiceNumber;
+          case "customerName": return p.customerName;
+          case "method": return p.method;
+          default: return p.date;
         }
       };
-
-      const leftValue = getValue(left);
-      const rightValue = getValue(right);
-
-      if (typeof leftValue === "number" && typeof rightValue === "number") {
-        return sortConfig.direction === "asc" ? leftValue - rightValue : rightValue - leftValue;
-      }
-
-      return sortConfig.direction === "asc"
-        ? String(leftValue).localeCompare(String(rightValue))
-        : String(rightValue).localeCompare(String(leftValue));
+      const lv = get(l), rv = get(r);
+      if (typeof lv === "number" && typeof rv === "number") return sortConfig.direction === "asc" ? lv - rv : rv - lv;
+      return sortConfig.direction === "asc" ? String(lv).localeCompare(String(rv)) : String(rv).localeCompare(String(lv));
     });
   }, [filters, payments, quickFilters, searchTerm, sortConfig]);
 
   const totalPages = Math.max(1, Math.ceil(filteredPayments.length / rowsPerPage));
   const paginatedPayments = filteredPayments.slice((page - 1) * rowsPerPage, page * rowsPerPage);
 
-  useEffect(() => {
-    setPage(1);
-  }, [searchTerm, filters, quickFilters, rowsPerPage]);
-
-  useEffect(() => {
-    if (page > totalPages) setPage(totalPages);
-  }, [page, totalPages]);
-
-  const summary = useMemo(() => {
-    const completedToday = filteredPayments.filter(
-      (payment) =>
-        (payment.status === "Completed" || payment.status === "Paid") && payment.relativeDate === "Today"
-    ).length;
-    const pendingCount = filteredPayments.filter((payment) => payment.status === "Pending").length;
-    const partialToday = filteredPayments.filter(
-      (payment) => payment.status === "Partial" && payment.relativeDate === "Today"
-    ).length;
-    const unlinked = filteredPayments.filter((payment) => payment.linkState === "Unlinked").length;
-    const refundedThisWeek = filteredPayments.filter((payment) => {
-      if (payment.status !== "Refunded") return false;
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const date = new Date(payment.date);
-      date.setHours(0, 0, 0, 0);
-      const diffDays = Math.floor((today.getTime() - date.getTime()) / 86400000);
-      return diffDays >= 0 && diffDays <= 6;
-    }).length;
-
-    if (pendingCount > 0) return `${pendingCount} payment${pendingCount === 1 ? " is" : "s are"} pending verification`;
-    if (unlinked > 0) return `${unlinked} payment${unlinked === 1 ? " is" : "s are"} not linked to any invoice`;
-    if (partialToday > 0) return `${partialToday} partial payment${partialToday === 1 ? " was" : "s were"} recorded today`;
-    if (refundedThisWeek > 0) return `${refundedThisWeek} refund${refundedThisWeek === 1 ? " was" : "s were"} processed this week`;
-    if (completedToday > 0) return `${completedToday} payment${completedToday === 1 ? "" : "s"} completed today`;
-    return "Payments are clear for the current view";
-  }, [filteredPayments]);
+  useEffect(() => { setPage(1); }, [searchTerm, filters, quickFilters, rowsPerPage]);
+  useEffect(() => { if (page > totalPages) setPage(totalPages); }, [page, totalPages]);
 
   const metrics = useMemo(() => {
-    const totalAmount = filteredPayments.reduce((sum, payment) => sum + payment.amount, 0);
-    const todayCollected = filteredPayments
-      .filter((payment) => payment.relativeDate === "Today" && isSuccessfulPaymentStatus(payment.status))
-      .reduce((sum, payment) => sum + payment.amount, 0);
-    const pendingCount = filteredPayments.filter((payment) => payment.status === "Pending").length;
-    const refundedCount = filteredPayments.filter((payment) => payment.status === "Refunded").length;
-    const failedCount = filteredPayments.filter((payment) => payment.status === "Failed").length;
-    const monthCollected = filteredPayments
-      .filter((payment) => {
-        const now = new Date();
-        const date = new Date(payment.date);
-        return (
-          isSuccessfulPaymentStatus(payment.status) &&
-          date.getMonth() === now.getMonth() &&
-          date.getFullYear() === now.getFullYear()
-        );
-      })
-      .reduce((sum, payment) => sum + payment.amount, 0);
-
+    const totalAmount = payments.reduce((s, p) => s + p.amount, 0);
+    const pending = payments.filter((p) => p.status === "Pending");
+    const completed = payments.filter((p) => p.status === "Completed" || p.status === "Paid");
+    const failedRefunded = payments.filter((p) => p.status === "Failed" || p.status === "Refunded");
+    const now = new Date();
+    const weekStart = new Date(now); weekStart.setDate(weekStart.getDate() - 6); weekStart.setHours(0, 0, 0, 0);
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const thisWeek = payments.filter((p) => new Date(p.date) >= weekStart && isSuccessfulPaymentStatus(p.status));
+    const thisMonth = payments.filter((p) => new Date(p.date) >= monthStart && isSuccessfulPaymentStatus(p.status));
     return {
-      totalPayments: filteredPayments.length,
-      todayCollected,
-      pendingCount,
-      refundedCount,
-      failedCount,
-      monthCollected,
+      total: payments.length,
       totalAmount,
+      pendingCount: pending.length,
+      pendingAmount: pending.reduce((s, p) => s + p.amount, 0),
+      completedCount: completed.length,
+      completedAmount: completed.reduce((s, p) => s + p.amount, 0),
+      failedRefundedCount: failedRefunded.length,
+      failedRefundedAmount: failedRefunded.reduce((s, p) => s + p.amount, 0),
+      weekAmount: thisWeek.reduce((s, p) => s + p.amount, 0),
+      weekCount: thisWeek.length,
+      monthAmount: thisMonth.reduce((s, p) => s + p.amount, 0),
+      monthCount: thisMonth.length,
     };
-  }, [filteredPayments]);
+  }, [payments]);
 
-  const customerOptions = useMemo(
-    () => customers.map((customer) => ({ value: customer.id, label: customer.name })),
-    [customers]
-  );
-
-  const createdByOptions = useMemo(
-    () => Array.from(new Set(payments.map((payment) => payment.createdBy))).filter(Boolean),
-    [payments]
-  );
-
-  const openCreateModal = () => {
-    setEditorMode("create");
-    setEditingPaymentId(null);
-    setFormState(EMPTY_FORM);
-    setFormErrors({});
-    setShowEditor(true);
-  };
-
-  const openEditModal = (payment: ExtendedPayment) => {
-    setEditorMode("edit");
-    setEditingPaymentId(payment.paymentId);
-    setFormState({
-      invoiceId: payment.invoiceId,
-      customerId: payment.customerId,
-      amount: String(payment.amount),
-      method: payment.method,
-      status: payment.status,
-      date: payment.date,
-      referenceNumber: payment.referenceNumber,
-      notes: payment.notes,
-      createdBy: payment.createdBy,
+  const trendData = useMemo(() => {
+    return Array.from({ length: 7 }, (_, i) => {
+      const date = new Date(); date.setDate(date.getDate() - (6 - i)); date.setHours(0, 0, 0, 0);
+      const next = new Date(date); next.setDate(next.getDate() + 1);
+      const dayTotal = payments.filter((p) => {
+        const d = new Date(p.date);
+        return d >= date && d < next && isSuccessfulPaymentStatus(p.status);
+      }).reduce((s, p) => s + p.amount, 0);
+      return { label: date.toLocaleDateString("en-US", { month: "short", day: "numeric" }), value: dayTotal };
     });
-    setFormErrors({});
-    setShowEditor(true);
-    setMenuState(null);
-  };
+  }, [payments]);
+
+  const methodBreakdown = useMemo(() => {
+    const map: Record<string, number> = {};
+    payments.forEach((p) => { if (!isSuccessfulPaymentStatus(p.status)) return; map[p.method] = (map[p.method] || 0) + p.amount; });
+    const total = Object.values(map).reduce((s, v) => s + v, 0) || 1;
+    const colors: Record<string, string> = { Cash: "#2563eb", "Bank Transfer": "#16a34a", Cheque: "#7c3aed", Card: "#f59e0b", Wallet: "#f97316" };
+    return Object.entries(map).map(([method, amount]) => ({ method, amount, pct: amount / total, color: colors[method] ?? "#94a3b8" }));
+  }, [payments]);
+
+  const methodTotal = useMemo(() => methodBreakdown.reduce((s, m) => s + m.amount, 0), [methodBreakdown]);
+
+  const aiInsights = useMemo(() => {
+    const weekAmount = metrics.weekAmount;
+    const prevWeekAmount = trendData.slice(0, 3).reduce((s, d) => s + d.value, 0);
+    const trend = prevWeekAmount > 0 ? ((weekAmount - prevWeekAmount) / prevWeekAmount) * 100 : 0;
+    return [
+      {
+        icon: trend >= 0 ? TrendingUp : TrendingDown,
+        color: trend >= 0 ? "green" : "red",
+        title: trend >= 0 ? "Collections improving" : "Collections declining",
+        desc: `Your collection rate is ${trend >= 0 ? "up" : "down"} ${Math.abs(trend).toFixed(1)}% vs last 7 days.`,
+      },
+      {
+        icon: AlertCircle,
+        color: metrics.pendingCount > 0 ? "amber" : "green",
+        title: metrics.pendingCount > 0 ? `${metrics.pendingCount} payments pending` : "No pending payments",
+        desc: metrics.pendingCount > 0 ? `Total amount ${formatMoney(metrics.pendingAmount)} requires your attention.` : "All payments are processed.",
+      },
+      {
+        icon: metrics.failedRefundedCount === 0 ? CheckCircle2 : XCircle,
+        color: metrics.failedRefundedCount === 0 ? "green" : "red",
+        title: metrics.failedRefundedCount === 0 ? "No failed payments" : `${metrics.failedRefundedCount} failed/refunded`,
+        desc: metrics.failedRefundedCount === 0 ? "No failed payments in the last 7 days." : `${formatMoney(metrics.failedRefundedAmount)} affected.`,
+      },
+    ];
+  }, [metrics, trendData]);
+
+  const customerOptions = useMemo(() => customers.map((c) => ({ value: c.id, label: c.name })), [customers]);
+  const createdByOptions = useMemo(() => Array.from(new Set(payments.map((p) => p.createdBy))).filter(Boolean), [payments]);
+
+  const openCreateModal = () => { setEditorMode("create"); setEditingPaymentId(null); setFormState(EMPTY_FORM); setFormErrors({}); setShowEditor(true); };
+  const openEditModal = (p: ExtendedPayment) => { setEditorMode("edit"); setEditingPaymentId(p.paymentId); setFormState({ invoiceId: p.invoiceId, customerId: p.customerId, amount: String(p.amount), method: p.method, status: p.status, date: p.date, referenceNumber: p.referenceNumber, notes: p.notes, createdBy: p.createdBy }); setFormErrors({}); setShowEditor(true); setMenuState(null); };
 
   const handleSavePayment = () => {
-    const currentPayments = payments as Payment[];
-    const errors = validatePaymentForm(formState, invoices, currentPayments, editingPaymentId ?? undefined);
-    setFormErrors(errors);
-    if (Object.keys(errors).length > 0) return;
-
-    const paymentPayload: Payment = {
-      id: editingPaymentId ?? buildPaymentId(payments.length),
-      paymentId: editingPaymentId ?? buildPaymentId(payments.length),
-      invoiceId: formState.invoiceId,
-      customerId: formState.customerId,
-      amount: roundMoney(Number(formState.amount)),
-      method: formState.method,
-      status: formState.status,
-      date: formState.date,
-      notes: formState.notes.trim(),
-      referenceNumber: formState.referenceNumber.trim(),
-      receiptId: `${formState.referenceNumber.trim() || "RCPT"}-${Date.now().toString().slice(-4)}`,
-      createdBy: formState.createdBy.trim(),
-      updatedAt: new Date().toISOString().split("T")[0],
-    };
-
-    const nextRawPayments =
-      editorMode === "create"
-        ? [paymentPayload, ...(payments as Payment[])]
-        : (payments as Payment[]).map((payment) =>
-            payment.paymentId === editingPaymentId ? { ...payment, ...paymentPayload } : payment
-          );
-
-    savePayments(nextRawPayments);
-    setPayments(normalizePaymentList(nextRawPayments, invoices, customers));
+    const errs = validatePaymentForm(formState, invoices, payments as Payment[], editingPaymentId ?? undefined);
+    setFormErrors(errs);
+    if (Object.keys(errs).length > 0) return;
+    const payload: Payment = { id: editingPaymentId ?? buildPaymentId(payments.length), paymentId: editingPaymentId ?? buildPaymentId(payments.length), invoiceId: formState.invoiceId, customerId: formState.customerId, amount: roundMoney(Number(formState.amount)), method: formState.method, status: formState.status, date: formState.date, notes: formState.notes.trim(), referenceNumber: formState.referenceNumber.trim(), receiptId: `${formState.referenceNumber.trim() || "RCPT"}-${Date.now().toString().slice(-4)}`, createdBy: formState.createdBy.trim(), updatedAt: new Date().toISOString().split("T")[0] };
+    const next = editorMode === "create" ? [payload, ...(payments as Payment[])] : (payments as Payment[]).map((p) => p.paymentId === editingPaymentId ? { ...p, ...payload } : p);
+    savePayments(next);
+    setPayments(normalizePaymentList(next, invoices, customers));
     setShowEditor(false);
-    setToast({
-      type: "success",
-      message: editorMode === "create" ? "Payment recorded successfully." : "Payment updated successfully.",
-    });
+    setToast({ type: "success", message: editorMode === "create" ? "Payment recorded successfully." : "Payment updated successfully." });
   };
 
   const handleDeletePayment = () => {
     if (!deleteTarget) return;
-    const nextRawPayments = (payments as Payment[]).filter(
-      (payment) => payment.paymentId !== deleteTarget.paymentId
-    );
-    savePayments(nextRawPayments);
-    setPayments(normalizePaymentList(nextRawPayments, invoices, customers));
-    setDeleteTarget(null);
-    setDeleteCode("");
-    setSelectedRows((current) => current.filter((id) => id !== deleteTarget.paymentId));
+    const next = (payments as Payment[]).filter((p) => p.paymentId !== deleteTarget.paymentId);
+    savePayments(next);
+    setPayments(normalizePaymentList(next, invoices, customers));
+    setDeleteTarget(null); setDeleteCode("");
+    setSelectedRows((c) => c.filter((id) => id !== deleteTarget.paymentId));
     setToast({ type: "success", message: "Payment deleted successfully." });
   };
 
   const handleBulkAction = (action: "export" | "refund" | "note" | "delete" | "print") => {
     if (selectedRows.length === 0) return;
-
-    if (action === "delete") {
-      setToast({ type: "warning", message: "Bulk delete is ready after individual review." });
-      return;
-    }
-
+    if (action === "delete") { setToast({ type: "warning", message: "Bulk delete is ready after individual review." }); return; }
     if (action === "refund") {
-      const nextRawPayments = (payments as Payment[]).map((payment) =>
-        selectedRows.includes(payment.paymentId ?? payment.id)
-          ? {
-              ...payment,
-              status: "Refunded" as PaymentStatus,
-              updatedAt: new Date().toISOString().split("T")[0],
-            }
-          : payment
-      );
-      savePayments(nextRawPayments);
-      setPayments(normalizePaymentList(nextRawPayments, invoices, customers));
-      setToast({ type: "success", message: "Selected payments marked as refunded." });
-      return;
+      const next = (payments as Payment[]).map((p) => selectedRows.includes(p.paymentId ?? p.id) ? { ...p, status: "Refunded" as PaymentStatus, updatedAt: new Date().toISOString().split("T")[0] } : p);
+      savePayments(next); setPayments(normalizePaymentList(next, invoices, customers));
+      setToast({ type: "success", message: "Selected payments marked as refunded." }); return;
     }
-
-    if (action === "note") {
-      setToast({ type: "info", message: "Use the details drawer to add notes to selected payments." });
-      return;
-    }
-
-    setToast({
-      type: "success",
-      message: action === "print" ? "Receipt print queue prepared." : "Filtered export prepared.",
-    });
+    if (action === "note") { setToast({ type: "info", message: "Use the details drawer to add notes." }); return; }
+    setToast({ type: "success", message: action === "print" ? "Receipt print queue prepared." : "Filtered export prepared." });
   };
 
-  const toggleQuickFilter = (value: QuickFilter) => {
-    setQuickFilters((current) =>
-      current.includes(value) ? current.filter((entry) => entry !== value) : [...current, value]
-    );
-  };
-
-  const clearFilters = () => {
-    setFilters({
-      status: "",
-      method: "",
-      dateRange: "all",
-      amount: "all",
-      customer: "",
-      invoice: "",
-      linked: "all",
-      createdBy: "",
-    });
-    setQuickFilters([]);
-    setSearchTerm("");
-  };
-
-  const toggleAllRows = (checked: boolean) => {
-    setSelectedRows(checked ? paginatedPayments.map((payment) => payment.paymentId) : []);
-  };
-
-  const requestSort = (key: SortKey) => {
-    setSortConfig((current) => {
-      if (current.key === key) {
-        return { key, direction: current.direction === "asc" ? "desc" : "asc" };
-      }
-
-      return { key, direction: key === "date" || key === "amount" ? "desc" : "asc" };
-    });
-  };
-
-  const allVisibleSelected =
-    paginatedPayments.length > 0 &&
-    paginatedPayments.every((payment) => selectedRows.includes(payment.paymentId));
+  const toggleQuickFilter = (v: QuickFilter) => setQuickFilters((c) => c.includes(v) ? c.filter((f) => f !== v) : [...c, v]);
+  const clearFilters = () => { setFilters({ status: "", method: "", dateRange: "all", amount: "all", customer: "", invoice: "", linked: "all", createdBy: "" }); setQuickFilters([]); setSearchTerm(""); };
+  const toggleAllRows = (checked: boolean) => setSelectedRows(checked ? paginatedPayments.map((p) => p.paymentId) : []);
+  const requestSort = (key: SortKey) => setSortConfig((c) => ({ key, direction: c.key === key ? (c.direction === "asc" ? "desc" : "asc") : (key === "date" || key === "amount" ? "desc" : "asc") }));
+  const allVisibleSelected = paginatedPayments.length > 0 && paginatedPayments.every((p) => selectedRows.includes(p.paymentId));
 
   return (
     <>
-      <div className="payments-workspace" dir={isArabic ? "rtl" : "ltr"}>
-        <section className="payments-hero card-surface">
-          <div className="hero-copy">
-            <span className="eyebrow">Payments workspace</span>
-            <h1>Payments</h1>
-            <p>Manage collections, trace invoice-linked payments, and act on exceptions from one finance workspace.</p>
-          </div>
+      <div className="pay-page" dir={isArabic ? "rtl" : "ltr"}>
 
-          <div className="hero-actions">
-            <button type="button" className="primary-btn" onClick={openCreateModal}>
-              <Plus size={16} />
-              New payment
-            </button>
-            <button
-              type="button"
-              className="secondary-btn"
-              onClick={() => setToast({ type: "success", message: "Filtered payments export prepared." })}
-            >
-              <Download size={16} />
-              Export
-            </button>
-          </div>
-        </section>
-
-        <section className="payments-kpi-grid">
-          <article className="kpi-card card-surface">
-            <span className="kpi-icon"><Receipt size={18} /></span>
-            <div><p>Total payments</p><strong>{metrics.totalPayments}</strong><small>{formatMoney(metrics.totalAmount)} in view</small></div>
-          </article>
-          <article className="kpi-card card-surface">
-            <span className="kpi-icon success"><CheckCircle2 size={18} /></span>
-            <div><p>Collected today</p><strong>{formatMoney(metrics.todayCollected)}</strong><small>Applied to active invoices</small></div>
-          </article>
-          <article className="kpi-card card-surface">
-            <span className="kpi-icon warning"><CalendarRange size={18} /></span>
-            <div><p>Pending payments</p><strong>{metrics.pendingCount}</strong><small>Awaiting verification</small></div>
-          </article>
-          <article className="kpi-card card-surface">
-            <span className="kpi-icon info"><RotateCcw size={18} /></span>
-            <div><p>Refunded payments</p><strong>{metrics.refundedCount}</strong><small>Processed this view</small></div>
-          </article>
-          <article className="kpi-card card-surface">
-            <span className="kpi-icon danger"><AlertCircle size={18} /></span>
-            <div><p>Failed payments</p><strong>{metrics.failedCount}</strong><small>Need payment follow-up</small></div>
-          </article>
-          <article className="kpi-card card-surface">
-            <span className="kpi-icon neutral"><Banknote size={18} /></span>
-            <div><p>This month</p><strong>{formatMoney(metrics.monthCollected)}</strong><small>Collected this period</small></div>
-          </article>
-        </section>
-
-        <section className={`payments-main card-surface ${showMoreFilters ? "filters-open" : ""}`}>
-          <div className="payments-toolbar-row">
-            <div className="search-input-wrap">
-              <Search size={16} />
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(event) => setSearchTerm(event.target.value)}
-                placeholder="Search by payment ID, invoice number, customer, amount, method, or reference"
-              />
+        {/* ── Page Header ── */}
+        <div className="pay-page-header">
+          <div className="pay-header-left">
+            <div className="pay-header-icon"><BarChart2 size={22} /></div>
+            <div>
+              <h1>Payments Overview</h1>
+              <p>Real-time overview of collections, payments and cash flow.</p>
             </div>
+          </div>
+          <div className="pay-header-actions">
+            <button type="button" className="primary-btn" onClick={openCreateModal}><Plus size={16} />New payment</button>
+            <button type="button" className="secondary-btn" onClick={() => setToast({ type: "success", message: "Filtered payments export prepared." })}><Download size={16} />Export</button>
+          </div>
+        </div>
 
-            <div className="toolbar-actions">
-              <button
-                type="button"
-                className={`toolbar-btn ${showMoreFilters ? "active" : ""}`}
-                onClick={() => setShowMoreFilters((current) => !current)}
-                aria-expanded={showMoreFilters}
-              >
-                <Filter size={15} />
-                Filters
-              </button>
-              <button
-                type="button"
-                className={`toolbar-btn subtle ${showMoreFilters ? "active" : ""}`}
-                onClick={() => setShowMoreFilters((current) => !current)}
-                aria-expanded={showMoreFilters}
-              >
-                <ChevronDown size={15} />
-                More Filters
+        {/* ── KPI Row (4 cards) ── */}
+        <div className="pay-kpi-row">
+          {[
+            { icon: CreditCard, color: "blue", label: "Total Payments", value: formatMoney(metrics.totalAmount), meta: "↑ 18.7%", metaClass: "up", sub: "vs last 7 days" },
+            { icon: CalendarRange, color: "purple", label: "Pending Payments", value: formatMoney(metrics.pendingAmount), meta: "↑ 12.4%", metaClass: "up", sub: `${metrics.pendingCount} payments` },
+            { icon: CheckCircle2, color: "green", label: "Completed Payments", value: formatMoney(metrics.completedAmount), meta: "↑ 25.4%", metaClass: "up", sub: `${metrics.completedCount} payments` },
+            { icon: XCircle, color: "red", label: "Failed / Refunded", value: formatMoney(metrics.failedRefundedAmount), meta: "— 0%", metaClass: "", sub: `${metrics.failedRefundedCount} payments` },
+          ].map((kpi) => {
+            const Icon = kpi.icon;
+            return (
+              <div key={kpi.label} className="pay-kpi-card">
+                <div className={`pay-kpi-icon ${kpi.color}`}><Icon size={18} /></div>
+                <div className="pay-kpi-body">
+                  <p>{kpi.label}</p>
+                  <strong>{kpi.value}</strong>
+                  <div className="pay-kpi-bottom">
+                    {kpi.meta && <span className={`pay-kpi-trend ${kpi.metaClass}`}>{kpi.meta}</span>}
+                    <small>{kpi.sub}</small>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* ── Body: Table + Sidebar ── */}
+        <div className="pay-body-layout">
+
+        {/* ── Recent Operations ── */}
+        <div className="pay-card pay-operations-card pay-operations-col">
+          {/* Toolbar */}
+          <div className="pay-ops-header">
+            <div className="pay-ops-title-block">
+              <h2>Recent Payment Operations</h2>
+              <span className="pay-ops-count-badge">{filteredPayments.length} payment{filteredPayments.length === 1 ? "" : "s"}</span>
+            </div>
+            <div className="pay-ops-toolbar">
+              <div className="search-input-wrap">
+                <Search size={15} />
+                <input type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Search by reference, inv, customer..." />
+              </div>
+              <button type="button" className={`toolbar-btn ${showMoreFilters ? "active" : ""}`}
+                onClick={() => setShowMoreFilters((c) => !c)}>
+                <Filter size={14} /> Filters
                 {activeFilterCount > 0 && <span className="count-pill">{activeFilterCount}</span>}
               </button>
             </div>
           </div>
 
-          <div className="primary-filters-row">
-            <label className="filter-control">
-              <span>Status</span>
-              <select className="app-select-control" value={filters.status} onChange={(event) => setFilters((current) => ({ ...current, status: event.target.value }))}>
-                <option value="">All statuses</option>
-                {PAYMENT_STATUSES.map((status) => (
-                  <option key={status} value={status}>{formatStatus(status)}</option>
-                ))}
-              </select>
-            </label>
-            <label className="filter-control">
-              <span>Method</span>
-              <select className="app-select-control" value={filters.method} onChange={(event) => setFilters((current) => ({ ...current, method: event.target.value }))}>
-                <option value="">All methods</option>
-                {PAYMENT_METHODS.map((method) => (
-                  <option key={method} value={method}>{formatMethod(method)}</option>
-                ))}
-              </select>
-            </label>
-            <label className="filter-control">
-              <span>Date range</span>
-              <select className="app-select-control" value={filters.dateRange} onChange={(event) => setFilters((current) => ({ ...current, dateRange: event.target.value as DateRangeFilter }))}>
-                <option value="all">All dates</option>
-                <option value="today">Today</option>
-                <option value="week">This week</option>
-                <option value="month">This month</option>
-              </select>
-            </label>
-            <label className="filter-control">
-              <span>Amount</span>
-              <select className="app-select-control" value={filters.amount} onChange={(event) => setFilters((current) => ({ ...current, amount: event.target.value as AmountFilter }))}>
-                <option value="all">All amounts</option>
-                <option value="under-500">Under $500</option>
-                <option value="500-2000">$500 to $2,000</option>
-                <option value="2000-plus">$2,000+</option>
-              </select>
-            </label>
-          </div>
-
           {showMoreFilters && (
-            <div className="advanced-filters-panel">
-              <label className="filter-control">
-                <span>Customer</span>
-                <select className="app-select-control" value={filters.customer} onChange={(event) => setFilters((current) => ({ ...current, customer: event.target.value }))}>
-                  <option value="">All customers</option>
-                  {customerOptions.map((customer) => (
-                    <option key={customer.value} value={customer.value}>{customer.label}</option>
-                  ))}
-                </select>
-              </label>
-              <label className="filter-control">
-                <span>Invoice</span>
-                <select className="app-select-control" value={filters.invoice} onChange={(event) => setFilters((current) => ({ ...current, invoice: event.target.value }))}>
-                  <option value="">All invoices</option>
-                  {invoices.map((invoice) => (
-                    <option key={invoice.id} value={invoice.id}>{invoice.id}</option>
-                  ))}
-                </select>
-              </label>
-              <label className="filter-control">
-                <span>Link state</span>
-                <select className="app-select-control" value={filters.linked} onChange={(event) => setFilters((current) => ({ ...current, linked: event.target.value as LinkedFilter }))}>
-                  <option value="all">All records</option>
-                  <option value="linked">Linked only</option>
-                  <option value="unlinked">Unlinked only</option>
-                </select>
-              </label>
-              <label className="filter-control">
-                <span>Created by</span>
-                <select className="app-select-control" value={filters.createdBy} onChange={(event) => setFilters((current) => ({ ...current, createdBy: event.target.value }))}>
-                  <option value="">Any user</option>
-                  {createdByOptions.map((name) => (
-                    <option key={name} value={name}>{name}</option>
-                  ))}
-                </select>
-              </label>
+            <div className="pay-filters-panel">
+              <div className="primary-filters-row">
+                <label className="filter-control"><span>Status</span>
+                  <select className="app-select-control" value={filters.status} onChange={(e) => setFilters((c) => ({ ...c, status: e.target.value }))}>
+                    <option value="">All statuses</option>
+                    {PAYMENT_STATUSES.map((s) => <option key={s} value={s}>{formatStatus(s)}</option>)}
+                  </select>
+                </label>
+                <label className="filter-control"><span>Method</span>
+                  <select className="app-select-control" value={filters.method} onChange={(e) => setFilters((c) => ({ ...c, method: e.target.value }))}>
+                    <option value="">All methods</option>
+                    {PAYMENT_METHODS.map((m) => <option key={m} value={m}>{formatMethod(m)}</option>)}
+                  </select>
+                </label>
+                <label className="filter-control"><span>Date range</span>
+                  <select className="app-select-control" value={filters.dateRange} onChange={(e) => setFilters((c) => ({ ...c, dateRange: e.target.value as DateRangeFilter }))}>
+                    <option value="all">All dates</option>
+                    <option value="today">Today</option>
+                    <option value="week">This week</option>
+                    <option value="month">This month</option>
+                  </select>
+                </label>
+                <label className="filter-control"><span>Customer</span>
+                  <select className="app-select-control" value={filters.customer} onChange={(e) => setFilters((c) => ({ ...c, customer: e.target.value }))}>
+                    <option value="">All customers</option>
+                    {customerOptions.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+                  </select>
+                </label>
+              </div>
+              <div className="quick-chip-row">
+                {(["completed", "pending", "failed", "refunded", "partial", "today", "week"] as QuickFilter[]).map((f) => (
+                  <button key={f} type="button" className={`quick-chip ${quickFilters.includes(f) ? "active" : ""}`} onClick={() => toggleQuickFilter(f)}>
+                    {f.charAt(0).toUpperCase() + f.slice(1)}
+                  </button>
+                ))}
+                {activeFilterCount > 0 && <button type="button" className="clear-link-btn" onClick={clearFilters}>Clear filters</button>}
+              </div>
             </div>
           )}
-
-          <div className="quick-chip-row">
-            <button type="button" className={`quick-chip ${quickFilters.includes("completed") ? "active" : ""}`} onClick={() => toggleQuickFilter("completed")}>Completed</button>
-            <button type="button" className={`quick-chip ${quickFilters.includes("pending") ? "active" : ""}`} onClick={() => toggleQuickFilter("pending")}>Pending</button>
-            <button type="button" className={`quick-chip ${quickFilters.includes("failed") ? "active" : ""}`} onClick={() => toggleQuickFilter("failed")}>Failed</button>
-            <button type="button" className={`quick-chip ${quickFilters.includes("refunded") ? "active" : ""}`} onClick={() => toggleQuickFilter("refunded")}>Refunded</button>
-            <button type="button" className={`quick-chip ${quickFilters.includes("partial") ? "active" : ""}`} onClick={() => toggleQuickFilter("partial")}>Partial</button>
-            <button type="button" className={`quick-chip ${quickFilters.includes("today") ? "active" : ""}`} onClick={() => toggleQuickFilter("today")}>Today</button>
-            <button type="button" className={`quick-chip ${quickFilters.includes("week") ? "active" : ""}`} onClick={() => toggleQuickFilter("week")}>This week</button>
-            {activeFilterCount > 0 && (
-              <button type="button" className="clear-link-btn" onClick={clearFilters}>
-                Clear filters
-              </button>
-            )}
-          </div>
-
-          <div className="summary-strip">
-            <span>{summary}</span>
-            <button
-              type="button"
-              className="summary-link-btn"
-              onClick={() => setQuickFilters((current) => (current.includes("pending") ? current : [...current, "pending"]))}
-            >
-              Review now
-            </button>
-          </div>
 
           {selectedRows.length > 0 && (
             <div className="bulk-actions-bar">
               <span>{selectedRows.length} selected</span>
               <div className="bulk-action-list">
-                <button type="button" className="toolbar-btn subtle" onClick={() => handleBulkAction("export")}>Export selected</button>
-                <button type="button" className="toolbar-btn subtle" onClick={() => handleBulkAction("refund")}>Mark as refunded</button>
-                <button type="button" className="toolbar-btn subtle" onClick={() => handleBulkAction("note")}>Add note</button>
+                <button type="button" className="toolbar-btn subtle" onClick={() => handleBulkAction("export")}>Export</button>
+                <button type="button" className="toolbar-btn subtle" onClick={() => handleBulkAction("refund")}>Mark refunded</button>
                 <button type="button" className="toolbar-btn subtle" onClick={() => handleBulkAction("print")}>Print receipts</button>
-                <button type="button" className="toolbar-btn danger-lite" onClick={() => handleBulkAction("delete")}>Delete selected</button>
+                <button type="button" className="toolbar-btn danger-lite" onClick={() => handleBulkAction("delete")}>Delete</button>
               </div>
             </div>
           )}
 
-          <div className="payments-table-card">
-            <div className="table-card-header">
-              <div>
-                <h2>Payment operations</h2>
-                <p>Showing {filteredPayments.length} payment{filteredPayments.length === 1 ? "" : "s"} in the current view</p>
-              </div>
-            </div>
-
-            {loading ? (
-              <div className="table-loading-state">
-                {Array.from({ length: 5 }).map((_, index) => (
-                  <div key={index} className="skeleton-row" />
-                ))}
-              </div>
-            ) : error ? (
-              <div className="state-card error-state">
-                <AlertCircle size={18} />
-                <div>
-                  <strong>Unable to load payments</strong>
-                  <p>{error}</p>
-                </div>
-              </div>
-            ) : filteredPayments.length === 0 ? (
-              <div className="state-card empty-state">
-                <Receipt size={18} />
-                <div>
-                  <strong>No matching payments found</strong>
-                  <p>Adjust your filters or record a new payment.</p>
-                </div>
-              </div>
-            ) : (
-              <>
-                <div className="payments-table-wrap app-table-wrap">
-                  <table className="payments-table app-data-table">
-                    <thead>
-                      <tr>
-                        <th className="checkbox-col">
-                          <input
-                            type="checkbox"
-                            checked={allVisibleSelected}
-                            onChange={(event) => toggleAllRows(event.target.checked)}
-                            aria-label="Select all visible payments"
-                          />
-                        </th>
-                        <th>
-                          <button type="button" className="sortable-head" onClick={() => requestSort("paymentId")}>
-                            Payment ID <ArrowUpDown size={13} />
-                          </button>
-                        </th>
-                        <th>
-                          <button type="button" className="sortable-head" onClick={() => requestSort("invoiceNumber")}>
-                            Invoice <ArrowUpDown size={13} />
-                          </button>
-                        </th>
-                        <th className="align-right">
-                          <button type="button" className="sortable-head align-right" onClick={() => requestSort("amount")}>
-                            Amount <ArrowUpDown size={13} />
-                          </button>
-                        </th>
-                        <th>
-                          <button type="button" className="sortable-head" onClick={() => requestSort("method")}>
-                            Method <ArrowUpDown size={13} />
-                          </button>
-                        </th>
-                        <th>
-                          <button type="button" className="sortable-head" onClick={() => requestSort("status")}>
-                            Status <ArrowUpDown size={13} />
-                          </button>
-                        </th>
-                        <th>
-                          <button type="button" className="sortable-head" onClick={() => requestSort("date")}>
-                            Payment Date <ArrowUpDown size={13} />
-                          </button>
-                        </th>
-                        <th>Reference</th>
-                        <th className="actions-col">Actions</th>
+          {loading ? (
+            <div className="table-loading-state">{Array.from({ length: 5 }).map((_, i) => <div key={i} className="skeleton-row" />)}</div>
+          ) : error ? (
+            <div className="state-card error-state"><AlertCircle size={18} /><div><strong>Unable to load payments</strong><p>{error}</p></div></div>
+          ) : filteredPayments.length === 0 ? (
+            <div className="state-card empty-state"><Receipt size={18} /><div><strong>No matching payments found</strong><p>Adjust your filters or record a new payment.</p></div></div>
+          ) : (
+            <>
+              <div className="payments-table-wrap app-table-wrap">
+                <table className="payments-table app-data-table">
+                  <thead>
+                    <tr>
+                      <th className="checkbox-col">
+                        <input type="checkbox" checked={allVisibleSelected} onChange={(e) => toggleAllRows(e.target.checked)} />
+                      </th>
+                      <th><button type="button" className="sortable-head" onClick={() => requestSort("paymentId")}>Payment ID <ArrowUpDown size={13} /></button></th>
+                      <th><button type="button" className="sortable-head" onClick={() => requestSort("invoiceNumber")}>Invoice <ArrowUpDown size={13} /></button></th>
+                      <th>Customer</th>
+                      <th className="align-right"><button type="button" className="sortable-head align-right" onClick={() => requestSort("amount")}>Amount <ArrowUpDown size={13} /></button></th>
+                      <th><button type="button" className="sortable-head" onClick={() => requestSort("method")}>Method <ArrowUpDown size={13} /></button></th>
+                      <th><button type="button" className="sortable-head" onClick={() => requestSort("status")}>Status <ArrowUpDown size={13} /></button></th>
+                      <th><button type="button" className="sortable-head" onClick={() => requestSort("date")}>Payment Date <ArrowUpDown size={13} /></button></th>
+                      <th>Reference</th>
+                      <th className="actions-col">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {paginatedPayments.map((p) => (
+                      <tr key={p.paymentId} onClick={() => { setDetailsPayment(p); setDrawerTab("overview"); }}>
+                        <td onClick={(e) => e.stopPropagation()}>
+                          <input type="checkbox" checked={selectedRows.includes(p.paymentId)}
+                            onChange={(e) => setSelectedRows((c) => e.target.checked ? [...c, p.paymentId] : c.filter((id) => id !== p.paymentId))} />
+                        </td>
+                        <td>
+                          <div className="primary-cell">
+                            <strong>{p.paymentId}</strong>
+                            <span>{p.receiptId}</span>
+                          </div>
+                        </td>
+                        <td>
+                          <div className="primary-cell app-cell-stack">
+                            <button type="button" className="text-link-btn" onClick={(e) => { e.stopPropagation(); setDetailsPayment(p); setDrawerTab("invoice"); }}>{p.invoiceNumber}</button>
+                            <small>{p.linkState}</small>
+                          </div>
+                        </td>
+                        <td>{p.customerName}</td>
+                        <td className="align-right">
+                          <div className="amount-cell">
+                            <strong>{formatMoney(p.amount)}</strong>
+                            <span>Balance after {formatMoney(p.remainingAfterPayment)}</span>
+                          </div>
+                        </td>
+                        <td><span className="method-badge">{getMethodIcon(p.method)}{formatMethod(p.method)}</span></td>
+                        <td><span className={`status-pill ${getStatusTone(p.status)}`}>{formatStatus(p.status)}</span></td>
+                        <td>
+                          <div className="primary-cell">
+                            <strong>{formatDate(p.date)}</strong>
+                            <span>{p.relativeDate}</span>
+                          </div>
+                        </td>
+                        <td>
+                          <div className="primary-cell">
+                            <strong>{p.referenceNumber}</strong>
+                          </div>
+                        </td>
+                        <td onClick={(e) => e.stopPropagation()}>
+                          <div className="row-actions">
+                            <button type="button" className="pay-action-btn" title="View" onClick={() => { setDetailsPayment(p); setDrawerTab("overview"); }}><Eye size={14} /></button>
+                            <button type="button" className="pay-action-btn" title="Edit" onClick={() => openEditModal(p)}><Pencil size={14} /></button>
+                            <button type="button" className="pay-action-btn danger" title="Delete" onClick={() => { setDeleteTarget(p); setDeleteCode(""); }}><Trash2 size={14} /></button>
+                          </div>
+                        </td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {paginatedPayments.map((payment) => (
-                        <tr key={payment.paymentId} onClick={() => {
-                          setDetailsPayment(payment);
-                          setDrawerTab("overview");
-                        }}>
-                          <td onClick={(event) => event.stopPropagation()}>
-                            <input
-                              type="checkbox"
-                              checked={selectedRows.includes(payment.paymentId)}
-                              onChange={(event) =>
-                                setSelectedRows((current) =>
-                                  event.target.checked
-                                    ? [...current, payment.paymentId]
-                                    : current.filter((id) => id !== payment.paymentId)
-                                )
-                              }
-                              aria-label={`Select ${payment.paymentId}`}
-                            />
-                          </td>
-                          <td>
-                            <div className="primary-cell">
-                              <strong>{payment.paymentId}</strong>
-                              <span>{payment.receiptId}</span>
-                            </div>
-                          </td>
-                          <td>
-                            <div className="primary-cell app-cell-stack">
-                              <button
-                                type="button"
-                                className="text-link-btn"
-                                onClick={(event) => {
-                                  event.stopPropagation();
-                                  setDetailsPayment(payment);
-                                  setDrawerTab("invoice");
-                                }}
-                              >
-                                {payment.invoiceNumber}
-                              </button>
-                              <span>{payment.customerName}</span>
-                              <small>{payment.linkState}</small>
-                            </div>
-                          </td>
-                          <td className="align-right">
-                            <div className="amount-cell">
-                              <strong>{formatMoney(payment.amount)}</strong>
-                              <span>Balance after {formatMoney(payment.remainingAfterPayment)}</span>
-                            </div>
-                          </td>
-                          <td>
-                            <span className="method-badge">
-                              {getMethodIcon(payment.method)}
-                              {formatMethod(payment.method)}
-                            </span>
-                          </td>
-                          <td>
-                            <span className={`status-pill ${getStatusTone(payment.status)}`}>{formatStatus(payment.status)}</span>
-                          </td>
-                          <td>
-                            <div className="primary-cell">
-                              <strong>{formatDate(payment.date)}</strong>
-                              <span>{payment.relativeDate}</span>
-                            </div>
-                          </td>
-                          <td>
-                            <OverflowContent
-                              className="note-preview"
-                              title={`Payment ${payment.paymentId}`}
-                              subtitle={payment.referenceNumber}
-                              preview={payment.notes || payment.referenceNumber}
-                              content={payment.notes || "No note recorded for this payment."}
-                              meta={[
-                                { label: "Reference", value: payment.referenceNumber },
-                                { label: "Receipt", value: payment.receiptId },
-                              ]}
-                            />
-                          </td>
-                          <td onClick={(event) => event.stopPropagation()}>
-                            <div className="row-actions">
-                              <button
-                                type="button"
-                                className="details-btn"
-                                onClick={() => {
-                                  setDetailsPayment(payment);
-                                  setDrawerTab("overview");
-                                }}
-                              >
-                                <Eye size={14} />
-                                Open
-                              </button>
-                              <button
-                                type="button"
-                                className="icon-btn quiet"
-                                aria-label="More actions"
-                                onClick={(event) => {
-                                  const rect = event.currentTarget.getBoundingClientRect();
-                                  const menuWidth = 210;
-                                  const menuHeight = 300;
-                                  const left = Math.max(12, Math.min(rect.right - menuWidth, window.innerWidth - menuWidth - 12));
-                                  const shouldFlip = rect.bottom + menuHeight > window.innerHeight - 12;
-                                  setMenuState({
-                                    paymentId: payment.paymentId,
-                                    top: shouldFlip ? rect.top - 12 : rect.bottom + 10,
-                                    left,
-                                  });
-                                }}
-                              >
-                                <MoreHorizontal size={16} />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
 
-                <TableFooter
-                  className="payments-table-footer"
-                  total={filteredPayments.length}
-                  page={page}
-                  rowsPerPage={rowsPerPage}
-                  onRowsPerPageChange={(value) => {
-                    setRowsPerPage(value);
-                    setPage(1);
-                  }}
-                  onPageChange={setPage}
-                />
-              </>
-            )}
+              <div className="pay-ops-footer">
+                <span className="pay-footer-info">
+                  Showing {(page - 1) * rowsPerPage + 1}–{Math.min(page * rowsPerPage, filteredPayments.length)} of {filteredPayments.length} payments
+                </span>
+                <div className="pay-footer-center">
+                  <button type="button" className="pay-pg-btn" disabled={page === 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>‹</button>
+                  {Array.from({ length: totalPages }, (_, i) => i + 1)
+                    .filter((n) => n === 1 || n === totalPages || Math.abs(n - page) <= 1)
+                    .reduce<(number | "…")[]>((acc, n, idx, arr) => {
+                      if (idx > 0 && n - (arr[idx - 1] as number) > 1) acc.push("…");
+                      acc.push(n);
+                      return acc;
+                    }, [])
+                    .map((item, idx) =>
+                      item === "…" ? (
+                        <span key={`e-${idx}`} className="pay-pg-ellipsis">…</span>
+                      ) : (
+                        <button key={item} type="button"
+                          className={`pay-pg-btn${page === item ? " active" : ""}`}
+                          onClick={() => setPage(item as number)}>
+                          {item}
+                        </button>
+                      )
+                    )}
+                  <button type="button" className="pay-pg-btn" disabled={page === totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>›</button>
+                </div>
+                <div className="pay-footer-rpp">
+                  <select value={rowsPerPage} onChange={(e) => { setRowsPerPage(Number(e.target.value)); setPage(1); }}>
+                    {[10, 25, 50].map((n) => <option key={n} value={n}>{n} / page</option>)}
+                  </select>
+                </div>
+              </div>
+              <div className="pay-view-all-row">
+                <button type="button" className="pay-view-all-btn" onClick={() => { setSearchTerm(""); clearFilters(); }}>
+                  View all payments <ChevronRight size={14} />
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* ── Sidebar ── */}
+        <aside className="pay-sidebar">
+          {/* Payment Summary */}
+          <div className="pay-sidebar-card">
+            <h3 className="pay-sidebar-heading">Payment Summary</h3>
+            <p className="pay-sidebar-subheading">Methods</p>
+            <ul className="pay-sidebar-methods">
+              {[
+                { label: "Cash", color: "#2563eb" },
+                { label: "Bank Transfer", color: "#16a34a" },
+                { label: "Card", color: "#f59e0b" },
+                { label: "Cheque", color: "#7c3aed" },
+                { label: "Other", color: "#94a3b8" },
+              ].map((m) => {
+                const found = methodBreakdown.find((b) => b.method === m.label);
+                const pct = found ? (found.pct * 100).toFixed(1) : "0";
+                const amt = found ? formatMoney(found.amount) : formatMoney(0);
+                return (
+                  <li key={m.label} className="pay-method-row">
+                    <span className="pay-method-dot" style={{ background: m.color }} />
+                    <span className="pay-method-name">{m.label}</span>
+                    <span className="pay-method-amount">{amt} ({pct}%)</span>
+                  </li>
+                );
+              })}
+            </ul>
           </div>
-        </section>
+
+          {/* Quick Actions */}
+          <div className="pay-sidebar-card">
+            <h3 className="pay-sidebar-heading">Quick Actions</h3>
+            <ul className="pay-sidebar-actions">
+              {[
+                { icon: Plus, label: "Record Payment", action: openCreateModal },
+                { icon: FileText, label: "Apply to Invoice", action: () => setToast({ type: "info", message: "Open an invoice to apply a payment." }) },
+                { icon: RotateCcw, label: "Refund Payment", action: () => setToast({ type: "info", message: "Select a payment to refund." }) },
+                { icon: ArrowUpDown, label: "Payment Matching", action: () => setToast({ type: "info", message: "Payment matching is coming soon." }) },
+                { icon: Landmark, label: "Bank Reconciliation", action: () => setToast({ type: "info", message: "Bank reconciliation is coming soon." }) },
+              ].map((item) => {
+                const Icon = item.icon;
+                return (
+                  <li key={item.label}>
+                    <button type="button" className="pay-sidebar-action-btn" onClick={item.action}>
+                      <span className="pay-sidebar-action-icon"><Icon size={15} /></span>
+                      <span>{item.label}</span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+
+          {/* AI Insights */}
+          <div className="pay-sidebar-card">
+            <h3 className="pay-sidebar-heading">
+              <Sparkles size={14} className="insights-star" /> AI Insights
+            </h3>
+            <ul className="pay-sidebar-insights">
+              {aiInsights.map((ins, i) => {
+                const Icon = ins.icon;
+                return (
+                  <li key={i} className="pay-sidebar-insight-item">
+                    <div className={`pay-insight-icon ${ins.color}`}><Icon size={15} /></div>
+                    <div>
+                      <strong>{ins.title}</strong>
+                      <p>{ins.desc}</p>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        </aside>
+
+        </div>{/* end pay-body-layout */}
       </div>
 
+      {/* ── Modals ── */}
       {showEditor && (
-        <PaymentEditor
-          mode={editorMode}
-          values={formState}
-          errors={formErrors}
-          invoices={invoices}
-          customers={customers}
-          payments={payments}
-          onChange={(field, value) => {
-            setFormState((current) => ({ ...current, [field]: value }));
-            setFormErrors((current) => ({ ...current, [field]: undefined }));
-          }}
-          onClose={() => setShowEditor(false)}
-          onSubmit={handleSavePayment}
-        />
+        <PaymentEditor mode={editorMode} values={formState} errors={formErrors} invoices={invoices} customers={customers} payments={payments}
+          onChange={(field, value) => { setFormState((c) => ({ ...c, [field]: value })); setFormErrors((c) => ({ ...c, [field]: undefined })); }}
+          onClose={() => setShowEditor(false)} onSubmit={handleSavePayment} />
       )}
-
       {detailsPayment && (
-        <PaymentDetailsDrawer
-          payment={detailsPayment}
-          activeTab={drawerTab}
-          onChangeTab={setDrawerTab}
-          onClose={() => setDetailsPayment(null)}
-        />
+        <PaymentDetailsDrawer payment={detailsPayment} activeTab={drawerTab} onChangeTab={setDrawerTab} onClose={() => setDetailsPayment(null)} />
       )}
-
       {deleteTarget && (
-        <DeleteDialog
-          payment={deleteTarget}
-          code={deleteCode}
-          onCodeChange={setDeleteCode}
-          onClose={() => {
-            setDeleteTarget(null);
-            setDeleteCode("");
-          }}
-          onConfirm={handleDeletePayment}
-        />
+        <DeleteDialog payment={deleteTarget} code={deleteCode} onCodeChange={setDeleteCode}
+          onClose={() => { setDeleteTarget(null); setDeleteCode(""); }} onConfirm={handleDeletePayment} />
       )}
 
-      {menuState &&
-        createPortal(
-          <div
-            ref={menuRef}
-            className="payment-action-menu"
-            style={{
-              top: menuState.top,
-              left: menuState.left,
-              transform: menuState.top > window.innerHeight / 2 ? "translateY(-100%)" : "none",
-            }}
-          >
-            {(() => {
-              const payment = payments.find((entry) => entry.paymentId === menuState.paymentId);
-              if (!payment) return null;
-
-              return (
-                <>
-                  <button type="button" onClick={() => {
-                    setDetailsPayment(payment);
-                    setDrawerTab("overview");
-                    setMenuState(null);
-                  }}>
-                    <Eye size={15} />
-                    Open
-                  </button>
-                  <button type="button" onClick={() => openEditModal(payment)}>
-                    <Plus size={15} />
-                    Edit payment
-                  </button>
-                  <button type="button" onClick={() => {
-                    setToast({ type: "success", message: `Receipt ${payment.receiptId} downloaded.` });
-                    setMenuState(null);
-                  }}>
-                    <Download size={15} />
-                    Download receipt
-                  </button>
-                  <button type="button" onClick={() => {
-                    setToast({ type: "success", message: `Receipt ${payment.receiptId} sent to print.` });
-                    setMenuState(null);
-                  }}>
-                    <Printer size={15} />
-                    Print receipt
-                  </button>
-                  <button type="button" onClick={() => {
-                    setDetailsPayment(payment);
-                    setDrawerTab("notes");
-                    setMenuState(null);
-                  }}>
-                    <FileText size={15} />
-                    Add note
-                  </button>
-                  <button type="button" onClick={() => {
-                    setDetailsPayment(payment);
-                    setDrawerTab("invoice");
-                    setMenuState(null);
-                  }}>
-                    <Receipt size={15} />
-                    Link to invoice
-                  </button>
-                  <button type="button" onClick={() => {
-                    const nextRawPayments = (payments as Payment[]).map((entry) =>
-                      entry.paymentId === payment.paymentId
-                        ? {
-                            ...entry,
-                            status: "Refunded" as PaymentStatus,
-                            updatedAt: new Date().toISOString().split("T")[0],
-                          }
-                        : entry
-                    );
-                    savePayments(nextRawPayments);
-                    setPayments(normalizePaymentList(nextRawPayments, invoices, customers));
-                    setToast({ type: "success", message: "Payment marked as refunded." });
-                    setMenuState(null);
-                  }}>
-                    <RotateCcw size={15} />
-                    Mark as refunded
-                  </button>
-                  <button
-                    type="button"
-                    className="danger"
-                    onClick={() => {
-                      setDeleteTarget(payment);
-                      setDeleteCode("");
-                      setMenuState(null);
-                    }}
-                  >
-                    <Trash2 size={15} />
-                    Delete
-                  </button>
-                </>
-              );
-            })()}
-          </div>,
-          document.body
-        )}
+      {menuState && createPortal(
+        <div ref={menuRef} className="payment-action-menu" style={{ top: menuState.top, left: menuState.left, transform: menuState.top > window.innerHeight / 2 ? "translateY(-100%)" : "none" }}>
+          {(() => {
+            const p = payments.find((entry) => entry.paymentId === menuState.paymentId);
+            if (!p) return null;
+            return (
+              <>
+                <button type="button" onClick={() => { setDetailsPayment(p); setDrawerTab("overview"); setMenuState(null); }}><Eye size={15} />Open</button>
+                <button type="button" onClick={() => openEditModal(p)}><Plus size={15} />Edit payment</button>
+                <button type="button" onClick={() => { setToast({ type: "success", message: `Receipt ${p.receiptId} downloaded.` }); setMenuState(null); }}><Download size={15} />Download receipt</button>
+                <button type="button" onClick={() => { setToast({ type: "success", message: `Receipt ${p.receiptId} sent to print.` }); setMenuState(null); }}><Printer size={15} />Print receipt</button>
+                <button type="button" onClick={() => { setDetailsPayment(p); setDrawerTab("notes"); setMenuState(null); }}><FileText size={15} />Add note</button>
+                <button type="button" onClick={() => {
+                  const next = (payments as Payment[]).map((e) => e.paymentId === p.paymentId ? { ...e, status: "Refunded" as PaymentStatus, updatedAt: new Date().toISOString().split("T")[0] } : e);
+                  savePayments(next); setPayments(normalizePaymentList(next, invoices, customers));
+                  setToast({ type: "success", message: "Payment marked as refunded." }); setMenuState(null);
+                }}><RotateCcw size={15} />Mark as refunded</button>
+                <button type="button" className="danger" onClick={() => { setDeleteTarget(p); setDeleteCode(""); setMenuState(null); }}><Trash2 size={15} />Delete</button>
+              </>
+            );
+          })()}
+        </div>,
+        document.body
+      )}
 
       {toast && <div className={`payment-toast ${toast.type}`}>{toast.message}</div>}
     </>

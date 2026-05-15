@@ -1,5 +1,6 @@
 import { Globe2, MoonStar, Palette, ShieldCheck } from "lucide-react";
 import { useSettings } from "../context/SettingsContext";
+import { Badge } from "../components/ui/Badge";
 import "./Settings.css";
 
 export default function Settings() {
@@ -19,7 +20,7 @@ export default function Settings() {
     <div className="settings-page" dir={isArabic ? "rtl" : "ltr"}>
       <section className="settings-header">
         <div>
-          <p className="dashboard-badge">{t.settings.systemSettings}</p>
+          <Badge variant="neutral" className="dashboard-badge">{t.settings.systemSettings}</Badge>
           <h1>{t.settings.pageTitle}</h1>
           <p>{t.settings.subtitle}</p>
         </div>
@@ -61,7 +62,7 @@ export default function Settings() {
         <article className="settings-panel app-subtle-card">
           <div className="settings-panel-header">
             <div>
-              <span className="settings-panel-chip">{t.settings.workspace}</span>
+              <Badge variant="neutral" className="settings-panel-chip">{t.settings.workspace}</Badge>
               <h2>{t.settings.languageTitle}</h2>
               <p>{t.settings.languageDescription}</p>
             </div>
@@ -90,7 +91,7 @@ export default function Settings() {
         <article className="settings-panel app-subtle-card">
           <div className="settings-panel-header">
             <div>
-              <span className="settings-panel-chip">{t.settings.appearance}</span>
+              <Badge variant="neutral" className="settings-panel-chip">{t.settings.appearance}</Badge>
               <h2>{t.settings.themeTitle}</h2>
               <p>{t.settings.themeDescription}</p>
             </div>

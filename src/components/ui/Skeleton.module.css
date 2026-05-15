@@ -1,0 +1,61 @@
+.bar {
+  display: block;
+  position: relative;
+  overflow: hidden;
+  background-color: var(--app-surface-muted);
+  isolation: isolate;
+}
+
+.bar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--app-surface-hover) 50%,
+    transparent 100%
+  );
+  transform: translateX(-100%);
+  animation: skeleton-shimmer 1500ms infinite;
+}
+
+/* Variants */
+.variant_text {
+  border-radius: var(--app-radius-xs);
+}
+
+.variant_rect {
+  border-radius: 0;
+}
+
+.variant_rect.rounded {
+  border-radius: var(--app-radius-sm);
+}
+
+.variant_circle {
+  border-radius: 50%;
+}
+
+/* Multi-line stack */
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-2);
+  width: 100%;
+}
+
+@keyframes skeleton-shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bar::after {
+    animation-duration: 3000ms;
+  }
+}

@@ -58,14 +58,21 @@ export default function Sidebar({
     >
       <div>
         <div className="sidebar-head">
-          <div className="sidebar-title-block">
-            <h2 className="sidebar-title">
-              {collapsed && !mobile ? "PF" : t.sidebar.title}
-            </h2>
-
-            {!collapsed || mobile ? (
-              <span className="sidebar-subtitle">{t.sidebar.subtitle}</span>
-            ) : null}
+          <div className="sidebar-brand">
+            <div className="sidebar-logo-mark" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="1" y="1" width="7" height="7" rx="2" fill="currentColor" opacity="0.9"/>
+                <rect x="10" y="1" width="7" height="7" rx="2" fill="currentColor" opacity="0.55"/>
+                <rect x="1" y="10" width="7" height="7" rx="2" fill="currentColor" opacity="0.55"/>
+                <rect x="10" y="10" width="7" height="7" rx="2" fill="currentColor" opacity="0.3"/>
+              </svg>
+            </div>
+            {(!collapsed || mobile) && (
+              <div className="sidebar-title-block">
+                <span className="sidebar-title">{t.sidebar.title}</span>
+                <span className="sidebar-subtitle">{t.sidebar.subtitle}</span>
+              </div>
+            )}
           </div>
 
           {!mobile ? (

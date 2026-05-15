@@ -1,0 +1,340 @@
+/* ═══════════════════════════════════════════════════════════════
+   SHORTCUTS OVERLAY
+   ═══════════════════════════════════════════════════════════════ */
+
+@keyframes shortcuts-backdrop-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes shortcuts-panel-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, calc(-50% + 14px)) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+.shortcuts-overlay-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  background: rgba(15, 23, 42, 0.45);
+  border: none;
+  backdrop-filter: blur(4px);
+  cursor: default;
+  animation: shortcuts-backdrop-in 0.18s ease both;
+}
+
+.shortcuts-overlay-panel {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 3001;
+  width: min(540px, calc(100vw - 32px));
+  max-height: min(82dvh, 660px);
+  overflow-y: auto;
+  border: 1px solid var(--app-border);
+  border-radius: 18px;
+  background: var(--app-surface);
+  box-shadow:
+    0 4px 6px -1px rgba(15, 23, 42, 0.06),
+    0 20px 50px -8px rgba(15, 23, 42, 0.18);
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  animation: shortcuts-panel-in 0.22s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* ─── Header ──────────────────────────────────────────────────── */
+.shortcuts-overlay-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px 14px 20px;
+  border-bottom: 1px solid var(--app-border);
+  background: var(--app-surface-muted);
+  border-radius: 18px 18px 0 0;
+  flex-shrink: 0;
+  gap: 12px;
+}
+
+.shortcuts-overlay-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.shortcuts-overlay-title strong {
+  color: var(--app-text);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.shortcuts-theme-badge {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: var(--app-surface-hover);
+  border: 1px solid var(--app-border);
+  color: var(--app-text-muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.shortcuts-close-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px 4px 6px;
+  border-radius: 8px;
+  border: 1px solid var(--app-border);
+  background: var(--app-surface);
+  color: var(--app-text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.shortcuts-close-btn:hover {
+  background: var(--app-surface-hover);
+  border-color: #cbd5e1;
+  color: var(--app-text);
+}
+
+.shortcuts-close-btn kbd {
+  font-size: 11px;
+  background: var(--app-surface-muted);
+  border: 1px solid var(--app-border);
+  padding: 1px 5px;
+  border-radius: 5px;
+}
+
+/* ─── Body ────────────────────────────────────────────────────── */
+.shortcuts-overlay-body {
+  padding: 14px 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* ─── Group ───────────────────────────────────────────────────── */
+.shortcuts-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.shortcuts-group-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--app-text-muted);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  padding: 0 4px 6px;
+  border-bottom: 1px solid var(--app-border);
+  margin-bottom: 2px;
+}
+
+.shortcuts-group-label svg {
+  opacity: 0.7;
+  flex-shrink: 0;
+}
+
+/* ─── Row ─────────────────────────────────────────────────────── */
+.shortcuts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.shortcuts-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  transition: background 0.13s;
+}
+
+.shortcuts-row:hover {
+  background: var(--app-surface-hover);
+}
+
+.shortcuts-row--danger .shortcuts-desc {
+  color: #dc2626;
+}
+
+.shortcuts-row--danger:hover {
+  background: #fff1f2;
+}
+
+.shortcuts-desc {
+  color: var(--app-text-soft);
+  font-size: 13px;
+  flex: 1;
+}
+
+.shortcuts-keys {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+.shortcuts-keys kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 6px;
+  border: 1px solid var(--app-border);
+  background: var(--app-surface-muted);
+  color: var(--app-text);
+  font-size: 11.5px;
+  font-weight: 700;
+  font-family: inherit;
+  box-shadow: 0 1px 0 var(--app-border);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   LOGOUT CONFIRM TOAST
+   ═══════════════════════════════════════════════════════════════ */
+
+@keyframes logout-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes logout-progress {
+  from { width: 100%; }
+  to   { width: 0%; }
+}
+
+.logout-confirm-toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 4000;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: var(--app-surface);
+  border: 1px solid #fecaca;
+  box-shadow:
+    0 4px 6px -1px rgba(15, 23, 42, 0.08),
+    0 16px 40px -4px rgba(220, 38, 38, 0.12);
+  min-width: 360px;
+  max-width: calc(100vw - 32px);
+  animation: logout-toast-in 0.22s cubic-bezier(0.16, 1, 0.3, 1) both;
+  overflow: hidden;
+}
+
+.logout-confirm-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: #fff1f2;
+  color: #dc2626;
+  flex-shrink: 0;
+}
+
+.logout-confirm-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.logout-confirm-body strong {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--app-text);
+}
+
+.logout-confirm-body span {
+  font-size: 11.5px;
+  color: var(--app-text-muted);
+}
+
+.logout-confirm-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.logout-btn-cancel {
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 8px;
+  border: 1px solid var(--app-border);
+  background: var(--app-surface);
+  color: var(--app-text-muted);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  font-family: inherit;
+}
+
+.logout-btn-cancel:hover {
+  background: var(--app-surface-hover);
+  border-color: #cbd5e1;
+  color: var(--app-text);
+}
+
+.logout-btn-confirm {
+  height: 32px;
+  padding: 0 14px;
+  border-radius: 8px;
+  border: none;
+  background: #dc2626;
+  color: #ffffff;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, box-shadow 0.15s;
+  font-family: inherit;
+}
+
+.logout-btn-confirm:hover {
+  background: #b91c1c;
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+}
+
+/* thin auto-dismiss progress bar at the bottom */
+.logout-confirm-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  background: #fca5a5;
+  border-radius: 0 0 14px 14px;
+  animation: logout-progress 6s linear forwards;
+}

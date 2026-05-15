@@ -1,0 +1,14 @@
+{
+  "recommendations": [
+    "dbaeumer.vscode-eslint",
+    "usernamehw.errorlens",
+    "wix.vscode-import-cost",
+    "eamodio.gitlens",
+    "anthropic.claude-code",
+    "streetsidesoftware.code-spell-checker",
+    "yoavbls.pretty-ts-errors",
+    "formulahendry.auto-rename-tag",
+    "naumovs.color-highlight"
+  ],
+  "unwantedRecommendations": []
+}

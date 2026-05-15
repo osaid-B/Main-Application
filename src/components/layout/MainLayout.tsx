@@ -1,23 +1,74 @@
-import { useEffect, useMemo, useState } from "react";
-import { Menu, PanelRightOpen, Plus } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Keyboard, LogOut, Menu, PanelRightOpen, Plus } from "lucide-react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import AppShellCommandBar from "./AppShellCommandBar";
 import AIAssistantPanel from "../ai/AIAssistantPanel";
+import ShortcutsOverlay from "../ui/ShortcutsOverlay";
 import { useAI } from "../../context/AIContext";
+import { useAuth } from "../../context/AuthContext";
 import { useSettings } from "../../context/SettingsContext";
+import { useKeyboardShortcuts } from "../../hooks/useKeyboardShortcuts";
 import "./AppShellCommandBar.css";
 
 export default function MainLayout() {
   const { isOpen, initialPrompt, openAI, closeAI } = useAI();
-  const { t, isArabic } = useSettings();
+  const { t, isArabic, theme, toggleTheme } = useSettings();
+  const { logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
 
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [logoutPending, setLogoutPending] = useState(false);
+  const logoutTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(
     () => localStorage.getItem("app-sidebar-collapsed") === "1"
+  );
+
+  const focusSearch = useCallback(() => {
+    const input = document.querySelector<HTMLInputElement>(".shell-command-search input");
+    if (input) {
+      input.focus();
+      input.select();
+    }
+  }, []);
+
+  const requestLogout = useCallback(() => {
+    setLogoutPending(true);
+    if (logoutTimerRef.current) clearTimeout(logoutTimerRef.current);
+    logoutTimerRef.current = setTimeout(() => setLogoutPending(false), 6000);
+  }, []);
+
+  const confirmLogout = useCallback(() => {
+    if (logoutTimerRef.current) clearTimeout(logoutTimerRef.current);
+    setLogoutPending(false);
+    logout();
+  }, [logout]);
+
+  const cancelLogout = useCallback(() => {
+    if (logoutTimerRef.current) clearTimeout(logoutTimerRef.current);
+    setLogoutPending(false);
+  }, []);
+
+  useEffect(() => {
+    if (!logoutPending) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Enter") { e.preventDefault(); confirmLogout(); }
+      if (e.key === "Escape") { e.preventDefault(); cancelLogout(); }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [logoutPending, confirmLogout, cancelLogout]);
+
+  useEffect(() => () => { if (logoutTimerRef.current) clearTimeout(logoutTimerRef.current); }, []);
+
+  const shortcuts = useKeyboardShortcuts(
+    useCallback(() => setShortcutsOpen((v) => !v), []),
+    focusSearch,
+    toggleTheme,
+    requestLogout
   );
 
   useEffect(() => {
@@ -216,7 +267,47 @@ export default function MainLayout() {
           <span>AI</span>
           <small>{t.layout.aiCopilot}</small>
         </button>
+
+        <button
+          type="button"
+          className="app-shortcuts-btn"
+          onClick={() => setShortcutsOpen(true)}
+          aria-label="Keyboard shortcuts"
+          title="Keyboard shortcuts (?)"
+        >
+          <Keyboard size={14} />
+          <kbd>?</kbd>
+        </button>
+
+        {logoutPending && (
+          <div className="logout-confirm-toast" role="alertdialog" aria-label="Confirm sign out">
+            <div className="logout-confirm-icon">
+              <LogOut size={16} />
+            </div>
+            <div className="logout-confirm-body">
+              <strong>Sign out?</strong>
+              <span>Press Enter to confirm or Esc to cancel</span>
+            </div>
+            <div className="logout-confirm-actions">
+              <button type="button" className="logout-btn-cancel" onClick={cancelLogout}>
+                Cancel
+              </button>
+              <button type="button" className="logout-btn-confirm" onClick={confirmLogout}>
+                Sign out
+              </button>
+            </div>
+            <div className="logout-confirm-progress" />
+          </div>
+        )}
       </main>
+
+      {shortcutsOpen && (
+        <ShortcutsOverlay
+          shortcuts={shortcuts}
+          onClose={() => setShortcutsOpen(false)}
+          isDark={theme === "dark"}
+        />
+      )}
 
       <nav className="mobile-bottom-nav" aria-label="Primary mobile navigation">
         {bottomNavItems.map((item) => {

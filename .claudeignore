@@ -1,0 +1,56 @@
+# ─── Backend (owned by another engineer) ───
+server/
+api/
+prisma/
+backend/
+
+# ─── Build artifacts ───
+dist/
+dist-ssr/
+build/
+.next/
+out/
+
+# ─── Dependencies ───
+node_modules/
+
+# ─── Environment & secrets ───
+.env
+.env.*
+*.local
+
+# ─── Lockfiles ───
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# ─── Logs ───
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# ─── Generated / cache ───
+.cache/
+.parcel-cache/
+.vite/
+coverage/
+*.tsbuildinfo
+
+# ─── OS / editor noise ───
+.DS_Store
+Thumbs.db
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# ─── Python (legacy from .gitignore) ───
+__pycache__/
+*.py[cod]
+*$py.class
+db.sqlite3
+db.sqlite3-journal

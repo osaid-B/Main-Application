@@ -1,0 +1,134 @@
+.purchases-workspace {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 22px 26px 36px;
+  color: #142033;
+}
+
+.side-card,
+.purchase-modal,
+.purchase-drawer {
+  background: #ffffff;
+  border: 1px solid #e5ecf5;
+  box-shadow: 0 12px 34px rgba(15, 23, 42, 0.04);
+}
+
+/* ── Unified main content card ── */
+.purchases-content-card {
+  background: #ffffff;
+  border: 1px solid #e5ecf5;
+  border-radius: 20px;
+  box-shadow: 0 12px 34px rgba(15, 23, 42, 0.04);
+  overflow: hidden;
+}
+
+/* ── Flat page header (no card) ── */
+.purchases-header-card {
+  border-radius: 0;
+  padding: 4px 0 6px;
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+.page-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: #eef5ff;
+  color: #2563eb;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.purchases-header-copy h1 {
+  margin: 6px 0 2px;
+  font-size: 34px;
+  line-height: 1.06;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+}
+
+.purchases-header-copy p {
+  margin: 0;
+  color: #64748b;
+  font-size: 14px;
+}
+
+.purchases-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.header-actions-menu-wrap {
+  position: relative;
+}
+
+.primary-button,
+.secondary-button,
+.danger-button,
+.toolbar-button,
+.suppliers-button,
+.action-button,
+.icon-button {
+  border: none;
+  cursor: pointer;
+  transition: 0.18s ease;
+  font: inherit;
+}
+
+.primary-button,
+.secondary-button,
+.danger-button {
+  min-height: 46px;
+  padding: 0 18px;
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.primary-button {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  color: #ffffff;
+  box-shadow: 0 14px 24px rgba(47, 107, 255, 0.18);
+}
+
+.primary-button:hover {
+  transform: translateY(-1px);
+}
+
+.secondary-button {
+  background: #ffffff;
+  color: #27364b;
+  border: 1px solid #dbe5f1;
+}
+
+.secondary-button:hover,
+.toolbar-button:hover,
+.suppliers-button:hover,
+.action-button:hover,
+.icon-button:hover {
+  background: #f8fbff;
+}
+
+.active-menu-button {
+  background: #eef5ff;
+  border-color: #d8e4ff;
+  color: #2563eb;
+}

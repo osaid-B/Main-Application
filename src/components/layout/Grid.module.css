@@ -1,0 +1,46 @@
+.grid {
+  display: grid;
+  width: 100%;
+}
+
+/* Columns */
+.cols_1 { grid-template-columns: repeat(1, minmax(0, 1fr)); }
+.cols_2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.cols_3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.cols_4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.cols_6 { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+.cols_12 { grid-template-columns: repeat(12, minmax(0, 1fr)); }
+
+/* Gaps */
+.gap_xs { gap: var(--app-space-2); }
+.gap_sm { gap: var(--app-space-3); }
+.gap_md { gap: var(--app-space-4); }
+.gap_lg { gap: var(--app-space-5); }
+.gap_xl { gap: var(--app-space-6); }
+
+/* Alignment (cross-axis) */
+.align_start { align-items: start; }
+.align_center { align-items: center; }
+.align_end { align-items: end; }
+.align_stretch { align-items: stretch; }
+
+/* Responsive collapse — tablet: 2 cols (when cols > 2) */
+@media (max-width: 900px) {
+  .responsive.cols_3,
+  .responsive.cols_4,
+  .responsive.cols_6,
+  .responsive.cols_12 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Responsive collapse — mobile: 1 col */
+@media (max-width: 600px) {
+  .responsive.cols_2,
+  .responsive.cols_3,
+  .responsive.cols_4,
+  .responsive.cols_6,
+  .responsive.cols_12 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
