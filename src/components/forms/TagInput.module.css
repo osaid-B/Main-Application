@@ -1,0 +1,102 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-2);
+}
+
+.label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--app-text-soft);
+}
+
+.field {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 6px;
+  background: var(--app-surface);
+  border: 1px solid var(--app-border-strong);
+  border-radius: var(--app-radius-sm);
+  transition: var(--app-transition);
+}
+
+.field:focus-within {
+  border-color: var(--app-accent);
+  box-shadow: 0 0 0 3px var(--app-accent-subtle);
+}
+
+.field.disabled { opacity: 0.6; cursor: not-allowed; }
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 4px 2px 10px;
+  background: var(--app-accent-subtle);
+  color: var(--app-accent-text, var(--app-accent-strong));
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.chipRemove {
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 0;
+  border-radius: 50%;
+  color: inherit;
+  cursor: pointer;
+  opacity: 0.6;
+  transition: var(--app-transition);
+}
+.chipRemove:hover { opacity: 1; background: rgba(0, 0, 0, 0.08); }
+.chipRemove:disabled { cursor: not-allowed; }
+
+.input {
+  flex: 1;
+  min-width: 80px;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+  color: var(--app-text);
+  outline: none;
+  padding: 0 6px;
+  min-height: 24px;
+}
+.input::placeholder { color: var(--app-text-light); }
+
+.hint {
+  font-size: 11px;
+  color: var(--app-text-muted);
+}
+
+.suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.suggestion {
+  padding: 3px 10px;
+  background: var(--app-surface-muted);
+  border: 1px dashed var(--app-border);
+  border-radius: 9999px;
+  font: inherit;
+  font-size: 11px;
+  color: var(--app-text-muted);
+  cursor: pointer;
+  transition: var(--app-transition);
+}
+.suggestion:hover:not(:disabled) {
+  background: var(--app-accent-subtle);
+  color: var(--app-accent-text, var(--app-accent-strong));
+  border-color: var(--app-accent-light);
+}

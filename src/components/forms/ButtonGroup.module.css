@@ -1,0 +1,71 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-2);
+}
+
+.groupLabel {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--app-text-soft);
+}
+
+.group {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 2px;
+  background: var(--app-surface-muted);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-md);
+  align-self: flex-start;
+}
+
+.option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  padding: 6px 14px;
+  background: transparent;
+  border: 0;
+  border-radius: var(--app-radius-sm);
+  font: inherit;
+  color: var(--app-text-soft);
+  cursor: pointer;
+  transition: var(--app-transition-fast, var(--app-transition));
+  white-space: nowrap;
+}
+
+.option:hover:not(:disabled):not(.active) {
+  background: var(--app-surface);
+  color: var(--app-text);
+}
+
+.option.active {
+  background: var(--app-surface);
+  color: var(--app-accent-text, var(--app-accent-strong));
+  box-shadow: var(--app-shadow-xs);
+}
+
+.option:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.option:focus-visible {
+  outline: 2px solid var(--app-accent);
+  outline-offset: 2px;
+}
+
+.optLabel {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.optHint {
+  font-size: 10px;
+  color: var(--app-text-muted);
+  font-weight: 400;
+}
+
+.size_sm .option { padding: 4px 10px; }
+.size_sm .optLabel { font-size: 11px; }
