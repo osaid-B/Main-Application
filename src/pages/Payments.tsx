@@ -1,4 +1,4 @@
-import { createPortal } from "react-dom";
+﻿import { createPortal } from "react-dom";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertCircle,
@@ -8,7 +8,6 @@ import {
   Calendar,
   CalendarRange,
   CheckCircle2,
-  ChevronDown,
   ChevronRight,
   CreditCard,
   Download,
@@ -16,7 +15,6 @@ import {
   FileText,
   Filter,
   Landmark,
-  MoreHorizontal,
   Pencil,
   Plus,
   Printer,
@@ -256,89 +254,6 @@ function validatePaymentForm(values: PaymentForm, invoices: Invoice[], payments:
     errors.amount = `Remaining invoice balance is ${formatMoney(remainingAmount)}.`;
   }
   return errors;
-}
-
-/* ── Trend Chart ──────────────────────────────────────── */
-function PayTrendChart({ data }: { data: { label: string; value: number }[] }) {
-  const W = 560, H = 150, padL = 56, padR = 16, padT = 12, padB = 32;
-  const maxVal = Math.max(...data.map((d) => d.value), 100);
-  const ceil = Math.ceil(maxVal / 500) * 500 || 500;
-  const iW = W - padL - padR;
-  const iH = H - padT - padB;
-  const toX = (i: number) => padL + (data.length < 2 ? iW / 2 : (i / (data.length - 1)) * iW);
-  const toY = (v: number) => padT + (1 - v / ceil) * iH;
-  const pts = data.map((d, i) => [toX(i), toY(d.value)] as [number, number]);
-  const line = pts.map((p, i) => `${i === 0 ? "M" : "L"}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(" ");
-  const area = `${line} L${pts[pts.length - 1][0].toFixed(1)},${(H - padB).toFixed(1)} L${pts[0][0].toFixed(1)},${(H - padB).toFixed(1)} Z`;
-  const steps = [0, Math.round(ceil / 3), Math.round((2 * ceil) / 3), ceil];
-
-  return (
-    <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} style={{ overflow: "visible", display: "block" }} aria-hidden>
-      {steps.map((v) => (
-        <g key={v}>
-          <line x1={padL} y1={toY(v)} x2={W - padR} y2={toY(v)} stroke="#f1f5f9" strokeWidth={1} />
-          <text x={padL - 8} y={toY(v) + 4} textAnchor="end" fontSize={10} fill="#94a3b8">
-            ${v >= 1000 ? `${(v / 1000).toFixed(0)}K` : v}
-          </text>
-        </g>
-      ))}
-      <path d={area} fill="#2563eb" fillOpacity={0.07} />
-      <path d={line} fill="none" stroke="#2563eb" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
-      {pts.map(([x, y], i) => (
-        <g key={i}>
-          <circle cx={x} cy={y} r={5} fill="#fff" stroke="#2563eb" strokeWidth={2} />
-        </g>
-      ))}
-      {data.map((d, i) => (
-        <text key={i} x={toX(i)} y={H - padB + 18} textAnchor="middle" fontSize={10} fill="#94a3b8">
-          {d.label}
-        </text>
-      ))}
-    </svg>
-  );
-}
-
-/* ── Donut Chart ──────────────────────────────────────── */
-function PayDonutChart({ slices, total }: {
-  slices: { method: string; amount: number; pct: number; color: string }[];
-  total: number;
-}) {
-  const R = 52, CX = 80, CY = 80, strokeW = 18;
-  const circ = 2 * Math.PI * R;
-  let cumPct = 0;
-
-  return (
-    <svg width={160} height={160} viewBox="0 0 160 160" style={{ display: "block", margin: "0 auto" }} aria-hidden>
-      <circle cx={CX} cy={CY} r={R} fill="none" stroke="#f1f5f9" strokeWidth={strokeW} />
-      {slices
-        .filter((s) => s.pct > 0.001)
-        .map((s, i) => {
-          const dash = s.pct * circ;
-          const gap = circ - dash;
-          const offset = circ * 0.25 - cumPct * circ;
-          cumPct += s.pct;
-          return (
-            <circle
-              key={i}
-              cx={CX}
-              cy={CY}
-              r={R}
-              fill="none"
-              stroke={s.color}
-              strokeWidth={strokeW}
-              strokeDasharray={`${dash.toFixed(2)} ${gap.toFixed(2)}`}
-              strokeDashoffset={offset.toFixed(2)}
-            />
-          );
-        })}
-      <text x={CX} y={CY - 7} textAnchor="middle" fontWeight={800} fontSize={13} fill="#0f172a">
-        {formatMoney(total)}
-      </text>
-      <text x={CX} y={CY + 10} textAnchor="middle" fontSize={10} fill="#94a3b8">
-        Total
-      </text>
-    </svg>
-  );
 }
 
 /* ── PaymentEditor Modal ──────────────────────────────── */
@@ -865,8 +780,6 @@ export default function Payments() {
     return Object.entries(map).map(([method, amount]) => ({ method, amount, pct: amount / total, color: colors[method] ?? "#94a3b8" }));
   }, [payments]);
 
-  const methodTotal = useMemo(() => methodBreakdown.reduce((s, m) => s + m.amount, 0), [methodBreakdown]);
-
   const aiInsights = useMemo(() => {
     const weekAmount = metrics.weekAmount;
     const prevWeekAmount = trendData.slice(0, 3).reduce((s, d) => s + d.value, 0);
@@ -894,7 +807,6 @@ export default function Payments() {
   }, [metrics, trendData]);
 
   const customerOptions = useMemo(() => customers.map((c) => ({ value: c.id, label: c.name })), [customers]);
-  const createdByOptions = useMemo(() => Array.from(new Set(payments.map((p) => p.createdBy))).filter(Boolean), [payments]);
 
   const openCreateModal = () => { setEditorMode("create"); setEditingPaymentId(null); setFormState(EMPTY_FORM); setFormErrors({}); setShowEditor(true); };
   const openEditModal = (p: ExtendedPayment) => { setEditorMode("edit"); setEditingPaymentId(p.paymentId); setFormState({ invoiceId: p.invoiceId, customerId: p.customerId, amount: String(p.amount), method: p.method, status: p.status, date: p.date, referenceNumber: p.referenceNumber, notes: p.notes, createdBy: p.createdBy }); setFormErrors({}); setShowEditor(true); setMenuState(null); };

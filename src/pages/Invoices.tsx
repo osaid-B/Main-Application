@@ -8,10 +8,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent, FormEvent, ReactNode } from "react";
 import { createPortal } from "react-dom";
 import {
-  BadgeDollarSign,
   Building2,
   Check,
-  Clock3,
   Eye,
   FileText,
   Filter,
@@ -792,30 +790,6 @@ export default function Invoices() {
       count: visibleByTab.length,
     };
   }, [visibleByTab]);
-
-  const kpiCards = useMemo(() => {
-    if (activeTab === "customer") {
-      return [
-        { title: "Amount Due", value: money(summary.amountDue), icon: BadgeDollarSign, tone: "blue" },
-        { title: "Late", value: String(summary.lateCount), icon: Clock3, tone: "amber" },
-        { title: "Invoices", value: String(summary.count), icon: FileText, tone: "green" },
-      ] as const;
-    }
-
-    if (activeTab === "supplier") {
-      return [
-        { title: "To Pay", value: money(summary.amountDue), icon: Truck, tone: "blue" },
-        { title: "Late", value: String(summary.lateCount), icon: Clock3, tone: "amber" },
-        { title: "Invoices", value: String(summary.count), icon: FileText, tone: "green" },
-      ] as const;
-    }
-
-    return [
-      { title: "Open Costs", value: money(summary.amountDue), icon: Building2, tone: "blue" },
-      { title: "Need Approval", value: String(summary.pendingApprovals), icon: Clock3, tone: "amber" },
-      { title: "Invoices", value: String(summary.count), icon: FileText, tone: "green" },
-    ] as const;
-  }, [activeTab, summary]);
 
   const activeFilterCount = [
     filters.status !== "all",

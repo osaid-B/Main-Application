@@ -53,7 +53,7 @@ export function Modal({
   footer,
   children,
   className,
-}: ModalProps): JSX.Element | null {
+}: ModalProps) {
   const surfaceRef = useRef<HTMLDivElement | null>(null);
   const previouslyFocusedRef = useRef<HTMLElement | null>(null);
   const [isClosing, setIsClosing] = useState(false);

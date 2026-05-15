@@ -1,29 +1,22 @@
 import "./Purchases.css";
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { ReactNode } from "react";
 import {
   AlertCircle,
-  ArrowDownToLine,
   ArrowUpDown,
   Calendar,
   CheckCircle2,
   ChevronDown,
-  Copy,
   Eye,
   Filter,
   LayoutGrid,
   List,
-  MoreVertical,
   Pencil,
   Plus,
-  Receipt,
   Search,
   ShoppingCart,
   Trash2,
-  Truck,
   X,
 } from "lucide-react";
-import OverflowContent from "../components/ui/OverflowContent";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
 import { Textarea } from "../components/ui/Textarea";
@@ -127,12 +120,6 @@ type FormErrors = Partial<
   >
 >;
 
-type RowAction = {
-  label: string;
-  icon: ReactNode;
-  onClick: () => void;
-  className: string;
-};
 
 const EMPTY_FORM: PurchaseFormState = {
   supplierId: "",
@@ -857,97 +844,6 @@ export default function Purchases() {
     forceCloseForm();
   }
 
-  function updatePurchase(
-    id: string,
-    updater: (purchase: PurchaseRecord) => PurchaseRecord,
-    successMessage: string
-  ) {
-    setPurchases((current) =>
-      current.map((entry) => (entry.id === id ? updater(entry) : entry))
-    );
-    setToast(successMessage);
-  }
-
-  function approvePurchase(id: string) {
-    updatePurchase(
-      id,
-      (entry) => ({
-        ...entry,
-        status: "Pending",
-        viewStatus: "Pending",
-        receivedPercent: 0,
-        paymentStatus: entry.paymentStatus === "Overdue" ? "Overdue" : "Unpaid",
-      }),
-      "Purchase approved"
-    );
-  }
-
-  function markAsReceived(id: string) {
-    updatePurchase(
-      id,
-      (entry) => ({
-        ...entry,
-        status: "Received",
-        viewStatus: "Received",
-        receivedPercent: 100,
-      }),
-      "Marked as received"
-    );
-  }
-
-  function cancelPurchase(id: string, label = "Purchase cancelled") {
-    updatePurchase(
-      id,
-      (entry) => ({
-        ...entry,
-        status: entry.status === "Received" ? "Received" : "Pending",
-        viewStatus: "Cancelled",
-      }),
-      label
-    );
-  }
-
-  function restorePurchase(id: string) {
-    updatePurchase(
-      id,
-      (entry) => ({
-        ...entry,
-        status: "Pending",
-        viewStatus: "Pending",
-        paymentStatus:
-          entry.paymentStatus === "Overdue"
-            ? "Overdue"
-            : entry.paymentStatus || "Unpaid",
-      }),
-      "Purchase restored"
-    );
-  }
-
-  function createPayment(id: string) {
-    updatePurchase(
-      id,
-      (entry) => ({
-        ...entry,
-        paymentStatus: "Paid",
-      }),
-      "Payment recorded"
-    );
-  }
-
-  function returnItems(id: string) {
-    updatePurchase(
-      id,
-      (entry) => ({
-        ...entry,
-        status: "Pending",
-        viewStatus: "Partially Received",
-        receivedPercent: Math.min(80, entry.receivedPercent ?? 68),
-        paymentStatus: "Partial",
-      }),
-      "Items marked for return"
-    );
-  }
-
   function requestDelete(row: PurchaseRow) {
     setDeleteRecord(row);
     setDeleteCode("");
@@ -969,134 +865,6 @@ export default function Purchases() {
     setDeleteCode("");
     setDeleteError("");
     setToast("Purchase deleted");
-  }
-
-  function getRowActions(row: PurchaseRow): RowAction[] {
-    if (row.status === "Draft") {
-      return [
-        {
-          label: "View",
-          icon: <Eye size={15} />,
-          onClick: () => setDetailRecord(row),
-          className: "view",
-        },
-        {
-          label: "Edit",
-          icon: <Pencil size={15} />,
-          onClick: () => openEditModal(row.purchaseId),
-          className: "edit",
-        },
-        {
-          label: "Approve",
-          icon: <CheckCircle2 size={15} />,
-          onClick: () => approvePurchase(row.purchaseId),
-          className: "approve",
-        },
-        {
-          label: "Delete",
-          icon: <Trash2 size={15} />,
-          onClick: () => requestDelete(row),
-          className: "delete",
-        },
-      ];
-    }
-
-    if (row.status === "Pending") {
-      return [
-        {
-          label: "View",
-          icon: <Eye size={15} />,
-          onClick: () => setDetailRecord(row),
-          className: "view",
-        },
-        {
-          label: "Edit",
-          icon: <Pencil size={15} />,
-          onClick: () => openEditModal(row.purchaseId),
-          className: "edit",
-        },
-        {
-          label: "Receive",
-          icon: <Truck size={15} />,
-          onClick: () => markAsReceived(row.purchaseId),
-          className: "receive",
-        },
-        {
-          label: "Cancel",
-          icon: <X size={15} />,
-          onClick: () => cancelPurchase(row.purchaseId),
-          className: "cancel",
-        },
-      ];
-    }
-
-    if (row.status === "Partially Received") {
-      return [
-        {
-          label: "View",
-          icon: <Eye size={15} />,
-          onClick: () => setDetailRecord(row),
-          className: "view",
-        },
-        {
-          label: "Receive Remaining",
-          icon: <Truck size={15} />,
-          onClick: () => markAsReceived(row.purchaseId),
-          className: "receive",
-        },
-        {
-          label: "Cancel Remaining",
-          icon: <X size={15} />,
-          onClick: () =>
-            cancelPurchase(row.purchaseId, "Remaining items cancelled"),
-          className: "cancel",
-        },
-      ];
-    }
-
-    if (row.status === "Received") {
-      return [
-        {
-          label: "View",
-          icon: <Eye size={15} />,
-          onClick: () => setDetailRecord(row),
-          className: "view",
-        },
-        {
-          label: "Create Payment",
-          icon: <Receipt size={15} />,
-          onClick: () => createPayment(row.purchaseId),
-          className: "payment",
-        },
-        {
-          label: "Return Items",
-          icon: <ArrowDownToLine size={15} />,
-          onClick: () => returnItems(row.purchaseId),
-          className: "return",
-        },
-      ];
-    }
-
-    return [
-      {
-        label: "View",
-        icon: <Eye size={15} />,
-        onClick: () => setDetailRecord(row),
-        className: "view",
-      },
-      {
-        label: "Restore",
-        icon: <CheckCircle2 size={15} />,
-        onClick: () => restorePurchase(row.purchaseId),
-        className: "approve",
-      },
-      {
-        label: "Delete",
-        icon: <Trash2 size={15} />,
-        onClick: () => requestDelete(row),
-        className: "delete",
-      },
-    ];
   }
 
   function renderRowActions(row: PurchaseRow) {

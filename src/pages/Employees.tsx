@@ -173,11 +173,6 @@ const calculateShiftHours = (start: string, end: string) => {
 
 const getTodayDate = () => new Date().toISOString().slice(0, 10);
 
-function shiftMonth(dateStr: string, delta: number) {
-  const d = new Date(`${dateStr}T00:00:00`);
-  d.setMonth(d.getMonth() + delta);
-  return d.toISOString().slice(0, 10);
-}
 
 function getStartOfWeek(date = new Date()) {
   const d = new Date(date);
@@ -1105,7 +1100,7 @@ function MonthlyAttendanceSection({
   onChangeWeekIndex: (index: number) => void;
   onOpenEditor: (employee: Employee, date: string) => void;
 }) {
-  const { monthLabel, days } = useMemo(() => getMonthDays(monthDate), [monthDate]);
+  const { days } = useMemo(() => getMonthDays(monthDate), [monthDate]);
   const weeks = useMemo(() => groupDaysIntoWeeks(days), [days]);
   const safeWeekIndex = Math.min(Math.max(weekIndex, 0), Math.max(weeks.length - 1, 0));
   const visibleDays = viewMode === "month" ? days : (weeks[safeWeekIndex] || []);

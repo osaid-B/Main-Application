@@ -49,7 +49,7 @@ function generateId(): string {
   return `toast-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-export function ToastProvider({ children }: { children: ReactNode }): JSX.Element {
+export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const timersRef = useRef<Map<string, number>>(new Map());
   const pausedRef = useRef<Set<string>>(new Set());

@@ -395,7 +395,7 @@ export default function Dashboard() {
       });
 
     purchases
-      .filter((pu) => pu.status === "Ordered" || pu.status === "Pending")
+      .filter((pu) => pu.status === "Pending")
       .slice(0, 1)
       .forEach((pu) => {
         events.push({
