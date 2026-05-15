@@ -1,0 +1,53 @@
+.card {
+  position: relative;
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-lg);
+  padding: var(--app-space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-2);
+  box-shadow: var(--app-shadow-soft);
+  transition: var(--app-transition);
+}
+
+.card:hover { box-shadow: var(--app-shadow-strong); }
+
+.card::before {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  width: 3px;
+  border-start-start-radius: var(--app-radius-lg);
+  border-end-start-radius: var(--app-radius-lg);
+}
+
+.tone_critical::before   { background: var(--atlas-danger); }
+.tone_operations::before { background: var(--atlas-orange); }
+.tone_finance::before    { background: var(--atlas-blue); }
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--app-text);
+  line-height: 1.4;
+}
+
+.desc {
+  margin: 0;
+  font-size: 12px;
+  color: var(--app-text-muted);
+  line-height: 1.5;
+}
+
+.action {
+  margin-top: var(--app-space-1);
+}
