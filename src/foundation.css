@@ -1,5 +1,67 @@
 /* ─── Design Tokens ─────────────────────────────────────────────────────── */
 :root {
+  /* === Atlas ERP brand palette === */
+  --atlas-blue: #2563eb;     /* Company workspace */
+  --atlas-purple: #8b5cf6;   /* Factory workspace */
+  --atlas-green: #10b981;    /* POS workspace */
+  --atlas-orange: #f97316;   /* Highlights / accent */
+
+  /* Blue scale (Company) */
+  --atlas-blue-50:  #eff6ff;
+  --atlas-blue-100: #dbeafe;
+  --atlas-blue-200: #bfdbfe;
+  --atlas-blue-300: #93c5fd;
+  --atlas-blue-400: #60a5fa;
+  --atlas-blue-500: #3b82f6;
+  --atlas-blue-600: #2563eb;
+  --atlas-blue-700: #1d4ed8;
+  --atlas-blue-800: #1e40af;
+  --atlas-blue-900: #1e3a8a;
+
+  /* Green scale (POS) */
+  --atlas-green-50:  #ecfdf5;
+  --atlas-green-100: #d1fae5;
+  --atlas-green-200: #a7f3d0;
+  --atlas-green-300: #6ee7b7;
+  --atlas-green-400: #34d399;
+  --atlas-green-500: #10b981;
+  --atlas-green-600: #059669;
+  --atlas-green-700: #047857;
+  --atlas-green-800: #065f46;
+  --atlas-green-900: #064e3b;
+
+  /* Purple scale (Factory) */
+  --atlas-purple-50:  #f5f3ff;
+  --atlas-purple-100: #ede9fe;
+  --atlas-purple-200: #ddd6fe;
+  --atlas-purple-300: #c4b5fd;
+  --atlas-purple-400: #a78bfa;
+  --atlas-purple-500: #8b5cf6;
+  --atlas-purple-600: #7c3aed;
+  --atlas-purple-700: #6d28d9;
+  --atlas-purple-800: #5b21b6;
+  --atlas-purple-900: #4c1d95;
+
+  /* Orange scale (Accent) */
+  --atlas-orange-50:  #fff7ed;
+  --atlas-orange-100: #ffedd5;
+  --atlas-orange-500: #f97316;
+  --atlas-orange-600: #ea580c;
+  --atlas-orange-700: #c2410c;
+
+  /* Semantic shortcuts */
+  --atlas-success: var(--atlas-green-500);
+  --atlas-warning: var(--atlas-orange-500);
+  --atlas-danger:  #ef4444;
+  --atlas-info:    var(--atlas-blue-500);
+
+  /* Accent text (for use on subtle backgrounds) */
+  --app-accent-text: var(--atlas-blue-700);
+
+  /* Typography fonts */
+  --font-arabic: "IBM Plex Sans Arabic", system-ui, sans-serif;
+  --font-mono:   "IBM Plex Mono", "Geist Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
   /* Backgrounds */
   --app-bg: #f0f2f5;
   --app-surface: #ffffff;
@@ -17,10 +79,10 @@
   --app-text-muted: #64748b;
   --app-text-subtle: #94a3b8;
 
-  /* Accent — professional blue */
-  --app-accent: #2563eb;
+  /* Accent — driven by active workspace; defaults to Atlas blue (Company) */
+  --app-accent: var(--atlas-blue);
   --app-accent-light: #3b82f6;
-  --app-accent-subtle: #eff6ff;
+  --app-accent-subtle: #dbeafe;
   --app-accent-strong: #1d4ed8;
 
   /* Status */
@@ -90,6 +152,11 @@ body {
   line-height: 1.5;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
+}
+
+/* RTL: switch to Arabic-optimized typeface */
+[dir="rtl"] body {
+  font-family: "IBM Plex Sans Arabic", "Cairo", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
 }
 
 button,
@@ -555,3 +622,67 @@ kbd {
     padding: 16px;
   }
 }
+
+/* ─── Workspace Theming ───────────────────────────────────────────── */
+[data-workspace="company"] {
+  --app-accent:         var(--atlas-blue);
+  --app-accent-light:   var(--atlas-blue-400);
+  --app-accent-strong:  var(--atlas-blue-700);
+  --app-accent-subtle:  var(--atlas-blue-100);
+  --app-accent-text:    var(--atlas-blue-700);
+}
+
+[data-workspace="pos"] {
+  --app-accent:         var(--atlas-green);
+  --app-accent-light:   var(--atlas-green-400);
+  --app-accent-strong:  var(--atlas-green-700);
+  --app-accent-subtle:  var(--atlas-green-100);
+  --app-accent-text:    var(--atlas-green-700);
+}
+
+[data-workspace="factory"] {
+  --app-accent:         var(--atlas-purple);
+  --app-accent-light:   var(--atlas-purple-400);
+  --app-accent-strong:  var(--atlas-purple-700);
+  --app-accent-subtle:  var(--atlas-purple-100);
+  --app-accent-text:    var(--atlas-purple-700);
+}
+
+/* ─── Status Dots (Atlas) ─────────────────────────────────────────── */
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+.status-dot--green  { background: var(--atlas-green); }
+.status-dot--blue   { background: var(--atlas-blue); }
+.status-dot--purple { background: var(--atlas-purple); }
+.status-dot--orange { background: var(--atlas-orange); }
+.status-dot--red    { background: var(--atlas-danger); }
+.status-dot--gray   { background: var(--app-text-light, #94a3b8); }
+
+.status-dot--pulse { position: relative; }
+.status-dot--pulse::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  background: inherit;
+  opacity: 0.3;
+  animation: atlas-pulse 2s ease-in-out infinite;
+}
+
+@keyframes atlas-pulse {
+  0%, 100% { opacity: 0.3; transform: scale(1); }
+  50%      { opacity: 0;   transform: scale(1.5); }
+}
+
+.ws-dot--company { color: var(--atlas-blue); }
+.ws-dot--pos     { color: var(--atlas-green); }
+.ws-dot--factory { color: var(--atlas-purple); }
+
+/* Atlas accent text for body when no workspace set (defaults to blue/Company) */
+:root { --app-text-light: #94a3b8; }
+

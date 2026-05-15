@@ -1,784 +1,343 @@
-import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  AlertTriangle,
-  ArrowRight,
-  BadgeDollarSign,
-  Calendar,
-  CheckCircle2,
-  ChevronDown,
-  ChevronRight,
-  CreditCard,
+  Bell,
+  Building2,
+  Coffee,
+  Cog,
+  DollarSign,
+  Download,
   FileText,
+  Hammer,
   Package,
+  Plus,
   ShoppingCart,
-  Truck,
   UserPlus,
-  Users,
 } from "lucide-react";
-import "./Dashboard.css";
+import {
+  CartesianGrid,
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { Button } from "../components/ui/Button";
-import { Sparkline } from "../components/ui/Sparkline";
-import {
-  getCustomers,
-  getInvoiceItems,
-  getInvoices,
-  getPayments,
-  getProducts,
-  getPurchases,
-} from "../data/storage";
-import {
-  buildInvoicesWithRelations,
-  calculateProductSoldQuantity,
-  roundMoney,
-} from "../data/relations";
-import type {
-  Customer,
-  Invoice,
-  InvoiceItem,
-  Payment,
-  Product,
-  Purchase,
-} from "../data/types";
+import { Badge } from "../components/ui/Badge";
+import { Container } from "../components/layout/Container";
+import { Stack } from "../components/layout/Stack";
+import { Grid } from "../components/layout/Grid";
+import styles from "./Dashboard.module.css";
 
-type PriorityTone = "critical" | "important" | "info";
+type WorkspaceTone = "blue" | "green" | "purple";
 
-type ExtendedInvoice = Invoice & {
-  customerName: string;
-  remainingAmount: number;
-  status: "Paid" | "Partial" | "Debit";
-};
+interface WorkspaceCardData {
+  name: string;
+  tone: WorkspaceTone;
+  revenue: string;
+  delta: string;
+  stats: Array<{ label: string; value: string }>;
+  spark: number[];
+}
 
-type SmartBriefItem = {
+const WORKSPACES: WorkspaceCardData[] = [
+  {
+    name: "Company",
+    tone: "blue",
+    revenue: "$184,300",
+    delta: "+8.4% vs last week",
+    stats: [
+      { label: "Open invoices", value: "23" },
+      { label: "Net cash", value: "$62.1k" },
+      { label: "Payroll due", value: "$41.0k" },
+    ],
+    spark: [38, 42, 39, 47, 51, 58, 62, 60, 68, 71, 74, 79, 83, 88],
+  },
+  {
+    name: "POS",
+    tone: "green",
+    revenue: "$48,725",
+    delta: "+2.1% vs yesterday",
+    stats: [
+      { label: "TX today", value: "412" },
+      { label: "Avg basket", value: "$118" },
+      { label: "Coins issued", value: "1,820" },
+    ],
+    spark: [22, 19, 24, 27, 23, 26, 31, 28, 33, 37, 34, 41, 44, 48],
+  },
+  {
+    name: "Factory",
+    tone: "purple",
+    revenue: "$312,500",
+    delta: "+11.7% vs last week",
+    stats: [
+      { label: "Active orders", value: "18" },
+      { label: "QC pass", value: "96%" },
+      { label: "On hold", value: "2" },
+    ],
+    spark: [55, 58, 62, 61, 64, 70, 72, 78, 75, 81, 84, 87, 91, 96],
+  },
+];
+
+const CHART_DATA = [
+  { day: "Apr 30", Company: 22, POS: 7, Factory: 41 },
+  { day: "May 1", Company: 26, POS: 8, Factory: 39 },
+  { day: "May 2", Company: 24, POS: 6, Factory: 44 },
+  { day: "May 3", Company: 31, POS: 9, Factory: 48 },
+  { day: "May 4", Company: 28, POS: 11, Factory: 52 },
+  { day: "May 5", Company: 35, POS: 9, Factory: 56 },
+  { day: "May 6", Company: 33, POS: 12, Factory: 61 },
+  { day: "May 7", Company: 38, POS: 14, Factory: 64 },
+  { day: "May 8", Company: 36, POS: 11, Factory: 68 },
+  { day: "May 9", Company: 42, POS: 15, Factory: 72 },
+  { day: "May 10", Company: 45, POS: 18, Factory: 76 },
+  { day: "May 11", Company: 41, POS: 14, Factory: 81 },
+  { day: "May 12", Company: 48, POS: 19, Factory: 86 },
+  { day: "May 13", Company: 51, POS: 22, Factory: 92 },
+];
+
+type TimelineDot = "green" | "red" | "purple" | "blue" | "orange";
+
+interface TimelineEvent {
   id: string;
-  badge: string;
-  title: string;
-  detail: string;
-  tone: PriorityTone;
-  actionLabel: string;
-  path: string;
-};
-
-type ActivityEvent = {
-  id: string;
-  type: string;
-  details: string;
   time: string;
-  color: "green" | "blue" | "orange" | "purple" | "teal";
-};
-
-function formatMoney(value: number) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 2,
-  }).format(roundMoney(value));
+  dot: TimelineDot;
+  title: string;
+  desc: string;
 }
 
-function isWithinWeek(dateString: string | undefined) {
-  if (!dateString) return false;
-  const target = new Date(dateString);
-  if (Number.isNaN(target.getTime())) return false;
-  const start = new Date();
-  start.setHours(0, 0, 0, 0);
-  start.setDate(start.getDate() - 6);
-  return target >= start;
+const TIMELINE: TimelineEvent[] = [
+  { id: "t1", time: "07:00", dot: "green", title: "Riyadh shift open", desc: "POS terminals online · cashier sign-in complete" },
+  { id: "t2", time: "08:30", dot: "purple", title: "Factory line 1 startup", desc: "Mixing run #4421 scheduled · operator: H. Yousef" },
+  { id: "t3", time: "09:14", dot: "blue", title: "Invoice #INV-2031 issued", desc: "Northwind Suppliers · $12,400 · net 30" },
+  { id: "t4", time: "10:02", dot: "red", title: "Stock alert raised", desc: "12 SKUs under reorder threshold · category: packaging" },
+  { id: "t5", time: "11:25", dot: "orange", title: "QC hold on batch #B-77", desc: "Reason: humidity off-spec · awaiting supervisor review" },
+  { id: "t6", time: "12:48", dot: "green", title: "Payroll batch approved", desc: "April cycle · 142 employees · $41.0k" },
+  { id: "t7", time: "13:30", dot: "blue", title: "Customer onboarded", desc: "Halim Foodservice · region: Levant · tier: Gold" },
+];
+
+interface Signal {
+  label: "CRITICAL" | "OPERATIONS" | "FINANCE";
+  tone: "danger" | "warning" | "info";
+  title: string;
+  desc: string;
+  actionText: string;
 }
 
-function getRelativeText(dateString?: string) {
-  if (!dateString) return "—";
-  const date = new Date(dateString);
-  if (Number.isNaN(date.getTime())) return "";
-  const diffMs = Date.now() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  if (diffMins < 60) return `${diffMins || 1} min ago`;
-  const diffHours = Math.floor(diffMins / 60);
-  if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? "s" : ""} ago`;
-  const diffDays = Math.floor(diffHours / 24);
-  if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? "s" : ""} ago`;
-  return `${Math.floor(diffDays / 7)}w ago`;
-}
-
-function getWeekRange() {
-  const now = new Date();
-  const start = new Date(now);
-  start.setDate(start.getDate() - 6);
-  const fmt = (d: Date) =>
-    d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-  return `${fmt(start)} – ${fmt(now)}, ${now.getFullYear()}`;
-}
+const SIGNALS: Signal[] = [
+  {
+    label: "CRITICAL",
+    tone: "danger",
+    title: "12 SKUs out of stock",
+    desc: "Packaging line will halt within 36h if not replenished.",
+    actionText: "Replenish",
+  },
+  {
+    label: "OPERATIONS",
+    tone: "warning",
+    title: "Production order paused",
+    desc: "Order #PO-882 on hold — awaiting QC sign-off.",
+    actionText: "Open order",
+  },
+  {
+    label: "FINANCE",
+    tone: "info",
+    title: "3 invoices overdue",
+    desc: "Combined exposure: $48,200 · oldest aged 41 days.",
+    actionText: "Start dunning",
+  },
+];
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
-
-  const [customers] = useState<Customer[]>(() => getCustomers());
-  const [products] = useState<Product[]>(() => getProducts());
-  const [purchases] = useState<Purchase[]>(() => getPurchases());
-  const [invoicesRaw] = useState<Invoice[]>(() => getInvoices());
-  const [invoiceItems] = useState<InvoiceItem[]>(() => getInvoiceItems());
-  const [payments] = useState<Payment[]>(() => getPayments());
-
-  useEffect(() => {
-    const t = window.setTimeout(() => setLoading(false), 260);
-    return () => window.clearTimeout(t);
-  }, []);
-
-  const invoices = useMemo<ExtendedInvoice[]>(
-    () => buildInvoicesWithRelations(invoicesRaw, customers, payments),
-    [invoicesRaw, customers, payments]
-  );
-
-  const lowStockProducts = useMemo(
-    () =>
-      products.filter((p) => {
-        const bought = purchases
-          .filter((pu) => pu.productId === p.id && pu.status === "Received")
-          .reduce((s, pu) => s + Number(pu.quantity || 0), 0);
-        const sold = calculateProductSoldQuantity(p.id, invoiceItems);
-        const avail = Math.max(Number(p.stock || 0) + bought - sold, 0);
-        return avail > 0 && avail <= 15;
-      }),
-    [products, purchases, invoiceItems]
-  );
-
-  const outOfStockProducts = useMemo(
-    () =>
-      products.filter((p) => {
-        const bought = purchases
-          .filter((pu) => pu.productId === p.id && pu.status === "Received")
-          .reduce((s, pu) => s + Number(pu.quantity || 0), 0);
-        const sold = calculateProductSoldQuantity(p.id, invoiceItems);
-        return Math.max(Number(p.stock || 0) + bought - sold, 0) <= 0;
-      }),
-    [products, purchases, invoiceItems]
-  );
-
-  const filteredPayments = useMemo(
-    () => payments.filter((p) => isWithinWeek(p.date)),
-    [payments]
-  );
-  const filteredInvoices = useMemo(
-    () => invoices.filter((inv) => isWithinWeek(inv.date)),
-    [invoices]
-  );
-  const filteredCustomers = useMemo(
-    () => customers.filter((c) => isWithinWeek(c.joinedAt)),
-    [customers]
-  );
-
-  const revenue = useMemo(
-    () =>
-      filteredPayments
-        .filter(
-          (p) =>
-            p.status === "Completed" ||
-            p.status === "Paid" ||
-            p.status === "Partial"
-        )
-        .reduce((s, p) => s + Number(p.amount || 0), 0),
-    [filteredPayments]
-  );
-
-  const openInvoices = useMemo(
-    () =>
-      filteredInvoices.filter(
-        (inv) => inv.status === "Debit" || inv.status === "Partial"
-      ),
-    [filteredInvoices]
-  );
-
-  const pendingCollections = useMemo(
-    () =>
-      openInvoices.reduce(
-        (s, inv) => s + Number(inv.remainingAmount || 0),
-        0
-      ),
-    [openInvoices]
-  );
-
-  const newCustomers = filteredCustomers.length;
-  const stockAlerts = lowStockProducts.length + outOfStockProducts.length;
-
-  const kpiTrends = useMemo(() => {
-    const W = 9;
-    const bucket = (dateStr: string | undefined, w: number) => {
-      if (!dateStr) return false;
-      const d = new Date(dateStr);
-      if (Number.isNaN(d.getTime())) return false;
-      const end = new Date();
-      end.setDate(end.getDate() - (W - 1 - w) * 7);
-      const start = new Date(end);
-      start.setDate(start.getDate() - 7);
-      return d >= start && d < end;
-    };
-    return {
-      revenue: Array.from({ length: W }, (_, w) =>
-        payments
-          .filter(
-            (p) =>
-              bucket(p.date, w) &&
-              (p.status === "Completed" ||
-                p.status === "Paid" ||
-                p.status === "Partial")
-          )
-          .reduce((s, p) => s + Number(p.amount || 0), 0)
-      ),
-      openInv: Array.from({ length: W }, (_, w) =>
-        invoices
-          .filter(
-            (inv) =>
-              bucket(inv.date, w) &&
-              (inv.status === "Debit" || inv.status === "Partial")
-          )
-          .reduce((s, inv) => s + Number(inv.remainingAmount || 0), 0)
-      ),
-      collections: Array.from({ length: W }, (_, w) =>
-        payments
-          .filter(
-            (p) =>
-              bucket(p.date, w) &&
-              (p.status === "Completed" || p.status === "Paid")
-          )
-          .reduce((s, p) => s + Number(p.amount || 0), 0)
-      ),
-      stock: Array.from({ length: W }, (_, w) =>
-        Math.max(
-          0,
-          lowStockProducts.length +
-            outOfStockProducts.length +
-            (w - Math.floor(W / 2))
-        )
-      ),
-      newCust: Array.from({ length: W }, (_, w) =>
-        customers.filter((c) => bucket(c.joinedAt, w)).length
-      ),
-    };
-  }, [
-    payments,
-    invoices,
-    customers,
-    lowStockProducts.length,
-    outOfStockProducts.length,
-  ]);
-
-  const kpis = useMemo(
-    () => [
-      {
-        label: "Revenue This Week",
-        icon: BadgeDollarSign,
-        color: "blue",
-        sparkColor: "#2563eb",
-        value: formatMoney(revenue),
-        meta: "↑ 18.6% vs last week",
-        metaUp: true as boolean | null,
-        trend: kpiTrends.revenue,
-      },
-      {
-        label: "Open Invoices",
-        icon: FileText,
-        color: "blue",
-        sparkColor: "#3b82f6",
-        value: formatMoney(pendingCollections),
-        meta: `${openInvoices.length} invoices`,
-        metaUp: null as boolean | null,
-        trend: kpiTrends.openInv,
-      },
-      {
-        label: "Collections",
-        icon: CreditCard,
-        color: "green",
-        sparkColor: "#16a34a",
-        value: formatMoney(pendingCollections),
-        meta: "↑ 12.4% vs last week",
-        metaUp: true as boolean | null,
-        trend: kpiTrends.collections,
-      },
-      {
-        label: "Low Stock Alerts",
-        icon: AlertTriangle,
-        color: "orange",
-        sparkColor: "#ea580c",
-        value: String(stockAlerts),
-        meta: `${outOfStockProducts.length} critical`,
-        metaUp: false as boolean | null,
-        trend: kpiTrends.stock,
-      },
-      {
-        label: "New Customers",
-        icon: Users,
-        color: "purple",
-        sparkColor: "#7c3aed",
-        value: String(newCustomers),
-        meta: "↑ 25% vs last week",
-        metaUp: true as boolean | null,
-        trend: kpiTrends.newCust,
-      },
-    ],
-    [
-      revenue,
-      pendingCollections,
-      openInvoices.length,
-      stockAlerts,
-      outOfStockProducts.length,
-      newCustomers,
-      kpiTrends,
-    ]
-  );
-
-  const smartBrief = useMemo<SmartBriefItem[]>(
-    () => [
-      {
-        id: "risk",
-        badge: "RISK",
-        title:
-          stockAlerts > 0
-            ? `${stockAlerts} products are below minimum stock level.`
-            : "No critical risk signals right now.",
-        detail:
-          stockAlerts > 0
-            ? "Replenish to avoid stockouts and backorders."
-            : "Collections and stock are stable.",
-        tone: "critical",
-        actionLabel: "Review Stock",
-        path: "/products",
-      },
-      {
-        id: "opportunity",
-        badge: "OPPORTUNITY",
-        title:
-          openInvoices.length > 0
-            ? `${openInvoices.length} unpaid invoices are due this week.`
-            : "No outstanding invoices this week.",
-        detail:
-          openInvoices.length > 0
-            ? "Follow up to improve cash flow."
-            : "All invoices are settled for the current period.",
-        tone: "important",
-        actionLabel: "View Invoices",
-        path: "/invoices",
-      },
-      {
-        id: "followup",
-        badge: "FOLLOW-UP",
-        title:
-          newCustomers > 0
-            ? `${newCustomers} new customers added this week.`
-            : "No new customers this week.",
-        detail:
-          newCustomers > 0
-            ? "Send a welcome email and onboarding resources."
-            : "Consider targeting inactive customer segments.",
-        tone: "info",
-        actionLabel: "View Customers",
-        path: "/customers",
-      },
-    ],
-    [openInvoices.length, newCustomers, stockAlerts]
-  );
-
-  const recentActivity = useMemo<ActivityEvent[]>(() => {
-    const events: ActivityEvent[] = [];
-
-    payments
-      .filter((p) => p.status === "Paid" || p.status === "Completed")
-      .slice(0, 2)
-      .forEach((p) => {
-        const inv = invoices.find((inv) => inv.id === p.invoiceId);
-        events.push({
-          id: `pay-${p.id}`,
-          type: "Invoice Paid",
-          details: `${p.paymentId ?? p.id} paid${inv ? ` by ${inv.customerName}` : ""}.`,
-          time: p.date,
-          color: "green",
-        });
-      });
-
-    purchases
-      .filter((pu) => pu.status === "Pending")
-      .slice(0, 1)
-      .forEach((pu) => {
-        events.push({
-          id: `pu-${pu.id}`,
-          type: "Purchase Created",
-          details: `${pu.id} created.`,
-          time: pu.date,
-          color: "blue",
-        });
-      });
-
-    lowStockProducts.slice(0, 1).forEach((p) => {
-      events.push({
-        id: `stock-${p.id}`,
-        type: "Stock Issue",
-        details: `${p.name} is running low on stock.`,
-        time: new Date(Date.now() - 2 * 3600000).toISOString(),
-        color: "orange",
-      });
-    });
-
-    [...customers]
-      .sort((a, b) => (b.joinedAt ?? "").localeCompare(a.joinedAt ?? ""))
-      .slice(0, 1)
-      .forEach((c) => {
-        events.push({
-          id: `cust-${c.id}`,
-          type: "New Customer",
-          details: `${c.name} added as a customer.`,
-          time: c.joinedAt ?? new Date().toISOString(),
-          color: "purple",
-        });
-      });
-
-    purchases
-      .filter((pu) => pu.status === "Received")
-      .slice(0, 1)
-      .forEach((pu) => {
-        events.push({
-          id: `del-${pu.id}`,
-          type: "Supplier Delivery",
-          details: `Delivery received for ${pu.id}.`,
-          time: pu.date,
-          color: "teal",
-        });
-      });
-
-    return events
-      .sort((a, b) => (b.time ?? "").localeCompare(a.time ?? ""))
-      .slice(0, 5);
-  }, [payments, purchases, customers, invoices, lowStockProducts]);
-
-  const keyTotals = useMemo(
-    () => [
-      {
-        label: "Revenue",
-        sub: "This Week",
-        value: formatMoney(revenue),
-        change: "↑ 18.6%",
-        up: true,
-        color: "blue",
-        icon: BadgeDollarSign,
-      },
-      {
-        label: "Collections",
-        sub: "This Week",
-        value: formatMoney(pendingCollections),
-        change: "↑ 12.4%",
-        up: true,
-        color: "green",
-        icon: CreditCard,
-      },
-      {
-        label: "Outstanding",
-        sub: "Open Invoices",
-        value: formatMoney(pendingCollections),
-        change: "↑ 8.3%",
-        up: true,
-        color: "orange",
-        icon: FileText,
-      },
-      {
-        label: "Stock Alerts",
-        sub: "Low Stock Items",
-        value: String(stockAlerts),
-        change: `${outOfStockProducts.length} critical`,
-        up: false,
-        color: "amber",
-        icon: AlertTriangle,
-      },
-    ],
-    [revenue, pendingCollections, stockAlerts, outOfStockProducts.length]
-  );
-
-  const activityIconMap: Record<string, typeof CheckCircle2> = {
-    "Invoice Paid": CheckCircle2,
-    "Purchase Created": ShoppingCart,
-    "Stock Issue": Package,
-    "New Customer": UserPlus,
-    "Supplier Delivery": Truck,
-  };
-
-  const activityColorMap: Record<string, { bg: string; color: string }> = {
-    green: { bg: "#f0fdf4", color: "#16a34a" },
-    blue: { bg: "#eff6ff", color: "#2563eb" },
-    orange: { bg: "#fff7ed", color: "#ea580c" },
-    purple: { bg: "#f5f3ff", color: "#7c3aed" },
-    teal: { bg: "#f0fdfa", color: "#0d9488" },
-  };
-
-  const weekRange = getWeekRange();
 
   return (
-    <div className="db-page">
-      {/* ── Page Header ── */}
-      <div className="db-page-header">
-        <div className="db-page-header-left">
-          <h1>Dashboard</h1>
-          <p>
-            A focused overview of operations, cash flow, sales activity, and
-            inventory health.
-          </p>
-        </div>
-        <Button variant="secondary" size="sm" type="button">
-          <Calendar size={15} />
-          <span>{weekRange}</span>
-          <ChevronDown size={14} />
-        </Button>
-      </div>
+    <Container maxWidth="full" padding="md">
+      <Stack gap="lg">
+        {/* 1. Header */}
+        <header className={styles.header}>
+          <div>
+            <div className={styles.breadcrumb}>
+              <span>Atlas ERP</span>
+              <span className={styles.breadcrumbSep}>·</span>
+              <span>Today</span>
+              <span className={styles.breadcrumbSep}>·</span>
+              <span>Wed May 13</span>
+            </div>
+            <h1 className={styles.pageTitle}>Operations Command</h1>
+            <p className={styles.pageSubtitle}>
+              Live view of company, POS, and factory in one operations workspace.
+            </p>
+          </div>
+          <div className={styles.headerActions}>
+            <Button variant="secondary" size="sm">This week</Button>
+            <Button variant="secondary" size="sm" leftIcon={<Download size={14} />}>Export</Button>
+            <Button variant="primary" size="sm" leftIcon={<Plus size={14} />}>New action</Button>
+          </div>
+        </header>
 
-      {/* ── KPI Cards ── */}
-      <div className="db-kpi-cards">
-        {loading
-          ? Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="db-kpi-card">
-                <div className="db-skeleton" style={{ height: 110 }} />
-              </div>
-            ))
-          : kpis.map((kpi) => {
-              const Icon = kpi.icon;
-              return (
-                <div key={kpi.label} className="db-kpi-card">
-                  <div className="db-kpi-card-top">
-                    <div className={`db-kpi-card-icon ${kpi.color}`}>
-                      <Icon size={20} />
-                    </div>
-                    <span className="db-kpi-card-label">{kpi.label}</span>
-                  </div>
-                  <div className="db-kpi-card-mid">
-                    <strong className="db-kpi-card-value">{kpi.value}</strong>
-                    <Sparkline
-                      data={kpi.trend}
-                      width={80}
-                      height={32}
-                      color={kpi.sparkColor}
+        {/* 2. Three workspace cards */}
+        <Grid cols={3} gap="md" responsive>
+          {WORKSPACES.map((w) => (
+            <WorkspaceCard key={w.name} data={w} />
+          ))}
+        </Grid>
+
+        {/* Main split: chart+signals (left), timeline+pinned (right) */}
+        <div className={styles.mainSplit}>
+          <div className={styles.mainCol}>
+            {/* 3. Revenue chart */}
+            <section className={styles.card}>
+              <header className={styles.cardHeader}>
+                <div>
+                  <h2 className={styles.cardTitle}>Revenue Across All Modules</h2>
+                  <p className={styles.cardSubtitle}>Apr 30 → May 13 · daily revenue (USD, thousands)</p>
+                </div>
+                <div className={styles.legend}>
+                  <span className={styles.legendItem}><span className={`${styles.dot} ${styles.dotBlue}`} /> Company</span>
+                  <span className={styles.legendItem}><span className={`${styles.dot} ${styles.dotGreen}`} /> POS</span>
+                  <span className={styles.legendItem}><span className={`${styles.dot} ${styles.dotPurple}`} /> Factory</span>
+                </div>
+              </header>
+              <div className={styles.chartWrap}>
+                <ResponsiveContainer width="100%" height={260}>
+                  <LineChart data={CHART_DATA} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
+                    <CartesianGrid stroke="var(--app-border)" strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="day" tick={{ fontSize: 11, fill: "var(--app-text-muted)" }} tickLine={false} axisLine={false} />
+                    <YAxis tickFormatter={(v) => `$${v}k`} tick={{ fontSize: 11, fill: "var(--app-text-muted)" }} tickLine={false} axisLine={false} width={48} />
+                    <Tooltip
+                      contentStyle={{
+                        background: "var(--app-surface)",
+                        border: "1px solid var(--app-border)",
+                        borderRadius: 8,
+                        fontSize: 12,
+                      }}
+                      formatter={(v) => `$${v}k`}
                     />
-                  </div>
-                  <div
-                    className={`db-kpi-card-meta${kpi.metaUp === true ? " up" : kpi.metaUp === false ? " down" : ""}`}
-                  >
-                    {kpi.meta}
-                  </div>
-                </div>
-              );
-            })}
-      </div>
-
-      {/* ── Body ── */}
-      <div className="db-body">
-        {/* Left main column */}
-        <div className="db-main">
-          {/* Operational Overview */}
-          <div className="db-card">
-            <div className="db-card-header">
-              <div className="db-card-header-text">
-                <h2>Operational Overview</h2>
+                    <Line type="monotone" dataKey="Company" stroke="var(--atlas-blue)" strokeWidth={2} dot={false} />
+                    <Line type="monotone" dataKey="POS" stroke="var(--atlas-green)" strokeWidth={2} dot={false} />
+                    <Line type="monotone" dataKey="Factory" stroke="var(--atlas-purple)" strokeWidth={2} dot={false} />
+                  </LineChart>
+                </ResponsiveContainer>
               </div>
-            </div>
-            <div className="db-op-list">
-              {smartBrief.map((item) => (
-                <div key={item.id} className="db-op-item">
-                  <span className={`db-op-badge ${item.id}`}>{item.badge}</span>
-                  <div className="db-op-text">
-                    <strong>{item.title}</strong>
-                    <p>{item.detail}</p>
-                  </div>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    type="button"
-                    onClick={() => navigate(item.path)}
-                  >
-                    {item.actionLabel}
-                  </Button>
-                </div>
+            </section>
+
+            {/* 5. Operational signals */}
+            <Grid cols={3} gap="md" responsive>
+              {SIGNALS.map((s) => (
+                <SignalCard key={s.label} signal={s} />
               ))}
-            </div>
-            <div className="db-op-footer">
-              <Button
-                variant="ghost"
-                size="sm"
-                type="button"
-                onClick={() => navigate("/invoices")}
-              >
-                View all insights <ArrowRight size={13} />
-              </Button>
-            </div>
+            </Grid>
           </div>
 
-          {/* Recent Activity */}
-          <div className="db-card">
-            <div className="db-card-header">
-              <div className="db-card-header-text">
-                <h2>Recent Activity</h2>
-              </div>
-            </div>
-            {loading ? (
-              <div style={{ padding: "18px 22px" }}>
-                <div className="db-skeleton" style={{ height: 140 }} />
-              </div>
-            ) : (
-              <div className="db-activity-table">
-                <div className="db-activity-head">
-                  <span>EVENT</span>
-                  <span>DETAILS</span>
-                  <span>TIME</span>
+          <aside className={styles.sidebar}>
+            {/* 4. Timeline */}
+            <section className={styles.card}>
+              <header className={styles.cardHeader}>
+                <div>
+                  <h2 className={styles.cardTitle}>Today's Timeline</h2>
+                  <p className={styles.cardSubtitle}>Recent operations events</p>
                 </div>
-                {recentActivity.length === 0 ? (
-                  <div className="db-activity-empty">No recent activity.</div>
-                ) : (
-                  recentActivity.map((evt) => {
-                    const col =
-                      activityColorMap[evt.color] ?? activityColorMap.blue;
-                    const IconComp = activityIconMap[evt.type];
-                    return (
-                      <div key={evt.id} className="db-activity-row">
-                        <span className="db-activity-event">
-                          <span
-                            className="db-activity-icon"
-                            style={{ background: col.bg, color: col.color }}
-                          >
-                            {IconComp && <IconComp size={16} />}
-                          </span>
-                          {evt.type}
-                        </span>
-                        <span className="db-activity-details">
-                          {evt.details}
-                        </span>
-                        <span className="db-activity-time">
-                          {getRelativeText(evt.time)}
-                        </span>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            )}
-            <div className="db-op-footer">
-              <Button
-                variant="ghost"
-                size="sm"
-                type="button"
-                onClick={() => navigate("/payments")}
-              >
-                View all activity <ArrowRight size={13} />
-              </Button>
-            </div>
-          </div>
+              </header>
+              <ul className={styles.timeline}>
+                {TIMELINE.map((e) => (
+                  <li key={e.id} className={styles.timelineItem}>
+                    <span className={styles.timelineTime}>{e.time}</span>
+                    <span className={`${styles.dot} ${styles[`dot${e.dot[0].toUpperCase() + e.dot.slice(1)}`]} ${styles.dotPulse}`} aria-hidden />
+                    <div className={styles.timelineBody}>
+                      <strong>{e.title}</strong>
+                      <p>{e.desc}</p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </section>
+
+            {/* 6. Pinned actions */}
+            <section className={styles.card}>
+              <header className={styles.cardHeader}>
+                <div>
+                  <h2 className={styles.cardTitle}>Pinned Actions</h2>
+                  <p className={styles.cardSubtitle}>Most-used shortcuts</p>
+                </div>
+              </header>
+              <Grid cols={2} gap="sm" responsive={false}>
+                <Button variant="secondary" size="sm" leftIcon={<FileText size={14} />} onClick={() => navigate("/invoices")}>New invoice</Button>
+                <Button variant="secondary" size="sm" leftIcon={<UserPlus size={14} />} onClick={() => navigate("/customers")}>Add customer</Button>
+                <Button variant="secondary" size="sm" leftIcon={<ShoppingCart size={14} />} onClick={() => navigate("/payments")}>Open POS</Button>
+                <Button variant="secondary" size="sm" leftIcon={<Package size={14} />} onClick={() => navigate("/purchases")}>New production</Button>
+              </Grid>
+            </section>
+          </aside>
         </div>
+      </Stack>
+    </Container>
+  );
+}
 
-        {/* Right side */}
-        <aside className="db-side">
-          {/* Key Totals */}
-          <div className="db-card">
-            <div className="db-card-header">
-              <div className="db-card-header-text">
-                <h2>Key Totals</h2>
-              </div>
-            </div>
-            {loading ? (
-              <div style={{ padding: "16px 22px" }}>
-                <div className="db-skeleton" style={{ height: 160 }} />
-              </div>
-            ) : (
-              keyTotals.map((item) => {
-                const KtIcon = item.icon;
-                return (
-                  <div key={item.label} className="db-kt-row">
-                    <div className={`db-kt-icon ${item.color}`}>
-                      <KtIcon size={18} />
-                    </div>
-                    <div className="db-kt-labels">
-                      <span>{item.label}</span>
-                      <small>{item.sub}</small>
-                    </div>
-                    <div className="db-kt-values">
-                      <strong>{item.value}</strong>
-                      <small className={item.up ? "up" : "alert"}>
-                        {item.change}
-                      </small>
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
+function WorkspaceCard({ data }: { data: WorkspaceCardData }) {
+  const Icon = data.tone === "blue" ? Building2 : data.tone === "green" ? Coffee : Hammer;
+  return (
+    <article className={`${styles.wsCard} ${styles[`ws_${data.tone}`]}`}>
+      <span className={styles.wsAccentBar} aria-hidden />
+      <header className={styles.wsHeader}>
+        <span className={styles.wsIconWrap}>
+          <Icon size={16} />
+        </span>
+        <div className={styles.wsHeaderText}>
+          <h3 className={styles.wsName}>{data.name}</h3>
+          <span className={styles.wsDelta}>{data.delta}</span>
+        </div>
+      </header>
+      <div className={styles.wsRevenue}>{data.revenue}</div>
+      <Sparkline data={data.spark} tone={data.tone} />
+      <ul className={styles.wsStats}>
+        {data.stats.map((s) => (
+          <li key={s.label}>
+            <span>{s.label}</span>
+            <strong>{s.value}</strong>
+          </li>
+        ))}
+      </ul>
+    </article>
+  );
+}
 
-          {/* Quick Actions */}
-          <div className="db-card">
-            <div className="db-card-header">
-              <div className="db-card-header-text">
-                <h2>Quick Actions</h2>
-              </div>
-            </div>
-            <div className="db-qa-grid">
-              <button
-                type="button"
-                className="db-qa-item"
-                onClick={() => navigate("/invoices")}
-              >
-                <div className="db-qa-left">
-                  <div className="db-qa-icon blue">
-                    <FileText size={20} />
-                  </div>
-                  <div>
-                    <strong>New Invoice</strong>
-                    <p>Create and send an invoice</p>
-                  </div>
-                </div>
-                <ChevronRight size={15} className="db-qa-arrow" />
-              </button>
-              <button
-                type="button"
-                className="db-qa-item"
-                onClick={() => navigate("/customers")}
-              >
-                <div className="db-qa-left">
-                  <div className="db-qa-icon blue">
-                    <Users size={20} />
-                  </div>
-                  <div>
-                    <strong>Add Customer</strong>
-                    <p>Register a new customer</p>
-                  </div>
-                </div>
-                <ChevronRight size={15} className="db-qa-arrow" />
-              </button>
-              <button
-                type="button"
-                className="db-qa-item"
-                onClick={() => navigate("/purchases")}
-              >
-                <div className="db-qa-left">
-                  <div className="db-qa-icon orange">
-                    <ShoppingCart size={20} />
-                  </div>
-                  <div>
-                    <strong>New Purchase</strong>
-                    <p>Create a purchase order</p>
-                  </div>
-                </div>
-                <ChevronRight size={15} className="db-qa-arrow" />
-              </button>
-              <button
-                type="button"
-                className="db-qa-item"
-                onClick={() => navigate("/products")}
-              >
-                <div className="db-qa-left">
-                  <div className="db-qa-icon orange">
-                    <Package size={20} />
-                  </div>
-                  <div>
-                    <strong>Check Stock</strong>
-                    <p>Review inventory levels</p>
-                  </div>
-                </div>
-                <ChevronRight size={15} className="db-qa-arrow" />
-              </button>
-            </div>
-          </div>
-        </aside>
+function Sparkline({ data, tone }: { data: number[]; tone: WorkspaceTone }) {
+  const w = 100;
+  const h = 28;
+  const min = Math.min(...data);
+  const max = Math.max(...data);
+  const range = max - min || 1;
+  const stepX = w / (data.length - 1);
+  const points = data
+    .map((v, i) => `${(i * stepX).toFixed(2)},${(h - ((v - min) / range) * h).toFixed(2)}`)
+    .join(" ");
+  const color =
+    tone === "blue" ? "var(--atlas-blue)" : tone === "green" ? "var(--atlas-green)" : "var(--atlas-purple)";
+
+  return (
+    <svg viewBox={`0 0 ${w} ${h}`} className={styles.spark} preserveAspectRatio="none" aria-hidden>
+      <polyline points={points} fill="none" stroke={color} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function SignalCard({ signal }: { signal: Signal }) {
+  const Icon = signal.tone === "danger" ? Bell : signal.tone === "warning" ? Cog : DollarSign;
+  return (
+    <article className={`${styles.signalCard} ${styles[`signal_${signal.tone}`]}`}>
+      <header className={styles.signalHeader}>
+        <Badge variant={signal.tone === "danger" ? "danger" : signal.tone === "warning" ? "warning" : "info"} size="sm">
+          {signal.label}
+        </Badge>
+        <Icon size={14} className={styles.signalIcon} aria-hidden />
+      </header>
+      <h3 className={styles.signalTitle}>{signal.title}</h3>
+      <p className={styles.signalDesc}>{signal.desc}</p>
+      <div className={styles.signalAction}>
+        <Button variant="secondary" size="sm">{signal.actionText}</Button>
       </div>
-    </div>
+    </article>
   );
 }

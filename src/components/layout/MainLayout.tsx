@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Keyboard, LogOut, Menu, PanelRightOpen, Plus } from "lucide-react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import Sidebar from "./Sidebar";
-import AppShellCommandBar from "./AppShellCommandBar";
+import AtlasHeader from "./AtlasHeader";
 import AIAssistantPanel from "../ai/AIAssistantPanel";
 import ShortcutsOverlay from "../ui/ShortcutsOverlay";
 import { useAI } from "../../context/AIContext";
@@ -251,7 +251,7 @@ export default function MainLayout() {
             </div>
           </header>
 
-          <AppShellCommandBar currentPath={location.pathname} />
+          <AtlasHeader />
 
           <div className="app-page-content">
             <Outlet />

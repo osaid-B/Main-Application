@@ -1,8 +1,29 @@
-import { PanelLeftClose, PanelLeftOpen, X } from "lucide-react";
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink } from "react-router-dom";
+import {
+  BarChart3,
+  Briefcase,
+  Building2,
+  CreditCard,
+  DollarSign,
+  FileText,
+  LayoutDashboard,
+  LogOut,
+  Package,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Receipt,
+  Search,
+  Settings,
+  Shield,
+  Truck,
+  UserCircle,
+  Users,
+  X,
+} from "lucide-react";
+import type { ComponentType } from "react";
 import { useAuth } from "../../context/AuthContext";
-import { useSettings } from "../../context/SettingsContext";
-import { moduleGroups, moduleRegistry } from "../../config/moduleRegistry";
+import { Avatar } from "../ui/Avatar";
+import "./Sidebar.atlas.css";
 
 type SidebarProps = {
   mobile?: boolean;
@@ -12,6 +33,62 @@ type SidebarProps = {
   onToggleCollapsed?: () => void;
 };
 
+interface NavItem {
+  icon: ComponentType<{ size?: number }>;
+  label: string;
+  path: string;
+  badge?: string;
+  dot?: boolean;
+  comingSoon?: boolean;
+}
+
+interface NavSection {
+  title: string;
+  items: NavItem[];
+}
+
+const SECTIONS: NavSection[] = [
+  {
+    title: "OVERVIEW",
+    items: [
+      { icon: LayoutDashboard, label: "Main Dashboard", path: "/dashboard" },
+      { icon: Building2, label: "Company", path: "/company", comingSoon: true },
+      { icon: DollarSign, label: "Finance", path: "/treasury" },
+    ],
+  },
+  {
+    title: "RELATIONS",
+    items: [
+      { icon: Users, label: "Customers", path: "/customers", badge: "4.2k" },
+      { icon: Truck, label: "Suppliers", path: "/suppliers" },
+      { icon: UserCircle, label: "Employees", path: "/employees" },
+      { icon: Briefcase, label: "Departments", path: "/departments", comingSoon: true },
+    ],
+  },
+  {
+    title: "ACCOUNTING",
+    items: [
+      { icon: FileText, label: "Invoices", path: "/invoices", dot: true },
+      { icon: Receipt, label: "Expenses", path: "/purchases" },
+      { icon: CreditCard, label: "Payments", path: "/payments" },
+      { icon: BarChart3, label: "Reports", path: "/reports", comingSoon: true },
+    ],
+  },
+  {
+    title: "INVENTORY",
+    items: [
+      { icon: Package, label: "Inventory", path: "/products" },
+    ],
+  },
+  {
+    title: "ADMIN",
+    items: [
+      { icon: Shield, label: "Permissions", path: "/permissions", comingSoon: true },
+      { icon: Settings, label: "Settings", path: "/settings" },
+    ],
+  },
+];
+
 export default function Sidebar({
   mobile = false,
   isOpen = false,
@@ -20,182 +97,137 @@ export default function Sidebar({
   onToggleCollapsed,
 }: SidebarProps) {
   const { user, logout } = useAuth();
-  const { t, isArabic } = useSettings();
-  const navigate = useNavigate();
 
-  const handleLogout = () => {
-    if (mobile && onClose) {
-      onClose();
-    }
-
-    logout();
-    navigate("/login");
-  };
-
-  const getLinkClass = ({ isActive }: { isActive: boolean }) =>
-    isActive ? "sidebar-link active" : "sidebar-link";
-
-  const groupedModules = Object.entries(moduleGroups).map(
-    ([groupKey, groupLabel]) => ({
-      groupKey,
-      groupLabel: t.groups[groupKey as keyof typeof t.groups] || groupLabel,
-      items: moduleRegistry.filter((item) => item.group === groupKey),
-    })
-  );
+  const userName = user?.username ?? "Sara Halim";
+  const userRole = "Owner";
 
   return (
     <aside
       className={[
-        "sidebar",
-        mobile ? "mobile-drawer-sidebar" : "desktop-sidebar",
-        collapsed && !mobile ? "collapsed" : "",
+        "atlas-sidebar",
+        mobile ? "atlas-sidebar--mobile" : "atlas-sidebar--desktop",
+        collapsed && !mobile ? "is-collapsed" : "",
         mobile && isOpen ? "is-open" : "",
       ]
         .filter(Boolean)
         .join(" ")}
-      dir={isArabic ? "rtl" : "ltr"}
       aria-hidden={mobile ? !isOpen : undefined}
     >
-      <div>
-        <div className="sidebar-head">
-          <div className="sidebar-brand">
-            <div className="sidebar-logo-mark" aria-hidden="true">
-              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <rect x="1" y="1" width="7" height="7" rx="2" fill="currentColor" opacity="0.9"/>
-                <rect x="10" y="1" width="7" height="7" rx="2" fill="currentColor" opacity="0.55"/>
-                <rect x="1" y="10" width="7" height="7" rx="2" fill="currentColor" opacity="0.55"/>
-                <rect x="10" y="10" width="7" height="7" rx="2" fill="currentColor" opacity="0.3"/>
-              </svg>
-            </div>
-            {(!collapsed || mobile) && (
-              <div className="sidebar-title-block">
-                <span className="sidebar-title">{t.sidebar.title}</span>
-                <span className="sidebar-subtitle">{t.sidebar.subtitle}</span>
-              </div>
-            )}
+      {/* Brand */}
+      <header className="atlas-brand">
+        <div className="atlas-brand-logo" aria-hidden>A</div>
+        {(!collapsed || mobile) && (
+          <div className="atlas-brand-info">
+            <h3>Atlas ERP</h3>
+            <p>Northwind Holdings</p>
           </div>
+        )}
+        {!mobile ? (
+          <button
+            type="button"
+            className="atlas-sidebar-toggle"
+            onClick={onToggleCollapsed}
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            {collapsed ? <PanelLeftOpen size={14} /> : <PanelLeftClose size={14} />}
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="atlas-sidebar-toggle"
+            onClick={onClose}
+            aria-label="Close navigation"
+          >
+            <X size={14} />
+          </button>
+        )}
+      </header>
 
-          {!mobile ? (
-            <button
-              type="button"
-              className="sidebar-toggle-btn"
-              onClick={onToggleCollapsed}
-              aria-label={
-                collapsed
-                  ? t.sidebar.expandNavigation
-                  : t.sidebar.collapseNavigation
-              }
-            >
-              {collapsed ? (
-                <PanelLeftOpen size={16} />
-              ) : (
-                <PanelLeftClose size={16} />
-              )}
-            </button>
-          ) : null}
-
-          {mobile ? (
-            <button
-              type="button"
-              className="sidebar-close-btn"
-              onClick={onClose}
-              aria-label={t.sidebar.closeNavigation}
-            >
-              <X size={18} />
-            </button>
-          ) : null}
+      {/* Search */}
+      {(!collapsed || mobile) && (
+        <div className="atlas-sidebar-search">
+          <Search size={13} aria-hidden />
+          <input type="search" placeholder="Search…" aria-label="Search" />
+          <kbd>⌘K</kbd>
         </div>
+      )}
 
-        <nav className="sidebar-nav">
-          {groupedModules.map((group) => (
-            <div key={group.groupKey} className="sidebar-group">
-              <span className="sidebar-group-label">{group.groupLabel}</span>
-
-              <div className="sidebar-group-links">
-                {group.items.map((item) => {
-                  const Icon = item.icon;
-
-                  const label =
-                    item.path && item.key in t.sidebar
-                      ? t.sidebar[item.key as keyof typeof t.sidebar]
-                      : t.modules[item.key as keyof typeof t.modules]?.label ||
-                        item.label;
-
-                  const description =
-                    t.modules[item.key as keyof typeof t.modules]
-                      ?.description || item.description;
-
-                  if (!item.path) {
-                    return (
-                      <div
-                        key={item.key}
-                        className={`sidebar-link sidebar-link-disabled ${
-                          item.future ? "sidebar-link-planned" : ""
-                        }`}
-                      >
-                        <span className="sidebar-link-icon" aria-hidden="true">
-                          <Icon size={18} />
-                        </span>
-
-                        <span
-                          className={`sidebar-link-text ${
-                            collapsed && !mobile ? "collapsed" : ""
-                          }`}
-                        >
-                          {label}
-
-                          {!collapsed || mobile ? (
-                            <small>
-                              {item.future ? t.sidebar.planned : description}
-                            </small>
-                          ) : null}
-                        </span>
-                      </div>
-                    );
-                  }
-
-                  return (
+      {/* Sections */}
+      <nav className="atlas-sidebar-nav" aria-label="Main navigation">
+        {SECTIONS.map((section) => (
+          <div key={section.title} className="atlas-nav-section">
+            {(!collapsed || mobile) && (
+              <h4 className="atlas-nav-section-title">{section.title}</h4>
+            )}
+            <ul className="atlas-nav-list">
+              {section.items.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <li key={item.label}>
                     <NavLink
-                      key={item.path}
                       to={item.path}
-                      className={getLinkClass}
-                      onClick={mobile ? onClose : undefined}
+                      className={({ isActive }) =>
+                        [
+                          "atlas-nav-link",
+                          isActive && !item.comingSoon ? "is-active" : "",
+                          item.comingSoon ? "is-disabled" : "",
+                        ]
+                          .filter(Boolean)
+                          .join(" ")
+                      }
+                      onClick={(e) => {
+                        if (item.comingSoon) e.preventDefault();
+                        if (mobile && onClose) onClose();
+                      }}
+                      aria-disabled={item.comingSoon || undefined}
+                      title={item.comingSoon ? "Coming soon" : undefined}
                     >
-                      <span className="sidebar-link-icon" aria-hidden="true">
-                        <Icon size={18} />
-                      </span>
-
-                      <span
-                        className={`sidebar-link-text ${
-                          collapsed && !mobile ? "collapsed" : ""
-                        }`}
-                      >
-                        {label}
-
-                        {!mobile && !collapsed && !item.future ? (
-                          <small>{description}</small>
-                        ) : null}
-                      </span>
+                      <Icon size={16} />
+                      {(!collapsed || mobile) && (
+                        <>
+                          <span className="atlas-nav-label">{item.label}</span>
+                          {item.badge && (
+                            <span className="atlas-nav-badge">{item.badge}</span>
+                          )}
+                          {item.dot && <span className="atlas-nav-dot" aria-hidden />}
+                          {item.comingSoon && (
+                            <span className="atlas-nav-soon">soon</span>
+                          )}
+                        </>
+                      )}
                     </NavLink>
-                  );
-                })}
-              </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        ))}
+      </nav>
+
+      {/* User profile */}
+      <footer className="atlas-sidebar-user">
+        <Avatar name={userName} size="sm" tone="accent" />
+        {(!collapsed || mobile) && (
+          <>
+            <div className="atlas-user-info">
+              <p>{userName}</p>
+              <span>{userRole}</span>
             </div>
-          ))}
-        </nav>
-      </div>
-
-      <div className="sidebar-footer">
-        {!collapsed || mobile ? (
-          <p className="sidebar-user">
-            {t.sidebar.loggedInAs} <strong>{user?.username}</strong>
-          </p>
-        ) : null}
-
-        <button type="button" className="logout-button" onClick={handleLogout}>
-          {t.common.logout}
-        </button>
-      </div>
+            <button
+              type="button"
+              className="atlas-user-logout"
+              onClick={() => {
+                if (mobile && onClose) onClose();
+                logout();
+              }}
+              aria-label="Sign out"
+              title="Sign out"
+            >
+              <LogOut size={14} />
+            </button>
+          </>
+        )}
+      </footer>
     </aside>
   );
-} 
+}

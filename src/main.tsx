@@ -10,6 +10,7 @@ import "./pages-normalize.css";
 import { AuthProvider } from "./context/AuthContext";
 import { AIProvider } from "./context/AIContext";
 import { ToastProvider } from "./components/ui/Toast";
+import { WorkspaceProvider } from "./contexts/WorkspaceContext";
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>
@@ -17,7 +18,9 @@ ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
       <BrowserRouter>
         <AuthProvider>
           <AIProvider>
-            <App />
+            <WorkspaceProvider>
+              <App />
+            </WorkspaceProvider>
           </AIProvider>
         </AuthProvider>
       </BrowserRouter>
