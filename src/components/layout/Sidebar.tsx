@@ -1,28 +1,44 @@
 import { NavLink } from "react-router-dom";
 import {
   BarChart3,
+  Boxes,
   Briefcase,
   Building2,
+  ClipboardList,
+  Clock,
   CreditCard,
   DollarSign,
+  Factory,
   FileText,
+  Globe,
+  History,
+  Layers,
   LayoutDashboard,
   LogOut,
   Package,
   PanelLeftClose,
   PanelLeftOpen,
   Receipt,
+  RotateCcw,
   Search,
   Settings,
   Shield,
+  ShieldCheck,
+  Ship,
+  ShoppingCart,
+  Star,
+  Tag,
   Truck,
   UserCircle,
+  UserCircle2,
   Users,
+  Warehouse,
   X,
 } from "lucide-react";
 import type { ComponentType } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { Avatar } from "../ui/Avatar";
+import { useWorkspace, type Workspace } from "../../contexts/WorkspaceContext";
 import "./Sidebar.atlas.css";
 
 type SidebarProps = {
@@ -47,12 +63,12 @@ interface NavSection {
   items: NavItem[];
 }
 
-const SECTIONS: NavSection[] = [
+const COMPANY_SECTIONS: NavSection[] = [
   {
     title: "OVERVIEW",
     items: [
       { icon: LayoutDashboard, label: "Main Dashboard", path: "/dashboard" },
-      { icon: Building2, label: "Company", path: "/company", comingSoon: true },
+      { icon: Building2, label: "Company", path: "/company" },
       { icon: DollarSign, label: "Finance", path: "/treasury" },
     ],
   },
@@ -69,25 +85,93 @@ const SECTIONS: NavSection[] = [
     title: "ACCOUNTING",
     items: [
       { icon: FileText, label: "Invoices", path: "/invoices", dot: true },
-      { icon: Receipt, label: "Expenses", path: "/purchases" },
+      { icon: Receipt, label: "Expenses", path: "/expenses" },
       { icon: CreditCard, label: "Payments", path: "/payments" },
-      { icon: BarChart3, label: "Reports", path: "/reports", comingSoon: true },
+      { icon: BarChart3, label: "Reports", path: "/reports" },
     ],
   },
   {
     title: "INVENTORY",
+    items: [{ icon: Package, label: "Inventory", path: "/products" }],
+  },
+  {
+    title: "ADMIN",
     items: [
-      { icon: Package, label: "Inventory", path: "/products" },
+      { icon: Shield, label: "Permissions", path: "/permissions" },
+      { icon: Settings, label: "Settings", path: "/settings" },
+    ],
+  },
+];
+
+const POS_SECTIONS: NavSection[] = [
+  {
+    title: "REGISTER",
+    items: [
+      { icon: ShoppingCart, label: "Checkout", path: "/pos/checkout" },
+      { icon: History, label: "Sales History", path: "/pos/history" },
+      { icon: RotateCcw, label: "Refunds", path: "/pos/refunds" },
+    ],
+  },
+  {
+    title: "CATALOG",
+    items: [
+      { icon: Package, label: "Products", path: "/pos/products" },
+      { icon: Tag, label: "Categories", path: "/pos/categories" },
+      { icon: ClipboardList, label: "Stock Counts", path: "/pos/stock" },
+    ],
+  },
+  {
+    title: "LOYALTY",
+    items: [
+      { icon: UserCircle2, label: "Customer Profile", path: "/pos/loyalty/profile" },
+      { icon: Clock, label: "Coins History", path: "/pos/loyalty/history" },
+      { icon: Star, label: "Coins Settings", path: "/pos/loyalty/settings" },
+      { icon: BarChart3, label: "Coins Reports", path: "/pos/loyalty/reports" },
     ],
   },
   {
     title: "ADMIN",
     items: [
-      { icon: Shield, label: "Permissions", path: "/permissions", comingSoon: true },
-      { icon: Settings, label: "Settings", path: "/settings" },
+      { icon: Users, label: "Cashiers", path: "/pos/cashiers" },
+      { icon: Receipt, label: "Receipts", path: "/pos/receipts" },
     ],
   },
 ];
+
+const FACTORY_SECTIONS: NavSection[] = [
+  {
+    title: "OPERATIONS",
+    items: [
+      { icon: Factory, label: "Factory Dashboard", path: "/factory" },
+      { icon: ClipboardList, label: "Production Orders", path: "/factory/orders", badge: "12" },
+      { icon: FileText, label: "Bills of Material", path: "/factory/boms" },
+      { icon: ShieldCheck, label: "Quality Control", path: "/factory/qc" },
+    ],
+  },
+  {
+    title: "INVENTORY",
+    items: [
+      { icon: Globe, label: "Local vs Imported", path: "/factory/inventory/sources" },
+      { icon: Boxes, label: "Raw Materials", path: "/factory/inventory/raw" },
+      { icon: Package, label: "Finished Goods", path: "/factory/inventory/finished" },
+      { icon: Warehouse, label: "Warehouse", path: "/factory/inventory/warehouse" },
+    ],
+  },
+  {
+    title: "SOURCING",
+    items: [
+      { icon: Ship, label: "Imports", path: "/factory/imports" },
+      { icon: Layers, label: "Batches", path: "/factory/batches" },
+      { icon: DollarSign, label: "Costing", path: "/factory/costing" },
+    ],
+  },
+];
+
+const SECTIONS_BY_WORKSPACE: Record<Workspace, NavSection[]> = {
+  company: COMPANY_SECTIONS,
+  pos: POS_SECTIONS,
+  factory: FACTORY_SECTIONS,
+};
 
 export default function Sidebar({
   mobile = false,
@@ -97,9 +181,12 @@ export default function Sidebar({
   onToggleCollapsed,
 }: SidebarProps) {
   const { user, logout } = useAuth();
+  const { workspace } = useWorkspace();
 
   const userName = user?.username ?? "Sara Halim";
   const userRole = "Owner";
+
+  const sections = SECTIONS_BY_WORKSPACE[workspace];
 
   return (
     <aside
@@ -113,7 +200,6 @@ export default function Sidebar({
         .join(" ")}
       aria-hidden={mobile ? !isOpen : undefined}
     >
-      {/* Brand */}
       <header className="atlas-brand">
         <div className="atlas-brand-logo" aria-hidden>A</div>
         {(!collapsed || mobile) && (
@@ -143,7 +229,6 @@ export default function Sidebar({
         )}
       </header>
 
-      {/* Search */}
       {(!collapsed || mobile) && (
         <div className="atlas-sidebar-search">
           <Search size={13} aria-hidden />
@@ -152,9 +237,8 @@ export default function Sidebar({
         </div>
       )}
 
-      {/* Sections */}
       <nav className="atlas-sidebar-nav" aria-label="Main navigation">
-        {SECTIONS.map((section) => (
+        {sections.map((section) => (
           <div key={section.title} className="atlas-nav-section">
             {(!collapsed || mobile) && (
               <h4 className="atlas-nav-section-title">{section.title}</h4>
@@ -186,13 +270,9 @@ export default function Sidebar({
                       {(!collapsed || mobile) && (
                         <>
                           <span className="atlas-nav-label">{item.label}</span>
-                          {item.badge && (
-                            <span className="atlas-nav-badge">{item.badge}</span>
-                          )}
+                          {item.badge && <span className="atlas-nav-badge">{item.badge}</span>}
                           {item.dot && <span className="atlas-nav-dot" aria-hidden />}
-                          {item.comingSoon && (
-                            <span className="atlas-nav-soon">soon</span>
-                          )}
+                          {item.comingSoon && <span className="atlas-nav-soon">soon</span>}
                         </>
                       )}
                     </NavLink>
@@ -204,7 +284,6 @@ export default function Sidebar({
         ))}
       </nav>
 
-      {/* User profile */}
       <footer className="atlas-sidebar-user">
         <Avatar name={userName} size="sm" tone="accent" />
         {(!collapsed || mobile) && (
