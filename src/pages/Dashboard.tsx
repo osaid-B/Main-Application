@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { Download, Plus } from "lucide-react";
 import { Button } from "../components/ui/Button";
 import { Container } from "../components/layout/Container";
@@ -15,6 +16,7 @@ import {
   TIMELINE_EVENTS,
   WORKSPACE_STATS,
 } from "../data/dashboardMock";
+import { useData } from "../context/DataContext";
 import styles from "./Dashboard.module.css";
 
 /**
@@ -22,6 +24,40 @@ import styles from "./Dashboard.module.css";
  * Live view across Company, POS, and Factory workspaces.
  */
 export default function Dashboard() {
+  const {
+    totalCustomers,
+    lowStockCount,
+    openInvoicesCount,
+    totalPaymentsCount,
+    outOfStockCount,
+  } = useData();
+
+  const workspaceStats = useMemo(() => {
+    return WORKSPACE_STATS.map((ws) => {
+      if (ws.id !== "company") return ws;
+      return {
+        ...ws,
+        stats: [
+          { label: "OPEN INVOICES", value: String(openInvoicesCount), tone: openInvoicesCount > 0 ? ("danger" as const) : ("success" as const) },
+          { label: "CUSTOMERS", value: String(totalCustomers), tone: "default" as const },
+          { label: "PAYMENTS", value: String(totalPaymentsCount), tone: "default" as const },
+        ],
+      };
+    });
+  }, [openInvoicesCount, totalCustomers, totalPaymentsCount]);
+
+  const operationalSignals = useMemo(() => {
+    return OPERATIONAL_SIGNALS.map((sig) => {
+      if (sig.id !== "sig1") return sig;
+      const count = outOfStockCount + lowStockCount;
+      return {
+        ...sig,
+        title: `${count} SKUs low/out of stock`,
+        tone: count > 0 ? ("critical" as const) : ("operations" as const),
+      };
+    });
+  }, [outOfStockCount, lowStockCount]);
+
   return (
     <Container maxWidth="full" padding="md">
       <Stack gap="lg">
@@ -49,7 +85,7 @@ export default function Dashboard() {
 
         {/* 2 · Workspace cards */}
         <Grid cols={3} gap="md" responsive>
-          {WORKSPACE_STATS.map((w) => (
+          {workspaceStats.map((w) => (
             <WorkspaceCard key={w.id} data={w} />
           ))}
         </Grid>
@@ -85,7 +121,7 @@ export default function Dashboard() {
 
             {/* 5 · Operational signals */}
             <Grid cols={3} gap="md" responsive>
-              {OPERATIONAL_SIGNALS.map((s) => (
+              {operationalSignals.map((s) => (
                 <SignalCard key={s.id} signal={s} />
               ))}
             </Grid>
