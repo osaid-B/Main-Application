@@ -30,16 +30,13 @@ import "./Products.css";
 import { Button } from "../components/ui/Button";
 import {
   getInvoiceItems,
-  getProductCategories,
-  getProducts,
   getPurchases,
   getSuppliers,
-  saveProductCategories,
-  saveProducts,
 } from "../data/storage";
 
 import type { InvoiceItem, Product, Purchase, Supplier } from "../data/types";
 import { useSettings } from "../context/SettingsContext";
+import { useData } from "../context/DataContext";
 
 type StockFilter = "" | "in" | "low" | "out";
 type ViewMode = "table" | "cards";
@@ -211,9 +208,14 @@ function buildNextProductCode(products: Product[]) {
 
 export default function Products() {
   const { t } = useSettings();
-
-  const [products, setProducts] = useState<Product[]>(() => getProducts());
-  const [categories, setCategories] = useState<string[]>(() => getProductCategories());
+  const {
+    products,
+    addProduct,
+    updateProduct,
+    deleteProduct,
+    productCategories,
+    setProductCategories,
+  } = useData();
   const [purchases] = useState<Purchase[]>(() => getPurchases());
   const [invoiceItems] = useState<InvoiceItem[]>(() => getInvoiceItems());
   const [suppliers] = useState<Supplier[]>(() => getSuppliers());
@@ -257,25 +259,6 @@ export default function Products() {
   const filtersRef = useRef<HTMLDivElement | null>(null);
   const categoryDropdownRef = useRef<HTMLDivElement>(null);
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
-
-  useEffect(() => {
-    saveProducts(products);
-  }, [products]);
-
-  useEffect(() => {
-    const derivedCategories = products
-      .map((product) => normalizeCategoryName(product.category || ""))
-      .filter(Boolean);
-
-    const merged = Array.from(new Set([...categories, ...derivedCategories]))
-      .filter(Boolean)
-      .sort((a, b) => a.localeCompare(b));
-
-    if (JSON.stringify(merged) !== JSON.stringify(categories)) {
-      setCategories(merged);
-      saveProductCategories(merged);
-    }
-  }, [products, categories]);
 
   useEffect(() => {
     function handleOutsideClick(event: MouseEvent) {
@@ -600,26 +583,16 @@ export default function Products() {
       isDeleted: false,
     } as Product;
 
-    setProducts((currentProducts) => {
-      const exists = currentProducts.some((product) => product.id === productToSave.id);
+    if (form.id) {
+      updateProduct(productToSave);
+    } else {
+      addProduct(productToSave);
+    }
 
-      if (exists) {
-        return currentProducts.map((product) =>
-          product.id === productToSave.id ? productToSave : product
-        );
-      }
-
-      return [productToSave, ...currentProducts];
-    });
-
-    setCategories((currentCategories) => {
-      const merged = Array.from(new Set([...currentCategories, category])).sort((a, b) =>
-        a.localeCompare(b)
-      );
-
-      saveProductCategories(merged);
-      return merged;
-    });
+    const mergedCats = Array.from(new Set([...productCategories, category])).sort((a, b) =>
+      a.localeCompare(b)
+    );
+    setProductCategories(mergedCats);
 
     closeProductModal();
   }
@@ -638,9 +611,7 @@ export default function Products() {
     if (!deleteTarget) return;
     if (deleteCode.trim() !== DELETE_CONFIRMATION_CODE) return;
 
-    setProducts((currentProducts) =>
-      currentProducts.filter((product) => product.id !== deleteTarget.id)
-    );
+    deleteProduct(deleteTarget.id);
 
     if (viewProduct?.id === deleteTarget.id) {
       setViewProduct(null);
@@ -685,7 +656,7 @@ export default function Products() {
       return;
     }
 
-    const duplicate = categories.some((category) => {
+    const duplicate = productCategories.some((category) => {
       const sameName = category.toLowerCase() === nextName.toLowerCase();
       const sameEditing =
         editingCategory && category.toLowerCase() === editingCategory.toLowerCase();
@@ -699,32 +670,25 @@ export default function Products() {
     }
 
     if (editingCategory) {
-      const nextCategories = categories
+      const nextCategories = productCategories
         .map((category) => (category === editingCategory ? nextName : category))
         .filter(Boolean)
         .sort((a, b) => a.localeCompare(b));
 
-      const nextProducts = products.map((product) =>
-        product.category === editingCategory
-          ? ({ ...product, category: nextName } as Product)
-          : product
-      );
-
-      setCategories(nextCategories);
-      saveProductCategories(nextCategories);
-      setProducts(nextProducts);
-      saveProducts(nextProducts);
+      setProductCategories(nextCategories);
+      products
+        .filter((p) => p.category === editingCategory)
+        .forEach((p) => updateProduct({ ...p, category: nextName } as Product));
 
       if (filterCategory === editingCategory) {
         setFilterCategory(nextName);
       }
     } else {
-      const nextCategories = Array.from(new Set([...categories, nextName]))
+      const nextCategories = Array.from(new Set([...productCategories, nextName]))
         .filter(Boolean)
         .sort((a, b) => a.localeCompare(b));
 
-      setCategories(nextCategories);
-      saveProductCategories(nextCategories);
+      setProductCategories(nextCategories);
     }
 
     setCategoryInput("");
@@ -760,23 +724,17 @@ export default function Products() {
 
     const category = categoryDeleteTarget.name;
 
-    const nextProducts = products.map((product) =>
-      product.category === category
-        ? ({ ...product, category: UNCATEGORIZED } as Product)
-        : product
-    );
-
     const nextCategories = Array.from(
-      new Set(categories.filter((item) => item !== category).concat(UNCATEGORIZED))
+      new Set(productCategories.filter((item) => item !== category).concat(UNCATEGORIZED))
     )
       .filter(Boolean)
       .sort((a, b) => a.localeCompare(b));
 
-    setProducts(nextProducts);
-    saveProducts(nextProducts);
+    products
+      .filter((p) => p.category === category)
+      .forEach((p) => updateProduct({ ...p, category: UNCATEGORIZED } as Product));
 
-    setCategories(nextCategories);
-    saveProductCategories(nextCategories);
+    setProductCategories(nextCategories);
 
     if (filterCategory === category) {
       setFilterCategory("");
@@ -903,7 +861,7 @@ export default function Products() {
                         onChange={(event) => setFilterCategory(event.target.value)}
                       >
                         <option value="">{t.products?.allCategories || "All Categories"}</option>
-                        {categories.map((category) => (
+                        {productCategories.map((category) => (
                           <option key={category} value={category}>
                             {category}
                           </option>
@@ -1394,10 +1352,10 @@ export default function Products() {
                       </button>
                       {showCategoryDropdown && (
                         <div className="prod-cat-list">
-                          {categories.length === 0 ? (
+                          {productCategories.length === 0 ? (
                             <div className="prod-cat-empty">No categories yet. Add some via the Categories button.</div>
                           ) : (
-                            categories.map((cat) => {
+                            productCategories.map((cat) => {
                               const Icon = getCategoryIcon(cat);
                               return (
                                 <button
@@ -1627,7 +1585,7 @@ export default function Products() {
                 </div>
               </div>
 
-              {categories.length > 0 && (
+              {productCategories.length > 0 && (
                 <div className="category-search-wrap">
                   <Search size={14} className="category-search-icon" />
                   <input
@@ -1656,10 +1614,10 @@ export default function Products() {
                 {(() => {
                   const q = categorySearch.trim().toLowerCase();
                   const filtered = q
-                    ? categories.filter((c) => c.toLowerCase().includes(q))
-                    : categories;
+                    ? productCategories.filter((c) => c.toLowerCase().includes(q))
+                    : productCategories;
 
-                  if (categories.length === 0) {
+                  if (productCategories.length === 0) {
                     return <div className="category-empty-state">No categories yet. Add one above.</div>;
                   }
 
@@ -1685,7 +1643,7 @@ export default function Products() {
                     <>
                       {q && (
                         <div className="category-search-meta">
-                          {filtered.length} of {categories.length} categor{categories.length === 1 ? "y" : "ies"}
+                          {filtered.length} of {productCategories.length} categor{productCategories.length === 1 ? "y" : "ies"}
                         </div>
                       )}
                       {filtered.map((category) => {
