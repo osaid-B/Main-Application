@@ -34,7 +34,7 @@ import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
 import { Select } from "../components/ui/Select";
 import { Modal } from "../components/ui/Modal";
-import { getCustomers, getInvoices, getPayments, savePayments } from "../data/storage";
+import { useData } from "../context/DataContext";
 import {
   calculateInvoiceRemainingAmount,
   getCustomerById,
@@ -606,12 +606,20 @@ function PaymentDetailsDrawer({ payment, activeTab, onChangeTab, onClose }: {
 /* ── Main Component ───────────────────────────────────── */
 export default function Payments() {
   const { isArabic } = useSettings();
+  const {
+    customers,
+    invoices,
+    payments: rawPayments,
+    addPayment,
+    updatePayment,
+    deletePayment: deletePaymentCtx,
+  } = useData();
   const menuRef = useRef<HTMLDivElement | null>(null);
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [payments, setPayments] = useState<ExtendedPayment[]>([]);
+  const payments = useMemo(
+    () => normalizePaymentList(rawPayments, invoices, customers),
+    [rawPayments, invoices, customers]
+  );
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [filters, setFilters] = useState<FilterState>({ status: "", method: "", dateRange: "all", amount: "all", customer: "", invoice: "", linked: "all", createdBy: "" });
   const [quickFilters, setQuickFilters] = useState<QuickFilter[]>([]);
@@ -633,22 +641,7 @@ export default function Payments() {
   const [deleteCode, setDeleteCode] = useState("");
 
   useEffect(() => {
-    const syncData = () => {
-      try {
-        const latestCustomers = getCustomers();
-        const latestInvoices = getInvoices();
-        const latestPayments = getPayments();
-        setCustomers(latestCustomers);
-        setInvoices(latestInvoices);
-        setPayments(normalizePaymentList(latestPayments, latestInvoices, latestCustomers));
-        setError("");
-      } catch { setError("Unable to load payment records right now."); }
-      finally { window.setTimeout(() => setLoading(false), 180); }
-    };
-    syncData();
-    window.addEventListener("focus", syncData);
-    window.addEventListener("storage", syncData);
-    return () => { window.removeEventListener("focus", syncData); window.removeEventListener("storage", syncData); };
+    window.setTimeout(() => setLoading(false), 180);
   }, []);
 
   useEffect(() => { if (!toast) return; const t = window.setTimeout(() => setToast(null), 2600); return () => window.clearTimeout(t); }, [toast]);
@@ -816,18 +809,18 @@ export default function Payments() {
     setFormErrors(errs);
     if (Object.keys(errs).length > 0) return;
     const payload: Payment = { id: editingPaymentId ?? buildPaymentId(payments.length), paymentId: editingPaymentId ?? buildPaymentId(payments.length), invoiceId: formState.invoiceId, customerId: formState.customerId, amount: roundMoney(Number(formState.amount)), method: formState.method, status: formState.status, date: formState.date, notes: formState.notes.trim(), referenceNumber: formState.referenceNumber.trim(), receiptId: `${formState.referenceNumber.trim() || "RCPT"}-${Date.now().toString().slice(-4)}`, createdBy: formState.createdBy.trim(), updatedAt: new Date().toISOString().split("T")[0] };
-    const next = editorMode === "create" ? [payload, ...(payments as Payment[])] : (payments as Payment[]).map((p) => p.paymentId === editingPaymentId ? { ...p, ...payload } : p);
-    savePayments(next);
-    setPayments(normalizePaymentList(next, invoices, customers));
+    if (editorMode === "create") {
+      addPayment(payload);
+    } else {
+      updatePayment(payload);
+    }
     setShowEditor(false);
     setToast({ type: "success", message: editorMode === "create" ? "Payment recorded successfully." : "Payment updated successfully." });
   };
 
   const handleDeletePayment = () => {
     if (!deleteTarget) return;
-    const next = (payments as Payment[]).filter((p) => p.paymentId !== deleteTarget.paymentId);
-    savePayments(next);
-    setPayments(normalizePaymentList(next, invoices, customers));
+    deletePaymentCtx(deleteTarget.id ?? deleteTarget.paymentId);
     setDeleteTarget(null); setDeleteCode("");
     setSelectedRows((c) => c.filter((id) => id !== deleteTarget.paymentId));
     setToast({ type: "success", message: "Payment deleted successfully." });
@@ -837,8 +830,9 @@ export default function Payments() {
     if (selectedRows.length === 0) return;
     if (action === "delete") { setToast({ type: "warning", message: "Bulk delete is ready after individual review." }); return; }
     if (action === "refund") {
-      const next = (payments as Payment[]).map((p) => selectedRows.includes(p.paymentId ?? p.id) ? { ...p, status: "Refunded" as PaymentStatus, updatedAt: new Date().toISOString().split("T")[0] } : p);
-      savePayments(next); setPayments(normalizePaymentList(next, invoices, customers));
+      rawPayments
+        .filter((p) => selectedRows.includes(p.paymentId ?? p.id))
+        .forEach((p) => updatePayment({ ...p, status: "Refunded" as PaymentStatus, updatedAt: new Date().toISOString().split("T")[0] }));
       setToast({ type: "success", message: "Selected payments marked as refunded." }); return;
     }
     if (action === "note") { setToast({ type: "info", message: "Use the details drawer to add notes." }); return; }
@@ -975,8 +969,6 @@ export default function Payments() {
 
           {loading ? (
             <div className="table-loading-state">{Array.from({ length: 5 }).map((_, i) => <div key={i} className="skeleton-row" />)}</div>
-          ) : error ? (
-            <div className="state-card error-state"><AlertCircle size={18} /><div><strong>Unable to load payments</strong><p>{error}</p></div></div>
           ) : filteredPayments.length === 0 ? (
             <div className="state-card empty-state"><Receipt size={18} /><div><strong>No matching payments found</strong><p>Adjust your filters or record a new payment.</p></div></div>
           ) : (
@@ -1196,8 +1188,7 @@ export default function Payments() {
                 <button type="button" onClick={() => { setToast({ type: "success", message: `Receipt ${p.receiptId} sent to print.` }); setMenuState(null); }}><Printer size={15} />Print receipt</button>
                 <button type="button" onClick={() => { setDetailsPayment(p); setDrawerTab("notes"); setMenuState(null); }}><FileText size={15} />Add note</button>
                 <button type="button" onClick={() => {
-                  const next = (payments as Payment[]).map((e) => e.paymentId === p.paymentId ? { ...e, status: "Refunded" as PaymentStatus, updatedAt: new Date().toISOString().split("T")[0] } : e);
-                  savePayments(next); setPayments(normalizePaymentList(next, invoices, customers));
+                  updatePayment({ ...p, status: "Refunded" as PaymentStatus, updatedAt: new Date().toISOString().split("T")[0] });
                   setToast({ type: "success", message: "Payment marked as refunded." }); setMenuState(null);
                 }}><RotateCcw size={15} />Mark as refunded</button>
                 <button type="button" className="danger" onClick={() => { setDeleteTarget(p); setDeleteCode(""); setMenuState(null); }}><Trash2 size={15} />Delete</button>
