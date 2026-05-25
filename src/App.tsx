@@ -3,6 +3,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import MainLayout from "./components/layout/MainLayout";
 import { useAuth } from "./context/AuthContext";
 import { SettingsProvider } from "./context/SettingsContext";
+import { DataProvider } from "./context/DataContext";
 
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
@@ -85,7 +86,9 @@ function AppRoutes() {
 export default function App() {
   return (
     <SettingsProvider>
-      <AppRoutes />
+      <DataProvider>
+        <AppRoutes />
+      </DataProvider>
     </SettingsProvider>
   );
 }

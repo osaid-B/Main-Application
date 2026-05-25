@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useData } from "../context/DataContext";
+import type { Customer } from "../data/types";
 import {
   ArrowLeft,
   Briefcase,
@@ -76,9 +78,21 @@ const REQUIRED_KEYS: Array<keyof FormState> = [
   "name", "type", "code", "phonePrimary", "governorate", "city",
 ];
 
+function generateCustomerId(customers: Customer[]): string {
+  const max = customers.reduce((m, c) => {
+    const match = c.id.match(/^CUST-(\d+)$/i);
+    return match ? Math.max(m, Number(match[1])) : m;
+  }, 1000);
+  return `CUST-${max + 1}`;
+}
+
 export default function AddCustomer() {
   const navigate = useNavigate();
-  const [form, setForm] = useState<FormState>(INITIAL);
+  const { addCustomer, customers } = useData();
+  const [form, setForm] = useState<FormState>(() => ({
+    ...INITIAL,
+    code: generateCustomerId(customers),
+  }));
   const [savedAt, setSavedAt] = useState<Date | null>(null);
   const autosaveRef = useRef<number | null>(null);
 
@@ -144,8 +158,33 @@ export default function AddCustomer() {
 
   function handleSave() {
     if (!canSave) return;
-    // TODO: persist to storage / API
-    try { window.localStorage.removeItem("atlas-customer-draft"); } catch {}
+    const today = new Date().toISOString().split("T")[0];
+    const id = generateCustomerId(customers);
+    const newCustomer: Customer = {
+      id,
+      name: form.name.trim(),
+      phone: form.phonePrimary.trim(),
+      email: form.email.trim() || undefined,
+      code: id,
+      taxId: form.taxId.trim() || undefined,
+      type: form.type,
+      classification: form.classification,
+      governorate: form.governorate,
+      city: form.city,
+      address: [form.neighborhood, form.street].filter(Boolean).join(", ") || undefined,
+      paymentTerms: form.paymentTerms,
+      currency: form.currency,
+      creditLimit: form.creditLimit ? Number(form.creditLimit) : undefined,
+      salesRep: form.salesRep || undefined,
+      alerts: form.alerts.length > 0 ? [...form.alerts] : [],
+      joinedAt: today,
+      lastOrderDate: today,
+      outstandingBalance: 0,
+      status: "active",
+      isDeleted: false,
+    };
+    addCustomer(newCustomer);
+    try { window.localStorage.removeItem("atlas-customer-draft"); } catch { /* ignore if unavailable */ }
     navigate("/customers");
   }
 
@@ -212,7 +251,7 @@ export default function AddCustomer() {
                 <button
                   type="button"
                   className={styles.refreshBtn}
-                  onClick={() => update("code", `C-${Math.floor(1000 + Math.random() * 9000)}`)}
+                  onClick={() => update("code", generateCustomerId(customers))}
                   aria-label="إنشاء رقم جديد"
                   title="إنشاء رقم جديد"
                 >

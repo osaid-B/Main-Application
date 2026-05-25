@@ -1,0 +1,331 @@
+import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
+import type {
+  Customer,
+  Employee,
+  Invoice,
+  InvoiceItem,
+  Payment,
+  Product,
+  Purchase,
+  Supplier,
+} from "../data/types";
+import {
+  getCustomers, saveCustomers,
+  getEmployees, saveEmployees,
+  getInvoiceItems,
+  getInvoices, saveInvoices,
+  getPayments, savePayments,
+  getProductCategories, saveProductCategories,
+  getProducts, saveProducts,
+  getPurchases, savePurchases,
+  getSuppliers, saveSuppliers,
+} from "../data/storage";
+import { isSuccessfulPaymentStatus, roundMoney } from "../data/relations";
+
+interface DataContextValue {
+  // Raw entity lists
+  customers: Customer[];
+  products: Product[];
+  suppliers: Supplier[];
+  invoices: Invoice[];
+  invoiceItems: InvoiceItem[];
+  payments: Payment[];
+  employees: Employee[];
+  purchases: Purchase[];
+  productCategories: string[];
+
+  // Customer CRUD
+  addCustomer: (c: Customer) => void;
+  updateCustomer: (c: Customer) => void;
+  deleteCustomer: (id: string) => void;
+
+  // Product CRUD
+  addProduct: (p: Product) => void;
+  updateProduct: (p: Product) => void;
+  deleteProduct: (id: string) => void;
+  setProductCategories: (cats: string[]) => void;
+
+  // Supplier CRUD
+  addSupplier: (s: Supplier) => void;
+  updateSupplier: (s: Supplier) => void;
+  deleteSupplier: (id: string) => void;
+
+  // Payment CRUD
+  addPayment: (p: Payment) => void;
+  updatePayment: (p: Payment) => void;
+  deletePayment: (id: string) => void;
+
+  // Employee CRUD
+  addEmployee: (e: Employee) => void;
+  updateEmployee: (e: Employee) => void;
+  deleteEmployee: (id: string) => void;
+
+  // Invoice CRUD
+  addInvoice: (inv: Invoice) => void;
+  updateInvoice: (inv: Invoice) => void;
+
+  // Derived selectors (replace hard-coded dashboard numbers)
+  totalRevenue: number;
+  receivablesTotal: number;
+  openInvoicesCount: number;
+  totalCustomers: number;
+  totalProducts: number;
+  lowStockCount: number;
+  outOfStockCount: number;
+  totalPaymentsCount: number;
+  payablesDue: number;
+  headcount: number;
+}
+
+const DataContext = createContext<DataContextValue | null>(null);
+
+export function DataProvider({ children }: { children: ReactNode }) {
+  const [customers, setCustomers] = useState<Customer[]>(() => getCustomers());
+  const [products, setProducts] = useState<Product[]>(() => getProducts());
+  const [productCategories, setProductCategoriesState] = useState<string[]>(() => getProductCategories());
+  const [suppliers, setSuppliers] = useState<Supplier[]>(() => getSuppliers());
+  const [invoices, setInvoices] = useState<Invoice[]>(() => getInvoices());
+  const [invoiceItems] = useState<InvoiceItem[]>(() => getInvoiceItems());
+  const [payments, setPayments] = useState<Payment[]>(() => getPayments());
+  const [employees, setEmployees] = useState<Employee[]>(() => getEmployees());
+  const [purchases, setPurchases] = useState<Purchase[]>(() => getPurchases());
+
+  // ── Customer CRUD ────────────────────────────────────────────────────────────
+
+  function addCustomer(c: Customer) {
+    const next = [...customers, c];
+    setCustomers(next);
+    saveCustomers(next);
+  }
+
+  function updateCustomer(c: Customer) {
+    const next = customers.map((x) => (x.id === c.id ? c : x));
+    setCustomers(next);
+    saveCustomers(next);
+  }
+
+  function deleteCustomer(id: string) {
+    const next = customers.map((x) => (x.id === id ? { ...x, isDeleted: true } : x));
+    setCustomers(next);
+    saveCustomers(next);
+  }
+
+  // ── Product CRUD ─────────────────────────────────────────────────────────────
+
+  function addProduct(p: Product) {
+    const next = [...products, p];
+    setProducts(next);
+    saveProducts(next);
+  }
+
+  function updateProduct(p: Product) {
+    const next = products.map((x) => (x.id === p.id ? p : x));
+    setProducts(next);
+    saveProducts(next);
+  }
+
+  function deleteProduct(id: string) {
+    const next = products.map((x) => (x.id === id ? { ...x, isDeleted: true } : x));
+    setProducts(next);
+    saveProducts(next);
+  }
+
+  function setProductCategories(cats: string[]) {
+    setProductCategoriesState(cats);
+    saveProductCategories(cats);
+  }
+
+  // ── Supplier CRUD ────────────────────────────────────────────────────────────
+
+  function addSupplier(s: Supplier) {
+    const next = [...suppliers, s];
+    setSuppliers(next);
+    saveSuppliers(next);
+  }
+
+  function updateSupplier(s: Supplier) {
+    const next = suppliers.map((x) => (x.id === s.id ? s : x));
+    setSuppliers(next);
+    saveSuppliers(next);
+  }
+
+  function deleteSupplier(id: string) {
+    const next = suppliers.map((x) => (x.id === id ? { ...x, isDeleted: true } : x));
+    setSuppliers(next);
+    saveSuppliers(next);
+  }
+
+  // ── Payment CRUD ─────────────────────────────────────────────────────────────
+
+  function addPayment(p: Payment) {
+    const next = [...payments, p];
+    setPayments(next);
+    savePayments(next);
+  }
+
+  function updatePayment(p: Payment) {
+    const next = payments.map((x) => (x.id === p.id ? p : x));
+    setPayments(next);
+    savePayments(next);
+  }
+
+  function deletePayment(id: string) {
+    const next = payments.map((x) =>
+      x.id === id ? { ...x, status: "Cancelled" as const } : x
+    );
+    setPayments(next);
+    savePayments(next);
+  }
+
+  // ── Employee CRUD ────────────────────────────────────────────────────────────
+
+  function addEmployee(e: Employee) {
+    const next = [...employees, e];
+    setEmployees(next);
+    saveEmployees(next);
+  }
+
+  function updateEmployee(e: Employee) {
+    const next = employees.map((x) => (x.id === e.id ? e : x));
+    setEmployees(next);
+    saveEmployees(next);
+  }
+
+  function deleteEmployee(id: string) {
+    const next = employees.map((x) => (x.id === id ? { ...x, isDeleted: true } : x));
+    setEmployees(next);
+    saveEmployees(next);
+  }
+
+  // ── Invoice CRUD ─────────────────────────────────────────────────────────────
+
+  function addInvoice(inv: Invoice) {
+    const next = [...invoices, inv];
+    setInvoices(next);
+    saveInvoices(next);
+  }
+
+  function updateInvoice(inv: Invoice) {
+    const next = invoices.map((x) => (x.id === inv.id ? inv : x));
+    setInvoices(next);
+    saveInvoices(next);
+  }
+
+  // ── Purchase CRUD (internal) ─────────────────────────────────────────────────
+  // Exposed via context if needed; Purchases page can call savePurchases directly
+  // until it migrates to DataContext.
+  function _addPurchase(p: Purchase) {
+    const next = [...purchases, p];
+    setPurchases(next);
+    savePurchases(next);
+  }
+  void _addPurchase; // suppress unused warning — available for future slice migration
+
+  // ── Derived selectors ────────────────────────────────────────────────────────
+
+  const activeCustomers = useMemo(
+    () => customers.filter((c) => !c.isDeleted),
+    [customers]
+  );
+
+  const activeProducts = useMemo(
+    () => products.filter((p) => !p.isDeleted && p.archived !== true),
+    [products]
+  );
+
+  const activeEmployees = useMemo(
+    () => employees.filter((e) => !e.isDeleted),
+    [employees]
+  );
+
+  const totalRevenue = useMemo(
+    () =>
+      roundMoney(
+        payments
+          .filter((p) => isSuccessfulPaymentStatus(p.status))
+          .reduce((sum, p) => sum + Number(p.amount || 0), 0)
+      ),
+    [payments]
+  );
+
+  const receivablesTotal = useMemo(
+    () =>
+      roundMoney(
+        invoices
+          .filter((inv) => inv.status !== "Paid")
+          .reduce((sum, inv) => sum + Number(inv.remainingAmount ?? inv.amount ?? 0), 0)
+      ),
+    [invoices]
+  );
+
+  const openInvoicesCount = useMemo(
+    () => invoices.filter((inv) => inv.status !== "Paid").length,
+    [invoices]
+  );
+
+  const totalCustomers = useMemo(() => activeCustomers.length, [activeCustomers]);
+  const totalProducts = useMemo(() => activeProducts.length, [activeProducts]);
+
+  const lowStockCount = useMemo(
+    () =>
+      activeProducts.filter(
+        (p) => p.stock > 0 && p.stock <= (p.minStock ?? p.reorderThreshold ?? 5)
+      ).length,
+    [activeProducts]
+  );
+
+  const outOfStockCount = useMemo(
+    () => activeProducts.filter((p) => p.stock <= 0).length,
+    [activeProducts]
+  );
+
+  const totalPaymentsCount = useMemo(() => payments.length, [payments]);
+
+  const payablesDue = useMemo(
+    () =>
+      roundMoney(
+        purchases
+          .filter((p) => p.status === "Pending")
+          .reduce((sum, p) => sum + Number(p.totalCost || 0), 0)
+      ),
+    [purchases]
+  );
+
+  const headcount = useMemo(() => activeEmployees.length, [activeEmployees]);
+
+  const value: DataContextValue = {
+    customers,
+    products,
+    suppliers,
+    invoices,
+    invoiceItems,
+    payments,
+    employees,
+    purchases,
+    productCategories,
+    addCustomer, updateCustomer, deleteCustomer,
+    addProduct, updateProduct, deleteProduct, setProductCategories,
+    addSupplier, updateSupplier, deleteSupplier,
+    addPayment, updatePayment, deletePayment,
+    addEmployee, updateEmployee, deleteEmployee,
+    addInvoice, updateInvoice,
+    totalRevenue,
+    receivablesTotal,
+    openInvoicesCount,
+    totalCustomers,
+    totalProducts,
+    lowStockCount,
+    outOfStockCount,
+    totalPaymentsCount,
+    payablesDue,
+    headcount,
+  };
+
+  return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
+}
+
+export function useData(): DataContextValue {
+  const ctx = useContext(DataContext);
+  if (!ctx) throw new Error("useData must be used within DataProvider");
+  return ctx;
+}

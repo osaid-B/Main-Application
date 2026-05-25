@@ -10,12 +10,11 @@ import { Container } from "../components/layout/Container";
 import { Stack } from "../components/layout/Stack";
 import {
   CLASSIFICATION_LABELS,
-  CUSTOMERS_TOTAL,
-  MOCK_CUSTOMERS,
   PAYMENT_TERMS_LABELS,
   TYPE_LABELS,
-  type MockCustomer,
 } from "../data/customersMock";
+import { useData } from "../context/DataContext";
+import type { Customer } from "../data/types";
 import styles from "./Customers.module.css";
 
 function relativeDate(iso: string): string {
@@ -33,35 +32,41 @@ function formatBalance(n: number, currency: string): string {
 
 export default function Customers() {
   const navigate = useNavigate();
+  const { customers } = useData();
   const [query, setQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
   const [classFilter, setClassFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
 
+  const active = useMemo(
+    () => customers.filter((c) => !c.isDeleted),
+    [customers]
+  );
+
   const filtered = useMemo(() => {
-    return MOCK_CUSTOMERS.filter((c) => {
+    return active.filter((c) => {
       if (typeFilter && c.type !== typeFilter) return false;
       if (classFilter && c.classification !== classFilter) return false;
-      if (statusFilter && c.status !== statusFilter) return false;
+      if (statusFilter && (c.status ?? "active") !== statusFilter) return false;
       if (query) {
         const q = query.toLowerCase();
         return (
           c.name.toLowerCase().includes(q) ||
-          c.code.toLowerCase().includes(q) ||
+          (c.code?.toLowerCase().includes(q) ?? false) ||
           c.phone.toLowerCase().includes(q) ||
           (c.email?.toLowerCase().includes(q) ?? false)
         );
       }
       return true;
     });
-  }, [query, typeFilter, classFilter, statusFilter]);
+  }, [active, query, typeFilter, classFilter, statusFilter]);
 
   const stats = useMemo(() => ({
-    total: CUSTOMERS_TOTAL,
-    vip: MOCK_CUSTOMERS.filter((c) => c.classification === "vip").length,
-    active: MOCK_CUSTOMERS.filter((c) => c.status === "active").length,
-    withBalance: MOCK_CUSTOMERS.filter((c) => c.outstandingBalance > 0).length,
-  }), []);
+    total: active.length,
+    vip: active.filter((c) => c.classification === "vip").length,
+    active: active.filter((c) => (c.status ?? "active") === "active").length,
+    withBalance: active.filter((c) => (c.outstandingBalance ?? 0) > 0).length,
+  }), [active]);
 
   return (
     <Container maxWidth="full" padding="md">
@@ -183,9 +188,13 @@ function StatPill({ label, value, tone }: { label: string; value: string; tone: 
   );
 }
 
-function CustomerRow({ c, onView }: { c: MockCustomer; onView: () => void }) {
-  const statusColor = c.status === "active" ? "green" : c.status === "inactive" ? "gray" : "red";
-  const balanceTone = c.outstandingBalance > c.creditLimit * 0.7 ? "danger" : c.outstandingBalance > 0 ? "warning" : "neutral";
+function CustomerRow({ c, onView }: { c: Customer; onView: () => void }) {
+  const status = c.status ?? "active";
+  const statusColor = status === "active" ? "green" : status === "inactive" ? "gray" : "red";
+  const balance = c.outstandingBalance ?? 0;
+  const limit = c.creditLimit ?? 0;
+  const balanceTone = balance > limit * 0.7 ? "danger" : balance > 0 ? "warning" : "neutral";
+  const alerts = c.alerts ?? [];
 
   return (
     <tr>
@@ -198,33 +207,39 @@ function CustomerRow({ c, onView }: { c: MockCustomer; onView: () => void }) {
           />
           <div className={styles.identText}>
             <button type="button" className={styles.nameLink} onClick={onView}>{c.name}</button>
-            <span>{c.code}</span>
+            <span>{c.code ?? c.id}</span>
           </div>
           {c.classification === "vip" && <Badge variant="warning" size="sm">VIP</Badge>}
           {c.classification === "risk" && <Badge variant="danger" size="sm">مخاطر</Badge>}
         </div>
       </td>
-      <td><Badge variant="neutral" size="sm">{TYPE_LABELS[c.type]}</Badge></td>
+      <td>
+        <Badge variant="neutral" size="sm">
+          {c.type ? TYPE_LABELS[c.type] : "—"}
+        </Badge>
+      </td>
       <td>
         <div className={styles.locCell}>
-          <strong>{c.city}</strong>
-          <span>{c.governorate}</span>
+          <strong>{c.city ?? "—"}</strong>
+          <span>{c.governorate ?? ""}</span>
         </div>
       </td>
-      <td>{PAYMENT_TERMS_LABELS[c.paymentTerms]}</td>
+      <td>{c.paymentTerms ? PAYMENT_TERMS_LABELS[c.paymentTerms] : "—"}</td>
       <td>
         <span className={`${styles.balance} ${styles[`bal_${balanceTone}`]}`}>
-          {c.outstandingBalance > 0
-            ? formatBalance(c.outstandingBalance, c.currency)
+          {balance > 0
+            ? formatBalance(balance, c.currency ?? "ILS")
             : <span className={styles.zeroBalance}>—</span>}
-          {c.alerts.length > 0 && <AlertTriangle size={12} className={styles.alertIcon} aria-hidden />}
+          {alerts.length > 0 && <AlertTriangle size={12} className={styles.alertIcon} aria-hidden />}
         </span>
       </td>
-      <td className={styles.timeCell}>{relativeDate(c.lastOrderDate)}</td>
+      <td className={styles.timeCell}>
+        {c.lastOrderDate ? relativeDate(c.lastOrderDate) : c.joinedAt ? relativeDate(c.joinedAt) : "—"}
+      </td>
       <td>
         <span className={styles.statusCell}>
           <span className={`status-dot status-dot--${statusColor}`} aria-hidden />
-          <span>{c.status === "active" ? "نشط" : c.status === "inactive" ? "غير نشط" : "مؤرشف"}</span>
+          <span>{status === "active" ? "نشط" : status === "inactive" ? "غير نشط" : "مؤرشف"}</span>
         </span>
       </td>
       <td>
