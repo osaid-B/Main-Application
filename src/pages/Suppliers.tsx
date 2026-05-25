@@ -28,9 +28,8 @@ import { Badge, type BadgeVariant } from "../components/ui/Badge";
 import {
   getProductCategories,
   getPurchases,
-  getSuppliers,
-  saveSuppliers,
 } from "../data/storage";
+import { useData } from "../context/DataContext";
 import type { Purchase, Supplier } from "../data/types";
 
 type SupplierStatus = "Active" | "Inactive" | "Preferred" | "Blocked";
@@ -707,7 +706,7 @@ function statusTone(status: SupplierStatus) {
 }
 
 export default function Suppliers() {
-  const [suppliers, setSuppliers] = useState<Supplier[]>(() => getSuppliers());
+  const { suppliers, addSupplier, updateSupplier, deleteSupplier: deleteSupplierCtx } = useData();
   const [purchases] = useState<Purchase[]>(() => getPurchases());
   const [productCategories] = useState<string[]>(() => getProductCategories());
   const [profiles, setProfiles] = useState<SupplierProfile[]>([]);
@@ -749,10 +748,6 @@ export default function Suppliers() {
   useEffect(() => {
     if (profiles.length > 0) saveProfiles(profiles);
   }, [profiles]);
-
-  useEffect(() => {
-    saveSuppliers(suppliers);
-  }, [suppliers]);
 
   useEffect(() => {
     if (!toast) return;
@@ -1220,17 +1215,12 @@ export default function Suppliers() {
       payments: [],
     };
 
-    setSuppliers((current) => {
-      const exists = current.some((supplier) => supplier.id === supplierId);
-
-      if (exists) {
-        return current.map((supplier) =>
-          supplier.id === supplierId ? nextSupplier : supplier
-        );
-      }
-
-      return [nextSupplier, ...current];
-    });
+    const supplierExists = suppliers.some((s) => s.id === supplierId);
+    if (supplierExists) {
+      updateSupplier(nextSupplier);
+    } else {
+      addSupplier(nextSupplier);
+    }
 
     setProfiles((current) => {
       const exists = current.some((item) => item.supplierId === supplierId);
@@ -1255,7 +1245,7 @@ export default function Suppliers() {
   }
 
   function deleteSupplierItem(supplierId: string) {
-    setSuppliers((current) => current.filter((supplier) => supplier.id !== supplierId));
+    deleteSupplierCtx(supplierId);
     setProfiles((current) =>
       current.filter((profile) => profile.supplierId !== supplierId)
     );

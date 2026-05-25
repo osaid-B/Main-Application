@@ -8,11 +8,22 @@ import { FormSection } from "../components/forms/FormSection";
 import { ButtonGroup } from "../components/forms/ButtonGroup";
 import { RadioCardGroup } from "../components/forms/RadioCardGroup";
 import { Globe, MapPin } from "lucide-react";
+import { useData } from "../context/DataContext";
+import type { Supplier } from "../data/types";
 
 type SupplierKind = "local" | "import";
 
+function generateSupplierId(suppliers: Supplier[]): string {
+  const max = suppliers.reduce((m, s) => {
+    const match = s.id.match(/^SUP-(\d+)$/i);
+    return match ? Math.max(m, Number(match[1])) : m;
+  }, 1000);
+  return `SUP-${max + 1}`;
+}
+
 export default function AddSupplier() {
   const navigate = useNavigate();
+  const { suppliers, addSupplier } = useData();
   const [kind, setKind] = useState<SupplierKind>("local");
   const [name, setName] = useState("");
   const [taxId, setTaxId] = useState("");
@@ -38,7 +49,23 @@ export default function AddSupplier() {
             Choose local or import supplier — additional fields appear conditionally.
           </p>
         </div>
-        <Button variant="primary" size="sm" leftIcon={<Save size={14} />} disabled={!canSave} onClick={() => navigate("/suppliers")}>
+        <Button
+          variant="primary"
+          size="sm"
+          leftIcon={<Save size={14} />}
+          disabled={!canSave}
+          onClick={() => {
+            const id = generateSupplierId(suppliers);
+            addSupplier({
+              id,
+              name: name.trim(),
+              address: country.trim() || undefined,
+              notes: [taxId.trim() && `Tax ID: ${taxId.trim()}`, swift.trim() && `SWIFT: ${swift.trim()}`, kind === "import" ? `Incoterms: ${incoterms}` : ""].filter(Boolean).join(" | ") || undefined,
+              isDeleted: false,
+            });
+            navigate("/suppliers");
+          }}
+        >
           Save supplier
         </Button>
       </header>
