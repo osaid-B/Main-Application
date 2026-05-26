@@ -11,15 +11,16 @@ import { useSettings } from "../../context/SettingsContext";
 import {
   POS_STOCK_COUNTS as INITIAL_COUNTS,
   type PosStockCount,
+  type StockCountItem,
   type StockCountStatus,
 } from "../../data/posMock";
 import styles from "./StockCounts.module.css";
 
 const STATUS_VARIANT: Record<StockCountStatus, "warning" | "info" | "success" | "neutral"> = {
-  open:         "warning",
+  open:          "warning",
   "in-progress": "info",
-  completed:    "success",
-  cancelled:    "neutral",
+  completed:     "success",
+  cancelled:     "neutral",
 };
 
 export default function StockCounts() {
@@ -53,6 +54,14 @@ export default function StockCounts() {
     setShowNewForm(false);
   }
 
+  function completeCount(id: string) {
+    setCounts((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, status: "completed" as StockCountStatus } : c)),
+    );
+    // Update the detail view with the new status
+    setDetail((prev) => prev && prev.id === id ? { ...prev, status: "completed" } : prev);
+  }
+
   return (
     <Container maxWidth="full" padding="md">
       <Stack gap="lg">
@@ -68,10 +77,10 @@ export default function StockCounts() {
         </header>
 
         <Grid cols={4} gap="md" responsive>
-          <Kpi label={tc.kpi.open}         value={String(openCount)}                  tone="warning" sub={tc.kpi.openSub} />
-          <Kpi label={tc.kpi.itemsCounted} value={String(itemsCounted)}               tone="info"    sub={tc.kpi.itemsSub} />
-          <Kpi label={tc.kpi.variances}    value={String(variances)}                  tone="danger"  sub={tc.kpi.variancesSub} />
-          <Kpi label={tc.kpi.lastCount}    value={lastCompleted?.date ?? "—"}         tone="success" sub={lastCompleted?.location ?? ""} />
+          <Kpi label={tc.kpi.open}         value={String(openCount)}          tone="warning" sub={tc.kpi.openSub} />
+          <Kpi label={tc.kpi.itemsCounted} value={String(itemsCounted)}       tone="info"    sub={tc.kpi.itemsSub} />
+          <Kpi label={tc.kpi.variances}    value={String(variances)}          tone="danger"  sub={tc.kpi.variancesSub} />
+          <Kpi label={tc.kpi.lastCount}    value={lastCompleted?.date ?? "—"} tone="success" sub={lastCompleted?.location ?? ""} />
         </Grid>
 
         <div className={styles.toolbar}>
@@ -138,15 +147,49 @@ export default function StockCounts() {
         </div>
       </Stack>
 
-      {detail && <CountDetailModal count={detail} onClose={() => setDetail(null)} />}
+      {detail && (
+        <CountDetailModal
+          count={detail}
+          onClose={() => setDetail(null)}
+          onComplete={completeCount}
+        />
+      )}
       {showNewForm && <NewCountModal onSave={addCount} onClose={() => setShowNewForm(false)} />}
     </Container>
   );
 }
 
-function CountDetailModal({ count, onClose }: { count: PosStockCount; onClose: () => void }) {
+function CountDetailModal({
+  count,
+  onClose,
+  onComplete,
+}: {
+  count: PosStockCount;
+  onClose: () => void;
+  onComplete: (id: string) => void;
+}) {
   const { t } = useSettings();
   const tc = t.pos.stockCounts;
+
+  const canComplete = count.status === "open" || count.status === "in-progress";
+
+  function handleComplete() {
+    const confirmed = window.confirm(tc.detail.confirmComplete);
+    if (confirmed) onComplete(count.id);
+  }
+
+  function varClass(item: StockCountItem) {
+    if (item.counted === 0 && item.expected > 0) return styles.varUncounted;
+    if (item.variance < 0) return styles.varNeg;
+    if (item.variance > 0) return styles.varPos;
+    return styles.varZero;
+  }
+
+  function varDisplay(item: StockCountItem) {
+    if (item.counted === 0 && item.expected > 0) return tc.detail.uncounted;
+    if (item.variance === 0) return "—";
+    return `${item.variance > 0 ? "+" : ""}${item.variance}`;
+  }
 
   return (
     <Modal
@@ -154,7 +197,16 @@ function CountDetailModal({ count, onClose }: { count: PosStockCount; onClose: (
       onClose={onClose}
       title={`${tc.detail.title} — ${count.id}`}
       size="md"
-      footer={<Button variant="secondary" onClick={onClose}>{tc.detail.close}</Button>}
+      footer={
+        <div className={styles.detailFooter}>
+          {canComplete && (
+            <Button variant="primary" size="sm" onClick={handleComplete}>
+              {tc.actions.complete}
+            </Button>
+          )}
+          <Button variant="secondary" onClick={onClose}>{tc.detail.close}</Button>
+        </div>
+      }
     >
       {count.items.length === 0 ? (
         <p className={styles.emptyDetail}>{tc.detail.noItems}</p>
@@ -177,9 +229,7 @@ function CountDetailModal({ count, onClose }: { count: PosStockCount; onClose: (
                 <td className={`${styles.numEnd} ${styles.mono}`}>{item.expected}</td>
                 <td className={`${styles.numEnd} ${styles.mono}`}>{item.counted}</td>
                 <td className={`${styles.numEnd} ${styles.mono}`}>
-                  <span className={item.variance < 0 ? styles.varNeg : item.variance > 0 ? styles.varPos : styles.varZero}>
-                    {item.variance === 0 ? "—" : `${item.variance > 0 ? "+" : ""}${item.variance}`}
-                  </span>
+                  <span className={varClass(item)}>{varDisplay(item)}</span>
                 </td>
               </tr>
             ))}

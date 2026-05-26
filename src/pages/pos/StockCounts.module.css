@@ -122,9 +122,10 @@
 .mono { font-family: var(--font-mono); font-size: 11px; }
 .numEnd { text-align: end; }
 
-.varPos { color: var(--atlas-green-700, var(--atlas-green)); font-weight: 600; }
+.varPos { color: var(--atlas-orange); font-weight: 600; }
 .varNeg { color: var(--atlas-danger); font-weight: 600; }
 .varZero { color: var(--app-text-muted); }
+.varUncounted { color: var(--app-text-muted); font-style: italic; font-size: 10px; }
 
 .viewBtn {
   background: transparent;
@@ -178,6 +179,13 @@
   color: var(--app-text-muted);
   font-size: 13px;
   font-style: italic;
+}
+
+/* Detail modal footer */
+.detailFooter {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--app-space-2);
 }
 
 /* New count form */
