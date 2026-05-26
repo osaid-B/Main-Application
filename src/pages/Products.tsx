@@ -192,8 +192,7 @@ function getCategoryIcon(name: string) {
 
 function buildNextProductCode(products: Product[]) {
   const maxCodeNumber = products.reduce((max, product) => {
-    const productAny = product as any;
-    const candidates = [product.id, productAny.code];
+    const candidates = [product.id, product.code];
 
     const localMax = candidates.reduce((innerMax, value) => {
       const match = String(value || "").match(/^PROD-(\d+)$/i);
@@ -204,6 +203,30 @@ function buildNextProductCode(products: Product[]) {
   }, 1000);
 
   return `PROD-${maxCodeNumber + 1}`;
+}
+
+function SortButton({
+  sortKey,
+  sortConfig,
+  onSort,
+  children,
+}: {
+  sortKey: SortKey;
+  sortConfig: { key: SortKey; direction: SortDirection };
+  onSort: (key: SortKey) => void;
+  children: string;
+}) {
+  const label = sortConfig.key !== sortKey ? "↕" : sortConfig.direction === "asc" ? "↑" : "↓";
+  return (
+    <button
+      type="button"
+      className={`table-sort-btn ${sortConfig.key === sortKey ? "active" : ""}`}
+      onClick={() => onSort(sortKey)}
+    >
+      <span>{children}</span>
+      <span>{label}</span>
+    </button>
+  );
 }
 
 export default function Products() {
@@ -298,7 +321,7 @@ export default function Products() {
     const map = new Map<string, number>();
 
     products
-      .filter((product) => !(product as any).isDeleted)
+      .filter((product) => !product.isDeleted)
       .forEach((product) => {
         const category = normalizeCategoryName(product.category || "");
         if (!category) return;
@@ -310,13 +333,11 @@ export default function Products() {
 
   const productRows = useMemo<ProductRow[]>(() => {
     return products
-      .filter((product) => !(product as any).isDeleted)
+      .filter((product) => !product.isDeleted)
       .filter((product) => String(product.name || "").trim() !== "")
       .map((product, index) => {
-        const productAny = product as any;
-
         const receivedQuantity = purchases
-          .filter((purchase) => purchase.productId === product.id && !(purchase as any).isDeleted)
+          .filter((purchase) => purchase.productId === product.id && !purchase.isDeleted)
           .reduce((sum, purchase) => sum + getNumber(purchase.quantity), 0);
 
         const soldQuantity = invoiceItems
@@ -326,23 +347,23 @@ export default function Products() {
         const baseStock = getNumber(product.stock);
         const available = Math.max(baseStock + receivedQuantity - soldQuantity, 0);
 
-        const salePrice = getNumber(productAny.salePrice ?? product.price);
-        const purchasePrice = getNumber(productAny.purchasePrice, salePrice * 0.7);
-        const minStock = getNumber(productAny.minStock, 5);
+        const salePrice = getNumber(product.salePrice ?? product.price);
+        const purchasePrice = getNumber(product.purchasePrice, salePrice * 0.7);
+        const minStock = getNumber(product.minStock, 5);
 
         return {
           ...product,
-          code: String(productAny.code || product.id || `PROD-${1000 + index + 1}`),
+          code: String(product.code || product.id || `PROD-${1000 + index + 1}`),
           salePrice,
           purchasePrice,
           available,
           minStock,
           statusLabel: getStatusLabel(available, minStock),
-          supplierId: String(productAny.supplierId || productAny.supplierLink || ""),
-          barcode: String(productAny.barcode || ""),
-          description: String(productAny.description || ""),
-          image: String(productAny.image || ""),
-          addedAt: getNumber(productAny.addedAt, Date.now() - index),
+          supplierId: String(product.supplierLink || ""),
+          barcode: String(product.barcode || ""),
+          description: String(product.description || ""),
+          image: String(product.image || ""),
+          addedAt: getNumber(product.addedAt, 0),
         };
       });
   }, [products, purchases, invoiceItems]);
@@ -481,29 +502,7 @@ export default function Products() {
     });
   }
 
-  function sortLabel(key: SortKey) {
-    if (sortConfig.key !== key) return "↕";
-    return sortConfig.direction === "asc" ? "↑" : "↓";
-  }
 
-  function SortButton({
-    sortKey,
-    children,
-  }: {
-    sortKey: SortKey;
-    children: string;
-  }) {
-    return (
-      <button
-        type="button"
-        className={`table-sort-btn ${sortConfig.key === sortKey ? "active" : ""}`}
-        onClick={() => updateSort(sortKey)}
-      >
-        <span>{children}</span>
-        <span>{sortLabel(sortKey)}</span>
-      </button>
-    );
-  }
 
   function openAddModal() {
     setForm({
@@ -554,8 +553,7 @@ export default function Products() {
     }
 
     const duplicatedCode = products.some((product) => {
-      const productAny = product as any;
-      return product.id !== form.id && String(productAny.code || "").trim() === code;
+      return product.id !== form.id && String(product.code || "").trim() === code;
     });
 
     if (duplicatedCode) {
@@ -578,7 +576,7 @@ export default function Products() {
       description: form.description.trim(),
       image: form.image.trim(),
       addedAt: form.id
-        ? getNumber((products.find((product) => product.id === form.id) as any)?.addedAt, Date.now())
+        ? getNumber(products.find((product) => product.id === form.id)?.addedAt, Date.now())
         : Date.now(),
       isDeleted: false,
     } as Product;
@@ -970,49 +968,49 @@ export default function Products() {
               <thead>
                 <tr>
                   <th className="col-product">
-                    <SortButton sortKey="name">
+                    <SortButton sortKey="name" sortConfig={sortConfig} onSort={updateSort}>
                       {t.common?.product || "Product"}
                     </SortButton>
                   </th>
 
                   <th className="col-category">
-                    <SortButton sortKey="category">
+                    <SortButton sortKey="category" sortConfig={sortConfig} onSort={updateSort}>
                       {t.products?.category || "Category"}
                     </SortButton>
                   </th>
 
                   <th className="col-supplier">
-                    <SortButton sortKey="supplier">
+                    <SortButton sortKey="supplier" sortConfig={sortConfig} onSort={updateSort}>
                       {t.products?.supplier || "Supplier"}
                     </SortButton>
                   </th>
 
                   <th className="col-stock">
-                    <SortButton sortKey="stock">
+                    <SortButton sortKey="stock" sortConfig={sortConfig} onSort={updateSort}>
                       {t.products?.stock || "Stock"}
                     </SortButton>
                   </th>
 
                   <th className="col-purchase">
-                    <SortButton sortKey="purchasePrice">
+                    <SortButton sortKey="purchasePrice" sortConfig={sortConfig} onSort={updateSort}>
                       {t.products?.purchasePrice || "Purchase"}
                     </SortButton>
                   </th>
 
                   <th className="col-sale">
-                    <SortButton sortKey="salePrice">
+                    <SortButton sortKey="salePrice" sortConfig={sortConfig} onSort={updateSort}>
                       {t.products?.salePrice || "Sale"}
                     </SortButton>
                   </th>
 
                   <th className="col-margin">
-                    <SortButton sortKey="margin">
+                    <SortButton sortKey="margin" sortConfig={sortConfig} onSort={updateSort}>
                       {t.products?.margin || "Margin"}
                     </SortButton>
                   </th>
 
                   <th className="col-status">
-                    <SortButton sortKey="status">
+                    <SortButton sortKey="status" sortConfig={sortConfig} onSort={updateSort}>
                       {t.products?.status || "Status"}
                     </SortButton>
                   </th>

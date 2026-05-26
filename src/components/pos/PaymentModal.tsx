@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Banknote, Check, CheckCircle2, CreditCard, Sparkles, X, Building2 } from "lucide-react";
 import { Modal } from "../ui/Modal";
 import { Button } from "../ui/Button";
@@ -37,12 +37,17 @@ export function PaymentModal({
   const [coinsToRedeem, setCoinsToRedeem] = useState<number>(0);
   const [transferRef, setTransferRef] = useState("");
 
-  useEffect(() => {
+  const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
+  if (prevIsOpen !== isOpen) {
+    setPrevIsOpen(isOpen);
     if (isOpen) {
-      setScreen("method"); setMethod(null);
-      setCashReceived(0); setCoinsToRedeem(0); setTransferRef("");
+      setScreen("method");
+      setMethod(null);
+      setCashReceived(0);
+      setCoinsToRedeem(0);
+      setTransferRef("");
     }
-  }, [isOpen]);
+  }
 
   function go(m: Method) {
     setMethod(m);

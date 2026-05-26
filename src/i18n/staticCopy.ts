@@ -778,7 +778,7 @@ const arCopy: Record<string, string> = {
 
 // ── DYNAMIC TRANSLATION RULES ────────────────────────────────
 const dynamicRules: Array<[RegExp, (match: RegExpMatchArray) => string]> = [
-  [/^Showing ([0-9,\-]+) of ([0-9,]+)$/i,
+  [/^Showing ([0-9,-]+) of ([0-9,]+)$/i,
     (m) => `عرض ${m[1]} من ${m[2]}`],
   [/^Showing ([0-9,]+) (customer|customers|payment|payments|invoice|invoices|record|records|product|products|supplier|suppliers|employee|employees) in the current view$/i,
     (m) => `يعرض ${m[1]} سجل`],

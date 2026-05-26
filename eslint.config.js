@@ -20,4 +20,17 @@ export default defineConfig([
       globals: globals.browser,
     },
   },
+  // Context/hook files and utility modules that intentionally co-locate
+  // non-component exports alongside components or hooks.
+  {
+    files: [
+      '**/context/**/*.{ts,tsx}',
+      '**/contexts/**/*.{ts,tsx}',
+      'src/components/ui/Toast.tsx',
+      'src/components/ui/Sparkline.tsx',
+    ],
+    rules: {
+      'react-refresh/only-export-components': 'off',
+    },
+  },
 ])

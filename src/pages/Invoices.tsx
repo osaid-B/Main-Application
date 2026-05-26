@@ -594,8 +594,20 @@ export default function Invoices() {
   const [products] = useState<Product[]>(() => getProducts());
   const [employees] = useState<Employee[]>(() => getEmployees());
 
-  const [records, setRecords] = useState<InvoiceRecord[]>([]);
-  const [hasLoaded, setHasLoaded] = useState(false);
+  const [records, setRecords] = useState<InvoiceRecord[]>(() => {
+    const stored = window.localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      try {
+        const parsedRecords = JSON.parse(stored) as InvoiceRecord[];
+        return parsedRecords.map(normalizeInvoiceRecord);
+      } catch {
+        window.localStorage.removeItem(STORAGE_KEY);
+        return seedInvoices(customers, suppliers, products, employees).map(normalizeInvoiceRecord);
+      }
+    }
+    return seedInvoices(customers, suppliers, products, employees).map(normalizeInvoiceRecord);
+  });
+  const [hasLoaded] = useState(true);
 
   const [activeTab, setActiveTab] = useState<TabKey>("customer");
   const [filters, setFilters] = useState<FilterState>(EMPTY_FILTERS);
@@ -661,23 +673,6 @@ export default function Invoices() {
     );
   }, [customerOptions, customerSearch]);
 
-  useEffect(() => {
-    const stored = window.localStorage.getItem(STORAGE_KEY);
-
-    if (stored) {
-      try {
-        const parsedRecords = JSON.parse(stored) as InvoiceRecord[];
-        setRecords(parsedRecords.map(normalizeInvoiceRecord));
-      } catch {
-        window.localStorage.removeItem(STORAGE_KEY);
-        setRecords(seedInvoices(customers, suppliers, products, employees).map(normalizeInvoiceRecord));
-      }
-    } else {
-      setRecords(seedInvoices(customers, suppliers, products, employees).map(normalizeInvoiceRecord));
-    }
-
-    setHasLoaded(true);
-  }, [customers, suppliers, products, employees]);
 
   useEffect(() => {
     if (!hasLoaded) return;

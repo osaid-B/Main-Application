@@ -628,6 +628,7 @@ export default function Payments() {
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [page, setPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [prevFilterSig, setPrevFilterSig] = useState({ searchTerm, filters, quickFilters, rowsPerPage });
   const [showEditor, setShowEditor] = useState(false);
   const [editorMode, setEditorMode] = useState<"create" | "edit">("create");
   const [formState, setFormState] = useState<PaymentForm>(EMPTY_FORM);
@@ -721,11 +722,19 @@ export default function Payments() {
     });
   }, [filters, payments, quickFilters, searchTerm, sortConfig]);
 
-  const totalPages = Math.max(1, Math.ceil(filteredPayments.length / rowsPerPage));
-  const paginatedPayments = filteredPayments.slice((page - 1) * rowsPerPage, page * rowsPerPage);
+  if (
+    prevFilterSig.searchTerm !== searchTerm ||
+    prevFilterSig.filters !== filters ||
+    prevFilterSig.quickFilters !== quickFilters ||
+    prevFilterSig.rowsPerPage !== rowsPerPage
+  ) {
+    setPrevFilterSig({ searchTerm, filters, quickFilters, rowsPerPage });
+    setPage(1);
+  }
 
-  useEffect(() => { setPage(1); }, [searchTerm, filters, quickFilters, rowsPerPage]);
-  useEffect(() => { if (page > totalPages) setPage(totalPages); }, [page, totalPages]);
+  const totalPages = Math.max(1, Math.ceil(filteredPayments.length / rowsPerPage));
+  const effectivePage = Math.min(page, totalPages);
+  const paginatedPayments = filteredPayments.slice((effectivePage - 1) * rowsPerPage, effectivePage * rowsPerPage);
 
   const metrics = useMemo(() => {
     const totalAmount = payments.reduce((s, p) => s + p.amount, 0);
@@ -1045,12 +1054,12 @@ export default function Payments() {
 
               <div className="pay-ops-footer">
                 <span className="pay-footer-info">
-                  Showing {(page - 1) * rowsPerPage + 1}–{Math.min(page * rowsPerPage, filteredPayments.length)} of {filteredPayments.length} payments
+                  Showing {(effectivePage - 1) * rowsPerPage + 1}–{Math.min(effectivePage * rowsPerPage, filteredPayments.length)} of {filteredPayments.length} payments
                 </span>
                 <div className="pay-footer-center">
-                  <button type="button" className="pay-pg-btn" disabled={page === 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>‹</button>
+                  <button type="button" className="pay-pg-btn" disabled={effectivePage === 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>‹</button>
                   {Array.from({ length: totalPages }, (_, i) => i + 1)
-                    .filter((n) => n === 1 || n === totalPages || Math.abs(n - page) <= 1)
+                    .filter((n) => n === 1 || n === totalPages || Math.abs(n - effectivePage) <= 1)
                     .reduce<(number | "…")[]>((acc, n, idx, arr) => {
                       if (idx > 0 && n - (arr[idx - 1] as number) > 1) acc.push("…");
                       acc.push(n);
@@ -1061,13 +1070,13 @@ export default function Payments() {
                         <span key={`e-${idx}`} className="pay-pg-ellipsis">…</span>
                       ) : (
                         <button key={item} type="button"
-                          className={`pay-pg-btn${page === item ? " active" : ""}`}
+                          className={`pay-pg-btn${effectivePage === item ? " active" : ""}`}
                           onClick={() => setPage(item as number)}>
                           {item}
                         </button>
                       )
                     )}
-                  <button type="button" className="pay-pg-btn" disabled={page === totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>›</button>
+                  <button type="button" className="pay-pg-btn" disabled={effectivePage === totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>›</button>
                 </div>
                 <div className="pay-footer-rpp">
                   <select value={rowsPerPage} onChange={(e) => { setRowsPerPage(Number(e.target.value)); setPage(1); }}>

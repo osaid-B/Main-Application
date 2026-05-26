@@ -19,6 +19,11 @@ export default function MainLayout() {
   const navigate = useNavigate();
 
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [prevPathname, setPrevPathname] = useState(location.pathname);
+  if (prevPathname !== location.pathname) {
+    setPrevPathname(location.pathname);
+    setMobileNavOpen(false);
+  }
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [logoutPending, setLogoutPending] = useState(false);
   const logoutTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -107,13 +112,6 @@ export default function MainLayout() {
     };
   }, [mobileNavOpen]);
 
-  /*
-    عند الانتقال بين الصفحات، أغلق قائمة الموبايل
-    حتى لا تبقى nav-open وتمنع السكرول.
-  */
-  useEffect(() => {
-    setMobileNavOpen(false);
-  }, [location.pathname]);
 
   const sectionMeta = useMemo(() => {
     const entries = [

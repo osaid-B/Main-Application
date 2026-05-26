@@ -52,14 +52,14 @@ export function SmartLocationPicker({
     return options.filter((o) => o.toLowerCase().includes(q));
   }, [options, query]);
 
-  // Reset query when the value changes externally.
-  useEffect(() => { if (!open) setQuery(""); }, [value, open]);
-
   // Close on outside click.
   useEffect(() => {
     if (!open) return;
     const onDown = (e: MouseEvent) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
+        setOpen(false);
+        setQuery("");
+      }
     };
     document.addEventListener("mousedown", onDown);
     return () => document.removeEventListener("mousedown", onDown);
@@ -86,7 +86,7 @@ export function SmartLocationPicker({
       <button
         type="button"
         className={cn(styles.trigger, open && styles.triggerOpen, error && styles.triggerError)}
-        onClick={() => !disabled && setOpen((o) => !o)}
+        onClick={() => { if (!disabled) { if (open) setQuery(""); setOpen((o) => !o); } }}
         disabled={disabled}
         aria-haspopup="listbox"
         aria-expanded={open}
@@ -113,7 +113,7 @@ export function SmartLocationPicker({
                 if (e.key === "ArrowDown") { e.preventDefault(); setActiveIndex((i) => Math.min(i + 1, filtered.length - 1)); }
                 else if (e.key === "ArrowUp") { e.preventDefault(); setActiveIndex((i) => Math.max(i - 1, 0)); }
                 else if (e.key === "Enter")  { e.preventDefault(); if (filtered[activeIndex]) select(filtered[activeIndex]); }
-                else if (e.key === "Escape") { setOpen(false); }
+                else if (e.key === "Escape") { setOpen(false); setQuery(""); }
               }}
             />
           </div>

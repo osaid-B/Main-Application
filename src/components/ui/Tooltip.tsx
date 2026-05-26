@@ -2,8 +2,8 @@ import {
   cloneElement,
   isValidElement,
   useCallback,
+  useEffect,
   useId,
-  useRef,
   useState,
   type FocusEvent,
   type MouseEvent,
@@ -57,23 +57,21 @@ export function Tooltip({
 }: TooltipProps) {
   const tooltipId = useId();
   const [isVisible, setIsVisible] = useState(false);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [pendingShow, setPendingShow] = useState(false);
 
-  const clearTimer = () => {
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
-      timerRef.current = null;
-    }
-  };
+  useEffect(() => {
+    if (!pendingShow) return;
+    const t = setTimeout(() => setIsVisible(true), delay);
+    return () => clearTimeout(t);
+  }, [pendingShow, delay]);
 
   const show = useCallback(() => {
     if (isDisabled) return;
-    clearTimer();
-    timerRef.current = setTimeout(() => setIsVisible(true), delay);
-  }, [delay, isDisabled]);
+    setPendingShow(true);
+  }, [isDisabled]);
 
   const hide = useCallback(() => {
-    clearTimer();
+    setPendingShow(false);
     setIsVisible(false);
   }, []);
 

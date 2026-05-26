@@ -1,5 +1,5 @@
 import "./Purchases.css";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertCircle,
   ArrowUpDown,
@@ -237,10 +237,9 @@ function getMainStatus(status: PurchaseStatusView, isOverdue: boolean): {
 function getProductUnitPrice(product?: Product) {
   if (!product) return 0;
 
-  const productAny = product as any;
-  const purchasePrice = Number(productAny.purchasePrice);
-  const price = Number(productAny.price);
-  const salePrice = Number(productAny.salePrice);
+  const purchasePrice = Number(product.purchasePrice);
+  const price = Number(product.price);
+  const salePrice = Number(product.salePrice);
 
   if (Number.isFinite(purchasePrice) && purchasePrice > 0) return purchasePrice;
   if (Number.isFinite(price) && price > 0) return price;
@@ -394,6 +393,7 @@ export default function Purchases() {
   const [viewMode, setViewMode] = useState<ViewMode>("table");
   const [page, setPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [prevFilterSig, setPrevFilterSig] = useState({ searchTerm, filters, quickStatus, rowsPerPage });
 
   const [formMode, setFormMode] = useState<"add" | "edit">("add");
   const [formOpen, setFormOpen] = useState(false);
@@ -444,6 +444,23 @@ export default function Purchases() {
     };
   }, [showMoreFilters]);
 
+  const forceCloseForm = useCallback(() => {
+    setFormOpen(false);
+    setDiscardConfirmOpen(false);
+    setFormDirty(false);
+    setFormErrors({});
+    setFormState(EMPTY_FORM);
+    setEditingId(null);
+  }, []);
+
+  const requestCloseForm = useCallback(() => {
+    if (formDirty) {
+      setDiscardConfirmOpen(true);
+      return;
+    }
+    forceCloseForm();
+  }, [formDirty, forceCloseForm]);
+
   useEffect(() => {
     if (!formOpen) return;
 
@@ -453,7 +470,7 @@ export default function Purchases() {
 
     document.addEventListener("keydown", handleEscape);
     return () => document.removeEventListener("keydown", handleEscape);
-  }, [formOpen, formDirty]);
+  }, [formOpen, requestCloseForm]);
 
   const rows = useMemo(
     () => buildRows(purchases, suppliers, products),
@@ -463,7 +480,7 @@ export default function Purchases() {
   const rowsMap = useMemo(() => new Map(rows.map((row) => [row.id, row])), [rows]);
 
   const supplierProductMap = useMemo(() => {
-    const activeProducts = products.filter((product) => !(product as any).isDeleted);
+    const activeProducts = products.filter((product) => !product.isDeleted);
 
     return suppliers.reduce<Record<string, Product[]>>((accumulator, supplier, index) => {
       accumulator[supplier.id] = activeProducts.filter(
@@ -481,7 +498,7 @@ export default function Purchases() {
   }, [products, suppliers]);
 
   const formProducts = useMemo(() => {
-    const activeProducts = products.filter((product) => !(product as any).isDeleted);
+    const activeProducts = products.filter((product) => !product.isDeleted);
 
     if (!formState.supplierId) return activeProducts;
 
@@ -569,13 +586,20 @@ export default function Purchases() {
     });
   }, [filters, quickStatus, rows, searchTerm]);
 
+  if (
+    prevFilterSig.searchTerm !== searchTerm ||
+    prevFilterSig.filters !== filters ||
+    prevFilterSig.quickStatus !== quickStatus ||
+    prevFilterSig.rowsPerPage !== rowsPerPage
+  ) {
+    setPrevFilterSig({ searchTerm, filters, quickStatus, rowsPerPage });
+    setPage(1);
+  }
+
   const totalPages = Math.max(1, Math.ceil(filteredRows.length / rowsPerPage));
-  const paginatedRows = filteredRows.slice((page - 1) * rowsPerPage, page * rowsPerPage);
+  const effectivePage = Math.min(page, totalPages);
+  const paginatedRows = filteredRows.slice((effectivePage - 1) * rowsPerPage, effectivePage * rowsPerPage);
   const visibleRows = paginatedRows;
-
-
-  useEffect(() => { setPage(1); }, [searchTerm, filters, quickStatus, rowsPerPage]);
-  useEffect(() => { if (page > totalPages) setPage(totalPages); }, [page, totalPages]);
 
   const activeAdvancedCount = [
     filters.orderDate,
@@ -702,24 +726,6 @@ export default function Purchases() {
     setFormDirty(false);
     setDiscardConfirmOpen(false);
     setFormOpen(true);
-  }
-
-  function forceCloseForm() {
-    setFormOpen(false);
-    setDiscardConfirmOpen(false);
-    setFormDirty(false);
-    setFormErrors({});
-    setFormState(EMPTY_FORM);
-    setEditingId(null);
-  }
-
-  function requestCloseForm() {
-    if (formDirty) {
-      setDiscardConfirmOpen(true);
-      return;
-    }
-
-    forceCloseForm();
   }
 
   function validateForm() {
@@ -885,7 +891,7 @@ export default function Purchases() {
           type="button"
           className="purchase-action-icon edit"
           title={canEdit ? "Edit" : "View"}
-          onClick={(e) => { e.stopPropagation(); canEdit ? openEditModal(row.purchaseId) : setDetailRecord(row); }}
+          onClick={(e) => { e.stopPropagation(); if (canEdit) { openEditModal(row.purchaseId); } else { setDetailRecord(row); } }}
         >
           <Pencil size={15} />
         </button>
@@ -1287,19 +1293,19 @@ export default function Purchases() {
 
               <div className="purch-table-footer">
                 <span>
-                  Showing {filteredRows.length === 0 ? 0 : (page - 1) * rowsPerPage + 1} to{" "}
-                  {Math.min(page * rowsPerPage, filteredRows.length)} of {filteredRows.length} results
+                  Showing {filteredRows.length === 0 ? 0 : (effectivePage - 1) * rowsPerPage + 1} to{" "}
+                  {Math.min(effectivePage * rowsPerPage, filteredRows.length)} of {filteredRows.length} results
                 </span>
                 <div className="purch-footer-right">
                   <div className="purch-pagination">
-                    <button type="button" className="purch-page-btn" disabled={page <= 1}
+                    <button type="button" className="purch-page-btn" disabled={effectivePage <= 1}
                       onClick={() => setPage((p) => p - 1)}>‹</button>
                     {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i + 1).map((n) => (
                       <button key={n} type="button"
-                        className={`purch-page-btn ${page === n ? "active" : ""}`}
+                        className={`purch-page-btn ${effectivePage === n ? "active" : ""}`}
                         onClick={() => setPage(n)}>{n}</button>
                     ))}
-                    <button type="button" className="purch-page-btn" disabled={page >= totalPages}
+                    <button type="button" className="purch-page-btn" disabled={effectivePage >= totalPages}
                       onClick={() => setPage((p) => p + 1)}>›</button>
                   </div>
                   <div className="purch-rows-select">
@@ -1762,7 +1768,7 @@ export default function Purchases() {
                             <span>New supplier will be saved globally.</span>
                           )}
                           {selectedProduct && (
-                            <span>{(selectedProduct as any).stock ?? 0} in stock now</span>
+                            <span>{selectedProduct.stock ?? 0} in stock now</span>
                           )}
                         </div>
                       )}

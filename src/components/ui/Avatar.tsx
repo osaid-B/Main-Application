@@ -1,6 +1,5 @@
 import {
   forwardRef,
-  useEffect,
   useState,
   type HTMLAttributes,
 } from "react";
@@ -53,11 +52,11 @@ export const Avatar = forwardRef<HTMLSpanElement, AvatarProps>(function Avatar(
   ref,
 ) {
   const [imgError, setImgError] = useState(false);
-
-  // Reset error state when src changes so a new URL can attempt to load.
-  useEffect(() => {
+  const [prevSrc, setPrevSrc] = useState(src);
+  if (prevSrc !== src) {
+    setPrevSrc(src);
     setImgError(false);
-  }, [src]);
+  }
 
   const showImage = Boolean(src) && !imgError;
   const initials = getInitials(name);

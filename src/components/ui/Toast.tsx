@@ -114,9 +114,10 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
   // Cleanup all timers on unmount.
   useEffect(() => {
+    const timers = timersRef.current;
     return () => {
-      timersRef.current.forEach((handle) => window.clearTimeout(handle));
-      timersRef.current.clear();
+      timers.forEach((handle) => window.clearTimeout(handle));
+      timers.clear();
     };
   }, []);
 

@@ -1,4 +1,3 @@
-/* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { translations, type AppLanguage } from "../i18n/translations";
 import { localizeDocument } from "../i18n/staticCopy";

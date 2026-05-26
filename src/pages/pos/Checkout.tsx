@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Barcode,
   Plus,
@@ -36,6 +36,7 @@ export default function Checkout() {
   const [customer, setCustomer] = useState<LoyaltyCustomer | null>(null);
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [now, setNow] = useState(new Date());
+  const [saleId] = useState(() => (9821 + Math.floor(Math.random() * 100)).toString().slice(0, 4));
 
   useEffect(() => {
     const t = window.setInterval(() => setNow(new Date()), 1000);
@@ -94,6 +95,10 @@ export default function Checkout() {
     return { subtotal, tax, total, itemsCount, lines: cart.length };
   }, [cart]);
 
+  const attachWalkInDemo = useCallback(() => {
+    setCustomer(LOYALTY_CUSTOMERS[0]);
+  }, []);
+
   // Keyboard shortcuts F1-F12
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -105,13 +110,7 @@ export default function Checkout() {
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-    // attachWalkInDemo is stable
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cart.length]);
-
-  function attachWalkInDemo() {
-    setCustomer(LOYALTY_CUSTOMERS[0]);
-  }
+  }, [cart.length, attachWalkInDemo]);
 
   const time = now.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 
@@ -142,7 +141,7 @@ export default function Checkout() {
           <header className={styles.cartHeader}>
             <div>
               <h2>السلة الحالية</h2>
-              <span className={styles.cartSubId}>POS-{(9821 + Math.floor(Math.random() * 100)).toString().slice(0, 4)}</span>
+              <span className={styles.cartSubId}>POS-{saleId}</span>
             </div>
             <Button variant="ghost" size="sm" onClick={clearCart} disabled={cart.length === 0} leftIcon={<Trash2 size={12} />}>
               إفراغ

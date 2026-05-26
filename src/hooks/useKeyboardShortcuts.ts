@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 
 type ShortcutHandler = () => void;
@@ -25,17 +25,17 @@ export function useKeyboardShortcuts(
   const pendingN = useRef(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const resetSequence = () => {
+  const resetSequence = useCallback(() => {
     pendingG.current = false;
     pendingN.current = false;
     if (timerRef.current) clearTimeout(timerRef.current);
-  };
+  }, []);
 
-  const arm = (flag: { current: boolean }) => {
+  const arm = useCallback((flag: { current: boolean }) => {
     resetSequence();
     flag.current = true;
     timerRef.current = setTimeout(resetSequence, GO_TIMEOUT);
-  };
+  }, [resetSequence]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -133,7 +133,7 @@ export function useKeyboardShortcuts(
       window.removeEventListener("keydown", handler);
       resetSequence();
     };
-  }, [navigate, onFocusSearch, onToggleHelp, onToggleDark, onLogout]);
+  }, [navigate, onFocusSearch, onToggleHelp, onToggleDark, onLogout, arm, resetSequence]);
 
   return [
     { keys: "Ctrl K",     description: "Focus search",      action: onFocusSearch, group: "general" },
