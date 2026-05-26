@@ -151,11 +151,6 @@ const EMPTY_FORM: InvoiceFormState = {
 
 const TAB_ORDER: TabKey[] = ["customer", "supplier", "internal"];
 
-const TAB_ICONS: Record<TabKey, typeof Users> = {
-  customer: Users,
-  supplier: Truck,
-  internal: Building2,
-};
 
 function ModalPortal({ children }: { children: ReactNode }) {
   if (typeof document === "undefined") return null;
@@ -573,6 +568,13 @@ function seedInvoices(
 
 export default function Invoices() {
   const { t } = useSettings();
+
+  const TAB_CONFIG: Record<TabKey, { label: string; tableTitle: string; icon: typeof Users }> = {
+    customer: { label: t.invoices.tabs.customer, tableTitle: t.invoices.tabs.customer, icon: Users },
+    supplier: { label: t.invoices.tabs.supplier, tableTitle: t.invoices.tabs.supplier, icon: Truck },
+    internal: { label: t.invoices.tabs.internal, tableTitle: t.invoices.tabs.internal, icon: Building2 },
+  };
+
   const [customers] = useState<Customer[]>(() => getCustomers());
   const [suppliers] = useState<Supplier[]>(() => getSuppliers());
   const [products] = useState<Product[]>(() => getProducts());
@@ -1065,12 +1067,12 @@ export default function Invoices() {
     if (!formState.id) return;
 
     if (editDeleteCode.trim() !== "123") {
-      setEditDeleteError("Type 123 to confirm deletion.");
+      setEditDeleteError(t.invoices.delete.error);
       return;
     }
 
     setRecords((current) => current.filter((record) => record.id !== formState.id));
-    pushToast("Invoice deleted.");
+    pushToast(t.invoices.toast.deleted);
     closeFormModal();
   }
 
@@ -1101,7 +1103,7 @@ export default function Invoices() {
         : current
     );
 
-    pushToast("Invoice marked as paid.");
+    pushToast(t.invoices.toast.markedPaid);
   }
 
   return (
@@ -1114,12 +1116,12 @@ export default function Invoices() {
               <FileText size={22} />
             </div>
             <div className="inv-header-copy">
-              <h1>Invoice Management</h1>
-              <p>Create, track, and manage all your customer, supplier, and internal invoices.</p>
+              <h1>{t.invoices.pageTitle}</h1>
+              <p>{t.invoices.pageSubtitle}</p>
             </div>
           </div>
           <Button variant="primary" onClick={() => openAddModal(activeTab)} leftIcon={<Plus size={16} />} className="inv-new-btn">
-            New Invoice
+            {t.invoices.newInvoice}
           </Button>
         </div>
 
@@ -1156,7 +1158,7 @@ export default function Invoices() {
               variant="search"
               value={filters.search}
               onChange={(event) => updateFilter("search", event.target.value)}
-              placeholder="Search invoice, name, product, or status"
+              placeholder={t.invoices.searchPlaceholder}
               leftIcon={<Search size={17} />}
               fullWidth
             />
@@ -1169,7 +1171,7 @@ export default function Invoices() {
                 onClick={() => setShowFilterMenu((current) => !current)}
               >
                 <Filter size={15} />
-                Filter
+                {t.invoices.filterBtn}
                 {activeFilterCount > 0 && (
                   <span className="toolbar-chip-count">{activeFilterCount}</span>
                 )}
@@ -1178,37 +1180,37 @@ export default function Invoices() {
               {showFilterMenu && (
                 <div className="invoice-filter-dropdown professional-filter-dropdown">
                   <Select
-                    label="Status"
+                    label={t.invoices.filter.status}
                     value={filters.status}
                     onChange={(event) =>
                       updateFilter("status", event.target.value as FilterState["status"])
                     }
                     options={[
-                      { value: "all", label: "All Statuses" },
-                      { value: "Paid", label: "Paid" },
-                      { value: "Partial", label: "Partial" },
-                      { value: "Unpaid", label: "Unpaid" },
+                      { value: "all", label: t.invoices.filter.allStatuses },
+                      { value: "Paid", label: t.invoices.status.paid },
+                      { value: "Partial", label: t.invoices.status.partial },
+                      { value: "Unpaid", label: t.invoices.status.unpaid },
                     ]}
                     fullWidth
                   />
 
                   <Select
-                    label="Due"
+                    label={t.invoices.filter.due}
                     value={filters.due}
                     onChange={(event) =>
                       updateFilter("due", event.target.value as DueFilter)
                     }
                     options={[
-                      { value: "all", label: "All Due Dates" },
-                      { value: "late", label: "Late" },
-                      { value: "today", label: "Due Today" },
-                      { value: "week", label: "Due This Week" },
+                      { value: "all", label: t.invoices.filter.allDue },
+                      { value: "late", label: t.invoices.filter.late },
+                      { value: "today", label: t.invoices.filter.dueToday },
+                      { value: "week", label: t.invoices.filter.dueThisWeek },
                     ]}
                     fullWidth
                   />
 
                   <Select
-                    label="Payment Method"
+                    label={t.invoices.filter.paymentMethod}
                     value={filters.paymentMethod}
                     onChange={(event) =>
                       updateFilter(
@@ -1217,17 +1219,17 @@ export default function Invoices() {
                       )
                     }
                     options={[
-                      { value: "all", label: "All Methods" },
-                      { value: "Cash", label: "كاش" },
-                      { value: "Card", label: "بطاقة" },
-                      { value: "Bank Transfer", label: "حوالة بنكية" },
+                      { value: "all", label: t.invoices.filter.allMethods },
+                      { value: "Cash", label: t.invoices.methods.cash },
+                      { value: "Card", label: t.invoices.methods.card },
+                      { value: "Bank Transfer", label: t.invoices.methods.bankTransfer },
                     ]}
                     fullWidth
                   />
 
                   <div className="filter-two-cols">
                     <Input
-                      label="Min Amount"
+                      label={t.invoices.filter.minAmount}
                       variant="number"
                       min="0"
                       value={filters.minAmount}
@@ -1237,36 +1239,36 @@ export default function Invoices() {
                     />
 
                     <Input
-                      label="Max Amount"
+                      label={t.invoices.filter.maxAmount}
                       variant="number"
                       min="0"
                       value={filters.maxAmount}
                       onChange={(event) => updateFilter("maxAmount", event.target.value)}
-                      placeholder="Any"
+                      placeholder={t.invoices.filter.anyPlaceholder}
                       fullWidth
                     />
                   </div>
 
                   <Select
-                    label="Sort By"
+                    label={t.invoices.filter.sortBy}
                     value={filters.sortBy}
                     onChange={(event) =>
                       updateFilter("sortBy", event.target.value as SortKey)
                     }
                     options={[
-                      { value: "newest", label: "Newest Created" },
-                      { value: "oldest", label: "Oldest Created" },
-                      { value: "dueSoon", label: "Due Soon First" },
-                      { value: "amountHigh", label: "Total: High to Low" },
-                      { value: "amountLow", label: "Total: Low to High" },
-                      { value: "amountDueHigh", label: "Amount Due: High to Low" },
+                      { value: "newest", label: t.invoices.filter.newest },
+                      { value: "oldest", label: t.invoices.filter.oldest },
+                      { value: "dueSoon", label: t.invoices.filter.dueSoon },
+                      { value: "amountHigh", label: t.invoices.filter.amountHigh },
+                      { value: "amountLow", label: t.invoices.filter.amountLow },
+                      { value: "amountDueHigh", label: t.invoices.filter.amountDueHigh },
                     ]}
                     fullWidth
                   />
 
                   <div className="invoice-filter-actions">
-                    <Button variant="secondary" onClick={resetFilters}>Reset</Button>
-                    <Button variant="primary" onClick={() => setShowFilterMenu(false)}>Apply</Button>
+                    <Button variant="secondary" onClick={resetFilters}>{t.common.reset}</Button>
+                    <Button variant="primary" onClick={() => setShowFilterMenu(false)}>{t.common.apply}</Button>
                   </div>
                 </div>
               )}
@@ -1284,14 +1286,14 @@ export default function Invoices() {
               <table className="invoice-table app-data-table">
                 <thead>
                   <tr>
-                    <th>Invoice</th>
-                    <th>{getPartyLabel(activeTab)}</th>
-                    <th>Product</th>
-                    <th>Issue Date</th>
-                    <th>Total</th>
-                    <th>Amount Due</th>
-                    <th>{activeTab === "internal" ? "Approval" : "Status"}</th>
-                    <th>Actions</th>
+                    <th>{t.invoices.cols.invoice}</th>
+                    <th>{getPartyLabel(activeTab, t)}</th>
+                    <th>{t.invoices.cols.product}</th>
+                    <th>{t.invoices.cols.issueDate}</th>
+                    <th>{t.invoices.cols.total}</th>
+                    <th>{t.invoices.cols.amountDue}</th>
+                    <th>{activeTab === "internal" ? t.invoices.cols.approval : t.invoices.cols.status}</th>
+                    <th>{t.invoices.cols.actions}</th>
                   </tr>
                 </thead>
 
@@ -1320,7 +1322,7 @@ export default function Invoices() {
 
                           <td>
                             <div className="party-cell">
-                              <strong>{firstItem?.label ?? "No product"}</strong>
+                              <strong>{firstItem?.label ?? t.invoices.noProduct}</strong>
                             </div>
                           </td>
 
@@ -1349,7 +1351,7 @@ export default function Invoices() {
                                   variant={invoice.approvedBy ? "success" : "warning"}
                                   className={`status-pill ${invoice.approvedBy ? "approved" : "pending-approval"}`}
                                 >
-                                  {invoice.approvedBy ? "Approved" : "Needs Approval"}
+                                  {invoice.approvedBy ? t.invoices.status.approved : t.invoices.status.needsApproval}
                                 </Badge>
                               </div>
                             ) : (
@@ -1365,7 +1367,7 @@ export default function Invoices() {
                                 }
                                 className={`status-pill ${late ? "overdue" : invoice.status.toLowerCase()}`}
                               >
-                                {late ? "Late" : invoice.status}
+                                {late ? t.invoices.status.late : invoice.status}
                               </Badge>
                             )}
                           </td>
@@ -1376,7 +1378,7 @@ export default function Invoices() {
                                 variant="icon"
                                 size="sm"
                                 className="inv-action-btn view"
-                                title="View"
+                                title={t.common.view}
                                 onClick={() => setDetailInvoice(invoice)}
                               >
                                 <Eye size={15} />
@@ -1386,7 +1388,7 @@ export default function Invoices() {
                                 variant="icon"
                                 size="sm"
                                 className="inv-action-btn edit"
-                                title="Edit"
+                                title={t.common.edit}
                                 onClick={() => openEditModal(invoice)}
                               >
                                 <Pencil size={15} />
@@ -1401,7 +1403,7 @@ export default function Invoices() {
                       <td colSpan={8}>
                         <div className="empty-state">
                           <FileText size={34} />
-                          <h3>No invoices found</h3>
+                          <h3>{t.invoices.noInvoices}</h3>
 
                           <Button
                             variant="primary"
@@ -1409,7 +1411,7 @@ export default function Invoices() {
                             leftIcon={<Plus size={16} />}
                             className="primary-action"
                           >
-                            Add Invoice
+                            {t.invoices.addInvoice}
                           </Button>
                         </div>
                       </td>
@@ -1421,7 +1423,7 @@ export default function Invoices() {
 
           <div className="inv-table-footer">
             <span>
-              Showing {filteredRecords.length} invoice{filteredRecords.length === 1 ? "" : "s"}
+              {t.invoices.showing} {filteredRecords.length} {filteredRecords.length === 1 ? t.invoices.invoice : t.invoices.invoices}
             </span>
           </div>
         </div>
@@ -1430,13 +1432,13 @@ export default function Invoices() {
       <Modal
         isOpen={formOpen}
         onClose={requestCloseFormModal}
-        title={formMode === "add" ? "Create Invoice" : "Edit Invoice"}
+        title={formMode === "add" ? t.invoices.form.createTitle : t.invoices.form.editTitle}
         size="lg"
         className="modal-card invoice-centered-modal"
         footer={
           <>
             <Button variant="secondary" onClick={requestCloseFormModal} className="secondary-action">
-              Cancel
+              {t.common.cancel}
             </Button>
             <Button
               variant="primary"
@@ -1445,7 +1447,7 @@ export default function Invoices() {
               leftIcon={<Check size={16} />}
               className="primary-action"
             >
-              Save
+              {t.common.save}
             </Button>
           </>
         }
@@ -1472,21 +1474,21 @@ export default function Invoices() {
                     <section className="form-cluster">
                       <div className="form-grid form-grid-top">
                         <label className="field-stack">
-                          <span>Type</span>
+                          <span>{t.invoices.form.type}</span>
                           <select
                             name="type"
                             value={formState.type}
                             onChange={handleFormChange}
                             autoComplete="off"
                           >
-                            <option value="customer">Customer Invoices</option>
-                            <option value="supplier">Supplier Invoices</option>
-                            <option value="internal">Internal Invoices</option>
+                            <option value="customer">{t.invoices.tabs.customer}</option>
+                            <option value="supplier">{t.invoices.tabs.supplier}</option>
+                            <option value="internal">{t.invoices.tabs.internal}</option>
                           </select>
                         </label>
 
                         <label className="field-stack">
-                          <span>Title</span>
+                          <span>{t.invoices.form.title}</span>
                           <input
                             name="invoiceTitleNoAutofill"
                             autoComplete="off"
@@ -1502,7 +1504,7 @@ export default function Invoices() {
                         </label>
 
                         <label className="field-stack">
-                          <span>Issue Date</span>
+                          <span>{t.invoices.form.issueDate}</span>
                           <input
                             type="date"
                             name="issueDate"
@@ -1517,7 +1519,7 @@ export default function Invoices() {
                       <div className="form-grid form-grid-inline">
                         {formState.type === "customer" ? (
                           <div className="field-stack smart-customer-field" ref={customerMenuRef}>
-                            <span>Customer</span>
+                            <span>{t.invoices.form.customer}</span>
 
                             <div className="smart-combobox">
                               <Search size={15} />
@@ -1542,7 +1544,7 @@ export default function Invoices() {
                                   }));
                                 }}
                                 onFocus={() => setShowCustomerMenu(true)}
-                                placeholder="Search customer by name, email, or phone"
+                                placeholder={t.invoices.form.searchCustomer}
                                 required
                               />
                             </div>
@@ -1558,13 +1560,13 @@ export default function Invoices() {
                                     >
                                       <strong>{customer.name}</strong>
                                       <span>
-                                        {customer.email || customer.phone || "No contact info"}
+                                        {customer.email || customer.phone || t.invoices.form.noContactInfo}
                                       </span>
                                     </button>
                                   ))
                                 ) : (
                                   <div className="smart-customer-empty">
-                                    No customers found
+                                    {t.invoices.form.noCustomers}
                                   </div>
                                 )}
                               </div>
@@ -1572,7 +1574,7 @@ export default function Invoices() {
                           </div>
                         ) : formState.type === "supplier" ? (
                           <label className="field-stack">
-                            <span>Supplier</span>
+                            <span>{t.invoices.form.supplier}</span>
                             <select
                               name="supplierPickerNoBrowserAutofill"
                               value={formState.supplierId}
@@ -1591,7 +1593,7 @@ export default function Invoices() {
                               }}
                               required
                             >
-                              <option value="">Select supplier</option>
+                              <option value="">{t.invoices.form.selectSupplier}</option>
                               {supplierOptions.map((supplier) => (
                                 <option key={supplier.id} value={supplier.id}>
                                   {supplier.name}
@@ -1601,7 +1603,7 @@ export default function Invoices() {
                           </label>
                         ) : (
                           <label className="field-stack">
-                            <span>Department</span>
+                            <span>{t.invoices.form.department}</span>
                             <input
                               name="partyName"
                               value={formState.partyName}
@@ -1617,7 +1619,7 @@ export default function Invoices() {
                     <section className="form-cluster">
                       <div className="form-grid form-grid-financial">
                         <label className="field-stack">
-                          <span>Product</span>
+                          <span>{t.invoices.form.product}</span>
                           <select
                             name="productId"
                             value={formState.productId}
@@ -1625,7 +1627,7 @@ export default function Invoices() {
                             autoComplete="off"
                             required
                           >
-                            <option value="">Select product</option>
+                            <option value="">{t.invoices.form.selectProduct}</option>
                             {productOptions.map((product) => (
                               <option key={product.id} value={product.id}>
                                 {product.name} - {money(product.price, formState.currency)}
@@ -1635,7 +1637,7 @@ export default function Invoices() {
                         </label>
 
                         <label className="field-stack">
-                          <span>Quantity</span>
+                          <span>{t.invoices.form.quantity}</span>
                           <input
                             name="quantity"
                             type="number"
@@ -1648,7 +1650,7 @@ export default function Invoices() {
                         </label>
 
                         <label className="field-stack">
-                          <span>Unit Price</span>
+                          <span>{t.invoices.form.unitPrice}</span>
                           <input
                             name="unitPrice"
                             type="number"
@@ -1662,7 +1664,7 @@ export default function Invoices() {
                         </label>
 
                         <label className="field-stack">
-                          <span>Paid Amount</span>
+                          <span>{t.invoices.form.paidAmount}</span>
                           <input
                             name="paidAmount"
                             type="number"
@@ -1675,7 +1677,7 @@ export default function Invoices() {
                         </label>
 
                         <label className="field-stack">
-                          <span>Currency</span>
+                          <span>{t.invoices.form.currency}</span>
                           <select
                             name="currency"
                             value={formState.currency}
@@ -1690,23 +1692,23 @@ export default function Invoices() {
                         </label>
 
                         <label className="field-stack">
-                          <span>Payment Method</span>
+                          <span>{t.invoices.form.paymentMethod}</span>
                           <select
                             name="paymentMethod"
                             value={formState.paymentMethod}
                             onChange={handleFormChange}
                             autoComplete="off"
                           >
-                            <option value="Cash">كاش</option>
-                            <option value="Card">بطاقة</option>
-                            <option value="Bank Transfer">حوالة بنكية</option>
+                            <option value="Cash">{t.invoices.methods.cash}</option>
+                            <option value="Card">{t.invoices.methods.card}</option>
+                            <option value="Bank Transfer">{t.invoices.methods.bankTransfer}</option>
                           </select>
                         </label>
                       </div>
 
                       <div className="invoice-auto-price-box">
                         <div>
-                          <span>Total</span>
+                          <span>{t.invoices.form.total}</span>
                           <strong>
                             {money(
                               normalizeNumber(formState.quantity) *
@@ -1717,12 +1719,12 @@ export default function Invoices() {
                         </div>
 
                         <div>
-                          <span>Paid</span>
+                          <span>{t.invoices.form.paid}</span>
                           <strong>{money(normalizeNumber(formState.paidAmount), formState.currency)}</strong>
                         </div>
 
                         <div>
-                          <span>Amount Due</span>
+                          <span>{t.invoices.form.amountDue}</span>
                           <strong>
                             {money(
                               Math.max(
@@ -1742,7 +1744,7 @@ export default function Invoices() {
                       <section className="form-cluster">
                         <div className="form-grid">
                           <label className="field-stack">
-                            <span>Department</span>
+                            <span>{t.invoices.form.department}</span>
                             <input
                               name="department"
                               value={formState.department}
@@ -1752,7 +1754,7 @@ export default function Invoices() {
                           </label>
 
                           <label className="field-stack">
-                            <span>Category</span>
+                            <span>{t.invoices.form.category}</span>
                             <input
                               name="category"
                               value={formState.category}
@@ -1762,22 +1764,22 @@ export default function Invoices() {
                           </label>
 
                           <label className="field-stack">
-                            <span>Priority</span>
+                            <span>{t.invoices.form.priorityLabel}</span>
                             <select
                               name="priority"
                               value={formState.priority}
                               onChange={handleFormChange}
                               autoComplete="off"
                             >
-                              <option value="Low">Low</option>
-                              <option value="Medium">Medium</option>
-                              <option value="High">High</option>
-                              <option value="Critical">Critical</option>
+                              <option value="Low">{t.invoices.priority.low}</option>
+                              <option value="Medium">{t.invoices.priority.medium}</option>
+                              <option value="High">{t.invoices.priority.high}</option>
+                              <option value="Critical">{t.invoices.priority.critical}</option>
                             </select>
                           </label>
 
                           <label className="field-stack">
-                            <span>Approved By</span>
+                            <span>{t.invoices.form.approvedBy}</span>
                             <input
                               name="approvedBy"
                               value={formState.approvedBy}
@@ -1792,7 +1794,7 @@ export default function Invoices() {
                     <section className="form-cluster">
                       <div className="form-grid">
                         <label className="field-stack full">
-                          <span>Notes</span>
+                          <span>{t.invoices.form.notes}</span>
                           <textarea
                             name="notes"
                             value={formState.notes}
@@ -1808,8 +1810,8 @@ export default function Invoices() {
                       <section className="form-cluster edit-delete-zone">
                         <div className="edit-delete-zone-head">
                           <div>
-                            <h3>Delete Invoice</h3>
-                            <p>Type 123 to confirm deletion.</p>
+                            <h3>{t.invoices.delete.title}</h3>
+                            <p>{t.invoices.delete.hint}</p>
                           </div>
                         </div>
 
@@ -1820,13 +1822,13 @@ export default function Invoices() {
                               setEditDeleteCode(event.target.value);
                               setEditDeleteError("");
                             }}
-                            placeholder="Type 123"
+                            placeholder={t.invoices.delete.placeholder}
                             autoComplete="off"
                           />
 
                           <button type="button" className="danger-action" onClick={requestDeleteFromEdit}>
                             <Trash2 size={16} />
-                            Delete
+                            {t.invoices.delete.confirmBtn}
                           </button>
                         </div>
 
@@ -1862,64 +1864,64 @@ export default function Invoices() {
               <div className="modal-body">
                 <div className="drawer-grid">
                   <section className="info-card">
-                    <h3>Invoice</h3>
+                    <h3>{t.invoices.detail.invoiceSection}</h3>
 
                     <dl>
                       <div>
-                        <dt>Type</dt>
+                        <dt>{t.invoices.detail.type}</dt>
                         <dd>{TAB_CONFIG[detailInvoice.type].label}</dd>
                       </div>
 
                       <div>
-                        <dt>{getPartyLabel(detailInvoice.type)}</dt>
+                        <dt>{getPartyLabel(detailInvoice.type, t)}</dt>
                         <dd>{detailInvoice.partyName}</dd>
                       </div>
 
                       <div>
-                        <dt>Status</dt>
-                        <dd>{isLate(detailInvoice) ? "Late" : detailInvoice.status}</dd>
+                        <dt>{t.invoices.detail.status}</dt>
+                        <dd>{isLate(detailInvoice) ? t.invoices.status.late : detailInvoice.status}</dd>
                       </div>
 
                       <div>
-                        <dt>Issue Date</dt>
+                        <dt>{t.invoices.detail.issueDate}</dt>
                         <dd>{formatDate(detailInvoice.issueDate)}</dd>
                       </div>
 
                       <div>
-                        <dt>Payment</dt>
-                        <dd>{paymentLabel(detailInvoice.paymentMethod)}</dd>
+                        <dt>{t.invoices.detail.payment}</dt>
+                        <dd>{paymentLabel(detailInvoice.paymentMethod, t)}</dd>
                       </div>
                     </dl>
                   </section>
 
                   <section className="info-card">
-                    <h3>Amounts</h3>
+                    <h3>{t.invoices.detail.amountsSection}</h3>
 
                     <dl>
                       <div>
-                        <dt>Total</dt>
+                        <dt>{t.invoices.detail.total}</dt>
                         <dd>{money(detailInvoice.totalAmount, detailInvoice.currency)}</dd>
                       </div>
 
                       <div>
-                        <dt>Paid</dt>
+                        <dt>{t.invoices.detail.paid}</dt>
                         <dd>{money(detailInvoice.paidAmount, detailInvoice.currency)}</dd>
                       </div>
 
                       <div>
-                        <dt>Amount Due</dt>
+                        <dt>{t.invoices.detail.amountDue}</dt>
                         <dd>{money(detailInvoice.remainingAmount, detailInvoice.currency)}</dd>
                       </div>
 
                       <div>
-                        <dt>Linked Record</dt>
+                        <dt>{t.invoices.detail.linkedRecord}</dt>
                         <dd>{detailInvoice.linkedRecord}</dd>
                       </div>
                     </dl>
                   </section>
 
                   <section className="info-card full">
-                    <h3>Product</h3>
+                    <h3>{t.invoices.detail.productSection}</h3>
 
                     <dl>
                       {detailInvoice.items.map((item) => (
@@ -1935,7 +1937,7 @@ export default function Invoices() {
 
                   {detailInvoice.notes && (
                     <section className="info-card full">
-                      <h3>Notes</h3>
+                      <h3>{t.invoices.detail.notesSection}</h3>
                       <p>{detailInvoice.notes}</p>
                     </section>
                   )}
@@ -1948,7 +1950,7 @@ export default function Invoices() {
                   className="secondary-action"
                   onClick={() => setDetailInvoice(null)}
                 >
-                  Close
+                  {t.invoices.detail.close}
                 </button>
 
                 {detailInvoice.status !== "Paid" && (
@@ -1958,7 +1960,7 @@ export default function Invoices() {
                     onClick={() => markAsPaid(detailInvoice)}
                   >
                     <Check size={16} />
-                    Mark Paid
+                    {t.invoices.detail.markPaid}
                   </button>
                 )}
               </div>
@@ -1979,19 +1981,17 @@ export default function Invoices() {
               </div>
 
               <div className="discard-confirm-content">
-                <h2>Discard changes?</h2>
-                <p>
-                  You have unsaved invoice data. If you close this window, your changes will be lost.
-                </p>
+                <h2>{t.invoices.discard.title}</h2>
+                <p>{t.invoices.discard.text}</p>
               </div>
 
               <div className="discard-confirm-actions">
                 <button type="button" className="secondary-action" onClick={keepEditing}>
-                  Continue Editing
+                  {t.invoices.discard.continueEditing}
                 </button>
 
                 <button type="button" className="danger-action" onClick={confirmDiscardChanges}>
-                  Discard
+                  {t.invoices.discard.discard}
                 </button>
               </div>
             </div>
