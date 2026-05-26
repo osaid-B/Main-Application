@@ -16,8 +16,6 @@ import {
 } from "../../data/posMock";
 import styles from "./Receipts.module.css";
 
-type DateFilter = "all" | "today" | "week" | "month";
-
 const STATUS_VARIANT: Record<PosReceiptStatus, "success" | "warning" | "neutral"> = {
   completed: "success",
   refunded:  "warning",
@@ -31,41 +29,61 @@ const METHOD_VARIANT: Record<PosPaymentMethod, "info" | "success" | "neutral" | 
   split:  "warning",
 };
 
-const TODAY = "2026-05-26";
-const WEEK_START = "2026-05-20";
-const MONTH_START = "2026-05-01";
+const TODAY     = "2026-05-26";
+const YESTERDAY = "2026-05-25";
+
+const CASHIER_IDS = ["CSH-01", "CSH-02", "CSH-03", "CSH-04", "CSH-05"] as const;
+const CASHIER_NAMES: Record<string, string> = {
+  "CSH-01": "Ahmad Qasim",
+  "CSH-02": "Mona Ibrahim",
+  "CSH-03": "Laila Mansour",
+  "CSH-04": "Karim Nasser",
+  "CSH-05": "Hana Saeed",
+};
 
 export default function Receipts() {
   const { t, formatCurrency } = useSettings();
   const tc = t.pos.receipts;
 
-  const [query, setQuery] = useState("");
-  const [dateFilter, setDateFilter] = useState<DateFilter>("all");
-  const [selected, setSelected] = useState<PosReceipt | null>(null);
+  const [query,         setQuery]         = useState("");
+  const [cashierFilter, setCashierFilter] = useState("");
+  const [methodFilter,  setMethodFilter]  = useState<PosPaymentMethod | "">("");
+  const [statusFilter,  setStatusFilter]  = useState<PosReceiptStatus | "">("");
+  const [selected,      setSelected]      = useState<PosReceipt | null>(null);
 
   const filtered = useMemo(() => {
     return POS_RECEIPTS.filter((r) => {
-      if (dateFilter === "today"  && r.date < TODAY)       return false;
-      if (dateFilter === "week"   && r.date < WEEK_START)  return false;
-      if (dateFilter === "month"  && r.date < MONTH_START) return false;
+      if (cashierFilter && r.cashierId !== cashierFilter) return false;
+      if (methodFilter  && r.paymentMethod !== methodFilter)  return false;
+      if (statusFilter  && r.status !== statusFilter)          return false;
       if (!query) return true;
       const q = query.toLowerCase();
       return r.id.toLowerCase().includes(q) || r.cashierName.toLowerCase().includes(q);
     });
-  }, [query, dateFilter]);
+  }, [query, cashierFilter, methodFilter, statusFilter]);
 
-  const todayRows  = POS_RECEIPTS.filter((r) => r.date === TODAY);
-  const todayCount = todayRows.length;
-  const todaySales = todayRows.reduce((s, r) => s + r.total, 0);
-  const avgReceipt = todayCount > 0 ? todaySales / todayCount : 0;
-  const refunds    = todayRows.filter((r) => r.status === "refunded").length;
+  const todayRows     = POS_RECEIPTS.filter((r) => r.date === TODAY);
+  const yesterdayRows = POS_RECEIPTS.filter((r) => r.date === YESTERDAY);
 
-  const DATE_FILTERS: Array<{ value: DateFilter; label: string }> = [
-    { value: "all",   label: tc.filters.all   },
-    { value: "today", label: tc.filters.today  },
-    { value: "week",  label: tc.filters.week   },
-    { value: "month", label: tc.filters.month  },
-  ];
+  const todayCount  = todayRows.length;
+  const todaySales  = todayRows.reduce((s, r) => s + r.total, 0);
+  const avgReceipt  = todayCount > 0 ? todaySales / todayCount : 0;
+  const refunds     = todayRows.filter((r) => r.status === "refunded").length;
+
+  const yesterdayCount  = yesterdayRows.length;
+  const yesterdaySales  = yesterdayRows.reduce((s, r) => s + r.total, 0);
+  const yesterdayAvg    = yesterdayCount > 0 ? yesterdaySales / yesterdayCount : 0;
+  const yesterdayRefund = yesterdayRows.filter((r) => r.status === "refunded").length;
+
+  const deltaCount  = todayCount  - yesterdayCount;
+  const deltaSales  = todaySales  - yesterdaySales;
+  const deltaAvg    = avgReceipt  - yesterdayAvg;
+  const deltaRefund = refunds     - yesterdayRefund;
+
+  function fmtDelta(n: number, isCurrency = false) {
+    const sign = n >= 0 ? "+" : "";
+    return `${sign}${isCurrency ? formatCurrency(n) : String(n)} vs yesterday`;
+  }
 
   return (
     <Container maxWidth="full" padding="md">
@@ -80,10 +98,10 @@ export default function Receipts() {
         </header>
 
         <Grid cols={4} gap="md" responsive>
-          <Kpi label={tc.kpi.todayCount} value={String(todayCount)}                tone="success" sub={tc.kpi.todayCountSub} />
-          <Kpi label={tc.kpi.todaySales} value={formatCurrency(todaySales)}        tone="info"    sub={tc.kpi.todaySalesSub} />
-          <Kpi label={tc.kpi.avgReceipt} value={formatCurrency(avgReceipt)}        tone="success" sub={tc.kpi.avgReceiptSub} />
-          <Kpi label={tc.kpi.refunds}    value={String(refunds)}                   tone="danger"  sub={tc.kpi.refundsSub} />
+          <Kpi label={tc.kpi.todayCount} value={String(todayCount)}         tone="success" sub={fmtDelta(deltaCount)} />
+          <Kpi label={tc.kpi.todaySales} value={formatCurrency(todaySales)} tone="info"    sub={fmtDelta(deltaSales, true)} />
+          <Kpi label={tc.kpi.avgReceipt} value={formatCurrency(avgReceipt)} tone="success" sub={fmtDelta(deltaAvg, true)} />
+          <Kpi label={tc.kpi.refunds}    value={String(refunds)}            tone="danger"  sub={fmtDelta(deltaRefund)} />
         </Grid>
 
         <div className={styles.filters}>
@@ -95,20 +113,40 @@ export default function Receipts() {
               onChange={(e) => setQuery(e.target.value)}
               leftIcon={<Search size={14} />}
             />
-          </div>
-          <div className={styles.actionTabs} role="tablist">
-            {DATE_FILTERS.map((f) => (
-              <button
-                key={f.value}
-                type="button"
-                role="tab"
-                aria-selected={dateFilter === f.value}
-                className={`${styles.actionTab} ${dateFilter === f.value ? styles.actionTabActive : ""}`}
-                onClick={() => setDateFilter(f.value)}
-              >
-                {f.label}
-              </button>
-            ))}
+            <select
+              className={styles.filterSelect}
+              value={cashierFilter}
+              onChange={(e) => setCashierFilter(e.target.value)}
+              aria-label={tc.filters.cashier}
+            >
+              <option value="">{tc.filters.allCashiers}</option>
+              {CASHIER_IDS.map((id) => (
+                <option key={id} value={id}>{CASHIER_NAMES[id]}</option>
+              ))}
+            </select>
+            <select
+              className={styles.filterSelect}
+              value={methodFilter}
+              onChange={(e) => setMethodFilter(e.target.value as PosPaymentMethod | "")}
+              aria-label={tc.filters.paymentMethod}
+            >
+              <option value="">{tc.filters.allMethods}</option>
+              <option value="cash">{tc.method.cash}</option>
+              <option value="card">{tc.method.card}</option>
+              <option value="wallet">{tc.method.wallet}</option>
+              <option value="split">{tc.method.split}</option>
+            </select>
+            <select
+              className={styles.filterSelect}
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as PosReceiptStatus | "")}
+              aria-label={tc.filters.status}
+            >
+              <option value="">{tc.filters.allStatuses}</option>
+              <option value="completed">{tc.status.completed}</option>
+              <option value="refunded">{tc.status.refunded}</option>
+              <option value="voided">{tc.status.voided}</option>
+            </select>
           </div>
         </div>
 

@@ -1385,6 +1385,12 @@ export const translations = {
           today: "Today",
           week: "This Week",
           month: "This Month",
+          cashier: "Cashier",
+          allCashiers: "All Cashiers",
+          paymentMethod: "Payment Method",
+          allMethods: "All Methods",
+          status: "Status",
+          allStatuses: "All Statuses",
         },
         detail: {
           title: "Receipt Detail",
@@ -1411,6 +1417,8 @@ export const translations = {
           edit: "Edit",
           deactivate: "Deactivate",
           activate: "Activate",
+          menu: "Actions",
+          confirmDeactivate: "Are you sure you want to deactivate this cashier?",
         },
         kpi: {
           active: "ACTIVE CASHIERS",
@@ -1420,6 +1428,8 @@ export const translations = {
           topPerformer: "TOP PERFORMER",
           transactions: "TRANSACTIONS TODAY",
           transactionsSub: "completed today",
+          avgTx: "AVG TRANSACTIONS",
+          avgTxSub: "per cashier",
         },
         cols: {
           cashier: "Cashier",
@@ -1448,6 +1458,7 @@ export const translations = {
           code: "Cashier Code",
           shift: "Shift",
           status: "Status",
+          pin: "PIN (optional)",
         },
         toast: {
           created: "Cashier added.",
@@ -1466,6 +1477,7 @@ export const translations = {
         noCount: "No stock counts found.",
         actions: {
           view: "View",
+          complete: "Complete Count",
         },
         kpi: {
           open: "OPEN COUNTS",
@@ -1501,6 +1513,8 @@ export const translations = {
           counted: "Counted",
           variance: "Variance",
           close: "Close",
+          confirmComplete: "Mark this count as completed?",
+          uncounted: "Not counted",
         },
         form: {
           createTitle: "New Stock Count",
@@ -1531,6 +1545,17 @@ export const translations = {
           parent: "Parent",
           status: "Status",
           actions: "Actions",
+          sortOrder: "Order",
+        },
+        rightPanel: {
+          title: "Products in Category",
+          selectPrompt: "Select a category to view its products",
+          noProducts: "No products in this category.",
+          moveCategory: "Move",
+        },
+        actions2: {
+          moveUp: "Move Up",
+          moveDown: "Move Down",
         },
         status: {
           active: "Active",
@@ -3341,6 +3366,12 @@ export const translations = {
           today: "اليوم",
           week: "هذا الأسبوع",
           month: "هذا الشهر",
+          cashier: "الكاشير",
+          allCashiers: "جميع الكاشيرين",
+          paymentMethod: "طريقة الدفع",
+          allMethods: "جميع الطرق",
+          status: "الحالة",
+          allStatuses: "جميع الحالات",
         },
         detail: {
           title: "تفاصيل الإيصال",
@@ -3367,6 +3398,8 @@ export const translations = {
           edit: "تعديل",
           deactivate: "تعطيل",
           activate: "تفعيل",
+          menu: "الإجراءات",
+          confirmDeactivate: "هل أنت متأكد من تعطيل هذا الكاشير؟",
         },
         kpi: {
           active: "الكاشيرين النشطين",
@@ -3376,6 +3409,8 @@ export const translations = {
           topPerformer: "الأفضل أداءً",
           transactions: "عمليات اليوم",
           transactionsSub: "مكتملة اليوم",
+          avgTx: "متوسط العمليات",
+          avgTxSub: "لكل كاشير",
         },
         cols: {
           cashier: "الكاشير",
@@ -3404,6 +3439,7 @@ export const translations = {
           code: "رمز الكاشير",
           shift: "الوردية",
           status: "الحالة",
+          pin: "الرقم السري (اختياري)",
         },
         toast: {
           created: "تم إضافة الكاشير.",
@@ -3422,6 +3458,7 @@ export const translations = {
         noCount: "ما في جلسات جرد.",
         actions: {
           view: "عرض",
+          complete: "إنهاء الجرد",
         },
         kpi: {
           open: "جلسات مفتوحة",
@@ -3457,6 +3494,8 @@ export const translations = {
           counted: "المعدود",
           variance: "الفرق",
           close: "إغلاق",
+          confirmComplete: "هل تريد إنهاء هذا الجرد؟",
+          uncounted: "غير معدود",
         },
         form: {
           createTitle: "جرد جديد",
@@ -3487,6 +3526,17 @@ export const translations = {
           parent: "الفئة الرئيسية",
           status: "الحالة",
           actions: "الإجراءات",
+          sortOrder: "الترتيب",
+        },
+        rightPanel: {
+          title: "منتجات الفئة",
+          selectPrompt: "اختر فئة لعرض منتجاتها",
+          noProducts: "ما في منتجات في هذه الفئة.",
+          moveCategory: "نقل",
+        },
+        actions2: {
+          moveUp: "تحريك لأعلى",
+          moveDown: "تحريك لأسفل",
         },
         status: {
           active: "نشط",

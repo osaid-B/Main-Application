@@ -87,6 +87,24 @@
   align-items: center;
 }
 
+.filterSelect {
+  height: 34px;
+  padding: 0 var(--app-space-3);
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-md);
+  font: inherit;
+  font-size: 12px;
+  color: var(--app-text);
+  cursor: pointer;
+  min-width: 140px;
+}
+
+.filterSelect:focus {
+  outline: 2px solid var(--app-primary);
+  outline-offset: 1px;
+}
+
 .actionTabs {
   display: inline-flex;
   flex-wrap: wrap;

@@ -360,6 +360,200 @@ export const POS_RECEIPTS: PosReceipt[] = [
     ],
     subtotal: 49.50, tax: 7.92, discount: 0, total: 57.42, paymentMethod: "split", status: "completed",
   },
+  {
+    id: "POS-9811", date: "2026-05-23", time: "18:10", cashierId: "CSH-04", cashierName: "Karim Nasser",
+    lines: [
+      { productId: "p-016", name: "Tea Biscuits 200g", qty: 2, unitPrice: 4.50, total: 9.00 },
+      { productId: "p-017", name: "Mixed Nuts 250g",   qty: 1, unitPrice: 14.00, total: 14.00 },
+    ],
+    subtotal: 23.00, tax: 3.68, discount: 0, total: 26.68, paymentMethod: "cash", status: "completed",
+  },
+  {
+    id: "POS-9810", date: "2026-05-23", time: "16:45", cashierId: "CSH-05", cashierName: "Hana Saeed",
+    lines: [
+      { productId: "p-001", name: "Mineral Water 500ml", qty: 6, unitPrice: 2.50, total: 15.00 },
+      { productId: "p-003", name: "Cola 330ml",          qty: 4, unitPrice: 4.50, total: 18.00 },
+    ],
+    subtotal: 33.00, tax: 5.28, discount: 0, total: 38.28, paymentMethod: "card", status: "completed",
+  },
+  {
+    id: "POS-9809", date: "2026-05-22", time: "14:30", cashierId: "CSH-04", cashierName: "Karim Nasser",
+    lines: [
+      { productId: "p-007", name: "Basmati Rice 1kg",  qty: 3, unitPrice: 9.75, total: 29.25 },
+      { productId: "p-010", name: "White Sugar 1kg",   qty: 2, unitPrice: 4.00, total: 8.00 },
+    ],
+    subtotal: 37.25, tax: 5.96, discount: 2.00, total: 41.21, paymentMethod: "wallet", status: "completed",
+    customerId: "lc-003", customerName: "Khaled Al-Sharif",
+  },
+  {
+    id: "POS-9808", date: "2026-05-22", time: "11:05", cashierId: "CSH-05", cashierName: "Hana Saeed",
+    lines: [
+      { productId: "p-019", name: "Full-Fat Milk 1L",  qty: 2, unitPrice: 5.50, total: 11.00 },
+      { productId: "p-022", name: "Butter 200g",       qty: 1, unitPrice: 8.00, total: 8.00 },
+    ],
+    subtotal: 19.00, tax: 3.04, discount: 0, total: 22.04, paymentMethod: "cash", status: "refunded",
+  },
+  {
+    id: "POS-9807", date: "2026-05-21", time: "17:20", cashierId: "CSH-01", cashierName: "Ahmad Qasim",
+    lines: [
+      { productId: "p-004", name: "Green Tea Box",       qty: 1, unitPrice: 12.00, total: 12.00 },
+      { productId: "p-005", name: "Instant Coffee 200g", qty: 1, unitPrice: 18.50, total: 18.50 },
+    ],
+    subtotal: 30.50, tax: 4.88, discount: 0, total: 35.38, paymentMethod: "card", status: "completed",
+    customerId: "lc-004", customerName: "Nour Al-Din Rida",
+  },
+  {
+    id: "POS-9806", date: "2026-05-21", time: "10:15", cashierId: "CSH-02", cashierName: "Mona Ibrahim",
+    lines: [
+      { productId: "p-023", name: "Liquid Hand Soap 500ml", qty: 3, unitPrice: 7.00, total: 21.00 },
+      { productId: "p-024", name: "Tissue Box",             qty: 2, unitPrice: 3.50, total: 7.00 },
+    ],
+    subtotal: 28.00, tax: 4.48, discount: 0, total: 32.48, paymentMethod: "split", status: "completed",
+  },
+  {
+    id: "POS-9805", date: "2026-05-20", time: "19:40", cashierId: "CSH-05", cashierName: "Hana Saeed",
+    lines: [
+      { productId: "p-014", name: "Grilled Chips 50g",    qty: 5, unitPrice: 3.00, total: 15.00 },
+      { productId: "p-015", name: "Milk Chocolate 100g",  qty: 2, unitPrice: 7.50, total: 15.00 },
+    ],
+    subtotal: 30.00, tax: 4.80, discount: 0, total: 34.80, paymentMethod: "cash", status: "completed",
+  },
+  {
+    id: "POS-9804", date: "2026-05-19", time: "15:00", cashierId: "CSH-03", cashierName: "Laila Mansour",
+    lines: [
+      { productId: "p-009", name: "Pasta 500g",       qty: 3, unitPrice: 5.50, total: 16.50 },
+      { productId: "p-012", name: "Tomato Sauce 400g", qty: 2, unitPrice: 6.00, total: 12.00 },
+    ],
+    subtotal: 28.50, tax: 4.56, discount: 0, total: 33.06, paymentMethod: "card", status: "voided",
+  },
+  {
+    id: "POS-9803", date: "2026-05-18", time: "12:30", cashierId: "CSH-04", cashierName: "Karim Nasser",
+    lines: [
+      { productId: "p-021", name: "Yogurt 400g",       qty: 4, unitPrice: 4.75, total: 19.00 },
+      { productId: "p-020", name: "White Cheese 500g", qty: 2, unitPrice: 13.00, total: 26.00 },
+    ],
+    subtotal: 45.00, tax: 7.20, discount: 5.00, total: 47.20, paymentMethod: "wallet", status: "completed",
+    customerId: "lc-005", customerName: "Reem Hussein",
+  },
+  {
+    id: "POS-9802", date: "2026-05-17", time: "09:55", cashierId: "CSH-02", cashierName: "Mona Ibrahim",
+    lines: [
+      { productId: "p-011", name: "Flour 2kg",        qty: 2, unitPrice: 7.25, total: 14.50 },
+      { productId: "p-008", name: "Olive Oil 500ml",  qty: 1, unitPrice: 22.00, total: 22.00 },
+    ],
+    subtotal: 36.50, tax: 5.84, discount: 0, total: 42.34, paymentMethod: "cash", status: "completed",
+  },
+  {
+    id: "POS-9801", date: "2026-05-16", time: "16:10", cashierId: "CSH-05", cashierName: "Hana Saeed",
+    lines: [
+      { productId: "p-002", name: "Orange Juice 1L",   qty: 4, unitPrice: 6.00, total: 24.00 },
+      { productId: "p-001", name: "Mineral Water 500ml", qty: 6, unitPrice: 2.50, total: 15.00 },
+    ],
+    subtotal: 39.00, tax: 6.24, discount: 0, total: 45.24, paymentMethod: "card", status: "completed",
+    customerId: "lc-002", customerName: "Sara Abu Hamad",
+  },
+  {
+    id: "POS-9800", date: "2026-05-15", time: "14:00", cashierId: "CSH-04", cashierName: "Karim Nasser",
+    lines: [
+      { productId: "p-013", name: "Canned Tuna",      qty: 5, unitPrice: 8.50, total: 42.50 },
+      { productId: "p-007", name: "Basmati Rice 1kg", qty: 2, unitPrice: 9.75, total: 19.50 },
+    ],
+    subtotal: 62.00, tax: 9.92, discount: 0, total: 71.92, paymentMethod: "cash", status: "completed",
+  },
+  {
+    id: "POS-9799", date: "2026-05-14", time: "11:25", cashierId: "CSH-01", cashierName: "Ahmad Qasim",
+    lines: [
+      { productId: "p-018", name: "Jelly Candy Packet", qty: 3, unitPrice: 2.00, total: 6.00 },
+      { productId: "p-016", name: "Tea Biscuits 200g",  qty: 2, unitPrice: 4.50, total: 9.00 },
+    ],
+    subtotal: 15.00, tax: 2.40, discount: 0, total: 17.40, paymentMethod: "cash", status: "refunded",
+  },
+  {
+    id: "POS-9798", date: "2026-05-13", time: "08:50", cashierId: "CSH-03", cashierName: "Laila Mansour",
+    lines: [
+      { productId: "p-005", name: "Instant Coffee 200g", qty: 1, unitPrice: 18.50, total: 18.50 },
+      { productId: "p-004", name: "Green Tea Box",       qty: 2, unitPrice: 12.00, total: 24.00 },
+    ],
+    subtotal: 42.50, tax: 6.80, discount: 3.00, total: 46.30, paymentMethod: "split", status: "completed",
+    customerId: "lc-001", customerName: "Mohammed Al-Omari",
+  },
+  {
+    id: "POS-9797", date: "2026-05-12", time: "17:35", cashierId: "CSH-02", cashierName: "Mona Ibrahim",
+    lines: [
+      { productId: "p-022", name: "Butter 200g",      qty: 2, unitPrice: 8.00, total: 16.00 },
+      { productId: "p-019", name: "Full-Fat Milk 1L", qty: 3, unitPrice: 5.50, total: 16.50 },
+    ],
+    subtotal: 32.50, tax: 5.20, discount: 0, total: 37.70, paymentMethod: "card", status: "completed",
+  },
+  {
+    id: "POS-9796", date: "2026-05-11", time: "13:45", cashierId: "CSH-05", cashierName: "Hana Saeed",
+    lines: [
+      { productId: "p-023", name: "Liquid Hand Soap 500ml", qty: 2, unitPrice: 7.00, total: 14.00 },
+      { productId: "p-010", name: "White Sugar 1kg",        qty: 3, unitPrice: 4.00, total: 12.00 },
+    ],
+    subtotal: 26.00, tax: 4.16, discount: 0, total: 30.16, paymentMethod: "wallet", status: "completed",
+  },
+  {
+    id: "POS-9795", date: "2026-05-10", time: "09:20", cashierId: "CSH-04", cashierName: "Karim Nasser",
+    lines: [
+      { productId: "p-003", name: "Cola 330ml",        qty: 8, unitPrice: 4.50, total: 36.00 },
+      { productId: "p-015", name: "Milk Chocolate 100g", qty: 3, unitPrice: 7.50, total: 22.50 },
+    ],
+    subtotal: 58.50, tax: 9.36, discount: 5.00, total: 62.86, paymentMethod: "cash", status: "completed",
+    customerId: "lc-004", customerName: "Nour Al-Din Rida",
+  },
+  {
+    id: "POS-9794", date: "2026-05-09", time: "18:00", cashierId: "CSH-01", cashierName: "Ahmad Qasim",
+    lines: [
+      { productId: "p-011", name: "Flour 2kg",          qty: 1, unitPrice: 7.25, total: 7.25 },
+      { productId: "p-009", name: "Pasta 500g",         qty: 2, unitPrice: 5.50, total: 11.00 },
+      { productId: "p-012", name: "Tomato Sauce 400g",  qty: 3, unitPrice: 6.00, total: 18.00 },
+    ],
+    subtotal: 36.25, tax: 5.80, discount: 0, total: 42.05, paymentMethod: "card", status: "completed",
+  },
+  {
+    id: "POS-9793", date: "2026-05-08", time: "15:30", cashierId: "CSH-03", cashierName: "Laila Mansour",
+    lines: [
+      { productId: "p-017", name: "Mixed Nuts 250g",    qty: 2, unitPrice: 14.00, total: 28.00 },
+      { productId: "p-014", name: "Grilled Chips 50g",  qty: 4, unitPrice: 3.00, total: 12.00 },
+    ],
+    subtotal: 40.00, tax: 6.40, discount: 0, total: 46.40, paymentMethod: "split", status: "completed",
+    customerId: "lc-002", customerName: "Sara Abu Hamad",
+  },
+  {
+    id: "POS-9792", date: "2026-05-07", time: "10:05", cashierId: "CSH-05", cashierName: "Hana Saeed",
+    lines: [
+      { productId: "p-020", name: "White Cheese 500g", qty: 1, unitPrice: 13.00, total: 13.00 },
+      { productId: "p-021", name: "Yogurt 400g",       qty: 2, unitPrice: 4.75, total: 9.50 },
+    ],
+    subtotal: 22.50, tax: 3.60, discount: 0, total: 26.10, paymentMethod: "card", status: "voided",
+  },
+  {
+    id: "POS-9791", date: "2026-05-06", time: "16:55", cashierId: "CSH-02", cashierName: "Mona Ibrahim",
+    lines: [
+      { productId: "p-024", name: "Tissue Box",         qty: 6, unitPrice: 3.50, total: 21.00 },
+      { productId: "p-023", name: "Liquid Hand Soap 500ml", qty: 2, unitPrice: 7.00, total: 14.00 },
+    ],
+    subtotal: 35.00, tax: 5.60, discount: 0, total: 40.60, paymentMethod: "cash", status: "completed",
+  },
+  {
+    id: "POS-9790", date: "2026-05-05", time: "11:40", cashierId: "CSH-04", cashierName: "Karim Nasser",
+    lines: [
+      { productId: "p-002", name: "Orange Juice 1L",   qty: 2, unitPrice: 6.00, total: 12.00 },
+      { productId: "p-006", name: "Sparkling Water 750ml", qty: 3, unitPrice: 5.00, total: 15.00 },
+    ],
+    subtotal: 27.00, tax: 4.32, discount: 0, total: 31.32, paymentMethod: "wallet", status: "completed",
+    customerId: "lc-005", customerName: "Reem Hussein",
+  },
+  {
+    id: "POS-9789", date: "2026-05-04", time: "09:10", cashierId: "CSH-01", cashierName: "Ahmad Qasim",
+    lines: [
+      { productId: "p-008", name: "Olive Oil 500ml",    qty: 2, unitPrice: 22.00, total: 44.00 },
+      { productId: "p-013", name: "Canned Tuna",        qty: 4, unitPrice: 8.50, total: 34.00 },
+    ],
+    subtotal: 78.00, tax: 12.48, discount: 8.00, total: 82.48, paymentMethod: "card", status: "completed",
+    customerId: "lc-001", customerName: "Mohammed Al-Omari",
+  },
 ];
 
 // ─── Cashiers ─────────────────────────────────────────────────────────────────
@@ -376,6 +570,7 @@ export interface PosCashier {
   todaySales: number;
   transactions: number;
   lastActive: string;
+  pin?: string;
   isDeleted?: boolean;
 }
 
@@ -385,6 +580,9 @@ export const POS_CASHIERS: PosCashier[] = [
   { id: "CSH-03", name: "Laila Mansour", code: "CSH-03", status: "on-break",  shift: "morning",   todaySales: 0,      transactions: 0,  lastActive: "2026-05-25T17:55:00Z" },
   { id: "CSH-04", name: "Karim Nasser",  code: "CSH-04", status: "inactive",  shift: "evening",   todaySales: 0,      transactions: 0,  lastActive: "2026-05-23T22:00:00Z" },
   { id: "CSH-05", name: "Hana Saeed",    code: "CSH-05", status: "active",    shift: "evening",   todaySales: 0,      transactions: 0,  lastActive: "2026-05-24T20:30:00Z" },
+  { id: "CSH-06", name: "Omar Haddad",   code: "CSH-06", status: "active",    shift: "morning",   todaySales: 88.40,  transactions: 2,  lastActive: "2026-05-26T09:50:00Z" },
+  { id: "CSH-07", name: "Dina Saleh",    code: "CSH-07", status: "inactive",  shift: "afternoon", todaySales: 0,      transactions: 0,  lastActive: "2026-05-20T14:00:00Z" },
+  { id: "CSH-08", name: "Yusuf Barakat", code: "CSH-08", status: "on-break",  shift: "evening",   todaySales: 0,      transactions: 0,  lastActive: "2026-05-26T08:00:00Z" },
 ];
 
 // ─── Stock Counts ─────────────────────────────────────────────────────────────
@@ -413,33 +611,54 @@ export interface PosStockCount {
 
 export const POS_STOCK_COUNTS: PosStockCount[] = [
   {
-    id: "CNT-004", date: "2026-05-26", location: "Main Floor", status: "open", itemsCount: 0, varianceValue: 0, countedBy: "Ahmad Qasim",
+    id: "CNT-005", date: "2026-05-26", location: "Main Floor", status: "open", itemsCount: 0, varianceValue: 0, countedBy: "Ahmad Qasim",
     items: [],
   },
   {
-    id: "CNT-003", date: "2026-05-20", location: "Storeroom A", status: "completed", itemsCount: 8, varianceValue: -42.50, countedBy: "Mona Ibrahim",
+    id: "CNT-004", date: "2026-05-20", location: "Storeroom A", status: "in-progress", itemsCount: 6, varianceValue: 0, countedBy: "Mona Ibrahim",
     items: [
-      { productId: "p-001", productName: "Mineral Water 500ml", sku: "BEV-H2O-500",  expected: 120, counted: 118, variance: -2  },
-      { productId: "p-002", productName: "Orange Juice 1L",     sku: "BEV-OJ-1L",    expected: 44,  counted: 40,  variance: -4  },
-      { productId: "p-007", productName: "Basmati Rice 1kg",    sku: "FOOD-RIC-1K",  expected: 55,  counted: 55,  variance:  0  },
-      { productId: "p-008", productName: "Olive Oil 500ml",     sku: "FOOD-OO-500",  expected: 18,  counted: 16,  variance: -2  },
-      { productId: "p-014", productName: "Grilled Chips 50g",   sku: "SNK-CHIP-50",  expected: 200, counted: 200, variance:  0  },
-      { productId: "p-015", productName: "Milk Chocolate 100g", sku: "SNK-CHO-100",  expected: 65,  counted: 62,  variance: -3  },
-      { productId: "p-019", productName: "Full-Fat Milk 1L",    sku: "DAI-MLK-1L",   expected: 60,  counted: 58,  variance: -2  },
-      { productId: "p-020", productName: "White Cheese 500g",   sku: "DAI-CHE-500",  expected: 25,  counted: 22,  variance: -3  },
+      { productId: "p-019", productName: "Full-Fat Milk 1L",    sku: "DAI-MLK-1L",   expected: 65, counted: 65, variance: 0 },
+      { productId: "p-020", productName: "White Cheese 500g",   sku: "DAI-CHE-500",  expected: 28, counted: 0,  variance: 0 },
+      { productId: "p-021", productName: "Yogurt 400g",         sku: "DAI-YOG-400",  expected: 50, counted: 0,  variance: 0 },
+      { productId: "p-022", productName: "Butter 200g",         sku: "DAI-BUT-200",  expected: 22, counted: 0,  variance: 0 },
+      { productId: "p-023", productName: "Liquid Soap 500ml",   sku: "HH-SOAP-500",  expected: 30, counted: 30, variance: 0 },
+      { productId: "p-024", productName: "Tissue Box",          sku: "HH-TSS-BOX",   expected: 40, counted: 0,  variance: 0 },
     ],
   },
   {
-    id: "CNT-002", date: "2026-05-13", location: "Dairy Section", status: "completed", itemsCount: 4, varianceValue: 0, countedBy: "Laila Mansour",
+    id: "CNT-003", date: "2026-05-14", location: "Dairy Section", status: "completed", itemsCount: 12, varianceValue: -67.50, countedBy: "Laila Mansour",
     items: [
-      { productId: "p-019", productName: "Full-Fat Milk 1L",  sku: "DAI-MLK-1L",  expected: 62, counted: 62, variance: 0 },
-      { productId: "p-020", productName: "White Cheese 500g", sku: "DAI-CHE-500", expected: 28, counted: 28, variance: 0 },
-      { productId: "p-021", productName: "Yogurt 400g",       sku: "DAI-YOG-400", expected: 50, counted: 50, variance: 0 },
-      { productId: "p-022", productName: "Butter 200g",       sku: "DAI-BUT-200", expected: 22, counted: 22, variance: 0 },
+      { productId: "p-001", productName: "Mineral Water 500ml", sku: "BEV-H2O-500",  expected: 120, counted: 118, variance: -2 },
+      { productId: "p-002", productName: "Orange Juice 1L",     sku: "BEV-OJ-1L",    expected: 44,  counted: 40,  variance: -4 },
+      { productId: "p-003", productName: "Cola 330ml",          sku: "BEV-COLA-330", expected: 80,  counted: 82,  variance: +2 },
+      { productId: "p-007", productName: "Basmati Rice 1kg",    sku: "FOOD-RIC-1K",  expected: 55,  counted: 52,  variance: -3 },
+      { productId: "p-008", productName: "Olive Oil 500ml",     sku: "FOOD-OO-500",  expected: 18,  counted: 17,  variance: -1 },
+      { productId: "p-009", productName: "Pasta 500g",          sku: "FOOD-PAS-500", expected: 40,  counted: 40,  variance:  0 },
+      { productId: "p-014", productName: "Grilled Chips 50g",   sku: "SNK-CHIP-50",  expected: 200, counted: 195, variance: -5 },
+      { productId: "p-015", productName: "Milk Chocolate 100g", sku: "SNK-CHO-100",  expected: 65,  counted: 65,  variance:  0 },
+      { productId: "p-019", productName: "Full-Fat Milk 1L",    sku: "DAI-MLK-1L",   expected: 60,  counted: 56,  variance: -4 },
+      { productId: "p-020", productName: "White Cheese 500g",   sku: "DAI-CHE-500",  expected: 25,  counted: 22,  variance: -3 },
+      { productId: "p-021", productName: "Yogurt 400g",         sku: "DAI-YOG-400",  expected: 50,  counted: 52,  variance: +2 },
+      { productId: "p-022", productName: "Butter 200g",         sku: "DAI-BUT-200",  expected: 22,  counted: 20,  variance: -2 },
     ],
   },
   {
-    id: "CNT-001", date: "2026-05-05", location: "Beverages Aisle", status: "cancelled", itemsCount: 0, varianceValue: 0, countedBy: "Ahmad Qasim",
+    id: "CNT-002", date: "2026-05-07", location: "Beverages Aisle", status: "completed", itemsCount: 10, varianceValue: 0, countedBy: "Ahmad Qasim",
+    items: [
+      { productId: "p-001", productName: "Mineral Water 500ml", sku: "BEV-H2O-500",  expected: 100, counted: 100, variance: 0 },
+      { productId: "p-002", productName: "Orange Juice 1L",     sku: "BEV-OJ-1L",    expected: 44,  counted: 44,  variance: 0 },
+      { productId: "p-003", productName: "Cola 330ml",          sku: "BEV-COLA-330", expected: 80,  counted: 80,  variance: 0 },
+      { productId: "p-004", productName: "Green Tea Box",       sku: "BEV-GT-BOX",   expected: 30,  counted: 30,  variance: 0 },
+      { productId: "p-005", productName: "Instant Coffee 200g", sku: "BEV-CF-200",   expected: 22,  counted: 22,  variance: 0 },
+      { productId: "p-006", productName: "Sparkling Water 750ml", sku: "BEV-SPK-750", expected: 15, counted: 15,  variance: 0 },
+      { productId: "p-007", productName: "Basmati Rice 1kg",    sku: "FOOD-RIC-1K",  expected: 55,  counted: 55,  variance: 0 },
+      { productId: "p-008", productName: "Olive Oil 500ml",     sku: "FOOD-OO-500",  expected: 18,  counted: 18,  variance: 0 },
+      { productId: "p-009", productName: "Pasta 500g",          sku: "FOOD-PAS-500", expected: 40,  counted: 40,  variance: 0 },
+      { productId: "p-010", productName: "White Sugar 1kg",     sku: "FOOD-SUG-1K",  expected: 90,  counted: 90,  variance: 0 },
+    ],
+  },
+  {
+    id: "CNT-001", date: "2026-04-28", location: "Main Floor", status: "cancelled", itemsCount: 0, varianceValue: 0, countedBy: "Karim Nasser",
     items: [],
   },
 ];
