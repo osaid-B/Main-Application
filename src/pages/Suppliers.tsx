@@ -30,6 +30,7 @@ import {
   getPurchases,
 } from "../data/storage";
 import { useData } from "../context/DataContext";
+import { useSettings } from "../context/SettingsContext";
 import type { Purchase, Supplier } from "../data/types";
 
 type SupplierStatus = "Active" | "Inactive" | "Preferred" | "Blocked";
@@ -706,6 +707,7 @@ function statusTone(status: SupplierStatus) {
 }
 
 export default function Suppliers() {
+  const { t } = useSettings();
   const { suppliers, addSupplier, updateSupplier, deleteSupplier: deleteSupplierCtx } = useData();
   const [purchases] = useState<Purchase[]>(() => getPurchases());
   const [productCategories] = useState<string[]>(() => getProductCategories());
@@ -1237,10 +1239,10 @@ export default function Suppliers() {
     setFormOpen(false);
     setToast(
       saveAsDraft
-        ? "Supplier saved as draft"
+        ? t.common.saveAsDraft
         : editingSupplierId
-          ? "Supplier updated"
-          : "Supplier added"
+          ? t.suppliers.toast.updated
+          : t.suppliers.toast.created
     );
   }
 
@@ -1251,7 +1253,7 @@ export default function Suppliers() {
     );
     setMenuState(null);
     setConfirmAction(null);
-    setToast("Supplier deleted");
+    setToast(t.suppliers.toast.deleted);
   }
 
   function confirmSupplierAction() {
@@ -1296,18 +1298,15 @@ export default function Suppliers() {
           <div className="suppliers-header-copy">
             <div className="suppliers-page-badge">
               <Truck size={16} />
-              Suppliers
+              {t.suppliers.pageTitle}
             </div>
-            <h1>Suppliers</h1>
-            <p>
-              Manage supplier profiles, purchase history, payment terms, and vendor
-              performance
-            </p>
+            <h1>{t.suppliers.pageTitle}</h1>
+            <p>{t.suppliers.pageSubtitle}</p>
           </div>
 
           <div className="suppliers-header-actions">
             <Button variant="primary" size="md" type="button" onClick={openAddModal} leftIcon={<Plus size={16} />}>
-              Add Supplier
+              {t.suppliers.addSupplier}
             </Button>
           </div>
         </section>
@@ -1369,7 +1368,7 @@ export default function Suppliers() {
                   className="supplier-search-field"
                   value={searchTerm}
                   onChange={(event) => setSearchTerm(event.target.value)}
-                  placeholder="Search by supplier name, code, phone, email, product, or note"
+                  placeholder={t.suppliers.searchPlaceholder}
                 />
 
                 <div className="supplier-toolbar-actions">
@@ -1383,7 +1382,7 @@ export default function Suppliers() {
                     leftIcon={<Filter size={15} />}
                     rightIcon={<ChevronDown size={15} />}
                   >
-                    Filters
+                    {t.suppliers.filterBtn}
                   </Button>
                 </div>
               </div>
@@ -1392,7 +1391,7 @@ export default function Suppliers() {
                 <div className="supplier-filter-popover">
                   <div className="supplier-filter-popover-head">
                     <div>
-                      <strong>Filters</strong>
+                      <strong>{t.suppliers.filterBtn}</strong>
                       <span>Keep the list focused with essential supplier fields.</span>
                     </div>
                     <Button
@@ -1474,7 +1473,7 @@ export default function Suppliers() {
 
                   <div className="supplier-filter-popover-footer">
                     <Button variant="secondary" size="md" type="button" onClick={clearFilters}>
-                      Reset
+                      {t.common.reset}
                     </Button>
                     <Button
                       variant="primary"
@@ -1482,7 +1481,7 @@ export default function Suppliers() {
                       type="button"
                       onClick={() => setMoreFiltersOpen(false)}
                     >
-                      Apply
+                      {t.common.apply}
                     </Button>
                   </div>
                 </div>
@@ -1563,7 +1562,7 @@ export default function Suppliers() {
                       onClick={openAddModal}
                       leftIcon={<Plus size={16} />}
                     >
-                      Add Supplier
+                      {t.suppliers.addSupplier}
                     </Button>
                   )}
                 </div>
@@ -1587,11 +1586,11 @@ export default function Suppliers() {
                             className="table-sort-btn"
                             onClick={() => handleSort("supplierName")}
                           >
-                            Supplier <ArrowUpDown size={13} />
+                            {t.suppliers.cols.supplier} <ArrowUpDown size={13} />
                           </button>
                         </th>
 
-                        <th>Phone</th>
+                        <th>{t.common.phone}</th>
 
                         <th>Location</th>
 
@@ -1601,7 +1600,7 @@ export default function Suppliers() {
                             className="table-sort-btn"
                             onClick={() => handleSort("outstandingBalance")}
                           >
-                            Balance <ArrowUpDown size={13} />
+                            {t.suppliers.cols.balance} <ArrowUpDown size={13} />
                           </button>
                         </th>
 
@@ -1611,11 +1610,11 @@ export default function Suppliers() {
                             className="table-sort-btn"
                             onClick={() => handleSort("status")}
                           >
-                            Status <ArrowUpDown size={13} />
+                            {t.suppliers.cols.status} <ArrowUpDown size={13} />
                           </button>
                         </th>
 
-                        <th>Actions</th>
+                        <th>{t.suppliers.cols.actions}</th>
                       </tr>
                     </thead>
 
@@ -1882,7 +1881,7 @@ export default function Suppliers() {
                   className={detailTab === tab ? "active" : ""}
                   onClick={() => setDetailTab(tab)}
                 >
-                  {tab}
+                  {t.suppliers.tabs[tab]}
                 </button>
               ))}
             </div>
@@ -2003,7 +2002,7 @@ export default function Suppliers() {
               {detailTab === "purchases" && (
                 <div className="detail-table-card">
                   <div className="detail-card-head">
-                    <h3>Purchases</h3>
+                    <h3>{t.suppliers.tabs.purchases}</h3>
                     <Button variant="primary" size="md" type="button" className="drawer-primary-btn">
                       Add Purchase
                     </Button>
@@ -2012,7 +2011,7 @@ export default function Suppliers() {
                     <thead>
                       <tr>
                         <th>PO Number</th>
-                        <th>Date</th>
+                        <th>{t.common.date}</th>
                         <th>Total</th>
                         <th>Received</th>
                         <th>Payment Status</th>
@@ -2037,16 +2036,16 @@ export default function Suppliers() {
 
               {detailTab === "invoices" && (
                 <div className="detail-table-card">
-                  <h3>Invoices</h3>
+                  <h3>{t.suppliers.tabs.invoices}</h3>
                   <table className="detail-table">
                     <thead>
                       <tr>
                         <th>Invoice Number</th>
-                        <th>Date</th>
+                        <th>{t.common.date}</th>
                         <th>Due Date</th>
-                        <th>Total</th>
+                        <th>{t.common.total}</th>
                         <th>Remaining</th>
-                        <th>Status</th>
+                        <th>{t.common.status}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -2067,15 +2066,15 @@ export default function Suppliers() {
 
               {detailTab === "payments" && (
                 <div className="detail-table-card">
-                  <h3>Payments</h3>
+                  <h3>{t.suppliers.tabs.payments}</h3>
                   <table className="detail-table">
                     <thead>
                       <tr>
                         <th>Payment Date</th>
-                        <th>Amount</th>
-                        <th>Method</th>
+                        <th>{t.common.amount}</th>
+                        <th>{t.common.method}</th>
                         <th>Reference</th>
-                        <th>Notes</th>
+                        <th>{t.common.notes}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -2102,7 +2101,7 @@ export default function Suppliers() {
               {detailTab === "contacts" && (
                 <div className="detail-table-card">
                   <div className="detail-card-head">
-                    <h3>Contacts</h3>
+                    <h3>{t.suppliers.tabs.contacts}</h3>
                     <Button variant="secondary" size="md" type="button" className="drawer-secondary-btn">
                       Add Contact
                     </Button>
@@ -2110,11 +2109,11 @@ export default function Suppliers() {
                   <table className="detail-table">
                     <thead>
                       <tr>
-                        <th>Name</th>
+                        <th>{t.common.name}</th>
                         <th>Role</th>
-                        <th>Phone</th>
-                        <th>Email</th>
-                        <th>Notes</th>
+                        <th>{t.common.phone}</th>
+                        <th>{t.common.email}</th>
+                        <th>{t.common.notes}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -2155,7 +2154,7 @@ export default function Suppliers() {
 
               {detailTab === "documents" && (
                 <div className="detail-table-card">
-                  <h3>Documents</h3>
+                  <h3>{t.suppliers.tabs.documents}</h3>
                   <table className="detail-table">
                     <thead>
                       <tr>
@@ -2163,7 +2162,7 @@ export default function Suppliers() {
                         <th>Type</th>
                         <th>Uploaded Date</th>
                         <th>Uploaded By</th>
-                        <th>Action</th>
+                        <th>{t.suppliers.cols.actions}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -2205,8 +2204,8 @@ export default function Suppliers() {
           <div className="supplier-modal" onClick={(event) => event.stopPropagation()}>
             <div className="supplier-drawer-head">
               <div>
-                <span>{formMode === "add" ? "Add Supplier" : "Edit Supplier"}</span>
-                <h2>{formMode === "add" ? "New Supplier" : "Update Supplier"}</h2>
+                <span>{formMode === "add" ? t.suppliers.form.createTitle : t.suppliers.form.editTitle}</span>
+                <h2>{formMode === "add" ? t.suppliers.form.createTitle : t.suppliers.form.editTitle}</h2>
                 <p>Supplier profile, terms, contacts, and finance details</p>
               </div>
               <Button
@@ -2492,7 +2491,7 @@ export default function Suppliers() {
                 type="button"
                 onClick={requestCloseForm}
               >
-                Cancel
+                {t.common.cancel}
               </Button>
               <Button
                 variant="secondary"
@@ -2500,7 +2499,7 @@ export default function Suppliers() {
                 type="button"
                 onClick={() => saveSupplierForm(true)}
               >
-                Save as Draft
+                {t.common.saveAsDraft}
               </Button>
               <Button
                 variant="primary"
@@ -2508,7 +2507,7 @@ export default function Suppliers() {
                 type="button"
                 onClick={() => saveSupplierForm(false)}
               >
-                Save Supplier
+                {t.suppliers.addSupplier}
               </Button>
             </div>
           </div>
@@ -2538,10 +2537,10 @@ export default function Suppliers() {
                   type="button"
                   onClick={() => setDiscardConfirmOpen(false)}
                 >
-                  Keep Editing
+                  {t.common.keepEditing}
                 </Button>
                 <Button variant="danger" size="md" type="button" className="supplier-danger-btn" onClick={closeFormNow}>
-                  Discard Changes
+                  {t.common.discard}
                 </Button>
               </div>
             </div>
@@ -2576,7 +2575,7 @@ export default function Suppliers() {
                   type="button"
                   onClick={() => setConfirmAction(null)}
                 >
-                  Cancel
+                  {t.common.cancel}
                 </Button>
                 <Button
                   variant={confirmAction.type === "delete" ? "danger" : "primary"}
@@ -2589,7 +2588,7 @@ export default function Suppliers() {
                   }
                   onClick={confirmSupplierAction}
                 >
-                  {confirmAction.type === "delete" ? "Delete Supplier" : "Archive Supplier"}
+                  {confirmAction.type === "delete" ? `${t.common.delete} ${t.suppliers.cols.supplier}` : `${t.common.archived} ${t.suppliers.cols.supplier}`}
                 </Button>
               </div>
             </div>
