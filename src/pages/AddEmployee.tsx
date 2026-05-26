@@ -7,12 +7,14 @@ import { Container } from "../components/layout/Container";
 import { FormSection } from "../components/forms/FormSection";
 import { RadioCardGroup } from "../components/forms/RadioCardGroup";
 import { ButtonGroup } from "../components/forms/ButtonGroup";
+import { useSettings } from "../context/SettingsContext";
 
 type EmpKind = "permanent" | "daily" | "temporary" | "intern";
 type PayCycle = "daily" | "weekly" | "monthly";
 
 export default function AddEmployee() {
   const navigate = useNavigate();
+  const { t } = useSettings();
   const [kind, setKind] = useState<EmpKind>("permanent");
   const [name, setName] = useState("");
   const [salary, setSalary] = useState("");
@@ -32,15 +34,15 @@ export default function AddEmployee() {
             onClick={() => navigate("/employees")}
             style={{ background: "transparent", border: 0, color: "var(--app-text-muted)", fontSize: 12, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 4, padding: 0, marginBottom: 8 }}
           >
-            <ArrowLeft size={14} /> Back to employees
+            <ArrowLeft size={14} /> {t.addEmployee.backLink}
           </button>
-          <h1 style={{ margin: 0, fontSize: "1.75rem", fontWeight: 700, color: "var(--app-text)" }}>Add Employee</h1>
+          <h1 style={{ margin: 0, fontSize: "1.75rem", fontWeight: 700, color: "var(--app-text)" }}>{t.addEmployee.pageTitle}</h1>
           <p style={{ margin: "4px 0 0", fontSize: 13, color: "var(--app-text-muted)", maxWidth: 640 }}>
-            Pick employment type to load the right pay structure.
+            {t.addEmployee.pageSubtitle}
           </p>
         </div>
         <Button variant="primary" size="sm" leftIcon={<Save size={14} />} disabled={!canSave} onClick={() => navigate("/employees")}>
-          Save employee
+          {t.addEmployee.saveEmployee}
         </Button>
       </header>
 

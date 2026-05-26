@@ -10,6 +10,7 @@ import { RadioCardGroup } from "../components/forms/RadioCardGroup";
 import { Globe, MapPin } from "lucide-react";
 import { useData } from "../context/DataContext";
 import type { Supplier } from "../data/types";
+import { useSettings } from "../context/SettingsContext";
 
 type SupplierKind = "local" | "import";
 
@@ -23,6 +24,7 @@ function generateSupplierId(suppliers: Supplier[]): string {
 
 export default function AddSupplier() {
   const navigate = useNavigate();
+  const { t } = useSettings();
   const { suppliers, addSupplier } = useData();
   const [kind, setKind] = useState<SupplierKind>("local");
   const [name, setName] = useState("");
@@ -42,11 +44,11 @@ export default function AddSupplier() {
             onClick={() => navigate("/suppliers")}
             style={{ background: "transparent", border: 0, color: "var(--app-text-muted)", fontSize: 12, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 4, padding: 0, marginBottom: 8 }}
           >
-            <ArrowLeft size={14} /> Back to suppliers
+            <ArrowLeft size={14} /> {t.addSupplier.backLink}
           </button>
-          <h1 style={{ margin: 0, fontSize: "1.75rem", fontWeight: 700, color: "var(--app-text)" }}>Add Supplier</h1>
+          <h1 style={{ margin: 0, fontSize: "1.75rem", fontWeight: 700, color: "var(--app-text)" }}>{t.addSupplier.pageTitle}</h1>
           <p style={{ margin: "4px 0 0", fontSize: 13, color: "var(--app-text-muted)", maxWidth: 640 }}>
-            Choose local or import supplier — additional fields appear conditionally.
+            {t.addSupplier.pageSubtitle}
           </p>
         </div>
         <Button
@@ -66,7 +68,7 @@ export default function AddSupplier() {
             navigate("/suppliers");
           }}
         >
-          Save supplier
+          {t.addSupplier.saveSupplier}
         </Button>
       </header>
 
