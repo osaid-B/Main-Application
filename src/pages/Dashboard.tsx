@@ -17,6 +17,7 @@ import {
   WORKSPACE_STATS,
 } from "../data/dashboardMock";
 import { useData } from "../context/DataContext";
+import { useSettings } from "../context/SettingsContext";
 import styles from "./Dashboard.module.css";
 
 /**
@@ -37,6 +38,7 @@ function downloadCsv(filename: string, headers: string[], rows: (string | number
 
 export default function Dashboard() {
   const [dateRange, setDateRange] = useState<"week" | "month">("week");
+  const { t } = useSettings();
 
   const {
     totalCustomers,
@@ -84,16 +86,10 @@ export default function Dashboard() {
         <header className={styles.header}>
           <div>
             <div className={styles.breadcrumb}>
-              <span>ATLAS ERP</span>
-              <span className={styles.breadcrumbSep}>·</span>
-              <span>TODAY</span>
-              <span className={styles.breadcrumbSep}>·</span>
-              <span>WED MAY 13</span>
+              {t.dashboard.breadcrumb}
             </div>
-            <h1 className={styles.pageTitle}>Operations Command</h1>
-            <p className={styles.pageSubtitle}>
-              Live view of company, POS, and factory in one operations workspace.
-            </p>
+            <h1 className={styles.pageTitle}>{t.dashboard.pageTitle}</h1>
+            <p className={styles.pageSubtitle}>{t.dashboard.pageSubtitle}</p>
           </div>
           <div className={styles.headerActions}>
             <Button
@@ -101,14 +97,14 @@ export default function Dashboard() {
               size="sm"
               onClick={() => setDateRange("week")}
             >
-              This week
+              {t.dashboard.thisWeek}
             </Button>
             <Button
               variant={dateRange === "month" ? "primary" : "secondary"}
               size="sm"
               onClick={() => setDateRange("month")}
             >
-              This month
+              {t.dashboard.thisMonth}
             </Button>
             <Button
               variant="secondary"
@@ -122,7 +118,7 @@ export default function Dashboard() {
                 )
               }
             >
-              Export
+              {t.dashboard.export}
             </Button>
             <Button
               variant="primary"
@@ -130,7 +126,7 @@ export default function Dashboard() {
               leftIcon={<Plus size={14} />}
               onClick={() => window.dispatchEvent(new CustomEvent("atlas:open-quick-create"))}
             >
-              New action
+              {t.dashboard.newAction}
             </Button>
           </div>
         </header>
@@ -149,20 +145,18 @@ export default function Dashboard() {
             <section className={styles.card}>
               <header className={styles.cardHeader}>
                 <div>
-                  <h2 className={styles.cardTitle}>Revenue Across All Modules</h2>
-                  <p className={styles.cardSubtitle}>
-                    Apr 30 → May 13 · daily revenue (USD)
-                  </p>
+                  <h2 className={styles.cardTitle}>{t.dashboard.chart.title}</h2>
+                  <p className={styles.cardSubtitle}>{t.dashboard.chart.subtitle}</p>
                 </div>
                 <div className={styles.legend}>
                   <span className={styles.legendItem}>
-                    <span className="status-dot status-dot--blue" aria-hidden /> Company
+                    <span className="status-dot status-dot--blue" aria-hidden /> {t.dashboard.chart.company}
                   </span>
                   <span className={styles.legendItem}>
-                    <span className="status-dot status-dot--green" aria-hidden /> POS
+                    <span className="status-dot status-dot--green" aria-hidden /> {t.dashboard.chart.pos}
                   </span>
                   <span className={styles.legendItem}>
-                    <span className="status-dot status-dot--purple" aria-hidden /> Factory
+                    <span className="status-dot status-dot--purple" aria-hidden /> {t.dashboard.chart.factory}
                   </span>
                 </div>
               </header>
@@ -184,8 +178,8 @@ export default function Dashboard() {
             <section className={styles.card}>
               <header className={styles.cardHeader}>
                 <div>
-                  <h2 className={styles.cardTitle}>Today's Timeline</h2>
-                  <p className={styles.cardSubtitle}>Live operations events</p>
+                  <h2 className={styles.cardTitle}>{t.dashboard.timeline.title}</h2>
+                  <p className={styles.cardSubtitle}>{t.dashboard.timeline.subtitle}</p>
                 </div>
               </header>
               <ul className={styles.timeline}>
@@ -199,8 +193,8 @@ export default function Dashboard() {
             <section className={styles.card}>
               <header className={styles.cardHeader}>
                 <div>
-                  <h2 className={styles.cardTitle}>Pinned Actions</h2>
-                  <p className={styles.cardSubtitle}>Most-used shortcuts</p>
+                  <h2 className={styles.cardTitle}>{t.dashboard.pinnedActions.title}</h2>
+                  <p className={styles.cardSubtitle}>{t.dashboard.pinnedActions.subtitle}</p>
                 </div>
               </header>
               <Grid cols={2} gap="sm" responsive={false}>

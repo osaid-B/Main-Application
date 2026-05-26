@@ -16,6 +16,7 @@ import {
   type DepartmentRow,
   type OpenInvoice,
 } from "../data/companyMock";
+import { useSettings } from "../context/SettingsContext";
 import styles from "./CompanyOverview.module.css";
 
 const KPI_BAR_COLOR: Record<CompanyKPI["color"], string> = {
@@ -47,6 +48,7 @@ function downloadCsv(filename: string, headers: string[], rows: (string | number
 
 export default function CompanyOverview() {
   const [dateRange, setDateRange] = useState<"month" | "6months">("6months");
+  const { t } = useSettings();
 
   const cashFlowData = useMemo(
     () => (dateRange === "month" ? CASH_FLOW.slice(-1) : CASH_FLOW),
@@ -59,11 +61,9 @@ export default function CompanyOverview() {
         {/* Header */}
         <header className={styles.header}>
           <div>
-            <div className={styles.breadcrumb}>ATLAS ERP · COMPANY · OVERVIEW</div>
-            <h1 className={styles.title}>Company Overview</h1>
-            <p className={styles.subtitle}>
-              The parent entity at a glance — cash, receivables, payroll, and revenue mix.
-            </p>
+            <div className={styles.breadcrumb}>{t.company.breadcrumb}</div>
+            <h1 className={styles.title}>{t.company.pageTitle}</h1>
+            <p className={styles.subtitle}>{t.company.pageSubtitle}</p>
           </div>
           <div className={styles.actions}>
             <Button
@@ -71,14 +71,14 @@ export default function CompanyOverview() {
               size="sm"
               onClick={() => setDateRange("month")}
             >
-              This month
+              {t.company.thisMonth}
             </Button>
             <Button
               variant={dateRange === "6months" ? "primary" : "secondary"}
               size="sm"
               onClick={() => setDateRange("6months")}
             >
-              Last 6 months
+              {t.company.last6Months}
             </Button>
             <Button
               variant="secondary"
@@ -92,7 +92,7 @@ export default function CompanyOverview() {
                 )
               }
             >
-              Export
+              {t.company.export}
             </Button>
             <Button
               variant="primary"
@@ -100,7 +100,7 @@ export default function CompanyOverview() {
               leftIcon={<Plus size={14} />}
               onClick={() => window.dispatchEvent(new CustomEvent("atlas:open-quick-create"))}
             >
-              New entry
+              {t.company.newEntry}
             </Button>
           </div>
         </header>
@@ -114,8 +114,8 @@ export default function CompanyOverview() {
         <div className={styles.chartsRow}>
           <section className={styles.card}>
             <header className={styles.cardHead}>
-              <h2 className={styles.cardTitle}>Cash Flow · 6 Months</h2>
-              <span className={styles.cardSub}>Inflow vs outflow · net delta</span>
+              <h2 className={styles.cardTitle}>{t.company.cashFlow.title}</h2>
+              <span className={styles.cardSub}>{t.company.cashFlow.subtitle}</span>
             </header>
             <ResponsiveContainer width="100%" height={240}>
               <BarChart data={cashFlowData} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
@@ -127,16 +127,16 @@ export default function CompanyOverview() {
                   formatter={(v) => `$${(Number(v) / 1000).toFixed(0)}k`}
                 />
                 <Legend wrapperStyle={{ fontSize: 11 }} iconType="circle" />
-                <Bar dataKey="inflow"  name="Inflow"  fill="var(--atlas-green)" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="outflow" name="Outflow" fill="var(--atlas-orange)" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="inflow"  name={t.company.cashFlow.inflow}  fill="var(--atlas-green)" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="outflow" name={t.company.cashFlow.outflow} fill="var(--atlas-orange)" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </section>
 
           <section className={styles.card}>
             <header className={styles.cardHead}>
-              <h2 className={styles.cardTitle}>Revenue by Department</h2>
-              <span className={styles.cardSub}>Distribution of monthly revenue</span>
+              <h2 className={styles.cardTitle}>{t.company.revenueDept.title}</h2>
+              <span className={styles.cardSub}>{t.company.revenueDept.subtitle}</span>
             </header>
             <div className={styles.donutWrap}>
               <ResponsiveContainer width="100%" height={200}>
@@ -176,12 +176,18 @@ export default function CompanyOverview() {
         <div className={styles.chartsRow}>
           <section className={styles.card}>
             <header className={styles.cardHead}>
-              <h2 className={styles.cardTitle}>Open Invoices</h2>
-              <span className={styles.cardSub}>Top 8 unpaid · sorted by due date</span>
+              <h2 className={styles.cardTitle}>{t.company.openInvoices.title}</h2>
+              <span className={styles.cardSub}>{t.company.openInvoices.subtitle}</span>
             </header>
             <table className={styles.invTable}>
               <thead>
-                <tr><th>Invoice</th><th>Customer</th><th>Due</th><th>Amount</th><th>Status</th></tr>
+                <tr>
+                  <th>{t.company.openInvoices.cols.invoice}</th>
+                  <th>{t.company.openInvoices.cols.customer}</th>
+                  <th>{t.company.openInvoices.cols.due}</th>
+                  <th>{t.company.openInvoices.cols.amount}</th>
+                  <th>{t.company.openInvoices.cols.status}</th>
+                </tr>
               </thead>
               <tbody>
                 {OPEN_INVOICES.map((i) => <InvoiceRow key={i.invoice} inv={i} />)}
@@ -191,8 +197,8 @@ export default function CompanyOverview() {
 
           <section className={styles.card}>
             <header className={styles.cardHead}>
-              <h2 className={styles.cardTitle}>Departments</h2>
-              <span className={styles.cardSub}>Headcount + monthly revenue contribution</span>
+              <h2 className={styles.cardTitle}>{t.company.departments.title}</h2>
+              <span className={styles.cardSub}>{t.company.departments.subtitle}</span>
             </header>
             <ul className={styles.deptList}>
               {DEPARTMENTS.map((d) => (
@@ -200,7 +206,7 @@ export default function CompanyOverview() {
                   <span className={`status-dot ${DEPT_DOT[d.color]}`} aria-hidden />
                   <div className={styles.deptText}>
                     <strong>{d.name}</strong>
-                    <span>{d.count} people</span>
+                    <span>{d.count} {t.company.departments.people}</span>
                   </div>
                   <span className={styles.deptRevenue}>${(d.revenue / 1000).toFixed(0)}k</span>
                 </li>

@@ -1,6 +1,7 @@
 import { Building2, Coffee, Hammer, TrendingUp } from "lucide-react";
 import type { WorkspaceStats } from "../../data/dashboardMock";
 import { MiniSparkline } from "./MiniSparkline";
+import { useSettings } from "../../context/SettingsContext";
 import styles from "./WorkspaceCard.module.css";
 
 interface Props {
@@ -19,6 +20,7 @@ const ICON_BY_COLOR = {
  */
 export function WorkspaceCard({ data }: Props) {
   const Icon = ICON_BY_COLOR[data.color];
+  const { t } = useSettings();
   return (
     <article className={`${styles.card} ${styles[`tone_${data.color}`]}`}>
       <span className={styles.accentBar} aria-hidden />
@@ -29,7 +31,7 @@ export function WorkspaceCard({ data }: Props) {
         <div className={styles.titleBlock}>
           <h3 className={styles.name}>{data.name}</h3>
           <span className={styles.trend}>
-            <TrendingUp size={11} aria-hidden /> +{data.trend}% vs last week
+            <TrendingUp size={11} aria-hidden /> +{data.trend}% {t.dashboard.vsLastWeek}
           </span>
         </div>
       </header>
