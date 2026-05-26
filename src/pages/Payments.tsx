@@ -270,6 +270,7 @@ function PaymentEditor({
   onClose: () => void;
   onSubmit: () => void;
 }) {
+  const { t } = useSettings();
   const selectedInvoice = invoices.find((inv) => inv.id === values.invoiceId);
   const selectedCustomer = customers.find((c) => c.id === values.customerId);
   const remainingAmount = selectedInvoice ? calculateInvoiceRemainingAmount(selectedInvoice, payments) : 0;
@@ -284,14 +285,14 @@ function PaymentEditor({
       onClose={onClose}
       variant="dialog"
       size="lg"
-      title={mode === "create" ? "Record Payment" : "Edit Payment"}
-      description="Record a payment and link it to an invoice for accurate tracking."
+      title={mode === "create" ? t.payments.form.createTitle : t.payments.form.editTitle}
+      description={t.payments.pageSubtitle}
       className="payment-modal-card"
       footer={
         <>
-          <Button variant="secondary" type="button" onClick={onClose}>Cancel</Button>
+          <Button variant="secondary" type="button" onClick={onClose}>{t.common.cancel}</Button>
           <Button variant="primary" type="button" onClick={onSubmit}>
-            {mode === "create" ? "Save payment" : "Save changes"}
+            {mode === "create" ? t.common.save : t.common.saveChanges}
           </Button>
         </>
       }
@@ -311,14 +312,14 @@ function PaymentEditor({
               <div className="payment-form-grid">
                 <div className="field-block">
                   <Select
-                    label="Invoice *"
+                    label={`${t.payments.form.invoice} *`}
                     value={values.invoiceId}
                     onChange={(e) => {
                       const inv = invoices.find((entry) => entry.id === e.target.value);
                       onChange("invoiceId", e.target.value);
                       onChange("customerId", inv?.customerId ?? "");
                     }}
-                    placeholder="Select invoice"
+                    placeholder={t.payments.form.selectInvoice}
                     error={errors.invoiceId}
                     options={invoices.map((inv) => {
                       const cust = customers.find((c) => c.id === inv.customerId);
@@ -330,10 +331,10 @@ function PaymentEditor({
                 <div className="field-block">
                   <Input
                     variant="text"
-                    label="Customer *"
+                    label={`${t.payments.form.customer} *`}
                     value={selectedCustomer?.name ?? ""}
                     readOnly
-                    placeholder="Select customer"
+                    placeholder={t.payments.form.selectCustomer}
                     error={errors.customerId}
                   />
                 </div>
@@ -343,7 +344,7 @@ function PaymentEditor({
                     <span className="amount-prefix">$</span>
                     <Input
                       variant="number"
-                      label="Amount *"
+                      label={`${t.payments.form.amount} *`}
                       min="0.01"
                       step="0.01"
                       value={values.amount}
@@ -357,7 +358,7 @@ function PaymentEditor({
                 <div className="field-block">
                   <div className="select-icon-wrap">
                     <Select
-                      label="Method *"
+                      label={`${t.payments.form.method} *`}
                       value={values.method}
                       onChange={(e) => onChange("method", e.target.value)}
                       options={PAYMENT_METHODS.map((m) => ({ value: m, label: formatMethod(m) }))}
@@ -372,7 +373,7 @@ function PaymentEditor({
                     {values.status === "Pending" && <span className="status-dot amber" />}
                     {(values.status === "Failed" || values.status === "Cancelled") && <span className="status-dot red" />}
                     <Select
-                      label="Status *"
+                      label={`${t.payments.form.status} *`}
                       value={values.status}
                       onChange={(e) => onChange("status", e.target.value)}
                       options={PAYMENT_STATUSES.map((s) => ({ value: s, label: formatStatus(s) }))}
@@ -384,7 +385,7 @@ function PaymentEditor({
                   <div className="date-input-wrap">
                     <Input
                       variant="date"
-                      label="Payment Date *"
+                      label={`${t.payments.form.date} *`}
                       value={values.date}
                       onChange={(e) => onChange("date", e.target.value)}
                       error={errors.date}
@@ -406,25 +407,25 @@ function PaymentEditor({
               </div>
               <div className="payment-form-grid">
                 <label className="field-block">
-                  <span>Reference</span>
+                  <span>{t.payments.form.reference}</span>
                   <input value={values.referenceNumber}
                     onChange={(e) => onChange("referenceNumber", e.target.value)}
-                    placeholder="Receipt or transfer reference" />
+                    placeholder={t.payments.form.reference} />
                   {errors.referenceNumber && <small className="field-error">{errors.referenceNumber}</small>}
                 </label>
 
                 <label className="field-block">
-                  <span>Created By</span>
+                  <span>{t.payments.form.createdBy}</span>
                   <div className="select-icon-wrap">
                     <input value={values.createdBy}
-                      onChange={(e) => onChange("createdBy", e.target.value)} placeholder="Captured by" />
+                      onChange={(e) => onChange("createdBy", e.target.value)} placeholder={t.payments.form.createdBy} />
                     <Receipt size={15} className="select-icon" />
                   </div>
                   {errors.createdBy && <small className="field-error">{errors.createdBy}</small>}
                 </label>
 
                 <label className="field-block field-span-full">
-                  <span>Note</span>
+                  <span>{t.payments.form.notes}</span>
                   <textarea rows={4} value={values.notes}
                     onChange={(e) => onChange("notes", e.target.value)}
                     placeholder="Optional operational note..." />
@@ -491,20 +492,21 @@ function DeleteDialog({ payment, code, onCodeChange, onClose, onConfirm }: {
   payment: ExtendedPayment; code: string;
   onCodeChange: (v: string) => void; onClose: () => void; onConfirm: () => void;
 }) {
+  const { t } = useSettings();
   return (
     <div className="payment-modal-overlay" onClick={onClose}>
       <div className="payment-modal-card delete-modal-card" onClick={(e) => e.stopPropagation()}>
         <div className="payment-modal-header">
-          <div><h2>Delete payment</h2><p>This will remove the payment and may change the linked invoice balance.</p></div>
+          <div><h2>{t.payments.delete.title}</h2><p>{t.payments.delete.hint}</p></div>
           <button type="button" className="icon-btn subtle" onClick={onClose}><X size={18} /></button>
         </div>
         <div className="delete-confirm-body">
           <p>Enter <strong>{DELETE_CONFIRMATION_CODE}</strong> to delete <strong>{payment.paymentId}</strong>.</p>
-          <input value={code} onChange={(e) => onCodeChange(e.target.value)} placeholder="Enter confirmation code" />
+          <input value={code} onChange={(e) => onCodeChange(e.target.value)} placeholder={t.payments.delete.placeholder} />
         </div>
         <div className="payment-modal-footer">
-          <button type="button" className="secondary-btn" onClick={onClose}>Cancel</button>
-          <button type="button" className="danger-btn" disabled={code !== DELETE_CONFIRMATION_CODE} onClick={onConfirm}>Delete payment</button>
+          <button type="button" className="secondary-btn" onClick={onClose}>{t.common.cancel}</button>
+          <button type="button" className="danger-btn" disabled={code !== DELETE_CONFIRMATION_CODE} onClick={onConfirm}>{t.payments.delete.confirmBtn}</button>
         </div>
       </div>
     </div>
@@ -516,6 +518,7 @@ function PaymentDetailsDrawer({ payment, activeTab, onChangeTab, onClose }: {
   payment: ExtendedPayment; activeTab: DrawerTab;
   onChangeTab: (tab: DrawerTab) => void; onClose: () => void;
 }) {
+  const { t } = useSettings();
   return (
     <div className="payment-drawer-overlay" onClick={onClose}>
       <aside className="payment-drawer" onClick={(e) => e.stopPropagation()}>
@@ -530,8 +533,8 @@ function PaymentDetailsDrawer({ payment, activeTab, onChangeTab, onClose }: {
         <div className="drawer-tab-strip">
           {(["overview", "invoice", "notes", "receipt", "history"] as DrawerTab[]).map((tab) => (
             <button key={tab} type="button" className={`drawer-tab-btn ${activeTab === tab ? "active" : ""}`} onClick={() => onChangeTab(tab)}>
-              {tab === "overview" && "Overview"}{tab === "invoice" && "Invoice link"}
-              {tab === "notes" && "Notes"}{tab === "receipt" && "Receipt"}{tab === "history" && "History"}
+              {tab === "overview" && t.payments.detail.overview}{tab === "invoice" && t.payments.detail.invoice}
+              {tab === "notes" && t.payments.detail.notes}{tab === "receipt" && t.payments.detail.receipt}{tab === "history" && t.payments.detail.history}
             </button>
           ))}
         </div>
@@ -605,7 +608,7 @@ function PaymentDetailsDrawer({ payment, activeTab, onChangeTab, onClose }: {
 
 /* ── Main Component ───────────────────────────────────── */
 export default function Payments() {
-  const { isArabic } = useSettings();
+  const { t, isArabic } = useSettings();
   const {
     customers,
     invoices,
@@ -824,7 +827,7 @@ export default function Payments() {
       updatePayment(payload);
     }
     setShowEditor(false);
-    setToast({ type: "success", message: editorMode === "create" ? "Payment recorded successfully." : "Payment updated successfully." });
+    setToast({ type: "success", message: editorMode === "create" ? t.payments.toast.created : t.payments.toast.updated });
   };
 
   const handleDeletePayment = () => {
@@ -832,7 +835,7 @@ export default function Payments() {
     deletePaymentCtx(deleteTarget.id ?? deleteTarget.paymentId);
     setDeleteTarget(null); setDeleteCode("");
     setSelectedRows((c) => c.filter((id) => id !== deleteTarget.paymentId));
-    setToast({ type: "success", message: "Payment deleted successfully." });
+    setToast({ type: "success", message: t.payments.toast.deleted });
   };
 
   const handleBulkAction = (action: "export" | "refund" | "note" | "delete" | "print") => {
@@ -863,13 +866,13 @@ export default function Payments() {
           <div className="pay-header-left">
             <div className="pay-header-icon"><BarChart2 size={22} /></div>
             <div>
-              <h1>Payments Overview</h1>
-              <p>Real-time overview of collections, payments and cash flow.</p>
+              <h1>{t.payments.pageTitle}</h1>
+              <p>{t.payments.pageSubtitle}</p>
             </div>
           </div>
           <div className="pay-header-actions">
-            <button type="button" className="primary-btn" onClick={openCreateModal}><Plus size={16} />New payment</button>
-            <button type="button" className="secondary-btn" onClick={() => setToast({ type: "success", message: "Filtered payments export prepared." })}><Download size={16} />Export</button>
+            <button type="button" className="primary-btn" onClick={openCreateModal}><Plus size={16} />{t.payments.newPayment}</button>
+            <button type="button" className="secondary-btn" onClick={() => setToast({ type: "success", message: "Filtered payments export prepared." })}><Download size={16} />{t.payments.export}</button>
           </div>
         </div>
 
@@ -917,7 +920,7 @@ export default function Payments() {
               </div>
               <button type="button" className={`toolbar-btn ${showMoreFilters ? "active" : ""}`}
                 onClick={() => setShowMoreFilters((c) => !c)}>
-                <Filter size={14} /> Filters
+                <Filter size={14} /> {t.payments.filterBtn}
                 {activeFilterCount > 0 && <span className="count-pill">{activeFilterCount}</span>}
               </button>
             </div>
@@ -926,29 +929,29 @@ export default function Payments() {
           {showMoreFilters && (
             <div className="pay-filters-panel">
               <div className="primary-filters-row">
-                <label className="filter-control"><span>Status</span>
+                <label className="filter-control"><span>{t.payments.filter.status}</span>
                   <select className="app-select-control" value={filters.status} onChange={(e) => setFilters((c) => ({ ...c, status: e.target.value }))}>
-                    <option value="">All statuses</option>
+                    <option value="">{t.payments.filter.allStatuses}</option>
                     {PAYMENT_STATUSES.map((s) => <option key={s} value={s}>{formatStatus(s)}</option>)}
                   </select>
                 </label>
-                <label className="filter-control"><span>Method</span>
+                <label className="filter-control"><span>{t.payments.filter.method}</span>
                   <select className="app-select-control" value={filters.method} onChange={(e) => setFilters((c) => ({ ...c, method: e.target.value }))}>
-                    <option value="">All methods</option>
+                    <option value="">{t.payments.filter.allMethods}</option>
                     {PAYMENT_METHODS.map((m) => <option key={m} value={m}>{formatMethod(m)}</option>)}
                   </select>
                 </label>
-                <label className="filter-control"><span>Date range</span>
+                <label className="filter-control"><span>{t.payments.filter.dateRange}</span>
                   <select className="app-select-control" value={filters.dateRange} onChange={(e) => setFilters((c) => ({ ...c, dateRange: e.target.value as DateRangeFilter }))}>
-                    <option value="all">All dates</option>
-                    <option value="today">Today</option>
-                    <option value="week">This week</option>
-                    <option value="month">This month</option>
+                    <option value="all">{t.payments.filter.allDates}</option>
+                    <option value="today">{t.payments.filter.today}</option>
+                    <option value="week">{t.payments.filter.thisWeek}</option>
+                    <option value="month">{t.payments.filter.thisMonth}</option>
                   </select>
                 </label>
-                <label className="filter-control"><span>Customer</span>
+                <label className="filter-control"><span>{t.payments.filter.customer}</span>
                   <select className="app-select-control" value={filters.customer} onChange={(e) => setFilters((c) => ({ ...c, customer: e.target.value }))}>
-                    <option value="">All customers</option>
+                    <option value="">{t.payments.filter.customer}</option>
                     {customerOptions.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
                   </select>
                 </label>
@@ -959,7 +962,7 @@ export default function Payments() {
                     {f.charAt(0).toUpperCase() + f.slice(1)}
                   </button>
                 ))}
-                {activeFilterCount > 0 && <button type="button" className="clear-link-btn" onClick={clearFilters}>Clear filters</button>}
+                {activeFilterCount > 0 && <button type="button" className="clear-link-btn" onClick={clearFilters}>{t.common.reset}</button>}
               </div>
             </div>
           )}
@@ -989,15 +992,15 @@ export default function Payments() {
                       <th className="checkbox-col">
                         <input type="checkbox" checked={allVisibleSelected} onChange={(e) => toggleAllRows(e.target.checked)} />
                       </th>
-                      <th><button type="button" className="sortable-head" onClick={() => requestSort("paymentId")}>Payment ID <ArrowUpDown size={13} /></button></th>
-                      <th><button type="button" className="sortable-head" onClick={() => requestSort("invoiceNumber")}>Invoice <ArrowUpDown size={13} /></button></th>
-                      <th>Customer</th>
-                      <th className="align-right"><button type="button" className="sortable-head align-right" onClick={() => requestSort("amount")}>Amount <ArrowUpDown size={13} /></button></th>
-                      <th><button type="button" className="sortable-head" onClick={() => requestSort("method")}>Method <ArrowUpDown size={13} /></button></th>
-                      <th><button type="button" className="sortable-head" onClick={() => requestSort("status")}>Status <ArrowUpDown size={13} /></button></th>
-                      <th><button type="button" className="sortable-head" onClick={() => requestSort("date")}>Payment Date <ArrowUpDown size={13} /></button></th>
-                      <th>Reference</th>
-                      <th className="actions-col">Actions</th>
+                      <th><button type="button" className="sortable-head" onClick={() => requestSort("paymentId")}>{t.payments.cols.paymentId} <ArrowUpDown size={13} /></button></th>
+                      <th><button type="button" className="sortable-head" onClick={() => requestSort("invoiceNumber")}>{t.payments.cols.invoice} <ArrowUpDown size={13} /></button></th>
+                      <th>{t.payments.cols.customer}</th>
+                      <th className="align-right"><button type="button" className="sortable-head align-right" onClick={() => requestSort("amount")}>{t.payments.cols.amount} <ArrowUpDown size={13} /></button></th>
+                      <th><button type="button" className="sortable-head" onClick={() => requestSort("method")}>{t.payments.cols.method} <ArrowUpDown size={13} /></button></th>
+                      <th><button type="button" className="sortable-head" onClick={() => requestSort("status")}>{t.payments.cols.status} <ArrowUpDown size={13} /></button></th>
+                      <th><button type="button" className="sortable-head" onClick={() => requestSort("date")}>{t.payments.cols.date} <ArrowUpDown size={13} /></button></th>
+                      <th>{t.payments.cols.reference}</th>
+                      <th className="actions-col">{t.payments.cols.actions}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1041,9 +1044,9 @@ export default function Payments() {
                         </td>
                         <td onClick={(e) => e.stopPropagation()}>
                           <div className="row-actions">
-                            <button type="button" className="pay-action-btn" title="View" onClick={() => { setDetailsPayment(p); setDrawerTab("overview"); }}><Eye size={14} /></button>
-                            <button type="button" className="pay-action-btn" title="Edit" onClick={() => openEditModal(p)}><Pencil size={14} /></button>
-                            <button type="button" className="pay-action-btn danger" title="Delete" onClick={() => { setDeleteTarget(p); setDeleteCode(""); }}><Trash2 size={14} /></button>
+                            <button type="button" className="pay-action-btn" title={t.common.view} onClick={() => { setDetailsPayment(p); setDrawerTab("overview"); }}><Eye size={14} /></button>
+                            <button type="button" className="pay-action-btn" title={t.common.edit} onClick={() => openEditModal(p)}><Pencil size={14} /></button>
+                            <button type="button" className="pay-action-btn danger" title={t.common.delete} onClick={() => { setDeleteTarget(p); setDeleteCode(""); }}><Trash2 size={14} /></button>
                           </div>
                         </td>
                       </tr>
