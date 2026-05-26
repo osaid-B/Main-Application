@@ -33,6 +33,8 @@ import PosStockCounts from "./pages/pos/StockCounts";
 import PosCategories from "./pages/pos/Categories";
 import Departments from "./pages/Departments";
 import Permissions from "./pages/Permissions";
+import Reports from "./pages/Reports";
+import Expenses from "./pages/Expenses";
 import ComingSoon from "./pages/ComingSoon";
 
 function AppRoutes() {
@@ -72,10 +74,10 @@ function AppRoutes() {
           {/* Finance & Accounting */}
           <Route path="/general-ledger" element={<ComingSoon title="General Ledger" />} />
           <Route path="/chart-of-accounts" element={<ComingSoon title="Chart of Accounts" />} />
-          <Route path="/reports" element={<ComingSoon title="Reports" />} />
+          <Route path="/reports" element={<Reports />} />
           <Route path="/reports/profit-loss" element={<ComingSoon title="Profit & Loss" />} />
           <Route path="/reports/balance-sheet" element={<ComingSoon title="Balance Sheet" />} />
-          <Route path="/expenses" element={<ComingSoon title="Expenses" />} />
+          <Route path="/expenses" element={<Expenses />} />
 
           {/* Inventory & Operations */}
           <Route path="/inventory" element={<ComingSoon title="Inventory" />} />
