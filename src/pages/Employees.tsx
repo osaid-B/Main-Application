@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import "./Employees.css";
+import { useSettings } from "../context/SettingsContext";
 import {
   BarChart2,
   Calendar,
@@ -384,6 +385,7 @@ function EmployeeFormModal({
   onSubmit: () => void;
   submitLabel: string;
 }) {
+  const { t } = useSettings();
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-card employees-modal-card" onClick={(e) => e.stopPropagation()}>
@@ -397,52 +399,52 @@ function EmployeeFormModal({
         <form className="modal-form" onSubmit={(e) => { e.preventDefault(); onSubmit(); }}>
           <div className="employees-form-grid">
             <div>
-              <label className="modal-label">Employee Name</label>
+              <label className="modal-label">{t.employees.form.name}</label>
               <input className="modal-input" type="text" value={values.name} onChange={(e) => onChange("name", e.target.value)} />
               {errors.name && <p className="form-error">{errors.name}</p>}
             </div>
             <div>
-              <label className="modal-label">Phone</label>
+              <label className="modal-label">{t.employees.form.phone}</label>
               <input className="modal-input" type="text" value={values.phone} onChange={(e) => onChange("phone", e.target.value.replace(/\D/g, "").slice(0, 10))} />
               {errors.phone && <p className="form-error">{errors.phone}</p>}
             </div>
             <div>
-              <label className="modal-label">Work Start</label>
+              <label className="modal-label">{t.employees.form.workStart}</label>
               <input className="modal-input" type="time" value={values.workStart} onChange={(e) => onChange("workStart", e.target.value)} />
               {errors.workStart && <p className="form-error">{errors.workStart}</p>}
             </div>
             <div>
-              <label className="modal-label">Work End</label>
+              <label className="modal-label">{t.employees.form.workEnd}</label>
               <input className="modal-input" type="time" value={values.workEnd} onChange={(e) => onChange("workEnd", e.target.value)} />
               {errors.workEnd && <p className="form-error">{errors.workEnd}</p>}
             </div>
             <div>
-              <label className="modal-label">Salary Type</label>
+              <label className="modal-label">{t.employees.form.salaryType}</label>
               <select className="modal-input" value={values.salaryType} onChange={(e) => onChange("salaryType", e.target.value as SalaryType)}>
-                <option value="hourly">Hourly Salary</option>
-                <option value="fixed">Fixed Salary</option>
+                <option value="hourly">{t.employees.salaryType.hourly}</option>
+                <option value="fixed">{t.employees.salaryType.fixed}</option>
               </select>
             </div>
             {values.salaryType === "hourly" ? (
               <div>
-                <label className="modal-label">Hourly Rate</label>
+                <label className="modal-label">{t.employees.form.hourlyRate}</label>
                 <input className="modal-input" type="number" min="0" step="1" value={values.hourlyRate} onChange={(e) => onChange("hourlyRate", e.target.value)} />
                 {errors.hourlyRate && <p className="form-error">{errors.hourlyRate}</p>}
               </div>
             ) : (
               <div>
-                <label className="modal-label">Fixed Salary</label>
+                <label className="modal-label">{t.employees.form.fixedSalary}</label>
                 <input className="modal-input" type="number" min="0" step="1" value={values.fixedSalary} onChange={(e) => onChange("fixedSalary", e.target.value)} />
                 {errors.fixedSalary && <p className="form-error">{errors.fixedSalary}</p>}
               </div>
             )}
             <div className="employees-form-grid-full">
-              <label className="modal-label">Notes</label>
+              <label className="modal-label">{t.employees.form.notes}</label>
               <textarea className="modal-input" rows={4} value={values.notes} onChange={(e) => onChange("notes", e.target.value)} />
             </div>
           </div>
           <div className="modal-actions">
-            <Button variant="secondary" size="md" onClick={onClose}>Cancel</Button>
+            <Button variant="secondary" size="md" onClick={onClose}>{t.common.cancel}</Button>
             <Button variant="primary" size="md" type="submit">{submitLabel}</Button>
           </div>
         </form>
@@ -459,13 +461,14 @@ function DeleteConfirmModal({
   onClose: () => void;
   onConfirm: () => void;
 }) {
+  const { t } = useSettings();
   const isValid = state.confirmText === DELETE_CONFIRMATION_CODE;
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-card confirm-dialog-card employees-danger-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <div>
-            <h2>Delete Employee</h2>
+            <h2>{t.employees.delete.title}</h2>
             <p>Danger zone</p>
           </div>
           <Button variant="icon" size="md" aria-label="Close" onClick={onClose}>×</Button>
@@ -478,9 +481,9 @@ function DeleteConfirmModal({
           <input className="modal-input" type="text" value={state.confirmText} onChange={(e) => onChange(e.target.value)} />
         </div>
         <div className="modal-actions">
-          <Button variant="secondary" size="md" onClick={onClose}>Cancel</Button>
+          <Button variant="secondary" size="md" onClick={onClose}>{t.common.cancel}</Button>
           <Button variant="danger" size="md" disabled={!isValid} onClick={onConfirm} style={{ opacity: isValid ? 1 : 0.5, cursor: isValid ? "pointer" : "not-allowed" }}>
-            Delete Employee
+            {t.common.delete}
           </Button>
         </div>
       </div>
@@ -496,6 +499,7 @@ function MonthlyAttendanceEditorModal({
   onClose: () => void;
   onSave: (payload: { employeeId: string; date: string; status: DailyAttendanceStatus; workedHours: number; advanceAmount: number; notes?: string }) => void;
 }) {
+  const { t } = useSettings();
   const [status, setStatus] = useState<DailyAttendanceStatus>(state.status);
   const [workedHours, setWorkedHours] = useState(state.workedHours);
   const [advanceAmount, setAdvanceAmount] = useState(state.advanceAmount);
@@ -520,27 +524,27 @@ function MonthlyAttendanceEditorModal({
         </div>
         <div className="modal-form">
           <div>
-            <label className="modal-label">Status</label>
+            <label className="modal-label">{t.common.status}</label>
             <select className="modal-input" value={status} onChange={(e) => { const s = e.target.value as DailyAttendanceStatus; setStatus(s); setWorkedHours(String(getDefaultWorkedHours(employee, s))); }}>
               {DAILY_STATUS_OPTIONS.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
             </select>
           </div>
           <div>
-            <label className="modal-label">Worked Hours</label>
+            <label className="modal-label">{t.employees.cols.workHours}</label>
             <input className="modal-input" type="number" min="0" step="0.25" value={workedHours} onChange={(e) => setWorkedHours(e.target.value)} />
           </div>
           <div>
-            <label className="modal-label">Advance</label>
+            <label className="modal-label">{t.employees.cols.advance}</label>
             <input className="modal-input" type="number" min="0" step="1" value={advanceAmount} onChange={(e) => setAdvanceAmount(e.target.value)} />
           </div>
           <div>
-            <label className="modal-label">Notes</label>
+            <label className="modal-label">{t.employees.form.notes}</label>
             <textarea className="modal-input" rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} />
           </div>
           <div className="modal-actions">
-            <Button variant="secondary" size="md" onClick={onClose}>Cancel</Button>
+            <Button variant="secondary" size="md" onClick={onClose}>{t.common.cancel}</Button>
             <Button variant="primary" size="md" onClick={() => onSave({ employeeId: state.employeeId, date: state.date, status, workedHours: Number(workedHours || 0), advanceAmount: Number(advanceAmount || 0), notes: notes.trim() || undefined })}>
-              Save
+              {t.common.save}
             </Button>
           </div>
         </div>
@@ -632,6 +636,7 @@ function TodayAttendanceSection({
   onUpdateEmployeeDay: (employeeId: string, payload: { status: DailyAttendanceStatus; workedHours: number; advanceAmount: number; notes?: string }) => void;
   onSaveSheet: () => void;
 }) {
+  const { t } = useSettings();
   const [page, setPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [sheetSearch, setSheetSearch] = useState("");
@@ -689,7 +694,7 @@ function TodayAttendanceSection({
               <UserCheck size={20} color="#16a34a" />
             </div>
             <div>
-              <span>Present</span>
+              <span>{t.employees.attendance.present}</span>
               <strong>{todaySummary.present}</strong>
               <small className="emp-kpi-pct">{pct(todaySummary.present)} of total <TrendingUp size={11} /></small>
             </div>
@@ -699,7 +704,7 @@ function TodayAttendanceSection({
               <UserX size={20} color="#d97706" />
             </div>
             <div>
-              <span>Late</span>
+              <span>{t.employees.attendance.late}</span>
               <strong>{todaySummary.late}</strong>
               <small className="emp-kpi-pct">{pct(todaySummary.late)} of total <TrendingUp size={11} /></small>
             </div>
@@ -709,7 +714,7 @@ function TodayAttendanceSection({
               <UserX size={20} color="#dc2626" />
             </div>
             <div>
-              <span>Absent</span>
+              <span>{t.employees.attendance.absent}</span>
               <strong>{todaySummary.absent}</strong>
               <small className="emp-kpi-pct">{pct(todaySummary.absent)} of total <TrendingUp size={11} /></small>
             </div>
@@ -757,13 +762,13 @@ function TodayAttendanceSection({
                 <table className="emp-sheet-table app-data-table">
                   <thead>
                     <tr>
-                      <th>Employee</th>
+                      <th>{t.employees.cols.employee}</th>
                       <th>Shift</th>
-                      <th>Status</th>
-                      <th>Hours</th>
-                      <th>Advance</th>
-                      <th>Note</th>
-                      <th>Action</th>
+                      <th>{t.employees.cols.status}</th>
+                      <th>{t.employees.cols.workHours}</th>
+                      <th>{t.employees.cols.advance}</th>
+                      <th>{t.employees.form.notes}</th>
+                      <th>{t.employees.cols.actions}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1332,6 +1337,7 @@ function ReportsSection({
   toggleReportSort: (key: ReportSortKey) => void;
   handleExportReportCsv: () => void;
 }) {
+  const { t } = useSettings();
   return (
     <>
       {/* Range tabs + export */}
@@ -1349,7 +1355,7 @@ function ReportsSection({
           ))}
         </div>
         <Button variant="secondary" size="md" onClick={handleExportReportCsv}>
-          <Download size={14} /> Export CSV
+          <Download size={14} /> {t.common.export} CSV
         </Button>
       </div>
 
@@ -1360,7 +1366,7 @@ function ReportsSection({
             <BarChart2 size={20} color="#16a34a" />
           </div>
           <div>
-            <span>Gross</span>
+            <span>{t.employees.reports.gross}</span>
             <strong>${payrollSummary.gross.toFixed(2)}</strong>
             <small>Total earnings</small>
           </div>
@@ -1370,7 +1376,7 @@ function ReportsSection({
             <CreditCard size={20} color="#ea580c" />
           </div>
           <div>
-            <span>Advance</span>
+            <span>{t.employees.cols.advance}</span>
             <strong>${payrollSummary.advance.toFixed(2)}</strong>
             <small>Total advances</small>
           </div>
@@ -1380,7 +1386,7 @@ function ReportsSection({
             <Wallet size={20} color="#2563eb" />
           </div>
           <div>
-            <span>Net</span>
+            <span>{t.employees.reports.net}</span>
             <strong>${payrollSummary.net.toFixed(2)}</strong>
             <small>Net payable</small>
           </div>
@@ -1415,7 +1421,7 @@ function ReportsSection({
                 <tr>
                   {(["name", "present", "late", "absent", "halfDay", "leave", "totalHours", "gross", "advance", "net"] as ReportSortKey[]).map((k) => (
                     <th key={k} className="emp-sortable" onClick={() => toggleReportSort(k)}>
-                      {{ name: "Employee", present: "Present", late: "Late", absent: "Absent", halfDay: "Half Day", leave: "Leave", totalHours: "Hours", gross: "Gross", advance: "Advance", net: "Net" }[k]}
+                      {{ name: t.employees.cols.employee, present: t.employees.reports.present, late: t.employees.reports.late, absent: t.employees.reports.absent, halfDay: t.employees.reports.halfDay, leave: t.employees.reports.leave, totalHours: t.employees.reports.totalHours, gross: t.employees.reports.gross, advance: t.employees.cols.advance, net: t.employees.reports.net }[k]}
                       {" "}{getReportSortIndicator(k)}
                     </th>
                   ))}
@@ -1465,6 +1471,7 @@ function EmployeesSection({
   onEdit: (employee: Employee) => void;
   onDelete: (employee: Employee) => void;
 }) {
+  const { t } = useSettings();
   const [localSearch, setLocalSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("active");
   const [page, setPage] = useState(1);
@@ -1548,18 +1555,18 @@ function EmployeesSection({
               <thead>
                 <tr>
                   <th className="emp-sortable" onClick={() => toggleSort("name")}>
-                    EMPLOYEE {sortKey === "name" ? (sortDir === "asc" ? "↑" : "↓") : <span className="emp-sort-icon"><ChevronLeft size={10} style={{ transform: "rotate(-90deg)" }} /></span>}
+                    {t.employees.cols.employee} {sortKey === "name" ? (sortDir === "asc" ? "↑" : "↓") : <span className="emp-sort-icon"><ChevronLeft size={10} style={{ transform: "rotate(-90deg)" }} /></span>}
                   </th>
                   <th className="emp-sortable" onClick={() => toggleSort("id")}>
                     EMP CODE {sortKey === "id" ? (sortDir === "asc" ? "↑" : "↓") : ""}
                   </th>
                   <th className="emp-sortable" onClick={() => toggleSort("phone")}>
-                    PHONE {sortKey === "phone" ? (sortDir === "asc" ? "↑" : "↓") : ""}
+                    {t.common.phone} {sortKey === "phone" ? (sortDir === "asc" ? "↑" : "↓") : ""}
                   </th>
                   <th>SHIFT</th>
                   <th>DEFAULT HOURS</th>
-                  <th>STATUS</th>
-                  <th>ACTIONS</th>
+                  <th>{t.employees.cols.status}</th>
+                  <th>{t.employees.cols.actions}</th>
                 </tr>
               </thead>
               <tbody>
@@ -1604,7 +1611,7 @@ function EmployeesSection({
                       <td>
                         <span className={`emp-status-badge ${isActive ? "active" : "inactive"}`}>
                           <span className="emp-status-dot" />
-                          {isActive ? "Active" : "Inactive"}
+                          {isActive ? t.common.active : t.common.inactive}
                         </span>
                       </td>
                       <td>
@@ -1668,7 +1675,7 @@ function EmployeesSection({
       ) : (
         <div className="emp-empty-state">
           <Users size={40} color="#cbd5e1" />
-          <strong>No employees found.</strong>
+          <strong>{t.employees.noEmployees}</strong>
           <span>Add your first employee to get started.</span>
         </div>
       )}
@@ -1679,6 +1686,7 @@ function EmployeesSection({
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function Employees() {
+  const { t } = useSettings();
   const [employees, setEmployees] = useState<Employee[]>(() => getEmployees());
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState<MainTab>("today");
@@ -1787,7 +1795,7 @@ export default function Employees() {
         )
       );
       resetFormState();
-      setToast({ type: "success", message: "Employee updated successfully." });
+      setToast({ type: "success", message: t.employees.toast.updated });
       return;
     }
 
@@ -1810,7 +1818,7 @@ export default function Employees() {
 
     setEmployees((prev) => [newEmployee, ...prev]);
     resetFormState();
-    setToast({ type: "success", message: "Employee added successfully." });
+    setToast({ type: "success", message: t.employees.toast.created });
   };
 
   const handleApplyPresentToAll = () => {
@@ -1887,9 +1895,9 @@ export default function Employees() {
         <div className="employees-header employees-lux-header">
           <div>
             <p className="dashboard-badge">Employee Management</p>
-            <h1 className="dashboard-title">Employees</h1>
+            <h1 className="dashboard-title">{t.employees.pageTitle}</h1>
             <p className="dashboard-subtitle employees-hero-text">
-              Manage attendance, monthly records, reports, and employee information
+              {t.employees.pageSubtitle}
             </p>
           </div>
           <div className="employees-header-actions">
@@ -1897,13 +1905,13 @@ export default function Employees() {
               <Search size={15} />
               <input
                 type="text"
-                placeholder="Search employee..."
+                placeholder={t.employees.searchPlaceholder}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
             <Button variant="primary" size="lg" onClick={openAddModal}>
-              + Add Employee
+              + {t.employees.addEmployee}
             </Button>
           </div>
         </div>
@@ -1913,10 +1921,10 @@ export default function Employees() {
           {/* Tabs */}
           <div className="emp-main-tabs">
             {([
-              ["today", "Today Attendance"],
-              ["monthly", "Monthly Attendance"],
-              ["reports", "Reports"],
-              ["employees", "Employees"],
+              ["today", t.employees.tabs.today],
+              ["monthly", t.employees.tabs.monthly],
+              ["reports", t.employees.tabs.reports],
+              ["employees", t.employees.tabs.employees],
             ] as [MainTab, string][]).map(([key, label]) => (
               <button
                 key={key}
@@ -1983,14 +1991,14 @@ export default function Employees() {
 
       {showEmployeeModal && (
         <EmployeeFormModal
-          title={editingEmployee ? "Edit Employee" : "Add Employee"}
+          title={editingEmployee ? t.employees.form.editTitle : t.employees.form.createTitle}
           description={editingEmployee ? "Update the selected employee information." : "Enter the new employee information."}
           values={form}
           errors={formErrors}
           onChange={setField}
           onClose={resetFormState}
           onSubmit={handleSaveEmployee}
-          submitLabel={editingEmployee ? "Save Changes" : "Save Employee"}
+          submitLabel={editingEmployee ? t.common.saveChanges : t.employees.addEmployee}
         />
       )}
 
@@ -2003,7 +2011,7 @@ export default function Employees() {
             if (!deleteDialog || deleteDialog.confirmText !== DELETE_CONFIRMATION_CODE) return;
             setEmployees((prev) => prev.filter((emp) => emp.id !== deleteDialog.employeeId));
             setDeleteDialog(null);
-            setToast({ type: "success", message: "Employee deleted successfully." });
+            setToast({ type: "success", message: t.employees.toast.deleted });
           }}
         />
       )}
@@ -2021,7 +2029,7 @@ export default function Employees() {
               notes: payload.notes,
             });
             setMonthlyEditor(null);
-            setToast({ type: "success", message: "Day entry updated successfully." });
+            setToast({ type: "success", message: t.employees.toast.attendanceMarked });
           }}
         />
       )}
