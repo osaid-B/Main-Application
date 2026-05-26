@@ -7,6 +7,7 @@ import { Badge } from "../components/ui/Badge";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent, FormEvent, ReactNode } from "react";
 import { createPortal } from "react-dom";
+import { useSettings } from "../context/SettingsContext";
 import {
   Building2,
   Check,
@@ -150,29 +151,10 @@ const EMPTY_FORM: InvoiceFormState = {
 
 const TAB_ORDER: TabKey[] = ["customer", "supplier", "internal"];
 
-const TAB_CONFIG: Record<
-  TabKey,
-  {
-    label: string;
-    tableTitle: string;
-    icon: typeof Users;
-  }
-> = {
-  customer: {
-    label: "Customer Invoices",
-    tableTitle: "Customer Invoices",
-    icon: Users,
-  },
-  supplier: {
-    label: "Supplier Invoices",
-    tableTitle: "Supplier Invoices",
-    icon: Truck,
-  },
-  internal: {
-    label: "Internal Invoices",
-    tableTitle: "Internal Invoices",
-    icon: Building2,
-  },
+const TAB_ICONS: Record<TabKey, typeof Users> = {
+  customer: Users,
+  supplier: Truck,
+  internal: Building2,
 };
 
 function ModalPortal({ children }: { children: ReactNode }) {
@@ -201,10 +183,22 @@ function normalizePaymentMethod(value: unknown): PaymentMethod {
   return "Bank Transfer";
 }
 
-function paymentLabel(method: PaymentMethod) {
-  if (method === "Cash") return "كاش";
-  if (method === "Card") return "بطاقة";
-  return "حوالة بنكية";
+type T = ReturnType<typeof useSettings>["t"];
+
+function paymentLabel(method: PaymentMethod, t: T) {
+  if (method === "Cash") return t.invoices.methods.cash;
+  if (method === "Card") return t.invoices.methods.card;
+  return t.invoices.methods.bankTransfer;
+}
+
+function getDefaultTitle(type: TabKey, t: T) {
+  return t.invoices.getDefaultTitle[type];
+}
+
+function getPartyLabel(type: TabKey, t: T) {
+  if (type === "customer") return t.invoices.cols.customer;
+  if (type === "supplier") return t.invoices.cols.supplier;
+  return t.invoices.cols.department;
 }
 
 function formatDate(value: string) {
@@ -277,17 +271,6 @@ function normalizeInvoiceRecord(invoice: InvoiceRecord): InvoiceRecord {
   };
 }
 
-function getDefaultTitle(type: TabKey) {
-  if (type === "customer") return "Customer Invoice";
-  if (type === "supplier") return "Supplier Invoice";
-  return "Internal Invoice";
-}
-
-function getPartyLabel(type: TabKey) {
-  if (type === "customer") return "Customer";
-  if (type === "supplier") return "Supplier";
-  return "Department";
-}
 
 function getCustomerId(customer: Customer, index: number) {
   const item = customer as Customer & Record<string, unknown>;
@@ -589,6 +572,7 @@ function seedInvoices(
 }
 
 export default function Invoices() {
+  const { t } = useSettings();
   const [customers] = useState<Customer[]>(() => getCustomers());
   const [suppliers] = useState<Supplier[]>(() => getSuppliers());
   const [products] = useState<Product[]>(() => getProducts());
@@ -873,7 +857,7 @@ export default function Invoices() {
       partyName: customer.name,
       partySubtext: customer.email || customer.phone,
       title:
-        current.title.trim() === "" || current.title === getDefaultTitle("customer")
+        current.title.trim() === "" || current.title === getDefaultTitle("customer", t)
           ? `${customer.name} Invoice`
           : current.title,
     }));
@@ -887,7 +871,7 @@ export default function Invoices() {
     setFormState({
       ...EMPTY_FORM,
       type,
-      title: getDefaultTitle(type),
+      title: getDefaultTitle(type, t),
       issueDate: TODAY,
       dueDate: TODAY,
       currency: "ILS",
@@ -980,8 +964,8 @@ export default function Invoices() {
           ...current,
           type: nextType,
           title:
-            current.title.trim() === "" || current.title === getDefaultTitle(current.type)
-              ? getDefaultTitle(nextType)
+            current.title.trim() === "" || current.title === getDefaultTitle(current.type, t)
+              ? getDefaultTitle(nextType, t)
               : current.title,
           paymentMethod: "Bank Transfer",
           customerId: nextType === "customer" ? current.customerId : "",
@@ -1022,7 +1006,7 @@ export default function Invoices() {
     const partyName =
       formState.partyName.trim() ||
       formState.department.trim() ||
-      getPartyLabel(formState.type);
+      getPartyLabel(formState.type, t);
 
     const partySubtext =
       formState.type === "internal"
@@ -1035,7 +1019,7 @@ export default function Invoices() {
     const nextRecord: InvoiceRecord = {
       id: nextId,
       type: formState.type,
-      title: formState.title.trim() || getDefaultTitle(formState.type),
+      title: formState.title.trim() || getDefaultTitle(formState.type, t),
       partyName,
       partySubtext,
       customerId: formState.type === "customer" ? formState.customerId : undefined,
@@ -1073,7 +1057,7 @@ export default function Invoices() {
       return [nextRecord, ...current];
     });
 
-    pushToast(formMode === "edit" ? "Invoice updated." : "Invoice created.");
+    pushToast(formMode === "edit" ? t.invoices.toast.updated : t.invoices.toast.created);
     closeFormModal();
   }
 

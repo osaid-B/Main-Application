@@ -1,4 +1,3 @@
-@'
 # Logs
 logs
 *.log
@@ -35,7 +34,7 @@ out/
 *.sln
 *.sw?
 
-# Django specific
+# Django / Python
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
@@ -43,6 +42,7 @@ media
 __pycache__/
 *.py[cod]
 *$py.class
+backend_backup/venv/
 
 # Environment variables
 .env
@@ -54,6 +54,5 @@ __pycache__/
 # OS
 Thumbs.db
 
-# Ghost file (causing git issues)
-, storage functions, or data types unless absolutely necessary.
-'@ | Set-Content -Path .gitignore -Encoding UTF8
+# Archives
+*.zip
