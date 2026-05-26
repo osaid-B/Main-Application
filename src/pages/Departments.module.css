@@ -1,0 +1,392 @@
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: var(--app-space-3);
+}
+
+.title {
+  margin: 0;
+  font-size: clamp(1.5rem, 2.5vw, 2rem);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  color: var(--app-text);
+}
+
+.subtitle {
+  margin: var(--app-space-1) 0 0;
+  font-size: 13px;
+  color: var(--app-text-muted);
+  max-width: 640px;
+}
+
+/* KPI cards */
+.kpi {
+  position: relative;
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-lg);
+  padding: var(--app-space-4);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  box-shadow: var(--app-shadow-soft);
+  overflow: hidden;
+}
+
+.kpi::before {
+  content: "";
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: 0;
+  inset-inline-end: 0;
+  height: 3px;
+}
+
+.kpi_success::before { background: var(--atlas-green); }
+.kpi_info::before    { background: var(--atlas-blue); }
+.kpi_warning::before { background: var(--atlas-orange); }
+.kpi_neutral::before { background: var(--app-text-light); }
+
+.kpiLabel {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--app-text-light);
+}
+
+.kpiValue {
+  font-size: 1.65rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--app-text);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.kpiSub { font-size: 11px; color: var(--app-text-muted); }
+
+/* Toolbar */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--app-space-3);
+  flex-wrap: wrap;
+}
+
+.searchWrap { flex: 1; min-width: 220px; }
+
+.viewToggle {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  background: var(--app-surface-muted);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-md);
+}
+
+.viewBtn {
+  padding: 5px 14px;
+  background: transparent;
+  border: 0;
+  border-radius: var(--app-radius-sm);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--app-text-soft);
+  cursor: pointer;
+  transition: var(--app-transition-fast, var(--app-transition));
+}
+
+.viewBtn:hover { background: var(--app-surface); color: var(--app-text); }
+.viewBtnActive { background: var(--app-surface); color: var(--app-text); font-weight: 600; box-shadow: var(--app-shadow-xs); }
+
+/* Table */
+.tableWrap {
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-lg);
+  overflow-x: auto;
+  box-shadow: var(--app-shadow-soft);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.table thead { background: var(--app-surface-muted); }
+
+.table th {
+  text-align: start;
+  padding: 8px 12px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--app-text-light);
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid var(--app-border);
+  white-space: nowrap;
+}
+
+.table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--app-border-subtle, var(--app-border));
+  vertical-align: middle;
+}
+
+.table tbody tr:last-child td { border-bottom: 0; }
+.table tbody tr:hover { background: var(--app-surface-hover); }
+
+.deptCell { display: flex; flex-direction: column; gap: 2px; }
+.deptCellChild { padding-inline-start: var(--app-space-4); }
+.deptName { font-weight: 600; font-size: 12px; color: var(--app-text); }
+.deptNameAr { font-size: 11px; color: var(--app-text-muted); direction: rtl; text-align: start; }
+.parentBadge {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--app-surface-muted);
+  border: 1px solid var(--app-border);
+  font-size: 10px;
+  color: var(--app-text-soft);
+}
+
+.headName { font-size: 12px; color: var(--app-text); }
+.headId { font-family: var(--font-mono); font-size: 10px; color: var(--app-text-muted); }
+
+.mono { font-family: var(--font-mono); font-size: 11px; }
+.numEnd { text-align: end; }
+.openPos { color: var(--atlas-orange); font-weight: 600; }
+
+.editBtn {
+  background: transparent;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-sm);
+  padding: 4px 8px;
+  font: inherit;
+  font-size: 11px;
+  color: var(--app-text-soft);
+  cursor: pointer;
+  transition: var(--app-transition-fast, var(--app-transition));
+}
+
+.editBtn:hover { border-color: var(--app-text-muted); color: var(--app-text); background: var(--app-surface-hover); }
+
+.empty {
+  text-align: center;
+  padding: var(--app-space-7) var(--app-space-3);
+  color: var(--app-text-muted);
+  font-size: 13px;
+}
+
+/* Org chart */
+.orgRoot {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-5);
+  padding: var(--app-space-4);
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-lg);
+  box-shadow: var(--app-shadow-soft);
+}
+
+.orgBranch {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--app-space-3);
+}
+
+.orgNode {
+  background: var(--app-surface);
+  border: 2px solid var(--app-border);
+  border-radius: var(--app-radius-md);
+  padding: var(--app-space-3) var(--app-space-4);
+  min-width: 140px;
+  text-align: center;
+  box-shadow: var(--app-shadow-soft);
+}
+
+.orgNodeName {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--app-text);
+}
+
+.orgNodeMeta {
+  font-size: 11px;
+  color: var(--app-text-muted);
+}
+
+.orgChildren {
+  display: flex;
+  gap: var(--app-space-4);
+  flex-wrap: wrap;
+  justify-content: center;
+  position: relative;
+}
+
+.orgChildren::before {
+  content: "";
+  position: absolute;
+  inset-block-start: -12px;
+  inset-inline-start: 50%;
+  width: 2px;
+  height: 12px;
+  background: var(--app-border);
+}
+
+.orgChildNode {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+}
+
+.orgChildNode::before {
+  content: "";
+  position: absolute;
+  inset-block-start: -12px;
+  inset-inline-start: 50%;
+  width: 2px;
+  height: 12px;
+  background: var(--app-border);
+}
+
+/* Form modal */
+.formGrid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-3);
+}
+
+.formRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--app-space-3);
+}
+
+.formLabel {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--app-text-soft);
+  margin-bottom: 4px;
+}
+
+.formSelect {
+  width: 100%;
+  padding: 8px 10px;
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-sm);
+  font: inherit;
+  font-size: 13px;
+  color: var(--app-text);
+  cursor: pointer;
+}
+
+.formSelect:focus {
+  outline: 2px solid var(--app-focus-ring, var(--atlas-blue));
+  outline-offset: 1px;
+}
+
+.formFooter {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--app-space-2);
+}
+
+/* Detail drawer */
+.drawerOverlay {
+  position: fixed;
+  inset: 0;
+  background: color-mix(in srgb, var(--app-bg) 40%, transparent);
+  z-index: 200;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.drawer {
+  width: 320px;
+  background: var(--app-surface);
+  border-inline-start: 1px solid var(--app-border);
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--app-shadow-md, var(--app-shadow-soft));
+}
+
+.drawerHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: var(--app-space-4);
+  border-bottom: 1px solid var(--app-border);
+  background: var(--app-surface-muted);
+}
+
+.drawerTitle {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--app-text);
+}
+
+.drawerSub {
+  font-size: 12px;
+  color: var(--app-text-muted);
+  direction: rtl;
+  text-align: start;
+}
+
+.drawerClose {
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  font-size: 16px;
+  color: var(--app-text-muted);
+  padding: 2px 4px;
+}
+
+.drawerClose:hover { color: var(--app-text); }
+
+.drawerBody {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--app-space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-4);
+}
+
+.drawerSection {}
+
+.drawerSectionTitle {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: var(--app-text-light);
+  margin-bottom: var(--app-space-2);
+}
+
+.memberRow {
+  font-size: 12px;
+  color: var(--app-text);
+  padding: 4px 0;
+  border-bottom: 1px solid var(--app-border-subtle, var(--app-border));
+}
+
+.drawerValue {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--app-text);
+}
+
+.drawerFooter {
+  padding: var(--app-space-3) var(--app-space-4);
+  border-top: 1px solid var(--app-border);
+  display: flex;
+  justify-content: flex-end;
+}

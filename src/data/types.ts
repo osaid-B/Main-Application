@@ -551,3 +551,40 @@ export type SystemAuditEntry = {
   diff?: Record<string, { from: unknown; to: unknown }>;
   ip?: string;
 };
+
+// ─── Departments ──────────────────────────────────────────────────────────────
+
+export interface Department {
+  id: string;
+  name: string;
+  nameAr: string;
+  headId?: string;
+  headName?: string;
+  parentId?: string;
+  headcount: number;
+  openPositions: number;
+  monthlyRevenue: number;
+  status: "active" | "inactive";
+}
+
+// ─── Permissions ──────────────────────────────────────────────────────────────
+
+export type PermissionAction = "view" | "create" | "edit" | "delete" | "export";
+
+export interface PermissionModule {
+  module: string;
+  label: string;
+  labelAr: string;
+  actions: Record<PermissionAction, boolean>;
+}
+
+export interface Role {
+  id: string;
+  name: string;
+  nameAr: string;
+  description: string;
+  descriptionAr: string;
+  userCount: number;
+  isSystem: boolean;
+  permissions: PermissionModule[];
+}
