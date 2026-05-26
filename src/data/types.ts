@@ -520,18 +520,23 @@ export type Quote = {
 // ── Expenses ──────────────────────────────────────────────────────────────────
 
 export type ExpensePaymentMethod = "cash" | "bank" | "card" | "cheque";
+export type ExpenseStatus = "approved" | "pending" | "rejected";
 
 export type Expense = {
   id: string;
   date: string;
+  description?: string;
   category: string;
   amount: number;
   currency: "ILS" | "USD" | "EUR";
   vendor?: string;
+  /** Display name of the payee / beneficiary */
+  payee?: string;
   paymentMethod: ExpensePaymentMethod;
   receiptUrl?: string;
   notes?: string;
   isDeleted?: boolean;
+  status?: ExpenseStatus;
 };
 
 // ── System Audit Log ──────────────────────────────────────────────────────────
