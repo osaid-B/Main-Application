@@ -60,6 +60,25 @@ function AppRoutes() {
           <Route path="/data-import" element={<DataImport />} />
           <Route path="/preview" element={<Preview />} />
 
+          {/* Finance & Accounting */}
+          <Route path="/general-ledger" element={<ComingSoon title="General Ledger" />} />
+          <Route path="/chart-of-accounts" element={<ComingSoon title="Chart of Accounts" />} />
+          <Route path="/reports" element={<ComingSoon title="Reports" />} />
+          <Route path="/reports/profit-loss" element={<ComingSoon title="Profit & Loss" />} />
+          <Route path="/reports/balance-sheet" element={<ComingSoon title="Balance Sheet" />} />
+          <Route path="/expenses" element={<ComingSoon title="Expenses" />} />
+
+          {/* Inventory & Operations */}
+          <Route path="/inventory" element={<ComingSoon title="Inventory" />} />
+          <Route path="/inventory/movements" element={<ComingSoon title="Stock Movements" />} />
+          <Route path="/manufacturing" element={<ComingSoon title="Manufacturing" />} />
+
+          {/* Sales */}
+          <Route path="/quotes" element={<ComingSoon title="Quotes" />} />
+
+          {/* System */}
+          <Route path="/audit-log" element={<ComingSoon title="Audit Log" />} />
+
           {/* POS workspace */}
           <Route path="/pos" element={<Navigate to="/pos/checkout" replace />} />
           <Route path="/pos/checkout" element={<PosCheckout />} />

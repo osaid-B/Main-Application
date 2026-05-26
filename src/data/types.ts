@@ -411,3 +411,143 @@ export type Employee = {
   dailyAttendance?: DailyAttendanceEntry[];
   isDeleted?: boolean;
 };
+
+// ── General Ledger ────────────────────────────────────────────────────────────
+
+export type JournalEntryStatus = "draft" | "posted" | "reversed";
+
+export type JournalLine = {
+  accountId: string;
+  debit: number;
+  credit: number;
+  memo?: string;
+};
+
+export type JournalEntry = {
+  id: string;
+  date: string;
+  reference: string;
+  description: string;
+  lines: JournalLine[];
+  status: JournalEntryStatus;
+  postedBy?: string;
+  isDeleted?: boolean;
+};
+
+// ── Chart of Accounts ─────────────────────────────────────────────────────────
+
+export type AccountType = "asset" | "liability" | "equity" | "revenue" | "expense";
+
+export type ChartAccount = {
+  id: string;
+  name: string;
+  type: AccountType;
+  parentId?: string;
+  balance: number;
+  currency: "ILS" | "USD" | "EUR";
+  isActive: boolean;
+};
+
+// ── Inventory ─────────────────────────────────────────────────────────────────
+
+export type StockLevel = {
+  productId: string;
+  warehouseId: string;
+  onHand: number;
+  reserved: number;
+  reorderPoint: number;
+  lastCountDate?: string;
+};
+
+export type StockMovementType = "in" | "out" | "transfer" | "adjustment";
+
+export type StockMovement = {
+  id: string;
+  date: string;
+  productId: string;
+  warehouseId: string;
+  type: StockMovementType;
+  quantity: number;
+  reference?: string;
+  notes?: string;
+};
+
+// ── Manufacturing ─────────────────────────────────────────────────────────────
+
+export type ProductionOrderStatus = "planned" | "in-progress" | "done" | "cancelled";
+
+export type BomLine = {
+  productId: string;
+  quantity: number;
+};
+
+export type ProductionOrder = {
+  id: string;
+  productId: string;
+  quantity: number;
+  startDate: string;
+  dueDate: string;
+  status: ProductionOrderStatus;
+  bom: BomLine[];
+  isDeleted?: boolean;
+};
+
+// ── Quotes ────────────────────────────────────────────────────────────────────
+
+export type QuoteStatus = "draft" | "sent" | "accepted" | "rejected" | "expired";
+
+export type QuoteLine = {
+  productId: string;
+  quantity: number;
+  unitPrice: number;
+  discountPct?: number;
+};
+
+export type Quote = {
+  id: string;
+  customerId: string;
+  date: string;
+  validUntil: string;
+  lines: QuoteLine[];
+  subtotal: number;
+  tax: number;
+  total: number;
+  status: QuoteStatus;
+  convertedInvoiceId?: string;
+  isDeleted?: boolean;
+};
+
+// ── Expenses ──────────────────────────────────────────────────────────────────
+
+export type ExpensePaymentMethod = "cash" | "bank" | "card" | "cheque";
+
+export type Expense = {
+  id: string;
+  date: string;
+  category: string;
+  amount: number;
+  currency: "ILS" | "USD" | "EUR";
+  vendor?: string;
+  paymentMethod: ExpensePaymentMethod;
+  receiptUrl?: string;
+  notes?: string;
+  isDeleted?: boolean;
+};
+
+// ── System Audit Log ──────────────────────────────────────────────────────────
+// Note: AuditEvent is already used by Treasury (different shape). This is the
+// app-wide activity log for the dedicated Audit Log page.
+
+export type SystemAuditAction = "create" | "update" | "delete" | "login" | "export";
+
+export type SystemAuditEntry = {
+  id: string;
+  timestamp: string;
+  actorId: string;
+  actorName: string;
+  action: SystemAuditAction;
+  entity: string;
+  entityId: string;
+  diff?: Record<string, { from: unknown; to: unknown }>;
+  ip?: string;
+};

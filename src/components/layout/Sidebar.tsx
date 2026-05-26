@@ -1,6 +1,8 @@
 import { NavLink } from "react-router-dom";
 import {
+  ArrowLeftRight,
   BarChart3,
+  BookOpen,
   Boxes,
   Briefcase,
   Building2,
@@ -9,17 +11,20 @@ import {
   CreditCard,
   DollarSign,
   Factory,
+  FileCheck2,
   FileText,
   Globe,
   History,
   Layers,
   LayoutDashboard,
+  ListTree,
   LogOut,
   Package,
   PanelLeftClose,
   PanelLeftOpen,
   Receipt,
   RotateCcw,
+  Scale,
   Search,
   Settings,
   Shield,
@@ -28,6 +33,7 @@ import {
   ShoppingCart,
   Star,
   Tag,
+  TrendingUp,
   Truck,
   UserCircle,
   UserCircle2,
@@ -76,6 +82,7 @@ const COMPANY_SECTIONS: NavSection[] = [
     title: "RELATIONS",
     items: [
       { icon: Users, label: "Customers", path: "/customers", badge: "4.2k" },
+      { icon: FileCheck2, label: "Quotes", path: "/quotes" },
       { icon: Truck, label: "Suppliers", path: "/suppliers" },
       { icon: UserCircle, label: "Employees", path: "/employees" },
       { icon: Briefcase, label: "Departments", path: "/departments", comingSoon: true },
@@ -84,20 +91,35 @@ const COMPANY_SECTIONS: NavSection[] = [
   {
     title: "ACCOUNTING",
     items: [
+      { icon: BookOpen, label: "General Ledger", path: "/general-ledger" },
+      { icon: ListTree, label: "Chart of Accounts", path: "/chart-of-accounts" },
       { icon: FileText, label: "Invoices", path: "/invoices", dot: true },
       { icon: Receipt, label: "Expenses", path: "/expenses" },
       { icon: CreditCard, label: "Payments", path: "/payments" },
+    ],
+  },
+  {
+    title: "REPORTS",
+    items: [
       { icon: BarChart3, label: "Reports", path: "/reports" },
+      { icon: TrendingUp, label: "Profit & Loss", path: "/reports/profit-loss" },
+      { icon: Scale, label: "Balance Sheet", path: "/reports/balance-sheet" },
     ],
   },
   {
     title: "INVENTORY",
-    items: [{ icon: Package, label: "Inventory", path: "/products" }],
+    items: [
+      { icon: Package, label: "Products", path: "/products" },
+      { icon: Warehouse, label: "Inventory", path: "/inventory" },
+      { icon: ArrowLeftRight, label: "Movements", path: "/inventory/movements" },
+      { icon: Factory, label: "Manufacturing", path: "/manufacturing" },
+    ],
   },
   {
     title: "ADMIN",
     items: [
       { icon: Shield, label: "Permissions", path: "/permissions" },
+      { icon: ClipboardList, label: "Audit Log", path: "/audit-log" },
       { icon: Settings, label: "Settings", path: "/settings" },
     ],
   },
