@@ -1,0 +1,396 @@
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: var(--app-space-3);
+}
+
+.breadcrumb {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--app-text-light);
+  margin-bottom: var(--app-space-2);
+}
+
+.title {
+  margin: 0;
+  font-size: clamp(1.5rem, 2.5vw, 2rem);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  color: var(--app-text);
+}
+
+.subtitle {
+  margin: var(--app-space-1) 0 0;
+  font-size: 13px;
+  color: var(--app-text-muted);
+  max-width: 640px;
+}
+
+/* Customer card */
+.customerCard {
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-lg);
+  padding: var(--app-space-4);
+  display: flex;
+  align-items: center;
+  gap: var(--app-space-4);
+  flex-wrap: wrap;
+  box-shadow: var(--app-shadow-soft);
+}
+
+.customerInfo {
+  flex: 1;
+  min-width: 180px;
+}
+
+.customerName {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--app-text);
+}
+
+.customerCode {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--app-text-muted);
+}
+
+.customerMeta {
+  font-size: 11px;
+  color: var(--app-text-muted);
+  margin-block-start: 2px;
+}
+
+.tierBadgeWrap { flex-shrink: 0; }
+
+.balanceDisplay {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.balanceValue {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--app-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.balanceLabel {
+  font-size: 13px;
+  color: var(--app-text-muted);
+}
+
+/* KPI cards */
+.kpi {
+  position: relative;
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-lg);
+  padding: var(--app-space-4);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  box-shadow: var(--app-shadow-soft);
+  overflow: hidden;
+}
+
+.kpi::before {
+  content: "";
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: 0;
+  inset-inline-end: 0;
+  height: 3px;
+}
+
+.kpi_success::before { background: var(--atlas-green); }
+.kpi_info::before    { background: var(--atlas-blue); }
+.kpi_warning::before { background: var(--atlas-orange); }
+.kpi_neutral::before { background: var(--app-text-light); }
+
+.kpiLabel {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--app-text-light);
+}
+
+.kpiValue {
+  font-size: 1.65rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--app-text);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+/* Tabs */
+.tabsBar {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 2px;
+  background: var(--app-surface-muted);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-md);
+  align-self: flex-start;
+}
+
+.tab {
+  padding: 6px 16px;
+  background: transparent;
+  border: 0;
+  border-radius: var(--app-radius-sm);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--app-text-soft);
+  cursor: pointer;
+  transition: var(--app-transition-fast, var(--app-transition));
+}
+
+.tab:hover { background: var(--app-surface); color: var(--app-text); }
+.tabActive { background: var(--app-surface); color: var(--app-text); font-weight: 600; box-shadow: var(--app-shadow-xs); }
+
+/* Table */
+.tableWrap {
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-lg);
+  overflow-x: auto;
+  box-shadow: var(--app-shadow-soft);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.table thead { background: var(--app-surface-muted); }
+
+.table th {
+  text-align: start;
+  padding: 8px 12px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--app-text-light);
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid var(--app-border);
+  white-space: nowrap;
+}
+
+.table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--app-border-subtle, var(--app-border));
+  vertical-align: middle;
+}
+
+.table tbody tr:last-child td { border-bottom: 0; }
+.table tbody tr:hover { background: var(--app-surface-hover); }
+
+.mono { font-family: var(--font-mono); font-size: 11px; }
+.numEnd { text-align: end; }
+.coinPos { color: var(--atlas-green); font-weight: 600; }
+.coinNeg { color: var(--atlas-danger); font-weight: 600; }
+.triggerCell { font-size: 11px; color: var(--app-text-muted); max-width: 240px; }
+
+/* Pagination */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--app-space-3);
+  padding: var(--app-space-3);
+  border-top: 1px solid var(--app-border);
+}
+
+.pageBtn {
+  background: transparent;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-sm);
+  padding: 4px 12px;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  color: var(--app-text-soft);
+  transition: var(--app-transition-fast, var(--app-transition));
+}
+
+.pageBtn:hover:not(:disabled) { background: var(--app-surface-hover); color: var(--app-text); }
+.pageBtn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.pageInfo { font-size: 12px; color: var(--app-text-muted); }
+
+/* Tier card */
+.tierCard {
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-lg);
+  padding: var(--app-space-5);
+  box-shadow: var(--app-shadow-soft);
+}
+
+.tierInfo {
+  display: flex;
+  gap: var(--app-space-8);
+  margin-bottom: var(--app-space-4);
+  flex-wrap: wrap;
+}
+
+.tierLabel {
+  font-size: 11px;
+  color: var(--app-text-muted);
+  margin-bottom: 2px;
+}
+
+.tierName {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--app-text);
+}
+
+.progressLabel {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--app-text-soft);
+  margin-bottom: 6px;
+}
+
+.progressBar {
+  height: 10px;
+  background: var(--app-surface-muted);
+  border-radius: 999px;
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+
+.progressFill {
+  height: 100%;
+  background: var(--atlas-blue);
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+
+.progressMeta {
+  font-size: 11px;
+  color: var(--app-text-muted);
+  margin-bottom: var(--app-space-5);
+}
+
+.benefitsTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--app-text);
+  margin-bottom: var(--app-space-3);
+}
+
+.tiersGrid {
+  display: flex;
+  gap: var(--app-space-3);
+  flex-wrap: wrap;
+}
+
+.tierBenefitCard {
+  background: var(--app-surface-muted);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-md);
+  padding: var(--app-space-3) var(--app-space-4);
+  min-width: 120px;
+  text-align: center;
+}
+
+.tierBenefitActive {
+  border-color: var(--atlas-blue);
+  background: color-mix(in srgb, var(--atlas-blue) 6%, var(--app-surface));
+}
+
+.tierBenefitName {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--app-text);
+  margin-bottom: 4px;
+}
+
+.tierBenefitMultiplier {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--atlas-blue);
+  margin-bottom: 2px;
+}
+
+.tierBenefitMin {
+  font-size: 10px;
+  color: var(--app-text-muted);
+}
+
+/* Adjustment form */
+.adjustCard {
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-lg);
+  padding: var(--app-space-5);
+  box-shadow: var(--app-shadow-soft);
+  max-width: 560px;
+}
+
+.adjustTitle {
+  margin: 0 0 var(--app-space-4);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--app-text);
+}
+
+.adjustForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-3);
+}
+
+.adjustRow {
+  display: flex;
+  gap: var(--app-space-3);
+  flex-wrap: wrap;
+}
+
+.adjustField {
+  flex: 1;
+  min-width: 140px;
+}
+
+.adjustLabel {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--app-text-soft);
+  margin-bottom: 4px;
+}
+
+.adjustSelect {
+  width: 100%;
+  padding: 8px 10px;
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-sm);
+  font: inherit;
+  font-size: 13px;
+  color: var(--app-text);
+  cursor: pointer;
+  height: 38px;
+}
+
+.adjustSelect:focus {
+  outline: 2px solid var(--app-focus-ring, var(--atlas-blue));
+  outline-offset: 1px;
+}
+
+.adjustFooter {
+  display: flex;
+  justify-content: flex-end;
+}
