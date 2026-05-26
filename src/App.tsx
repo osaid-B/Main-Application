@@ -24,6 +24,9 @@ import Preview from "./pages/Preview";
 import CompanyOverview from "./pages/CompanyOverview";
 import PosCheckout from "./pages/pos/Checkout";
 import CoinsHistory from "./pages/pos/CoinsHistory";
+import CoinsReports from "./pages/pos/CoinsReports";
+import CoinsSettings from "./pages/pos/CoinsSettings";
+import LoyaltyProfile from "./pages/pos/LoyaltyProfile";
 import PosReceipts from "./pages/pos/Receipts";
 import PosCashiers from "./pages/pos/Cashiers";
 import PosStockCounts from "./pages/pos/StockCounts";
@@ -91,10 +94,10 @@ function AppRoutes() {
           <Route path="/pos/products" element={<ComingSoon title="POS Products" />} />
           <Route path="/pos/categories" element={<PosCategories />} />
           <Route path="/pos/stock" element={<PosStockCounts />} />
-          <Route path="/pos/loyalty/profile" element={<ComingSoon title="Customer Profile" />} />
+          <Route path="/pos/loyalty/profile" element={<LoyaltyProfile />} />
           <Route path="/pos/loyalty/history" element={<CoinsHistory />} />
-          <Route path="/pos/loyalty/settings" element={<ComingSoon title="Coins Settings" />} />
-          <Route path="/pos/loyalty/reports" element={<ComingSoon title="Coins Reports" />} />
+          <Route path="/pos/loyalty/settings" element={<CoinsSettings />} />
+          <Route path="/pos/loyalty/reports" element={<CoinsReports />} />
           <Route path="/pos/cashiers" element={<PosCashiers />} />
           <Route path="/pos/receipts" element={<PosReceipts />} />
 

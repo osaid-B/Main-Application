@@ -687,3 +687,145 @@ export const POS_PRODUCT_CATEGORIES: PosProductCategory[] = [
   { id: "cat-07", name: "Frozen Foods",  nameAr: "أطعمة مجمدة",  productCount: 0,  status: "inactive", sortOrder: 6 },
   { id: "cat-08", name: "Personal Care", nameAr: "عناية شخصية",  productCount: 0,  status: "inactive", sortOrder: 7 },
 ];
+
+// ─── Loyalty Coins Reports ─────────────────────────────────────────────────────
+
+export interface CoinsMonthlyPoint {
+  month: string;
+  issued: number;
+  redeemed: number;
+}
+
+export const POS_COINS_MONTHLY: CoinsMonthlyPoint[] = [
+  { month: "Dec", issued: 38200, redeemed: 14800 },
+  { month: "Jan", issued: 41500, redeemed: 16200 },
+  { month: "Feb", issued: 39800, redeemed: 15600 },
+  { month: "Mar", issued: 44200, redeemed: 18900 },
+  { month: "Apr", issued: 46800, redeemed: 19100 },
+  { month: "May", issued: 48320, redeemed: 19750 },
+];
+
+export interface CoinsTopCustomer {
+  name: string;
+  code: string;
+  balance: number;
+}
+
+export const POS_COINS_TOP_BALANCES: CoinsTopCustomer[] = [
+  { name: "Mohammed Al-Omari", code: "LYL-00042", balance: 12400 },
+  { name: "Sara Abu Hamad",    code: "LYL-00089", balance: 9250  },
+  { name: "Khaled Al-Sharif", code: "LYL-00213", balance: 8100  },
+  { name: "Nour Al-Din Rida", code: "LYL-00310", balance: 6000  },
+  { name: "Reem Hussein",     code: "LYL-00156", balance: 5800  },
+  { name: "Tariq Mansour",    code: "LYL-00078", balance: 5200  },
+  { name: "Lina Barakat",     code: "LYL-00390", balance: 4900  },
+  { name: "Hassan Khalil",    code: "LYL-00445", balance: 4100  },
+  { name: "Dina Qasim",       code: "LYL-00512", balance: 3800  },
+  { name: "Faris Nasser",     code: "LYL-00667", balance: 3200  },
+];
+
+// ─── Loyalty Settings ─────────────────────────────────────────────────────────
+
+export interface LoyaltyTier {
+  id: string;
+  name: string;
+  nameAr: string;
+  minCoins: number;
+  multiplier: number;
+}
+
+export interface LoyaltySettings {
+  programName: string;
+  coinsCurrencyName: string;
+  coinsPerUnit: number;
+  unitAmount: number;
+  minPurchaseToEarn: number;
+  minCoinsToRedeem: number;
+  coinsPerCurrencyUnit: number;
+  maxRedemptionPct: number;
+  expiryEnabled: boolean;
+  expiryMonths: number;
+  expiryWarningDays: number;
+  tiersEnabled: boolean;
+  tiers: LoyaltyTier[];
+}
+
+export const LOYALTY_SETTINGS_DEFAULT: LoyaltySettings = {
+  programName: "Atlas Coins",
+  coinsCurrencyName: "Coins",
+  coinsPerUnit: 1,
+  unitAmount: 10,
+  minPurchaseToEarn: 20,
+  minCoinsToRedeem: 100,
+  coinsPerCurrencyUnit: 100,
+  maxRedemptionPct: 30,
+  expiryEnabled: true,
+  expiryMonths: 12,
+  expiryWarningDays: 14,
+  tiersEnabled: true,
+  tiers: [
+    { id: "t1", name: "Bronze", nameAr: "برونز", minCoins: 0,     multiplier: 1   },
+    { id: "t2", name: "Silver", nameAr: "فضة",   minCoins: 5000,  multiplier: 1.5 },
+    { id: "t3", name: "Gold",   nameAr: "ذهب",   minCoins: 15000, multiplier: 2   },
+  ],
+};
+
+// ─── Loyalty Member Profile ────────────────────────────────────────────────────
+
+export type LoyaltyProfileAction = "earned" | "redeemed" | "expired" | "adjusted";
+
+export interface LoyaltyProfileTransaction {
+  id: string;
+  date: string;
+  action: LoyaltyProfileAction;
+  coins: number;
+  trigger: string;
+  balanceAfter: number;
+}
+
+export interface LoyaltyMemberProfile {
+  customerId: string;
+  customerName: string;
+  customerCode: string;
+  tier: "Bronze" | "Silver" | "Gold";
+  coinsBalance: number;
+  memberSince: string;
+  totalEarned: number;
+  totalRedeemed: number;
+  totalExpired: number;
+  transactions: LoyaltyProfileTransaction[];
+}
+
+export const LOYALTY_PROFILES: LoyaltyMemberProfile[] = [
+  {
+    customerId: "lc-001",
+    customerName: "Mohammed Al-Omari",
+    customerCode: "LYL-00042",
+    tier: "Gold",
+    coinsBalance: 12400,
+    memberSince: "2024-11-15",
+    totalEarned: 38200,
+    totalRedeemed: 25800,
+    totalExpired: 0,
+    transactions: [
+      { id: "lt-001", date: "2026-05-26", action: "earned",   coins:   350, trigger: "Purchase POS-9821",         balanceAfter: 12400 },
+      { id: "lt-002", date: "2026-05-18", action: "redeemed", coins:  -500, trigger: "Redemption POS-9808",       balanceAfter: 12050 },
+      { id: "lt-003", date: "2026-05-10", action: "earned",   coins:   280, trigger: "Purchase POS-9795",         balanceAfter: 12550 },
+      { id: "lt-004", date: "2026-04-28", action: "earned",   coins:   420, trigger: "Purchase POS-9762",         balanceAfter: 12270 },
+      { id: "lt-005", date: "2026-04-15", action: "redeemed", coins: -1000, trigger: "Redemption POS-9748",       balanceAfter: 11850 },
+      { id: "lt-006", date: "2026-04-02", action: "earned",   coins:   600, trigger: "Purchase POS-9720",         balanceAfter: 12850 },
+      { id: "lt-007", date: "2026-03-20", action: "adjusted", coins:   200, trigger: "Manual bonus — Ramadan promo", balanceAfter: 12250 },
+      { id: "lt-008", date: "2026-03-08", action: "earned",   coins:   380, trigger: "Purchase POS-9688",         balanceAfter: 12050 },
+      { id: "lt-009", date: "2026-02-22", action: "redeemed", coins:  -800, trigger: "Redemption POS-9655",       balanceAfter: 11670 },
+      { id: "lt-010", date: "2026-02-14", action: "earned",   coins:   520, trigger: "Purchase POS-9630",         balanceAfter: 12470 },
+      { id: "lt-011", date: "2026-01-30", action: "earned",   coins:   290, trigger: "Purchase POS-9601",         balanceAfter: 11950 },
+      { id: "lt-012", date: "2026-01-15", action: "redeemed", coins:  -500, trigger: "Redemption POS-9578",       balanceAfter: 11660 },
+      { id: "lt-013", date: "2025-12-25", action: "earned",   coins:   750, trigger: "Purchase POS-9530",         balanceAfter: 12160 },
+      { id: "lt-014", date: "2025-11-11", action: "earned",   coins:   440, trigger: "Purchase POS-9480",         balanceAfter: 11410 },
+      { id: "lt-015", date: "2025-09-05", action: "redeemed", coins: -2000, trigger: "Redemption POS-9350",       balanceAfter: 10970 },
+      { id: "lt-016", date: "2025-06-20", action: "earned",   coins:  1200, trigger: "Purchase POS-9210",         balanceAfter: 12970 },
+      { id: "lt-017", date: "2025-03-14", action: "earned",   coins:   900, trigger: "Purchase POS-9050",         balanceAfter: 11770 },
+      { id: "lt-018", date: "2024-11-15", action: "earned",   coins:   500, trigger: "Welcome bonus",             balanceAfter:    500 },
+    ],
+  },
+];
