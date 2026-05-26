@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Plus, Search } from "lucide-react";
+import { ChevronUp, ChevronDown, Plus, Search } from "lucide-react";
 import { Container } from "../../components/layout/Container";
 import { Stack } from "../../components/layout/Stack";
 import { Input } from "../../components/ui/Input";
@@ -9,6 +9,7 @@ import { Modal } from "../../components/ui/Modal";
 import { useSettings } from "../../context/SettingsContext";
 import {
   POS_PRODUCT_CATEGORIES as INITIAL_CATS,
+  POS_PRODUCTS,
   type PosProductCategory,
   type PosCategoryStatus,
 } from "../../data/posMock";
@@ -19,17 +20,26 @@ export default function Categories() {
   const tc = t.pos.categories;
 
   const [categories, setCategories] = useState<PosProductCategory[]>(INITIAL_CATS);
-  const [query, setQuery] = useState("");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [productQuery, setProductQuery] = useState("");
   const [editing, setEditing] = useState<PosProductCategory | null>(null);
   const [isAdding, setIsAdding] = useState(false);
 
-  const filtered = useMemo(() =>
-    categories.filter((c) => {
-      if (!query) return true;
-      const q = query.toLowerCase();
-      return c.name.toLowerCase().includes(q) || c.nameAr.includes(q);
-    }),
-  [categories, query]);
+  const selectedCategory = categories.find((c) => c.id === selectedId) ?? null;
+
+  const categoryProducts = useMemo(() => {
+    if (!selectedCategory) return [];
+    const catName = selectedCategory.name.toLowerCase();
+    return POS_PRODUCTS.filter((p) => p.category.toLowerCase() === catName);
+  }, [selectedCategory]);
+
+  const filteredProducts = useMemo(() => {
+    if (!productQuery) return categoryProducts;
+    const q = productQuery.toLowerCase();
+    return categoryProducts.filter((p) =>
+      p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q),
+    );
+  }, [categoryProducts, productQuery]);
 
   const topLevel = categories.filter((c) => !c.parentId);
 
@@ -46,6 +56,26 @@ export default function Categories() {
         return { ...c, status: next };
       }),
     );
+  }
+
+  function moveUp(id: string) {
+    setCategories((prev) => {
+      const idx = prev.findIndex((c) => c.id === id);
+      if (idx <= 0) return prev;
+      const arr = [...prev];
+      [arr[idx - 1], arr[idx]] = [arr[idx], arr[idx - 1]];
+      return arr;
+    });
+  }
+
+  function moveDown(id: string) {
+    setCategories((prev) => {
+      const idx = prev.findIndex((c) => c.id === id);
+      if (idx >= prev.length - 1) return prev;
+      const arr = [...prev];
+      [arr[idx], arr[idx + 1]] = [arr[idx + 1], arr[idx]];
+      return arr;
+    });
   }
 
   function saveCategory(data: Omit<PosProductCategory, "id" | "productCount" | "sortOrder">) {
@@ -73,78 +103,115 @@ export default function Categories() {
           </Button>
         </header>
 
-        <div className={styles.toolbar}>
-          <div className={styles.searchWrap}>
-            <Input
-              variant="search"
-              placeholder={tc.searchPlaceholder}
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              leftIcon={<Search size={14} />}
-              fullWidth
-            />
-          </div>
-        </div>
+        <div className={styles.splitView}>
+          {/* Left panel: category list */}
+          <aside className={styles.leftPanel}>
+            {categories.map((c, idx) => {
+              const parent = parentName(c.parentId);
+              const isSelected = c.id === selectedId;
+              return (
+                <div
+                  key={c.id}
+                  className={`${styles.catRow} ${isSelected ? styles.catRowActive : ""} ${c.parentId ? styles.catRowChild : ""}`}
+                  onClick={() => setSelectedId(c.id)}
+                >
+                  <div className={styles.catRowMain}>
+                    {c.parentId && <span className={styles.indent} aria-hidden="true" />}
+                    <div className={styles.catCell}>
+                      <span className={styles.catName}>{c.name}</span>
+                      <span className={styles.catNameAr}>{c.nameAr}</span>
+                      {parent && <span className={styles.parentLabel}>{parent}</span>}
+                    </div>
+                    <Badge variant={c.status === "active" ? "success" : "neutral"} size="sm">
+                      {tc.status[c.status]}
+                    </Badge>
+                    <span className={styles.productCount}>{c.productCount}</span>
+                  </div>
+                  <div className={styles.catRowActions} onClick={(e) => e.stopPropagation()}>
+                    <button type="button" className={styles.iconBtn} onClick={() => moveUp(c.id)} aria-label={tc.actions2.moveUp} disabled={idx === 0}>
+                      <ChevronUp size={12} />
+                    </button>
+                    <button type="button" className={styles.iconBtn} onClick={() => moveDown(c.id)} aria-label={tc.actions2.moveDown} disabled={idx === categories.length - 1}>
+                      <ChevronDown size={12} />
+                    </button>
+                    <button type="button" className={styles.iconBtn} onClick={() => setEditing(c)}>
+                      {tc.actions.edit}
+                    </button>
+                    <button
+                      type="button"
+                      className={`${styles.iconBtn} ${c.status === "active" ? styles.iconBtnDanger : ""}`}
+                      onClick={() => toggleStatus(c.id)}
+                    >
+                      {c.status === "active" ? tc.actions.deactivate : tc.actions.activate}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </aside>
 
-        <div className={styles.tableWrap}>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th>{tc.cols.name}</th>
-                <th className={styles.numEnd}>{tc.cols.products}</th>
-                <th>{tc.cols.parent}</th>
-                <th>{tc.cols.status}</th>
-                <th>{tc.cols.actions}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((c) => {
-                const parent = parentName(c.parentId);
-                return (
-                  <tr key={c.id}>
-                    <td>
-                      <div className={styles.catCell}>
-                        <span className={styles.catName}>{c.name}</span>
-                        <span className={styles.catNameAr}>{c.nameAr}</span>
-                      </div>
-                    </td>
-                    <td className={`${styles.numEnd} ${styles.mono}`}>{c.productCount}</td>
-                    <td>
-                      {parent ? (
-                        <span className={styles.parentBadge}>{parent}</span>
-                      ) : (
-                        <span style={{ color: "var(--app-text-light)", fontSize: 11 }}>—</span>
+          {/* Right panel: products in selected category */}
+          <section className={styles.rightPanel}>
+            {!selectedCategory ? (
+              <div className={styles.emptyState}>
+                <p className={styles.emptyStateText}>{tc.rightPanel.selectPrompt}</p>
+              </div>
+            ) : (
+              <>
+                <div className={styles.rightHeader}>
+                  <div>
+                    <span className={styles.rightTitle}>{selectedCategory.name}</span>
+                    <span className={styles.rightSubtitle}>{tc.rightPanel.title}</span>
+                  </div>
+                  <Input
+                    variant="search"
+                    placeholder={tc.searchPlaceholder}
+                    value={productQuery}
+                    onChange={(e) => setProductQuery(e.target.value)}
+                    leftIcon={<Search size={13} />}
+                  />
+                </div>
+                <div className={styles.productTableWrap}>
+                  <table className={styles.table}>
+                    <thead>
+                      <tr>
+                        <th>{tc.cols.name}</th>
+                        <th>{t.common.code}</th>
+                        <th className={styles.numEnd}>{t.common.price}</th>
+                        <th className={styles.numEnd}>Stock</th>
+                        <th>{tc.cols.status}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredProducts.map((p) => (
+                        <tr key={p.id}>
+                          <td>
+                            <div className={styles.productCell}>
+                              <span className={styles.productEmoji}>{p.emoji}</span>
+                              <span className={styles.catName}>{p.name}</span>
+                            </div>
+                          </td>
+                          <td><span className={styles.mono}>{p.sku}</span></td>
+                          <td className={`${styles.numEnd} ${styles.mono}`}>₪{p.price.toFixed(2)}</td>
+                          <td className={`${styles.numEnd} ${styles.mono}`}>{p.stock}</td>
+                          <td>
+                            <Badge variant={p.stock > 0 ? "success" : "danger"} size="sm">
+                              {p.stock > 0 ? t.common.active : "Out of Stock"}
+                            </Badge>
+                          </td>
+                        </tr>
+                      ))}
+                      {filteredProducts.length === 0 && (
+                        <tr>
+                          <td colSpan={5} className={styles.empty}>{tc.rightPanel.noProducts}</td>
+                        </tr>
                       )}
-                    </td>
-                    <td>
-                      <Badge variant={c.status === "active" ? "success" : "neutral"} size="sm">
-                        {tc.status[c.status]}
-                      </Badge>
-                    </td>
-                    <td>
-                      <div className={styles.actionBtns}>
-                        <button type="button" className={styles.iconBtn} onClick={() => setEditing(c)}>
-                          {tc.actions.edit}
-                        </button>
-                        <button
-                          type="button"
-                          className={`${styles.iconBtn} ${c.status === "active" ? styles.iconBtnDanger : ""}`}
-                          onClick={() => toggleStatus(c.id)}
-                        >
-                          {c.status === "active" ? tc.actions.deactivate : tc.actions.activate}
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-              {filtered.length === 0 && (
-                <tr>
-                  <td colSpan={5} className={styles.empty}>{tc.noCategories}</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
+          </section>
         </div>
       </Stack>
 
