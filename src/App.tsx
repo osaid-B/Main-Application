@@ -31,6 +31,8 @@ import PosReceipts from "./pages/pos/Receipts";
 import PosCashiers from "./pages/pos/Cashiers";
 import PosStockCounts from "./pages/pos/StockCounts";
 import PosCategories from "./pages/pos/Categories";
+import Departments from "./pages/Departments";
+import Permissions from "./pages/Permissions";
 import ComingSoon from "./pages/ComingSoon";
 
 function AppRoutes() {
@@ -82,6 +84,10 @@ function AppRoutes() {
 
           {/* Sales */}
           <Route path="/quotes" element={<ComingSoon title="Quotes" />} />
+
+          {/* Org & Access */}
+          <Route path="/departments" element={<Departments />} />
+          <Route path="/permissions" element={<Permissions />} />
 
           {/* System */}
           <Route path="/audit-log" element={<ComingSoon title="Audit Log" />} />

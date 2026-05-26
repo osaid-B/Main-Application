@@ -1,0 +1,272 @@
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: var(--app-space-3);
+}
+
+.title {
+  margin: 0;
+  font-size: clamp(1.5rem, 2.5vw, 2rem);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  color: var(--app-text);
+}
+
+.subtitle {
+  margin: var(--app-space-1) 0 0;
+  font-size: 13px;
+  color: var(--app-text-muted);
+  max-width: 640px;
+}
+
+/* Two-panel layout */
+.twoPanel {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: var(--app-space-4);
+  align-items: start;
+}
+
+@media (max-width: 768px) {
+  .twoPanel {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Roles panel (left) */
+.rolesPanel {
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-lg);
+  overflow: hidden;
+  box-shadow: var(--app-shadow-soft);
+}
+
+.rolesPanelHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--app-space-3) var(--app-space-3);
+  background: var(--app-surface-muted);
+  border-bottom: 1px solid var(--app-border);
+}
+
+.rolesPanelTitle {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--app-text-light);
+}
+
+.roleCard {
+  padding: var(--app-space-3);
+  border-bottom: 1px solid var(--app-border-subtle, var(--app-border));
+  cursor: pointer;
+  transition: var(--app-transition-fast, var(--app-transition));
+}
+
+.roleCard:last-child { border-bottom: 0; }
+.roleCard:hover { background: var(--app-surface-hover); }
+.roleCardActive { background: var(--app-surface-active, var(--app-surface-hover)); border-inline-start: 3px solid var(--atlas-blue); }
+
+.roleCardMain { margin-bottom: var(--app-space-1); }
+
+.roleName {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--app-text);
+}
+
+.roleNameAr {
+  font-size: 11px;
+  color: var(--app-text-muted);
+  direction: rtl;
+  text-align: start;
+}
+
+.roleDesc {
+  font-size: 11px;
+  color: var(--app-text-soft);
+  margin-top: 2px;
+}
+
+.roleCardMeta {
+  display: flex;
+  align-items: center;
+  gap: var(--app-space-2);
+  flex-wrap: wrap;
+}
+
+.roleUserCount {
+  font-size: 10px;
+  color: var(--app-text-muted);
+}
+
+.systemBadge {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--app-surface-muted);
+  border: 1px solid var(--app-border);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--app-text-soft);
+}
+
+.deleteRoleBtn {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  font-size: 10px;
+  color: var(--atlas-red, #e53e3e);
+  cursor: pointer;
+  margin-inline-start: auto;
+}
+
+.deleteRoleBtn:hover { text-decoration: underline; }
+
+/* Matrix panel (right) */
+.matrixPanel {
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-lg);
+  overflow: hidden;
+  box-shadow: var(--app-shadow-soft);
+  min-height: 400px;
+}
+
+.emptyState {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+}
+
+.emptyStateText {
+  color: var(--app-text-muted);
+  font-size: 14px;
+}
+
+.matrixHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: var(--app-space-4);
+  background: var(--app-surface-muted);
+  border-bottom: 1px solid var(--app-border);
+}
+
+.matrixTitle {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--app-text);
+}
+
+.matrixSub {
+  font-size: 12px;
+  color: var(--app-text-muted);
+  direction: rtl;
+  text-align: start;
+  margin-top: 2px;
+}
+
+.matrixWrap {
+  overflow-x: auto;
+}
+
+.matrix {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.matrix thead {
+  background: var(--app-surface-muted);
+}
+
+.matrix th {
+  text-align: start;
+  padding: 8px 12px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--app-text-light);
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid var(--app-border);
+  white-space: nowrap;
+}
+
+.actionCol {
+  text-align: center;
+  width: 80px;
+}
+
+.matrix td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--app-border-subtle, var(--app-border));
+  vertical-align: middle;
+}
+
+.matrix tbody tr:last-child td { border-bottom: 0; }
+.matrix tbody tr:hover { background: var(--app-surface-hover); }
+
+.moduleCell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.moduleLabel {
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--app-text);
+}
+
+.moduleLabelAr {
+  font-size: 11px;
+  color: var(--app-text-muted);
+  direction: rtl;
+  text-align: start;
+}
+
+.checkboxCell {
+  text-align: center;
+}
+
+.checkbox {
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+  accent-color: var(--atlas-blue);
+}
+
+.checkbox:disabled { cursor: not-allowed; opacity: 0.5; }
+
+.matrixFooter {
+  padding: var(--app-space-3) var(--app-space-4);
+  border-top: 1px solid var(--app-border);
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* Form modal */
+.formGrid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-3);
+}
+
+/* Confirm modal */
+.confirmFooter {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--app-space-2);
+}
+
+.confirmMsg {
+  font-size: 13px;
+  color: var(--app-text);
+  margin: 0;
+}
