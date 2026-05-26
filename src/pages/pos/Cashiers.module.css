@@ -168,6 +168,63 @@
   font-size: 13px;
 }
 
+/* Overflow menu */
+.menuWrap {
+  position: relative;
+  display: inline-block;
+}
+
+.menuTrigger {
+  background: transparent;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-sm);
+  padding: 4px 10px;
+  font: inherit;
+  font-size: 14px;
+  letter-spacing: 0.1em;
+  color: var(--app-text-soft);
+  cursor: pointer;
+  transition: var(--app-transition-fast, var(--app-transition));
+  line-height: 1;
+}
+
+.menuTrigger:hover {
+  border-color: var(--app-text-muted);
+  color: var(--app-text);
+  background: var(--app-surface-hover);
+}
+
+.menuPopup {
+  position: absolute;
+  inset-inline-end: 0;
+  inset-block-start: calc(100% + 4px);
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-md);
+  box-shadow: var(--app-shadow-md, var(--app-shadow-soft));
+  min-width: 130px;
+  z-index: 100;
+  overflow: hidden;
+}
+
+.menuItem {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  background: transparent;
+  border: 0;
+  text-align: start;
+  font: inherit;
+  font-size: 12px;
+  color: var(--app-text);
+  cursor: pointer;
+  transition: var(--app-transition-fast, var(--app-transition));
+}
+
+.menuItem:hover { background: var(--app-surface-hover); }
+.menuItemDanger { color: var(--atlas-danger); }
+.menuItemDanger:hover { background: color-mix(in srgb, var(--atlas-danger) 8%, transparent); }
+
 /* Form modal */
 .formGrid {
   display: flex;

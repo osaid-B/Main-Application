@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Plus, Search } from "lucide-react";
 import { Container } from "../../components/layout/Container";
 import { Stack } from "../../components/layout/Stack";
@@ -18,8 +18,8 @@ import {
 import styles from "./Cashiers.module.css";
 
 const STATUS_VARIANT: Record<CashierStatus, "success" | "neutral" | "warning"> = {
-  active:   "success",
-  inactive: "neutral",
+  active:     "success",
+  inactive:   "neutral",
   "on-break": "warning",
 };
 
@@ -28,8 +28,8 @@ export default function Cashiers() {
   const tc = t.pos.cashiers;
 
   const [cashiers, setCashiers] = useState<PosCashier[]>(INITIAL_CASHIERS);
-  const [query, setQuery] = useState("");
-  const [editing, setEditing] = useState<PosCashier | null>(null);
+  const [query,    setQuery]    = useState("");
+  const [editing,  setEditing]  = useState<PosCashier | null>(null);
   const [isAdding, setIsAdding] = useState(false);
 
   const filtered = useMemo(() =>
@@ -42,12 +42,22 @@ export default function Cashiers() {
     }),
   [cashiers, query]);
 
-  const activeCount   = cashiers.filter((c) => !c.isDeleted && c.status === "active").length;
-  const todaySalesSum = cashiers.filter((c) => !c.isDeleted).reduce((s, c) => s + c.todaySales, 0);
-  const txCount       = cashiers.filter((c) => !c.isDeleted).reduce((s, c) => s + c.transactions, 0);
-  const topPerformer  = [...cashiers].filter((c) => !c.isDeleted).sort((a, b) => b.todaySales - a.todaySales)[0];
+  const activeCashiers = cashiers.filter((c) => !c.isDeleted);
+  const activeCount    = activeCashiers.filter((c) => c.status === "active").length;
+  const todaySalesSum  = activeCashiers.reduce((s, c) => s + c.todaySales, 0);
+  const txCount        = activeCashiers.reduce((s, c) => s + c.transactions, 0);
+  const topPerformer   = [...activeCashiers].sort((a, b) => b.todaySales - a.todaySales)[0];
+  const avgTx          = activeCashiers.length > 0
+    ? (txCount / activeCashiers.length).toFixed(1)
+    : "0";
 
   function toggleStatus(id: string) {
+    const cashier = cashiers.find((c) => c.id === id);
+    if (!cashier) return;
+    if (cashier.status === "active") {
+      const confirmed = window.confirm(tc.actions.confirmDeactivate);
+      if (!confirmed) return;
+    }
     setCashiers((prev) =>
       prev.map((c) => {
         if (c.id !== id) return c;
@@ -57,7 +67,7 @@ export default function Cashiers() {
     );
   }
 
-  function saveCashier(data: Omit<PosCashier, "id" | "todaySales" | "transactions" | "lastActive">) {
+  function saveCashier(data: Omit<PosCashier, "id" | "todaySales" | "transactions" | "lastActive" | "isDeleted">) {
     if (editing) {
       setCashiers((prev) => prev.map((c) => (c.id === editing.id ? { ...c, ...data } : c)));
       setEditing(null);
@@ -89,7 +99,7 @@ export default function Cashiers() {
           <Kpi label={tc.kpi.active}       value={String(activeCount)}           tone="success" sub={tc.kpi.activeSub} />
           <Kpi label={tc.kpi.salesTotal}   value={formatCurrency(todaySalesSum)} tone="info"    sub={tc.kpi.salesTotalSub} />
           <Kpi label={tc.kpi.topPerformer} value={topPerformer?.name ?? "—"}     tone="warning" sub={topPerformer ? formatCurrency(topPerformer.todaySales) : ""} />
-          <Kpi label={tc.kpi.transactions} value={String(txCount)}               tone="success" sub={tc.kpi.transactionsSub} />
+          <Kpi label={tc.kpi.avgTx}        value={avgTx}                         tone="success" sub={tc.kpi.avgTxSub} />
         </Grid>
 
         <div className={styles.toolbar}>
@@ -139,22 +149,12 @@ export default function Cashiers() {
                   <td className={`${styles.numEnd} ${styles.mono}`}>{c.transactions}</td>
                   <td className={styles.mono}>{new Date(c.lastActive).toLocaleDateString()}</td>
                   <td>
-                    <div className={styles.actionBtns}>
-                      <button
-                        type="button"
-                        className={styles.iconBtn}
-                        onClick={() => setEditing(c)}
-                      >
-                        {tc.actions.edit}
-                      </button>
-                      <button
-                        type="button"
-                        className={`${styles.iconBtn} ${c.status === "active" ? styles.iconBtnDanger : ""}`}
-                        onClick={() => toggleStatus(c.id)}
-                      >
-                        {c.status === "active" ? tc.actions.deactivate : tc.actions.activate}
-                      </button>
-                    </div>
+                    <OverflowMenu
+                      onEdit={() => setEditing(c)}
+                      onToggle={() => toggleStatus(c.id)}
+                      isActive={c.status === "active"}
+                      tc={tc}
+                    />
                   </td>
                 </tr>
               ))}
@@ -179,13 +179,73 @@ export default function Cashiers() {
   );
 }
 
+function OverflowMenu({
+  onEdit,
+  onToggle,
+  isActive,
+  tc,
+}: {
+  onEdit: () => void;
+  onToggle: () => void;
+  isActive: boolean;
+  tc: { actions: { edit: string; deactivate: string; activate: string } };
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [open]);
+
+  return (
+    <div className={styles.menuWrap} ref={ref}>
+      <button
+        type="button"
+        className={styles.menuTrigger}
+        onClick={() => setOpen((v) => !v)}
+        aria-haspopup="true"
+        aria-expanded={open}
+      >
+        ···
+      </button>
+      {open && (
+        <div className={styles.menuPopup} role="menu">
+          <button
+            type="button"
+            role="menuitem"
+            className={styles.menuItem}
+            onClick={() => { setOpen(false); onEdit(); }}
+          >
+            {tc.actions.edit}
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            className={`${styles.menuItem} ${isActive ? styles.menuItemDanger : ""}`}
+            onClick={() => { setOpen(false); onToggle(); }}
+          >
+            {isActive ? tc.actions.deactivate : tc.actions.activate}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function CashierFormModal({
   initial,
   onSave,
   onClose,
 }: {
   initial?: PosCashier;
-  onSave: (data: Omit<PosCashier, "id" | "todaySales" | "transactions" | "lastActive">) => void;
+  onSave: (data: Omit<PosCashier, "id" | "todaySales" | "transactions" | "lastActive" | "isDeleted">) => void;
   onClose: () => void;
 }) {
   const { t } = useSettings();
@@ -193,12 +253,19 @@ function CashierFormModal({
 
   const [name,   setName]   = useState(initial?.name   ?? "");
   const [code,   setCode]   = useState(initial?.code   ?? "");
+  const [pin,    setPin]    = useState(initial?.pin    ?? "");
   const [shift,  setShift]  = useState<CashierShift>(initial?.shift  ?? "morning");
   const [status, setStatus] = useState<CashierStatus>(initial?.status ?? "active");
 
   function handleSave() {
     if (!name.trim()) return;
-    onSave({ name: name.trim(), code: code.trim() || name.trim().toUpperCase().slice(0, 6), shift, status });
+    onSave({
+      name: name.trim(),
+      code: code.trim() || name.trim().toUpperCase().slice(0, 6),
+      pin: pin.trim() || undefined,
+      shift,
+      status,
+    });
   }
 
   return (
@@ -219,6 +286,7 @@ function CashierFormModal({
       <div className={styles.formGrid}>
         <Input label={tc.form.name} value={name} onChange={(e) => setName(e.target.value)} required placeholder="e.g. Ahmad Qasim" />
         <Input label={tc.form.code} value={code} onChange={(e) => setCode(e.target.value)} placeholder="e.g. CSH-06" />
+        <Input label={tc.form.pin} value={pin} onChange={(e) => setPin(e.target.value)} placeholder="4-digit PIN" variant="password" />
         <div className={styles.formRow}>
           <div>
             <label className={styles.formLabel}>{tc.form.shift}</label>
