@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useData } from "../context/DataContext";
+import { useSettings } from "../context/SettingsContext";
 import type { Customer } from "../data/types";
 import {
   ArrowLeft,
@@ -30,6 +31,7 @@ import {
   type Currency,
   type PaymentTerms,
 } from "../data/customersMock";
+import { translations } from "../i18n/translations";
 import styles from "./AddCustomer.module.css";
 
 interface FormState {
@@ -56,7 +58,7 @@ interface FormState {
 const INITIAL: FormState = {
   name: "",
   type: "company",
-  code: `C-${Math.floor(1000 + Math.random() * 9000)}`,
+  code: "",
   taxId: "",
   phonePrimary: "",
   phoneSecondary: "",
@@ -80,8 +82,11 @@ const REQUIRED_KEYS: Array<keyof FormState> = [
 
 function generateCustomerId(customers: Customer[]): string {
   const max = customers.reduce((m, c) => {
-    const match = c.id.match(/^CUST-(\d+)$/i);
-    return match ? Math.max(m, Number(match[1])) : m;
+    const nums = [c.id, c.code ?? ""].map((s) => {
+      const match = s.match(/(\d+)$/);
+      return match ? Number(match[1]) : 0;
+    });
+    return Math.max(m, ...nums);
   }, 1000);
   return `CUST-${max + 1}`;
 }
@@ -89,6 +94,7 @@ function generateCustomerId(customers: Customer[]): string {
 export default function AddCustomer() {
   const navigate = useNavigate();
   const { addCustomer, customers } = useData();
+  const { t } = useSettings();
   const [form, setForm] = useState<FormState>(() => ({
     ...INITIAL,
     code: generateCustomerId(customers),
@@ -159,7 +165,7 @@ export default function AddCustomer() {
   function handleSave() {
     if (!canSave) return;
     const today = new Date().toISOString().split("T")[0];
-    const id = generateCustomerId(customers);
+    const id = form.code;
     const newCustomer: Customer = {
       id,
       name: form.name.trim(),
@@ -193,18 +199,16 @@ export default function AddCustomer() {
       <header className={styles.pageHeader}>
         <div>
           <button type="button" className={styles.backLink} onClick={() => navigate("/customers")}>
-            <ArrowLeft size={14} /> العودة إلى العملاء
+            <ArrowLeft size={14} /> {t.addCustomer.backLink}
           </button>
-          <h1 className={styles.title}>إضافة عميل جديد</h1>
-          <p className={styles.subtitle}>
-            املأ الأقسام الأربعة بالتسلسل. الحفظ التلقائي مفعّل — يمكنك إغلاق الصفحة والعودة لاحقاً.
-          </p>
+          <h1 className={styles.title}>{t.addCustomer.pageTitle}</h1>
+          <p className={styles.subtitle}>{t.addCustomer.pageSubtitle}</p>
         </div>
         <div className={styles.pageActions}>
-          <Button variant="secondary" size="sm" onClick={() => navigate("/customers")}>إلغاء</Button>
-          <Button variant="secondary" size="sm">حفظ كمسودة</Button>
+          <Button variant="secondary" size="sm" onClick={() => navigate("/customers")}>{t.addCustomer.cancel}</Button>
+          <Button variant="secondary" size="sm">{t.addCustomer.saveAsDraft}</Button>
           <Button variant="primary" size="sm" leftIcon={<Save size={14} />} disabled={!canSave} onClick={handleSave}>
-            حفظ العميل
+            {t.addCustomer.saveCustomer}
           </Button>
         </div>
       </header>
@@ -214,149 +218,149 @@ export default function AddCustomer() {
         <div className={styles.formCol}>
           <FormSection
             number={1}
-            title="المعلومات الأساسية"
-            subtitle="الاسم، النوع، الرقم، والمعرّف الضريبي."
+            title={t.addCustomer.sections.basic.title}
+            subtitle={t.addCustomer.sections.basic.subtitle}
             progress={sec1Complete ? "4 / 4 ✓" : `${[form.name, form.type, form.code, form.taxId].filter(Boolean).length} / 4`}
             isComplete={sec1Complete}
           >
             <Input
-              label="اسم العميل"
+              label={t.addCustomer.fields.name}
               required
               value={form.name}
               onChange={(e) => update("name", e.target.value)}
-              placeholder="مثال: شركة فلسطين للتجارة"
-              error={!form.name ? undefined : form.name.trim().length < 3 ? "يجب أن يكون 3 أحرف على الأقل" : undefined}
+              placeholder={t.addCustomer.fields.namePlaceholder}
+              error={!form.name ? undefined : form.name.trim().length < 3 ? t.addCustomer.fields.nameError : undefined}
             />
 
             <RadioCardGroup<CustomerType>
-              label="نوع العميل *"
+              label={t.addCustomer.fields.customerType}
               value={form.type}
               onChange={(v) => update("type", v)}
               options={[
-                { value: "individual",  label: "فرد",   description: "شخص طبيعي",  icon: UserIcon },
-                { value: "company",     label: "شركة",  description: "شركة تجارية", icon: Building2 },
-                { value: "institution", label: "مؤسسة", description: "غير ربحية / حكومية", icon: Briefcase },
+                { value: "individual",  label: t.addCustomer.fields.typeIndividual,   description: t.addCustomer.fields.typeIndividualDesc,  icon: UserIcon },
+                { value: "company",     label: t.addCustomer.fields.typeCompany,      description: t.addCustomer.fields.typeCompanyDesc,      icon: Building2 },
+                { value: "institution", label: t.addCustomer.fields.typeInstitution,  description: t.addCustomer.fields.typeInstitutionDesc,  icon: Briefcase },
               ]}
             />
 
             <div className={styles.row2}>
               <div className={styles.codeField}>
                 <Input
-                  label="رقم العميل"
+                  label={t.addCustomer.fields.code}
                   required
                   value={form.code}
                   readOnly
-                  hint="يُولَّد تلقائياً"
+                  hint={t.addCustomer.fields.codeHint}
                 />
                 <button
                   type="button"
                   className={styles.refreshBtn}
                   onClick={() => update("code", generateCustomerId(customers))}
-                  aria-label="إنشاء رقم جديد"
-                  title="إنشاء رقم جديد"
+                  aria-label={t.addCustomer.fields.codeRefresh}
+                  title={t.addCustomer.fields.codeRefresh}
                 >
                   <RefreshCw size={13} />
                 </button>
               </div>
               <Input
-                label="الرقم الضريبي"
+                label={t.addCustomer.fields.taxId}
                 value={form.taxId}
                 onChange={(e) => update("taxId", e.target.value.replace(/[^\d]/g, "").slice(0, 9))}
-                placeholder="9 أرقام"
-                hint="اختياري — يجب أن يكون 9 أرقام إن وُجد"
-                error={form.taxId && form.taxId.length !== 9 ? "يجب 9 أرقام بالضبط" : undefined}
+                placeholder={t.addCustomer.fields.taxIdPlaceholder}
+                hint={t.addCustomer.fields.taxIdHint}
+                error={form.taxId && form.taxId.length !== 9 ? t.addCustomer.fields.taxIdError : undefined}
               />
             </div>
           </FormSection>
 
           <FormSection
             number={2}
-            title="معلومات التواصل"
-            subtitle="الهاتف والبريد الإلكتروني."
-            progress={sec2Complete ? "تم" : "1 من 3 مطلوب"}
+            title={t.addCustomer.sections.contact.title}
+            subtitle={t.addCustomer.sections.contact.subtitle}
+            progress={sec2Complete ? t.addCustomer.sections.address.done : t.addCustomer.sections.contact.progress}
             isComplete={sec2Complete}
           >
             <Input
-              label="رقم الجوال"
+              label={t.addCustomer.fields.phonePrimary}
               required
               variant="tel"
               value={form.phonePrimary}
               onChange={(e) => update("phonePrimary", e.target.value)}
-              placeholder="+970 59 xxx xxxx"
+              placeholder={t.addCustomer.fields.phonePrimaryPlaceholder}
               leftIcon={<span className={styles.dialPrefix}>+970</span>}
             />
             <Input
-              label="رقم آخر"
+              label={t.addCustomer.fields.phoneSecondary}
               variant="tel"
               value={form.phoneSecondary}
               onChange={(e) => update("phoneSecondary", e.target.value)}
-              placeholder="اختياري"
+              placeholder={t.addCustomer.fields.phonePlaceholderOptional}
             />
             <Input
-              label="البريد الإلكتروني"
+              label={t.addCustomer.fields.email}
               variant="email"
               value={form.email}
               onChange={(e) => update("email", e.target.value)}
-              placeholder="name@example.com"
-              error={form.email && !/.+@.+\..+/.test(form.email) ? "بريد إلكتروني غير صالح" : undefined}
+              placeholder={t.addCustomer.fields.emailPlaceholder}
+              error={form.email && !/.+@.+\..+/.test(form.email) ? t.addCustomer.fields.emailError : undefined}
             />
           </FormSection>
 
           <FormSection
             number={3}
-            title="تفاصيل العنوان"
-            subtitle="المحافظة والمدينة وعنوان التواصل."
-            progress={sec3Complete ? "تم" : "مطلوب"}
+            title={t.addCustomer.sections.address.title}
+            subtitle={t.addCustomer.sections.address.subtitle}
+            progress={sec3Complete ? t.addCustomer.sections.address.done : t.addCustomer.sections.address.progress}
             isComplete={sec3Complete}
           >
             <div className={styles.row2}>
               <SmartLocationPicker
-                label="المحافظة"
+                label={t.addCustomer.fields.governorate}
                 required
                 options={GOVERNORATES}
                 value={form.governorate}
                 onChange={(v) => update("governorate", v)}
-                placeholder="اختر محافظة…"
+                placeholder={t.addCustomer.fields.governoratePlaceholder}
               />
               <SmartLocationPicker
-                label="المدينة / القرية"
+                label={t.addCustomer.fields.city}
                 required
                 options={cityOptions}
                 value={form.city}
                 onChange={(v) => update("city", v)}
-                placeholder={form.governorate ? "اختر مدينة…" : "اختر المحافظة أولاً"}
+                placeholder={form.governorate ? t.addCustomer.fields.cityPlaceholder : t.addCustomer.fields.cityPlaceholderFirst}
                 disabled={!form.governorate}
                 allowAddNew
               />
             </div>
             <div className={styles.row2}>
               <Input
-                label="الحي"
+                label={t.addCustomer.fields.neighborhood}
                 value={form.neighborhood}
                 onChange={(e) => update("neighborhood", e.target.value)}
-                placeholder="اختياري"
+                placeholder={t.addCustomer.fields.phonePlaceholderOptional}
               />
               <Input
-                label="الشارع"
+                label={t.addCustomer.fields.street}
                 value={form.street}
                 onChange={(e) => update("street", e.target.value)}
-                placeholder="اختياري"
+                placeholder={t.addCustomer.fields.phonePlaceholderOptional}
               />
             </div>
           </FormSection>
 
           <FormSection
             number={4}
-            title="المعلومات التجارية"
-            subtitle="شروط الدفع، العملة، والحد الائتماني."
+            title={t.addCustomer.sections.commercial.title}
+            subtitle={t.addCustomer.sections.commercial.subtitle}
             isComplete={sec4Complete}
           >
             <ButtonGroup<PaymentTerms>
-              label="شروط الدفع"
+              label={t.addCustomer.fields.paymentTerms}
               value={form.paymentTerms}
               onChange={(v) => update("paymentTerms", v)}
               options={[
-                { value: "cash",  label: "نقدي" },
+                { value: "cash",  label: t.addCustomer.fields.termCash },
                 { value: "net15", label: "Net 15" },
                 { value: "net30", label: "Net 30" },
                 { value: "net60", label: "Net 60" },
@@ -364,7 +368,7 @@ export default function AddCustomer() {
               ]}
             />
             <ButtonGroup<Currency>
-              label="العملة المفضلة"
+              label={t.addCustomer.fields.currency}
               value={form.currency}
               onChange={(v) => update("currency", v)}
               options={[
@@ -375,51 +379,51 @@ export default function AddCustomer() {
               ]}
             />
             <Input
-              label="الحد الائتماني"
+              label={t.addCustomer.fields.creditLimit}
               variant="number"
               value={form.creditLimit}
               onChange={(e) => update("creditLimit", e.target.value.replace(/[^\d]/g, ""))}
               placeholder="0"
-              hint={`بالعملة المختارة (${form.currency})`}
+              hint={`${t.addCustomer.fields.creditLimitHint} (${form.currency})`}
             />
           </FormSection>
 
           <FormSection
             number={5}
-            title="إعدادات متقدمة"
-            subtitle="مندوب المبيعات، التصنيف، الخصم الافتراضي، التنبيهات."
+            title={t.addCustomer.sections.advanced.title}
+            subtitle={t.addCustomer.sections.advanced.subtitle}
             collapsible
             defaultCollapsed
           >
             <Input
-              label="مندوب المبيعات"
+              label={t.addCustomer.fields.salesRep}
               value={form.salesRep}
               onChange={(e) => update("salesRep", e.target.value)}
-              hint="حدد من قائمة المندوبين"
+              hint={t.addCustomer.fields.salesRepHint}
             />
             <ButtonGroup<CustomerClassification>
-              label="تصنيف العميل"
+              label={t.addCustomer.fields.classification}
               value={form.classification}
               onChange={(v) => update("classification", v)}
               options={[
-                { value: "standard", label: "قياسي" },
+                { value: "standard", label: t.addCustomer.fields.classificationStandard },
                 { value: "vip",      label: "VIP" },
-                { value: "risk",     label: "مخاطر" },
+                { value: "risk",     label: t.addCustomer.fields.classificationRisk },
               ]}
             />
             <Input
-              label="خصم افتراضي %"
+              label={t.addCustomer.fields.defaultDiscount}
               variant="number"
               value={form.defaultDiscount}
               onChange={(e) => update("defaultDiscount", e.target.value.replace(/[^\d]/g, "").slice(0, 2))}
               placeholder="0"
-              hint="من 0 إلى 99"
+              hint={t.addCustomer.fields.defaultDiscountHint}
             />
             <TagInput
-              label="تنبيهات"
+              label={t.addCustomer.fields.alerts}
               value={form.alerts}
               onChange={(v) => update("alerts", v)}
-              hint="استخدم Enter لإضافة، Backspace للحذف"
+              hint={t.addCustomer.fields.alertsHint}
               suggestions={["High balance", "Overdue", "Credit warning", "New account"]}
             />
           </FormSection>
@@ -435,13 +439,13 @@ export default function AddCustomer() {
       <div className={styles.saveBar}>
         <span className={styles.autosave}>
           <span className={`status-dot status-dot--${savedAt ? "green" : "gray"}`} aria-hidden />
-          {savedAt ? `تم حفظ المسودة (${timeAgo(savedAt)})` : "لم يتم الحفظ بعد"}
+          {savedAt ? `${t.addCustomer.autosaveSaved} (${timeAgo(savedAt, t)})` : t.addCustomer.autosaveUnsaved}
         </span>
         <div className={styles.saveBarActions}>
-          <Button variant="secondary" size="sm" onClick={() => navigate("/customers")}>إلغاء</Button>
-          <Button variant="secondary" size="sm">حفظ كمسودة</Button>
+          <Button variant="secondary" size="sm" onClick={() => navigate("/customers")}>{t.addCustomer.cancel}</Button>
+          <Button variant="secondary" size="sm">{t.addCustomer.saveAsDraft}</Button>
           <Button variant="primary" size="sm" leftIcon={<Save size={14} />} disabled={!canSave} onClick={handleSave}>
-            حفظ العميل <kbd className={styles.kbd}>⌘S</kbd>
+            {t.addCustomer.saveCustomer} <kbd className={styles.kbd}>⌘S</kbd>
           </Button>
         </div>
       </div>
@@ -449,13 +453,15 @@ export default function AddCustomer() {
   );
 }
 
-function timeAgo(d: Date): string {
+type T = typeof translations.en;
+
+function timeAgo(d: Date, t: T): string {
   const sec = Math.floor((Date.now() - d.getTime()) / 1000);
-  if (sec < 5) return "الآن";
-  if (sec < 60) return `قبل ${sec} ث`;
+  if (sec < 5) return t.addCustomer.timeAgo.now;
+  if (sec < 60) return `${sec}${t.addCustomer.timeAgo.seconds}`;
   const min = Math.floor(sec / 60);
-  if (min < 60) return `قبل ${min} د`;
-  return d.toLocaleTimeString("ar", { hour: "2-digit", minute: "2-digit" });
+  if (min < 60) return `${min}${t.addCustomer.timeAgo.minutes}`;
+  return d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
 }
 
 interface PreviewProps {
@@ -464,6 +470,7 @@ interface PreviewProps {
 }
 
 function CustomerPreviewCard({ form, completion }: PreviewProps) {
+  const { t } = useSettings();
   const initials = form.name
     .trim()
     .split(/\s+/)
@@ -475,15 +482,15 @@ function CustomerPreviewCard({ form, completion }: PreviewProps) {
   return (
     <section className={styles.previewCard}>
       <header className={styles.previewHeader}>
-        <h3>معاينة مباشرة</h3>
+        <h3>{t.addCustomer.preview.title}</h3>
         <Badge variant={completion.pct >= 80 ? "success" : completion.pct >= 50 ? "info" : "neutral"} size="sm">
-          {completion.pct}% مكتمل
+          {completion.pct}% {t.addCustomer.preview.complete}
         </Badge>
       </header>
       <div className={styles.previewProgress}>
         <div className={styles.previewBar} style={{ width: `${completion.pct}%` }} />
       </div>
-      <p className={styles.previewMeta}>{completion.filled} / {completion.total} حقل</p>
+      <p className={styles.previewMeta}>{completion.filled} / {completion.total} {t.addCustomer.preview.fields}</p>
 
       <div className={styles.previewBody}>
         <div className={styles.previewAvatar}>
@@ -491,34 +498,34 @@ function CustomerPreviewCard({ form, completion }: PreviewProps) {
           {form.classification === "vip" && <Crown size={12} className={styles.previewCrown} aria-hidden />}
         </div>
         <div className={styles.previewIdentity}>
-          <strong>{form.name || "اسم العميل"}</strong>
+          <strong>{form.name || t.addCustomer.preview.customerName}</strong>
           <span>{form.code}</span>
         </div>
         <div className={styles.previewTags}>
-          <Badge variant="info" size="sm">{typeLabel(form.type)}</Badge>
+          <Badge variant="info" size="sm">{typeLabel(form.type, t)}</Badge>
           {form.classification === "vip" && <Badge variant="warning" size="sm">VIP</Badge>}
-          {form.classification === "risk" && <Badge variant="danger" size="sm">مخاطر</Badge>}
-          <Badge variant="neutral" size="sm">{paymentLabel(form.paymentTerms)}</Badge>
+          {form.classification === "risk" && <Badge variant="danger" size="sm">{t.addCustomer.fields.classificationRisk}</Badge>}
+          <Badge variant="neutral" size="sm">{paymentLabel(form.paymentTerms, t)}</Badge>
           <Badge variant="neutral" size="sm">{form.currency}</Badge>
         </div>
 
-        <Row label="الهاتف"        value={form.phonePrimary || "—"} />
-        <Row label="البريد"        value={form.email || "—"} />
-        <Row label="المحافظة"      value={form.governorate || "—"} />
-        <Row label="المدينة"        value={form.city || "—"} />
-        <Row label="الحي / الشارع" value={[form.neighborhood, form.street].filter(Boolean).join(" · ") || "—"} />
-        <Row label="الرقم الضريبي" value={form.taxId || "—"} />
-        <Row label="الحد الائتماني" value={form.creditLimit ? `${form.creditLimit} ${form.currency}` : "—"} />
-        <Row label="المندوب"        value={form.salesRep} />
+        <Row label={t.addCustomer.preview.phone}        value={form.phonePrimary || "—"} />
+        <Row label={t.addCustomer.preview.email}        value={form.email || "—"} />
+        <Row label={t.addCustomer.preview.governorate}  value={form.governorate || "—"} />
+        <Row label={t.addCustomer.preview.city}         value={form.city || "—"} />
+        <Row label={t.addCustomer.preview.neighborhood} value={[form.neighborhood, form.street].filter(Boolean).join(" · ") || "—"} />
+        <Row label={t.addCustomer.preview.taxId}        value={form.taxId || "—"} />
+        <Row label={t.addCustomer.preview.creditLimit}  value={form.creditLimit ? `${form.creditLimit} ${form.currency}` : "—"} />
+        <Row label={t.addCustomer.preview.salesRep}     value={form.salesRep} />
         <Row
-          label="التنبيهات"
+          label={t.addCustomer.preview.alertsLabel}
           value={form.alerts.length > 0 ? form.alerts.join(" · ") : "—"}
         />
       </div>
 
       {completion.pct === 100 && (
         <div className={styles.previewOK}>
-          <CheckCircle2 size={14} /> جميع الحقول مكتملة
+          <CheckCircle2 size={14} /> {t.addCustomer.preview.allComplete}
         </div>
       )}
     </section>
@@ -534,10 +541,13 @@ function Row({ label, value }: { label: string; value: string }) {
   );
 }
 
-function typeLabel(t: CustomerType): string {
-  return t === "individual" ? "فرد" : t === "company" ? "شركة" : "مؤسسة";
+function typeLabel(type: CustomerType, t: T): string {
+  if (type === "individual") return t.addCustomer.fields.typeIndividual;
+  if (type === "company") return t.addCustomer.fields.typeCompany;
+  return t.addCustomer.fields.typeInstitution;
 }
 
-function paymentLabel(p: PaymentTerms): string {
-  return p === "cash" ? "نقدي" : p === "net15" ? "Net 15" : p === "net30" ? "Net 30" : p === "net60" ? "Net 60" : "Net 90";
+function paymentLabel(p: PaymentTerms, t: T): string {
+  if (p === "cash") return t.addCustomer.fields.termCash;
+  return p === "net15" ? "Net 15" : p === "net30" ? "Net 30" : p === "net60" ? "Net 60" : "Net 90";
 }
