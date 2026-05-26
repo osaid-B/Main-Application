@@ -27,6 +27,7 @@ import CoinsHistory from "./pages/pos/CoinsHistory";
 import PosReceipts from "./pages/pos/Receipts";
 import PosCashiers from "./pages/pos/Cashiers";
 import PosStockCounts from "./pages/pos/StockCounts";
+import PosCategories from "./pages/pos/Categories";
 import ComingSoon from "./pages/ComingSoon";
 
 function AppRoutes() {
@@ -88,7 +89,7 @@ function AppRoutes() {
           <Route path="/pos/history" element={<ComingSoon title="Sales History" />} />
           <Route path="/pos/refunds" element={<ComingSoon title="Refunds" />} />
           <Route path="/pos/products" element={<ComingSoon title="POS Products" />} />
-          <Route path="/pos/categories" element={<ComingSoon title="Categories" />} />
+          <Route path="/pos/categories" element={<PosCategories />} />
           <Route path="/pos/stock" element={<PosStockCounts />} />
           <Route path="/pos/loyalty/profile" element={<ComingSoon title="Customer Profile" />} />
           <Route path="/pos/loyalty/history" element={<CoinsHistory />} />
