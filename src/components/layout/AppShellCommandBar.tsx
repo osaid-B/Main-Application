@@ -72,6 +72,17 @@ export default function AppShellCommandBar({ currentPath }: CommandBarProps) {
     localStorage.setItem(ROLE_PRESET_KEY, rolePreset);
   }, [rolePreset]);
 
+  useEffect(() => {
+    const openCreate = () => { setCreateOpen(true); setAlertsOpen(false); setSearchOpen(false); };
+    const openAlerts = () => { setAlertsOpen(true); setCreateOpen(false); setSearchOpen(false); };
+    window.addEventListener("atlas:open-quick-create", openCreate);
+    window.addEventListener("atlas:open-alerts", openAlerts);
+    return () => {
+      window.removeEventListener("atlas:open-quick-create", openCreate);
+      window.removeEventListener("atlas:open-alerts", openAlerts);
+    };
+  }, []);
+
   const closeLayers = useCallback(() => {
     setSearchOpen(false);
     setCreateOpen(false);

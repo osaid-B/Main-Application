@@ -99,12 +99,18 @@ export default function AtlasHeader() {
           className="atlas-icon-btn"
           aria-label="Notifications"
           title="Notifications"
+          onClick={() => window.dispatchEvent(new CustomEvent("atlas:open-alerts"))}
         >
           <Bell size={15} />
           <span className="atlas-notif-badge" aria-hidden>6</span>
         </button>
 
-        <Button variant="primary" size="sm" leftIcon={<Plus size={14} />}>
+        <Button
+          variant="primary"
+          size="sm"
+          leftIcon={<Plus size={14} />}
+          onClick={() => window.dispatchEvent(new CustomEvent("atlas:open-quick-create"))}
+        >
           New action
         </Button>
       </div>

@@ -1,7 +1,7 @@
 .row {
   display: grid;
-  grid-template-columns: 48px auto 1fr;
-  align-items: start;
+  grid-template-columns: 44px 10px 1fr;
+  align-items: center;
   gap: var(--app-space-2);
   padding-block: var(--app-space-2);
   border-bottom: 1px dashed var(--app-border);
@@ -14,12 +14,11 @@
   font-size: 11px;
   color: var(--app-text-muted);
   font-weight: 500;
-  padding-top: 3px;
   letter-spacing: -0.02em;
 }
 
 .dot {
-  margin-top: 6px;
+  justify-self: center;
 }
 
 .body {

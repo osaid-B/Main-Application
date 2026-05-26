@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Download, Plus } from "lucide-react";
 import { Button } from "../components/ui/Button";
 import { Container } from "../components/layout/Container";
@@ -23,7 +23,21 @@ import styles from "./Dashboard.module.css";
  * Atlas ERP — Operations Command dashboard.
  * Live view across Company, POS, and Factory workspaces.
  */
+function downloadCsv(filename: string, headers: string[], rows: (string | number)[][]) {
+  const csv = [headers, ...rows]
+    .map((row) => row.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(","))
+    .join("\n");
+  const a = Object.assign(document.createElement("a"), {
+    href: URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8;" })),
+    download: filename,
+  });
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
 export default function Dashboard() {
+  const [dateRange, setDateRange] = useState<"week" | "month">("week");
+
   const {
     totalCustomers,
     lowStockCount,
@@ -45,6 +59,11 @@ export default function Dashboard() {
       };
     });
   }, [openInvoicesCount, totalCustomers, totalPaymentsCount]);
+
+  const chartData = useMemo(
+    () => (dateRange === "week" ? REVENUE_CHART.slice(-7) : REVENUE_CHART),
+    [dateRange]
+  );
 
   const operationalSignals = useMemo(() => {
     return OPERATIONAL_SIGNALS.map((sig) => {
@@ -77,9 +96,42 @@ export default function Dashboard() {
             </p>
           </div>
           <div className={styles.headerActions}>
-            <Button variant="secondary" size="sm">This week</Button>
-            <Button variant="secondary" size="sm" leftIcon={<Download size={14} />}>Export</Button>
-            <Button variant="primary" size="sm" leftIcon={<Plus size={14} />}>New action</Button>
+            <Button
+              variant={dateRange === "week" ? "primary" : "secondary"}
+              size="sm"
+              onClick={() => setDateRange("week")}
+            >
+              This week
+            </Button>
+            <Button
+              variant={dateRange === "month" ? "primary" : "secondary"}
+              size="sm"
+              onClick={() => setDateRange("month")}
+            >
+              This month
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              leftIcon={<Download size={14} />}
+              onClick={() =>
+                downloadCsv(
+                  "atlas-revenue.csv",
+                  ["Date", "Company", "POS", "Factory"],
+                  chartData.map((r) => [r.date, r.company, r.pos, r.factory])
+                )
+              }
+            >
+              Export
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              leftIcon={<Plus size={14} />}
+              onClick={() => window.dispatchEvent(new CustomEvent("atlas:open-quick-create"))}
+            >
+              New action
+            </Button>
           </div>
         </header>
 
@@ -115,7 +167,7 @@ export default function Dashboard() {
                 </div>
               </header>
               <div className={styles.chartWrap}>
-                <RevenueChart data={REVENUE_CHART} />
+                <RevenueChart data={chartData} />
               </div>
             </section>
 

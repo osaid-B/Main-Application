@@ -1,3 +1,4 @@
+import { useMemo, useState } from "react";
 import { Bar, BarChart, CartesianGrid, Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { ArrowDownRight, ArrowUpRight, Download, Plus } from "lucide-react";
 import { Button } from "../components/ui/Button";
@@ -32,7 +33,26 @@ const DEPT_DOT: Record<DepartmentRow["color"], string> = {
   orange: "status-dot--orange",
 };
 
+function downloadCsv(filename: string, headers: string[], rows: (string | number)[][]) {
+  const csv = [headers, ...rows]
+    .map((row) => row.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(","))
+    .join("\n");
+  const a = Object.assign(document.createElement("a"), {
+    href: URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8;" })),
+    download: filename,
+  });
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
 export default function CompanyOverview() {
+  const [dateRange, setDateRange] = useState<"month" | "6months">("6months");
+
+  const cashFlowData = useMemo(
+    () => (dateRange === "month" ? CASH_FLOW.slice(-1) : CASH_FLOW),
+    [dateRange]
+  );
+
   return (
     <Container maxWidth="full" padding="md">
       <Stack gap="lg">
@@ -46,9 +66,42 @@ export default function CompanyOverview() {
             </p>
           </div>
           <div className={styles.actions}>
-            <Button variant="secondary" size="sm">This month</Button>
-            <Button variant="secondary" size="sm" leftIcon={<Download size={14} />}>Export</Button>
-            <Button variant="primary" size="sm" leftIcon={<Plus size={14} />}>New entry</Button>
+            <Button
+              variant={dateRange === "month" ? "primary" : "secondary"}
+              size="sm"
+              onClick={() => setDateRange("month")}
+            >
+              This month
+            </Button>
+            <Button
+              variant={dateRange === "6months" ? "primary" : "secondary"}
+              size="sm"
+              onClick={() => setDateRange("6months")}
+            >
+              Last 6 months
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              leftIcon={<Download size={14} />}
+              onClick={() =>
+                downloadCsv(
+                  "atlas-company-kpis.csv",
+                  ["Label", "Value", "Trend %"],
+                  COMPANY_KPIS.map((k) => [k.label, k.value, k.trend])
+                )
+              }
+            >
+              Export
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              leftIcon={<Plus size={14} />}
+              onClick={() => window.dispatchEvent(new CustomEvent("atlas:open-quick-create"))}
+            >
+              New entry
+            </Button>
           </div>
         </header>
 
@@ -65,7 +118,7 @@ export default function CompanyOverview() {
               <span className={styles.cardSub}>Inflow vs outflow · net delta</span>
             </header>
             <ResponsiveContainer width="100%" height={240}>
-              <BarChart data={CASH_FLOW} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
+              <BarChart data={cashFlowData} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
                 <CartesianGrid stroke="var(--app-border)" strokeDasharray="3 3" vertical={false} />
                 <XAxis dataKey="month" tick={{ fontSize: 11, fill: "var(--app-text-muted)" }} axisLine={false} tickLine={false} />
                 <YAxis tickFormatter={(v) => `$${(Number(v) / 1000).toFixed(0)}k`} tick={{ fontSize: 11, fill: "var(--app-text-muted)" }} axisLine={false} tickLine={false} width={48} />
