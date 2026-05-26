@@ -1341,14 +1341,23 @@ export const translations = {
       receipts: {
         pageTitle: "Receipts",
         pageSubtitle: "All POS transactions and completed sales.",
+        breadcrumb: "POS · RECEIPTS",
         searchPlaceholder: "Search by receipt # or cashier…",
         export: "Export",
         noReceipts: "No receipts found.",
+        actions: {
+          view: "View",
+          print: "Print",
+        },
         kpi: {
           todayCount: "TODAY'S RECEIPTS",
+          todayCountSub: "POS transactions",
           todaySales: "TOTAL SALES TODAY",
+          todaySalesSub: "across all cashiers",
           avgReceipt: "AVG RECEIPT",
+          avgReceiptSub: "per receipt",
           refunds: "REFUNDS TODAY",
+          refundsSub: "receipts refunded",
         },
         cols: {
           receipt: "Receipt #",
@@ -1394,14 +1403,23 @@ export const translations = {
       cashiers: {
         pageTitle: "Cashiers",
         pageSubtitle: "Manage POS cashier accounts and monitor performance.",
+        breadcrumb: "POS · CASHIERS",
         addCashier: "Add Cashier",
         searchPlaceholder: "Search by name or code…",
         noCashiers: "No cashiers found.",
+        actions: {
+          edit: "Edit",
+          deactivate: "Deactivate",
+          activate: "Activate",
+        },
         kpi: {
           active: "ACTIVE CASHIERS",
+          activeSub: "currently active",
           salesTotal: "SALES TODAY",
+          salesTotalSub: "all cashiers combined",
           topPerformer: "TOP PERFORMER",
           transactions: "TRANSACTIONS TODAY",
+          transactionsSub: "completed today",
         },
         cols: {
           cashier: "Cashier",
@@ -1442,13 +1460,20 @@ export const translations = {
       stockCounts: {
         pageTitle: "Stock Counts",
         pageSubtitle: "Inventory count sessions — expected vs. actual stock.",
+        breadcrumb: "POS · STOCK COUNTS",
         newCount: "New Count",
         searchPlaceholder: "Search by ID, location, or counter…",
         noCount: "No stock counts found.",
+        actions: {
+          view: "View",
+        },
         kpi: {
           open: "OPEN COUNTS",
+          openSub: "open or in-progress",
           itemsCounted: "ITEMS COUNTED",
+          itemsSub: "from completed counts",
           variances: "VARIANCES FLAGGED",
+          variancesSub: "sessions with discrepancies",
           lastCount: "LAST COUNT DATE",
         },
         cols: {
@@ -1469,6 +1494,7 @@ export const translations = {
         },
         detail: {
           title: "Count Detail",
+          noItems: "No items recorded yet for this count session.",
           product: "Product",
           sku: "SKU",
           expected: "Expected",
@@ -1490,9 +1516,15 @@ export const translations = {
       categories: {
         pageTitle: "Categories",
         pageSubtitle: "Product category management for the POS catalog.",
+        breadcrumb: "POS · CATEGORIES",
         addCategory: "Add Category",
         searchPlaceholder: "Search categories…",
         noCategories: "No categories found.",
+        actions: {
+          edit: "Edit",
+          deactivate: "Deactivate",
+          activate: "Activate",
+        },
         cols: {
           name: "Category",
           products: "Products",
@@ -3265,14 +3297,23 @@ export const translations = {
       receipts: {
         pageTitle: "الإيصالات",
         pageSubtitle: "جميع عمليات POS والمبيعات المكتملة.",
+        breadcrumb: "POS · الإيصالات",
         searchPlaceholder: "ابحث برقم الإيصال أو الكاشير...",
         export: "تصدير",
         noReceipts: "ما في إيصالات.",
+        actions: {
+          view: "عرض",
+          print: "طباعة",
+        },
         kpi: {
           todayCount: "إيصالات اليوم",
+          todayCountSub: "عمليات POS",
           todaySales: "إجمالي مبيعات اليوم",
+          todaySalesSub: "عبر جميع الكاشيرين",
           avgReceipt: "متوسط الإيصال",
+          avgReceiptSub: "لكل إيصال",
           refunds: "المرتجعات اليوم",
+          refundsSub: "إيصالات مردودة",
         },
         cols: {
           receipt: "رقم الإيصال",
@@ -3318,14 +3359,23 @@ export const translations = {
       cashiers: {
         pageTitle: "الكاشيرين",
         pageSubtitle: "إدارة حسابات الكاشيرين ومتابعة الأداء.",
+        breadcrumb: "POS · الكاشيرين",
         addCashier: "إضافة كاشير",
         searchPlaceholder: "ابحث بالاسم أو الرمز...",
         noCashiers: "ما في كاشيرين.",
+        actions: {
+          edit: "تعديل",
+          deactivate: "تعطيل",
+          activate: "تفعيل",
+        },
         kpi: {
           active: "الكاشيرين النشطين",
+          activeSub: "نشط حالياً",
           salesTotal: "مبيعات اليوم",
+          salesTotalSub: "جميع الكاشيرين",
           topPerformer: "الأفضل أداءً",
           transactions: "عمليات اليوم",
+          transactionsSub: "مكتملة اليوم",
         },
         cols: {
           cashier: "الكاشير",
@@ -3366,13 +3416,20 @@ export const translations = {
       stockCounts: {
         pageTitle: "جرد المخزون",
         pageSubtitle: "جلسات جرد المخزون — المتوقع مقابل الفعلي.",
+        breadcrumb: "POS · جرد المخزون",
         newCount: "جرد جديد",
         searchPlaceholder: "ابحث بالرقم أو الموقع أو العداد...",
         noCount: "ما في جلسات جرد.",
+        actions: {
+          view: "عرض",
+        },
         kpi: {
           open: "جلسات مفتوحة",
+          openSub: "مفتوح أو جاري",
           itemsCounted: "أصناف معدودة",
+          itemsSub: "من الجلسات المكتملة",
           variances: "فروقات مرصودة",
+          variancesSub: "جلسات فيها فروقات",
           lastCount: "تاريخ آخر جرد",
         },
         cols: {
@@ -3393,6 +3450,7 @@ export const translations = {
         },
         detail: {
           title: "تفاصيل الجرد",
+          noItems: "ما في أصناف مسجلة لهذه الجلسة بعد.",
           product: "المنتج",
           sku: "الرمز",
           expected: "المتوقع",
@@ -3414,9 +3472,15 @@ export const translations = {
       categories: {
         pageTitle: "الفئات",
         pageSubtitle: "إدارة فئات المنتجات في كتالوج POS.",
+        breadcrumb: "POS · الفئات",
         addCategory: "إضافة فئة",
         searchPlaceholder: "ابحث في الفئات...",
         noCategories: "ما في فئات.",
+        actions: {
+          edit: "تعديل",
+          deactivate: "تعطيل",
+          activate: "تفعيل",
+        },
         cols: {
           name: "الفئة",
           products: "المنتجات",

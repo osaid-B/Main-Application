@@ -64,7 +64,7 @@ export default function Categories() {
       <Stack gap="lg">
         <header className={styles.header}>
           <div>
-            <div className={styles.breadcrumb}>POS · CATEGORIES</div>
+            <div className={styles.breadcrumb}>{tc.breadcrumb}</div>
             <h1 className={styles.title}>{tc.pageTitle}</h1>
             <p className={styles.subtitle}>{tc.pageSubtitle}</p>
           </div>
@@ -124,14 +124,14 @@ export default function Categories() {
                     <td>
                       <div className={styles.actionBtns}>
                         <button type="button" className={styles.iconBtn} onClick={() => setEditing(c)}>
-                          Edit
+                          {tc.actions.edit}
                         </button>
                         <button
                           type="button"
                           className={`${styles.iconBtn} ${c.status === "active" ? styles.iconBtnDanger : ""}`}
                           onClick={() => toggleStatus(c.id)}
                         >
-                          {c.status === "active" ? "Deactivate" : "Activate"}
+                          {c.status === "active" ? tc.actions.deactivate : tc.actions.activate}
                         </button>
                       </div>
                     </td>

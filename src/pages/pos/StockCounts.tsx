@@ -58,7 +58,7 @@ export default function StockCounts() {
       <Stack gap="lg">
         <header className={styles.header}>
           <div>
-            <div className={styles.breadcrumb}>POS · STOCK COUNTS</div>
+            <div className={styles.breadcrumb}>{tc.breadcrumb}</div>
             <h1 className={styles.title}>{tc.pageTitle}</h1>
             <p className={styles.subtitle}>{tc.pageSubtitle}</p>
           </div>
@@ -68,9 +68,9 @@ export default function StockCounts() {
         </header>
 
         <Grid cols={4} gap="md" responsive>
-          <Kpi label={tc.kpi.open}         value={String(openCount)}                  tone="warning" sub="open or in-progress" />
-          <Kpi label={tc.kpi.itemsCounted} value={String(itemsCounted)}               tone="info"    sub="from completed counts" />
-          <Kpi label={tc.kpi.variances}    value={String(variances)}                  tone="danger"  sub="sessions with discrepancies" />
+          <Kpi label={tc.kpi.open}         value={String(openCount)}                  tone="warning" sub={tc.kpi.openSub} />
+          <Kpi label={tc.kpi.itemsCounted} value={String(itemsCounted)}               tone="info"    sub={tc.kpi.itemsSub} />
+          <Kpi label={tc.kpi.variances}    value={String(variances)}                  tone="danger"  sub={tc.kpi.variancesSub} />
           <Kpi label={tc.kpi.lastCount}    value={lastCompleted?.date ?? "—"}         tone="success" sub={lastCompleted?.location ?? ""} />
         </Grid>
 
@@ -123,7 +123,7 @@ export default function StockCounts() {
                   <td>{c.countedBy}</td>
                   <td>
                     <button type="button" className={styles.viewBtn} onClick={() => setDetail(c)}>
-                      View
+                      {tc.actions.view}
                     </button>
                   </td>
                 </tr>
@@ -157,7 +157,7 @@ function CountDetailModal({ count, onClose }: { count: PosStockCount; onClose: (
       footer={<Button variant="secondary" onClick={onClose}>{tc.detail.close}</Button>}
     >
       {count.items.length === 0 ? (
-        <p className={styles.emptyDetail}>No items recorded yet for this count session.</p>
+        <p className={styles.emptyDetail}>{tc.detail.noItems}</p>
       ) : (
         <table className={styles.detailTable}>
           <thead>

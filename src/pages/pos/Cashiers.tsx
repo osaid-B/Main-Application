@@ -76,7 +76,7 @@ export default function Cashiers() {
       <Stack gap="lg">
         <header className={styles.header}>
           <div>
-            <div className={styles.breadcrumb}>POS · CASHIERS</div>
+            <div className={styles.breadcrumb}>{tc.breadcrumb}</div>
             <h1 className={styles.title}>{tc.pageTitle}</h1>
             <p className={styles.subtitle}>{tc.pageSubtitle}</p>
           </div>
@@ -86,10 +86,10 @@ export default function Cashiers() {
         </header>
 
         <Grid cols={4} gap="md" responsive>
-          <Kpi label={tc.kpi.active}       value={String(activeCount)}           tone="success" sub="currently active" />
-          <Kpi label={tc.kpi.salesTotal}   value={formatCurrency(todaySalesSum)} tone="info"    sub="all cashiers combined" />
+          <Kpi label={tc.kpi.active}       value={String(activeCount)}           tone="success" sub={tc.kpi.activeSub} />
+          <Kpi label={tc.kpi.salesTotal}   value={formatCurrency(todaySalesSum)} tone="info"    sub={tc.kpi.salesTotalSub} />
           <Kpi label={tc.kpi.topPerformer} value={topPerformer?.name ?? "—"}     tone="warning" sub={topPerformer ? formatCurrency(topPerformer.todaySales) : ""} />
-          <Kpi label={tc.kpi.transactions} value={String(txCount)}               tone="success" sub="completed today" />
+          <Kpi label={tc.kpi.transactions} value={String(txCount)}               tone="success" sub={tc.kpi.transactionsSub} />
         </Grid>
 
         <div className={styles.toolbar}>
@@ -145,14 +145,14 @@ export default function Cashiers() {
                         className={styles.iconBtn}
                         onClick={() => setEditing(c)}
                       >
-                        Edit
+                        {tc.actions.edit}
                       </button>
                       <button
                         type="button"
                         className={`${styles.iconBtn} ${c.status === "active" ? styles.iconBtnDanger : ""}`}
                         onClick={() => toggleStatus(c.id)}
                       >
-                        {c.status === "active" ? "Deactivate" : "Activate"}
+                        {c.status === "active" ? tc.actions.deactivate : tc.actions.activate}
                       </button>
                     </div>
                   </td>

@@ -72,7 +72,7 @@ export default function Receipts() {
       <Stack gap="lg">
         <header className={styles.header}>
           <div>
-            <div className={styles.breadcrumb}>POS · RECEIPTS</div>
+            <div className={styles.breadcrumb}>{tc.breadcrumb}</div>
             <h1 className={styles.title}>{tc.pageTitle}</h1>
             <p className={styles.subtitle}>{tc.pageSubtitle}</p>
           </div>
@@ -80,10 +80,10 @@ export default function Receipts() {
         </header>
 
         <Grid cols={4} gap="md" responsive>
-          <Kpi label={tc.kpi.todayCount} value={String(todayCount)}                tone="success" sub="POS transactions" />
-          <Kpi label={tc.kpi.todaySales} value={formatCurrency(todaySales)}        tone="info"    sub="across all cashiers" />
-          <Kpi label={tc.kpi.avgReceipt} value={formatCurrency(avgReceipt)}        tone="success" sub="per receipt" />
-          <Kpi label={tc.kpi.refunds}    value={String(refunds)}                   tone="danger"  sub="receipts refunded" />
+          <Kpi label={tc.kpi.todayCount} value={String(todayCount)}                tone="success" sub={tc.kpi.todayCountSub} />
+          <Kpi label={tc.kpi.todaySales} value={formatCurrency(todaySales)}        tone="info"    sub={tc.kpi.todaySalesSub} />
+          <Kpi label={tc.kpi.avgReceipt} value={formatCurrency(avgReceipt)}        tone="success" sub={tc.kpi.avgReceiptSub} />
+          <Kpi label={tc.kpi.refunds}    value={String(refunds)}                   tone="danger"  sub={tc.kpi.refundsSub} />
         </Grid>
 
         <div className={styles.filters}>
@@ -150,7 +150,7 @@ export default function Receipts() {
                       className={styles.viewBtn}
                       onClick={() => setSelected(r)}
                     >
-                      View
+                      {tc.actions.view}
                     </button>
                   </td>
                 </tr>
