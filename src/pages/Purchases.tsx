@@ -31,6 +31,7 @@ import {
   saveSuppliers,
 } from "../data/storage";
 import type { Product, Purchase, Supplier } from "../data/types";
+import { useSettings } from "../context/SettingsContext";
 
 type PurchaseFormState = {
   supplierId: string;
@@ -379,6 +380,7 @@ function buildRows(
 }
 
 export default function Purchases() {
+  const { t } = useSettings();
   const [suppliers, setSuppliers] = useState<Supplier[]>(() => getSuppliers());
   const [products] = useState<Product[]>(() => getProducts());
   const [purchases, setPurchases] = useState<PurchaseRecord[]>(
@@ -841,10 +843,10 @@ export default function Purchases() {
       setPurchases((current) =>
         current.map((entry) => (entry.id === editingId ? payload : entry))
       );
-      setToast(mode === "draft" ? "Purchase saved as draft" : "Purchase updated");
+      setToast(mode === "draft" ? t.common.saveAsDraft : t.purchases.toast.updated);
     } else {
       setPurchases((current) => [payload, ...current]);
-      setToast(mode === "draft" ? "Purchase saved as draft" : "Purchase created");
+      setToast(mode === "draft" ? t.common.saveAsDraft : t.purchases.toast.created);
     }
 
     forceCloseForm();
@@ -870,7 +872,7 @@ export default function Purchases() {
     setDeleteRecord(null);
     setDeleteCode("");
     setDeleteError("");
-    setToast("Purchase deleted");
+    setToast(t.purchases.toast.deleted);
   }
 
   function renderRowActions(row: PurchaseRow) {
@@ -915,15 +917,15 @@ export default function Purchases() {
           <div className="purchases-header-copy">
             <div className="page-badge">
               <ShoppingCart size={16} />
-              Purchases
+              {t.purchases.pageTitle}
             </div>
-            <h1>Purchases</h1>
-            <p>Manage and track all your purchase orders and bills</p>
+            <h1>{t.purchases.pageTitle}</h1>
+            <p>{t.purchases.pageSubtitle}</p>
           </div>
 
           <div className="purchases-header-actions">
             <Button variant="primary" type="button" onClick={openAddModal} leftIcon={<Plus size={16} />}>
-              New Purchase
+              {t.purchases.newPurchase}
             </Button>
           </div>
         </section>
@@ -935,7 +937,7 @@ export default function Purchases() {
                   <Search size={18} />
                   <input
                     type="text"
-                    placeholder="Search by PO number, supplier, status or product..."
+                    placeholder={t.purchases.searchPlaceholder}
                     value={searchTerm}
                     onChange={(event) => setSearchTerm(event.target.value)}
                   />
@@ -951,7 +953,7 @@ export default function Purchases() {
                     aria-expanded={showMoreFilters}
                   >
                     <Filter size={16} />
-                    Filters
+                    {t.purchases.filterBtn}
                     {activeAdvancedCount > 0 && (
                       <span className="toolbar-count">{activeAdvancedCount}</span>
                     )}
@@ -981,7 +983,7 @@ export default function Purchases() {
                 <div className="filters-popover-shell" ref={filterPopoverRef}>
                   <div className="filters-popover-head">
                     <div>
-                      <strong>Filters</strong>
+                      <strong>{t.purchases.filterBtn}</strong>
                       <span>Refine purchases with compact focused controls.</span>
                     </div>
                     <button
@@ -1096,7 +1098,7 @@ export default function Purchases() {
                       type="button"
                       onClick={resetDraftFilters}
                     >
-                      Reset
+                      {t.common.reset}
                     </Button>
                     <div className="filters-popover-cta">
                       <Button
@@ -1104,14 +1106,14 @@ export default function Purchases() {
                         type="button"
                         onClick={() => setShowMoreFilters(false)}
                       >
-                        Close
+                        {t.common.close}
                       </Button>
                       <Button
                         variant="primary"
                         type="button"
                         onClick={applyFilters}
                       >
-                        Apply
+                        {t.common.apply}
                       </Button>
                     </div>
                   </div>
@@ -1159,13 +1161,13 @@ export default function Purchases() {
 
                     <thead>
                       <tr>
-                        <th><span className="th-sort">PO Number <ArrowUpDown size={11} /></span></th>
-                        <th>Supplier</th>
+                        <th><span className="th-sort">{t.purchases.cols.poNumber} <ArrowUpDown size={11} /></span></th>
+                        <th>{t.purchases.cols.supplier}</th>
                         <th><span className="th-sort">Delivery Date <ArrowUpDown size={11} /></span></th>
-                        <th><span className="th-sort">Total Amount <ArrowUpDown size={11} /></span></th>
-                        <th><span className="th-sort">Received <ArrowUpDown size={11} /></span></th>
-                        <th>Status</th>
-                        <th>Actions</th>
+                        <th><span className="th-sort">{t.purchases.cols.total} <ArrowUpDown size={11} /></span></th>
+                        <th><span className="th-sort">{t.purchases.cols.received} <ArrowUpDown size={11} /></span></th>
+                        <th>{t.purchases.cols.status}</th>
+                        <th>{t.purchases.cols.actions}</th>
                       </tr>
                     </thead>
 
@@ -1216,7 +1218,7 @@ export default function Purchases() {
                             <td>
                               <div className="received-cell">
                                 <strong>{money(row.receivedAmount)}</strong>
-                                <span>{row.receivedPercent}% received</span>
+                                <span>{row.receivedPercent}% {t.purchases.cols.received}</span>
                               </div>
                             </td>
 
@@ -1266,7 +1268,7 @@ export default function Purchases() {
 
                       <div className="purchase-grid-meta">
                         <div className="purchase-grid-meta-row">
-                          <span className="pgm-label">Supplier</span>
+                          <span className="pgm-label">{t.purchases.cols.supplier}</span>
                           <span className="pgm-value">{row.supplierName}</span>
                         </div>
                         <div className="purchase-grid-meta-row">
@@ -1274,11 +1276,11 @@ export default function Purchases() {
                           <span className="pgm-value">{formatDate(row.deliveryDate)}</span>
                         </div>
                         <div className="purchase-grid-meta-row">
-                          <span className="pgm-label">Amount</span>
+                          <span className="pgm-label">{t.purchases.cols.total}</span>
                           <span className="pgm-value pgm-amount">{money(row.totalAmount)}</span>
                         </div>
                         <div className="purchase-grid-meta-row">
-                          <span className="pgm-label">Received</span>
+                          <span className="pgm-label">{t.purchases.cols.received}</span>
                           <span className="pgm-value">{row.receivedPercent}%</span>
                         </div>
                       </div>
@@ -1332,26 +1334,26 @@ export default function Purchases() {
         {detailRecord && (
               <div className="drawer-grid">
                 <div className="drawer-card">
-                  <h3>Overview</h3>
+                  <h3>{t.purchases.detail.title}</h3>
                   <dl>
                     <div>
-                      <dt>Product</dt>
+                      <dt>{t.common.product}</dt>
                       <dd>{detailRecord.productName}</dd>
                     </div>
                     <div>
-                      <dt>Order Date</dt>
+                      <dt>{t.purchases.cols.date}</dt>
                       <dd>{formatDate(detailRecord.orderDate)}</dd>
                     </div>
                     <div>
-                      <dt>Delivery</dt>
+                      <dt>{t.purchases.form.expectedDate}</dt>
                       <dd>{formatDate(detailRecord.deliveryDate)}</dd>
                     </div>
                     <div>
-                      <dt>Total</dt>
+                      <dt>{t.purchases.detail.total}</dt>
                       <dd>{money(detailRecord.totalAmount)}</dd>
                     </div>
                     <div>
-                      <dt>Received</dt>
+                      <dt>{t.purchases.cols.received}</dt>
                       <dd>{money(detailRecord.receivedAmount)}</dd>
                     </div>
                     <div>
@@ -1366,29 +1368,29 @@ export default function Purchases() {
                 </div>
 
                 <div className="drawer-card">
-                  <h3>Supplier</h3>
+                  <h3>{t.purchases.cols.supplier}</h3>
                   <dl>
                     <div>
-                      <dt>Name</dt>
+                      <dt>{t.common.name}</dt>
                       <dd>{detailRecord.supplierName}</dd>
                     </div>
                     <div>
-                      <dt>Phone</dt>
+                      <dt>{t.common.phone}</dt>
                       <dd>{detailRecord.supplierPhone}</dd>
                     </div>
                     <div>
-                      <dt>Email</dt>
+                      <dt>{t.common.email}</dt>
                       <dd>{detailRecord.supplierEmail}</dd>
                     </div>
                     <div>
-                      <dt>Address</dt>
+                      <dt>{t.common.address}</dt>
                       <dd>{detailRecord.supplierAddress}</dd>
                     </div>
                   </dl>
                 </div>
 
                 <div className="drawer-card full">
-                  <h3>Notes</h3>
+                  <h3>{t.common.notes}</h3>
                   <p>{detailRecord.notes}</p>
                 </div>
               </div>
@@ -1400,13 +1402,13 @@ export default function Purchases() {
         onClose={requestCloseForm}
         variant="dialog"
         size="lg"
-        title={formMode === "add" ? "Add Supplier Purchase" : "Update Supplier Purchase"}
+        title={formMode === "add" ? t.purchases.form.createTitle : t.purchases.form.editTitle}
         description="Product pricing is linked automatically. Create a supplier here and it will be available globally."
         className="purchase-modal purchase-order-modal"
         footer={
           <>
             <Button variant="secondary" type="button" onClick={requestCloseForm}>
-              Cancel
+              {t.common.cancel}
             </Button>
             <Button
               variant="secondary"
@@ -1414,10 +1416,10 @@ export default function Purchases() {
               type="button"
               onClick={() => saveForm("draft")}
             >
-              Save as Draft
+              {t.common.saveAsDraft}
             </Button>
             <Button variant="primary" type="button" onClick={() => saveForm("final")}>
-              {formMode === "add" ? "Create Purchase" : "Save Changes"}
+              {formMode === "add" ? t.purchases.newPurchase : t.common.saveChanges}
             </Button>
           </>
         }
@@ -1427,7 +1429,7 @@ export default function Purchases() {
                   <div className="purchase-order-main">
                     <section className="purchase-form-section">
                       <div className="purchase-section-head">
-                        <h3>Supplier</h3>
+                        <h3>{t.purchases.form.supplier}</h3>
                         <p>
                           Choose an existing supplier or create a real supplier that appears
                           in the Suppliers page.
@@ -1794,10 +1796,10 @@ export default function Purchases() {
               type="button"
               onClick={() => setDiscardConfirmOpen(false)}
             >
-              Keep Editing
+              {t.common.keepEditing}
             </Button>
             <Button variant="danger" type="button" onClick={forceCloseForm}>
-              Discard Changes
+              {t.common.discard}
             </Button>
           </>
         }
@@ -1819,10 +1821,10 @@ export default function Purchases() {
               type="button"
               onClick={() => setDeleteRecord(null)}
             >
-              Cancel
+              {t.common.cancel}
             </Button>
             <Button variant="danger" type="button" onClick={confirmDelete}>
-              Delete
+              {t.common.delete}
             </Button>
           </>
         }
