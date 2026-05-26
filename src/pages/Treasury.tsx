@@ -26,6 +26,7 @@ import { Select } from "../components/ui/Select";
 import { Modal } from "../components/ui/Modal";
 import { Badge } from "../components/ui/Badge";
 import { useAuth } from "../context/AuthContext";
+import { useSettings } from "../context/SettingsContext";
 import {
   getAuditEvents,
   getBankAccounts,
@@ -188,6 +189,7 @@ function renderPages(page: number, total: number, setPage: (p: number) => void) 
 
 export default function Treasury() {
   const { user } = useAuth();
+  const { t } = useSettings();
   const customers  = useMemo(() => getCustomers(),  []);
   const suppliers  = useMemo(() => getSuppliers(),  []);
   const invoices   = useMemo(() => getInvoices(),   []);
@@ -437,13 +439,10 @@ export default function Treasury() {
       <header className="trs-header">
         <div className="trs-header-eyebrow">
           <Landmark size={14} />
-          Treasury Operations
+          {t.treasury.pageTitle}
         </div>
-        <h1 className="trs-header-title">Treasury, Cheques, and Transfers</h1>
-        <p className="trs-header-sub">
-          Manage incoming customer cheques, outgoing supplier cheques, transfer verification,
-          OCR review, document custody, approval control, and reconciliation readiness.
-        </p>
+        <h1 className="trs-header-title">{t.treasury.pageTitle}</h1>
+        <p className="trs-header-sub">{t.treasury.pageSubtitle}</p>
       </header>
 
       {/* ── KPI Row ────────────────────────────────────────── */}
@@ -451,7 +450,7 @@ export default function Treasury() {
         <div className="trs-kpi-card">
           <div className="trs-kpi-icon trs-kpi-icon--blue"><Landmark size={20} /></div>
           <div>
-            <span className="trs-kpi-label">Bank Balances</span>
+            <span className="trs-kpi-label">{t.treasury.overview.bankAccounts}</span>
             <strong className="trs-kpi-value">
               {money(bankAccounts.reduce((sum, a) => sum + a.currentBalance, 0))}
             </strong>
@@ -499,7 +498,7 @@ export default function Treasury() {
                   variant="search"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Search by cheque number, transfer reference..."
+                  placeholder={t.treasury.searchPlaceholder}
                 />
               </div>
               <Select
@@ -509,7 +508,7 @@ export default function Treasury() {
                 options={activeStatuses.map((s) => ({ value: s, label: s }))}
               />
               <div className="trs-tab-group">
-                {([ ["overview","Overview"], ["incoming","Incoming Cheques"], ["outgoing","Outgoing Cheques"] ] as [TreasuryTab, string][]).map(([key, label]) => (
+                {([["overview", t.treasury.tabs.overview], ["incoming", t.treasury.tabs.incoming], ["outgoing", t.treasury.tabs.outgoing]] as [TreasuryTab, string][]).map(([key, label]) => (
                   <Button key={key} type="button" variant="ghost" className={`trs-tab-btn${activeTab === key ? " active" : ""}`} onClick={() => switchTab(key)}>
                     {label}
                   </Button>
@@ -517,7 +516,7 @@ export default function Treasury() {
               </div>
             </div>
             <div className="trs-sub-tab-group">
-              {([ ["overview","All"], ["transfers","Bank Transfers"], ["reconciliation","Reconciliation"] ] as [TreasuryTab, string][]).map(([key, label]) => (
+              {([["overview", t.common.all], ["transfers", t.treasury.tabs.transfers], ["reconciliation", t.treasury.tabs.reconciliation]] as [TreasuryTab, string][]).map(([key, label]) => (
                 <Button key={key} type="button" variant="ghost" className={`trs-sub-tab-btn${activeTab === key ? " active" : ""}`} onClick={() => switchTab(key)}>
                   {label}
                 </Button>
@@ -541,13 +540,13 @@ export default function Treasury() {
                   </colgroup>
                   <thead>
                     <tr>
-                      <th>Item / Reference</th>
-                      <th>Type</th>
-                      <th>Party</th>
-                      <th>Status</th>
-                      <th>Date</th>
-                      <th>Amount</th>
-                      <th>Actions</th>
+                      <th>{t.treasury.cols.reference}</th>
+                      <th>{t.common.type}</th>
+                      <th>{t.treasury.cols.party}</th>
+                      <th>{t.treasury.cols.status}</th>
+                      <th>{t.treasury.cols.date}</th>
+                      <th>{t.treasury.cols.amount}</th>
+                      <th>{t.treasury.cols.actions}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -633,15 +632,15 @@ export default function Treasury() {
           {activeTab === "incoming" && (
             <div className="trs-table-card">
               <div className="trs-table-inner-head">
-                <strong>Incoming Customer Cheques</strong>
-                <span className="trs-table-sub">Received, deposited, under collection, cleared, bounced, and post-dated instruments</span>
+                <strong>{t.treasury.tabs.incoming}</strong>
+                <span className="trs-table-sub">{t.treasury.pageSubtitle}</span>
               </div>
               <div className="trs-table-wrap">
                 <table className="trs-table">
                   <thead>
                     <tr>
-                      <th>Cheque</th><th>Customer</th><th>Due Date</th>
-                      <th>Amount</th><th>Status</th><th>OCR</th><th>Actions</th>
+                      <th>{t.treasury.cols.reference}</th><th>{t.common.customer}</th><th>{t.treasury.cols.dueDate}</th>
+                      <th>{t.treasury.cols.amount}</th><th>{t.treasury.cols.status}</th><th>OCR</th><th>{t.treasury.cols.actions}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -668,7 +667,7 @@ export default function Treasury() {
                           <td>
                             <div className="trs-row-actions">
                               <Button type="button" variant="icon" className="trs-icon-btn" onClick={() => setDetailRecord({ type: "incoming", record })}><Eye size={15} /></Button>
-                              <Button type="button" variant="primary" className="trs-mini-btn trs-mini-btn--primary" disabled={!access.approve} onClick={() => handleApproveCheque(record, "incoming")}>Approve</Button>
+                              <Button type="button" variant="primary" className="trs-mini-btn trs-mini-btn--primary" disabled={!access.approve} onClick={() => handleApproveCheque(record, "incoming")}>"Approve"</Button>
                             </div>
                           </td>
                         </tr>
@@ -684,15 +683,15 @@ export default function Treasury() {
           {activeTab === "outgoing" && (
             <div className="trs-table-card">
               <div className="trs-table-inner-head">
-                <strong>Outgoing Supplier Cheques</strong>
-                <span className="trs-table-sub">Approved, issued, delivered, cleared, bounced, or voided supplier instruments</span>
+                <strong>{t.treasury.tabs.outgoing}</strong>
+                <span className="trs-table-sub">{t.treasury.pageSubtitle}</span>
               </div>
               <div className="trs-table-wrap">
                 <table className="trs-table">
                   <thead>
                     <tr>
-                      <th>Cheque</th><th>Supplier</th><th>Due Date</th>
-                      <th>Amount</th><th>Status</th><th>Journal</th><th>Actions</th>
+                      <th>{t.treasury.cols.reference}</th><th>{t.common.supplier}</th><th>{t.treasury.cols.dueDate}</th>
+                      <th>{t.treasury.cols.amount}</th><th>{t.treasury.cols.status}</th><th>{t.common.notes}</th><th>{t.treasury.cols.actions}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -714,7 +713,7 @@ export default function Treasury() {
                           <td>
                             <div className="trs-row-actions">
                               <Button type="button" variant="icon" className="trs-icon-btn" onClick={() => setDetailRecord({ type: "outgoing", record })}><Eye size={15} /></Button>
-                              <Button type="button" variant="primary" className="trs-mini-btn trs-mini-btn--primary" disabled={!access.approve} onClick={() => handleApproveCheque(record, "outgoing")}>Approve</Button>
+                              <Button type="button" variant="primary" className="trs-mini-btn trs-mini-btn--primary" disabled={!access.approve} onClick={() => handleApproveCheque(record, "outgoing")}>"Approve"</Button>
                             </div>
                           </td>
                         </tr>
@@ -730,15 +729,15 @@ export default function Treasury() {
           {activeTab === "transfers" && (
             <div className="trs-table-card">
               <div className="trs-table-inner-head">
-                <strong>Bank Transfers</strong>
-                <span className="trs-table-sub">Incoming and outgoing transfers with proof review, OCR, and settlement verification</span>
+                <strong>{t.treasury.tabs.transfers}</strong>
+                <span className="trs-table-sub">{t.treasury.pageSubtitle}</span>
               </div>
               <div className="trs-table-wrap">
                 <table className="trs-table">
                   <thead>
                     <tr>
-                      <th>Transfer</th><th>Counterparty</th><th>Date</th>
-                      <th>Amount</th><th>Status</th><th>Proof / OCR</th><th>Actions</th>
+                      <th>{t.treasury.form.transfer.reference}</th><th>{t.treasury.form.transfer.from}</th><th>{t.treasury.cols.date}</th>
+                      <th>{t.treasury.cols.amount}</th><th>{t.treasury.cols.status}</th><th>OCR</th><th>{t.treasury.cols.actions}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -764,7 +763,7 @@ export default function Treasury() {
                           <td>
                             <div className="trs-row-actions">
                               <Button type="button" variant="icon" className="trs-icon-btn" onClick={() => setDetailRecord({ type: "transfer", record })}><Eye size={15} /></Button>
-                              <Button type="button" variant="primary" className="trs-mini-btn trs-mini-btn--primary" disabled={!access.verifyTransfer} onClick={() => handleVerifyTransfer(record)}>Verify</Button>
+                              <Button type="button" variant="primary" className="trs-mini-btn trs-mini-btn--primary" disabled={!access.verifyTransfer} onClick={() => handleVerifyTransfer(record)}>{t.treasury.reconciliation.match}</Button>
                             </div>
                           </td>
                         </tr>
@@ -781,19 +780,19 @@ export default function Treasury() {
             <div className="trs-table-card">
               <div className="trs-table-inner-head" style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <div>
-                  <strong>Reconciliation Readiness</strong>
-                  <span className="trs-table-sub">Suggested, unmatched, and partially matched treasury records</span>
+                  <strong>{t.treasury.reconciliation.title}</strong>
+                  <span className="trs-table-sub">{t.treasury.reconciliation.subtitle}</span>
                 </div>
                 <Button type="button" variant="primary" className="trs-mini-btn trs-mini-btn--primary" disabled={!access.reconcile} leftIcon={<RefreshCcw size={14} />}>
-                  Run Suggestions
+                  {t.treasury.reconciliation.match}
                 </Button>
               </div>
               <div className="trs-table-wrap">
                 <table className="trs-table">
                   <thead>
                     <tr>
-                      <th>Source</th><th>Date</th><th>Amount</th>
-                      <th>Match Status</th><th>Suggested Match</th><th>Notes</th>
+                      <th>{t.treasury.cols.reference}</th><th>{t.treasury.cols.date}</th><th>{t.treasury.cols.amount}</th>
+                      <th>{t.treasury.cols.status}</th><th>{t.treasury.reconciliation.match}</th><th>{t.common.notes}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -979,6 +978,7 @@ function OCRReviewModal({
   onClose: () => void;
   onSave: (fields: OCRFieldReview[]) => void;
 }) {
+  const { t } = useSettings();
   const [fields, setFields] = useState(target.extraction.fields);
   return (
     <Modal
@@ -987,11 +987,11 @@ function OCRReviewModal({
       variant="dialog"
       size="lg"
       title={target.extraction.sourceId}
-      description="Review extracted fields, confirm confidence, and save manual corrections with audit history."
+      description={t.treasury.ocr.subtitle}
       footer={
         <>
-          <Button type="button" variant="secondary" className="trs-mini-btn" onClick={onClose}>Cancel</Button>
-          <Button type="button" variant="primary" className="trs-mini-btn trs-mini-btn--primary" onClick={() => onSave(fields)}>Save OCR corrections</Button>
+          <Button type="button" variant="secondary" className="trs-mini-btn" onClick={onClose}>{t.common.cancel}</Button>
+          <Button type="button" variant="primary" className="trs-mini-btn trs-mini-btn--primary" onClick={() => onSave(fields)}>{t.common.save}</Button>
         </>
       }
     >
@@ -1007,9 +1007,9 @@ function OCRReviewModal({
               <strong>{field.field}</strong>
               <span>{confidenceLabel(field.confidence)} · {Math.round(field.confidence * 100)}%</span>
             </div>
-            <label><span>Extracted</span><Input value={field.extractedValue} disabled /></label>
+            <label><span>{t.treasury.ocr.extracted}</span><Input value={field.extractedValue} disabled /></label>
             <label>
-              <span>Corrected value</span>
+              <span>{t.treasury.ocr.confirm}</span>
               <Input
                 value={field.correctedValue ?? field.extractedValue}
                 onChange={(e) =>
