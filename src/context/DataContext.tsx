@@ -25,6 +25,7 @@ import {
   getSuppliers, saveSuppliers,
 } from "../data/storage";
 import { isSuccessfulPaymentStatus, roundMoney } from "../data/relations";
+import { POS_CASHIERS, type PosCashier } from "../data/posMock";
 
 interface DataContextValue {
   // Raw entity lists
@@ -65,6 +66,11 @@ interface DataContextValue {
   addEmployee: (e: Employee) => void;
   updateEmployee: (e: Employee) => void;
   deleteEmployee: (id: string) => void;
+
+  // Cashier CRUD
+  cashiers: PosCashier[];
+  addCashier: (c: PosCashier) => void;
+  updateCashier: (c: PosCashier) => void;
 
   // Department CRUD
   addDepartment: (d: Department) => void;
@@ -110,6 +116,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [purchases, setPurchases] = useState<Purchase[]>(() => getPurchases());
   const [expenses, setExpenses] = useState<Expense[]>(() => getExpenses());
   const [departments, setDepartments] = useState<Department[]>(() => getDepartments());
+  const [cashiers, setCashiers] = useState<PosCashier[]>(() => POS_CASHIERS);
 
   // ── Customer CRUD ────────────────────────────────────────────────────────────
 
@@ -216,6 +223,20 @@ export function DataProvider({ children }: { children: ReactNode }) {
     const next = employees.map((x) => (x.id === id ? { ...x, isDeleted: true } : x));
     setEmployees(next);
     saveEmployees(next);
+    // cascade: deactivate any cashier linked to this employee
+    setCashiers((prev) =>
+      prev.map((c) => (c.employeeId === id && c.status === "active" ? { ...c, status: "inactive" as const } : c))
+    );
+  }
+
+  // ── Cashier CRUD ─────────────────────────────────────────────────────────────
+
+  function addCashier(c: PosCashier) {
+    setCashiers((prev) => [...prev, c]);
+  }
+
+  function updateCashier(c: PosCashier) {
+    setCashiers((prev) => prev.map((x) => (x.id === c.id ? c : x)));
   }
 
   // ── Department CRUD ──────────────────────────────────────────────────────────
@@ -385,6 +406,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     addSupplier, updateSupplier, deleteSupplier,
     addPayment, updatePayment, deletePayment,
     addEmployee, updateEmployee, deleteEmployee,
+    cashiers, addCashier, updateCashier,
     addExpense, updateExpense, deleteExpense,
     addInvoice, updateInvoice,
     totalRevenue,
