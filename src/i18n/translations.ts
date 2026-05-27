@@ -2144,6 +2144,26 @@ export const translations = {
       },
     },
 
+    notifications: {
+      pageTitle: "Notifications",
+      pageSubtitle: "Activity alerts from all modules",
+      bell: "Notifications",
+      panelTitle: "Notifications",
+      markAllRead: "Mark all read",
+      clearAll: "Clear all",
+      viewAll: "View all",
+      empty: "All caught up!",
+      tabs: {
+        all: "All",
+        unread: "Unread",
+        invoice: "Invoices",
+        inventory: "Inventory",
+        factory: "Factory",
+        pos: "POS",
+        loyalty: "Loyalty",
+      },
+    },
+
     generalLedger: {
       pageTitle: "General Ledger",
       pageSubtitle: "Journal entries, double-entry bookkeeping, and account postings.",
@@ -4844,6 +4864,26 @@ export const translations = {
         general: "عام",
         appearance: "المظهر",
         system: "النظام",
+      },
+    },
+
+    notifications: {
+      pageTitle: "الإشعارات",
+      pageSubtitle: "تنبيهات النشاط من جميع الوحدات",
+      bell: "الإشعارات",
+      panelTitle: "الإشعارات",
+      markAllRead: "تعليم الكل كمقروء",
+      clearAll: "مسح الكل",
+      viewAll: "عرض الكل",
+      empty: "لا توجد إشعارات!",
+      tabs: {
+        all: "الكل",
+        unread: "غير مقروء",
+        invoice: "الفواتير",
+        inventory: "المخزون",
+        factory: "المصنع",
+        pos: "نقطة البيع",
+        loyalty: "الولاء",
       },
     },
 

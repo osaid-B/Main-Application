@@ -1,10 +1,10 @@
 import { useLocation } from "react-router-dom";
-import { Bell, ChevronLeft, Plus, Search, Sparkles } from "lucide-react";
+import { ChevronLeft, Plus, Sparkles } from "lucide-react";
 import { Button } from "../ui/Button";
 import { useWorkspace, WORKSPACES, type Workspace } from "../../contexts/WorkspaceContext";
 import { useAI } from "../../context/AIContext";
 import { useSettings } from "../../context/SettingsContext";
-import { useData } from "../../context/DataContext";
+import NotificationsPanel from "../notifications/NotificationsPanel";
 import "./AtlasHeader.css";
 
 const TABS: Workspace[] = ["company", "factory", "pos"];
@@ -14,8 +14,6 @@ export default function AtlasHeader() {
   const { workspace, setWorkspace } = useWorkspace();
   const { openAI } = useAI();
   const { t } = useSettings();
-  const { lowStockCount, openInvoicesCount } = useData();
-  const alertCount = lowStockCount + (openInvoicesCount > 5 ? 1 : 0);
 
   const pageTitles = t.header.pageTitles as unknown as Record<string, string>;
   const pageTitle =
@@ -37,7 +35,7 @@ export default function AtlasHeader() {
       {/* Center: global search */}
       <div className="atlas-header-center">
         <div className="atlas-global-search">
-          <Search size={14} aria-hidden />
+          <Sparkles size={14} aria-hidden />
           <input
             type="search"
             placeholder={t.header.searchPlaceholder}
@@ -81,16 +79,8 @@ export default function AtlasHeader() {
           <Sparkles size={15} />
         </button>
 
-        <button
-          type="button"
-          className="atlas-icon-btn"
-          aria-label={t.header.notifications}
-          title={t.header.notifications}
-          onClick={() => window.dispatchEvent(new CustomEvent("atlas:open-alerts"))}
-        >
-          <Bell size={15} />
-          {alertCount > 0 && <span className="atlas-notif-badge" aria-hidden>{alertCount}</span>}
-        </button>
+        {/* Notifications bell — now using NotificationsPanel */}
+        <NotificationsPanel />
 
         <Button
           variant="primary"

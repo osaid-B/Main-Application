@@ -6,6 +6,7 @@ import { useAuth } from "./context/AuthContext";
 import { SettingsProvider } from "./context/SettingsContext";
 import { DataProvider } from "./context/DataContext";
 import { FactoryProvider } from "./context/FactoryContext";
+import { NotificationsProvider } from "./context/NotificationsContext";
 
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
@@ -52,6 +53,7 @@ import FactoryImports from "./pages/factory/FactoryImports";
 import FactoryBatches from "./pages/factory/FactoryBatches";
 import FactoryCosting from "./pages/factory/FactoryCosting";
 import ComingSoon from "./pages/ComingSoon";
+import Notifications from "./pages/Notifications";
 
 function AppRoutes() {
   const { isAuthenticated } = useAuth();
@@ -114,6 +116,7 @@ function AppRoutes() {
           </Route>
 
           {/* System */}
+          <Route path="/notifications" element={<Notifications />} />
           <Route path="/audit-log" element={<ComingSoon title="Audit Log" />} />
 
           {/* Factory workspace — Factory role + Admin */}
@@ -160,7 +163,9 @@ export default function App() {
     <SettingsProvider>
       <DataProvider>
         <FactoryProvider>
-          <AppRoutes />
+          <NotificationsProvider>
+            <AppRoutes />
+          </NotificationsProvider>
         </FactoryProvider>
       </DataProvider>
     </SettingsProvider>

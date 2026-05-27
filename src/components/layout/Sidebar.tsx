@@ -2,6 +2,7 @@ import { NavLink } from "react-router-dom";
 import {
   ArrowLeftRight,
   BarChart3,
+  Bell,
   BookOpen,
   Boxes,
   Briefcase,
@@ -118,6 +119,7 @@ const COMPANY_SECTIONS: NavSection[] = [
   {
     title: "ADMIN",
     items: [
+      { icon: Bell, label: "Notifications", path: "/notifications" },
       { icon: Shield, label: "Permissions", path: "/permissions" },
       { icon: ClipboardList, label: "Audit Log", path: "/audit-log" },
       { icon: Settings, label: "Settings", path: "/settings" },
