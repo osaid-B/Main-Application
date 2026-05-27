@@ -27,10 +27,11 @@ export default function Cashiers() {
   const { t, formatCurrency } = useSettings();
   const tc = t.pos.cashiers;
 
-  const [cashiers, setCashiers] = useState<PosCashier[]>(INITIAL_CASHIERS);
-  const [query,    setQuery]    = useState("");
-  const [editing,  setEditing]  = useState<PosCashier | null>(null);
-  const [isAdding, setIsAdding] = useState(false);
+  const [cashiers, setCashiers]       = useState<PosCashier[]>(INITIAL_CASHIERS);
+  const [query,    setQuery]          = useState("");
+  const [editing,  setEditing]        = useState<PosCashier | null>(null);
+  const [isAdding, setIsAdding]       = useState(false);
+  const [deactivateTarget, setDeactivateTarget] = useState<string | null>(null);
 
   const filtered = useMemo(() =>
     cashiers.filter((c) => {
@@ -55,9 +56,13 @@ export default function Cashiers() {
     const cashier = cashiers.find((c) => c.id === id);
     if (!cashier) return;
     if (cashier.status === "active") {
-      const confirmed = window.confirm(tc.actions.confirmDeactivate);
-      if (!confirmed) return;
+      setDeactivateTarget(id);
+      return;
     }
+    applyToggle(id);
+  }
+
+  function applyToggle(id: string) {
     setCashiers((prev) =>
       prev.map((c) => {
         if (c.id !== id) return c;
@@ -174,6 +179,25 @@ export default function Cashiers() {
           onSave={saveCashier}
           onClose={() => { setIsAdding(false); setEditing(null); }}
         />
+      )}
+
+      {deactivateTarget && (
+        <Modal
+          isOpen
+          onClose={() => setDeactivateTarget(null)}
+          title={tc.actions.deactivate}
+          size="sm"
+          footer={
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+              <Button variant="ghost" onClick={() => setDeactivateTarget(null)}>{t.common.cancel}</Button>
+              <Button variant="primary" onClick={() => { applyToggle(deactivateTarget); setDeactivateTarget(null); }}>
+                {tc.actions.deactivate}
+              </Button>
+            </div>
+          }
+        >
+          <p style={{ margin: 0, fontSize: 13 }}>{tc.actions.confirmDeactivate}</p>
+        </Modal>
       )}
     </Container>
   );

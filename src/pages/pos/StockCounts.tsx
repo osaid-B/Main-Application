@@ -170,12 +170,12 @@ function CountDetailModal({
 }) {
   const { t } = useSettings();
   const tc = t.pos.stockCounts;
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   const canComplete = count.status === "open" || count.status === "in-progress";
 
   function handleComplete() {
-    const confirmed = window.confirm(tc.detail.confirmComplete);
-    if (confirmed) onComplete(count.id);
+    setConfirmOpen(true);
   }
 
   function varClass(item: StockCountItem) {
@@ -192,6 +192,25 @@ function CountDetailModal({
   }
 
   return (
+    <>
+    {confirmOpen && (
+      <Modal
+        isOpen
+        onClose={() => setConfirmOpen(false)}
+        title={tc.actions.complete}
+        size="sm"
+        footer={
+          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+            <Button variant="ghost" onClick={() => setConfirmOpen(false)}>{t.common.cancel}</Button>
+            <Button variant="primary" onClick={() => { setConfirmOpen(false); onComplete(count.id); }}>
+              {tc.actions.complete}
+            </Button>
+          </div>
+        }
+      >
+        <p style={{ margin: 0, fontSize: 13 }}>{tc.detail.confirmComplete}</p>
+      </Modal>
+    )}
     <Modal
       isOpen
       onClose={onClose}
@@ -237,6 +256,7 @@ function CountDetailModal({
         </table>
       )}
     </Modal>
+    </>
   );
 }
 
