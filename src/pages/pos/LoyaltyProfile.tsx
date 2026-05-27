@@ -1,10 +1,12 @@
 import { useState } from "react";
+import { useToast } from "../../components/ui/Toast";
 import { Container } from "../../components/layout/Container";
 import { Stack } from "../../components/layout/Stack";
 import { Grid } from "../../components/layout/Grid";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { Avatar } from "../../components/ui/Avatar";
+import { Modal } from "../../components/ui/Modal";
 import { Textarea } from "../../components/ui/Textarea";
 import { Input } from "../../components/ui/Input";
 import { useSettings } from "../../context/SettingsContext";
@@ -40,33 +42,57 @@ export default function LoyaltyProfile() {
   // In a real app, we'd read ?id= from URL params
   const profile: LoyaltyMemberProfile = LOYALTY_PROFILES[0];
 
+  const { toast } = useToast();
+
+  const [localProfile, setLocalProfile] = useState(profile);
   const [activeTab, setActiveTab] = useState<TabId>("history");
   const [page, setPage] = useState(0);
   const [adjustAmount, setAdjustAmount] = useState("");
   const [adjustType, setAdjustType] = useState<"add" | "deduct">("add");
   const [adjustReason, setAdjustReason] = useState("");
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
-  const txSlice = profile.transactions.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
-  const totalPages = Math.ceil(profile.transactions.length / PAGE_SIZE);
+  const txSlice = localProfile.transactions.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  const totalPages = Math.ceil(localProfile.transactions.length / PAGE_SIZE);
 
   // Tier progress
   const tiers = LOYALTY_SETTINGS_DEFAULT.tiers;
   const currentTierIdx = tiers.reduce((bestIdx, tier, idx) => {
-    return profile.coinsBalance >= tier.minCoins ? idx : bestIdx;
+    return localProfile.coinsBalance >= tier.minCoins ? idx : bestIdx;
   }, 0);
   const currentTier = tiers[currentTierIdx];
   const nextTier = tiers[currentTierIdx + 1] ?? null;
   const progressPct = nextTier
-    ? Math.min(100, Math.round(((profile.coinsBalance - currentTier.minCoins) / (nextTier.minCoins - currentTier.minCoins)) * 100))
+    ? Math.min(100, Math.round(((localProfile.coinsBalance - currentTier.minCoins) / (nextTier.minCoins - currentTier.minCoins)) * 100))
     : 100;
+
+  function applyAdjustment() {
+    const coins = parseInt(adjustAmount, 10) || 0;
+    const delta = adjustType === "add" ? coins : -coins;
+    const newBalance = localProfile.coinsBalance + delta;
+    const newTx: LoyaltyProfileTransaction = {
+      id: `adj-${Date.now()}`,
+      date: new Date().toISOString().slice(0, 10),
+      action: "adjusted",
+      coins: delta,
+      trigger: adjustReason.trim(),
+      balanceAfter: newBalance,
+    };
+    setLocalProfile((prev) => ({
+      ...prev,
+      coinsBalance: newBalance,
+      transactions: [newTx, ...prev.transactions],
+    }));
+    setAdjustAmount("");
+    setAdjustReason("");
+    setConfirmOpen(false);
+    setActiveTab("history");
+    toast(tc.adjustment.toast ?? "Adjustment recorded.", { type: "success" });
+  }
 
   function handleAdjustment() {
     if (!adjustAmount || !adjustReason.trim()) return;
-    const confirmed = window.confirm(tc.adjustment.confirmMsg);
-    if (!confirmed) return;
-    setAdjustAmount("");
-    setAdjustReason("");
-    window.alert("Adjustment recorded (mock — not persisted).");
+    setConfirmOpen(true);
   }
 
   return (
@@ -82,27 +108,27 @@ export default function LoyaltyProfile() {
 
         {/* Customer card */}
         <div className={styles.customerCard}>
-          <Avatar name={profile.customerName} size="lg" tone="accent" />
+          <Avatar name={localProfile.customerName} size="lg" tone="accent" />
           <div className={styles.customerInfo}>
-            <div className={styles.customerName}>{profile.customerName}</div>
-            <div className={styles.customerCode}>{profile.customerCode}</div>
-            <div className={styles.customerMeta}>Member since {profile.memberSince}</div>
+            <div className={styles.customerName}>{localProfile.customerName}</div>
+            <div className={styles.customerCode}>{localProfile.customerCode}</div>
+            <div className={styles.customerMeta}>{tc.memberSince ?? "Member since"} {localProfile.memberSince}</div>
           </div>
           <div className={styles.tierBadgeWrap}>
-            <Badge variant={TIER_VARIANT[profile.tier]} size="md">{profile.tier}</Badge>
+            <Badge variant={TIER_VARIANT[localProfile.tier]} size="md">{localProfile.tier}</Badge>
           </div>
           <div className={styles.balanceDisplay}>
-            <span className={styles.balanceValue}>{profile.coinsBalance.toLocaleString()}</span>
-            <span className={styles.balanceLabel}>coins</span>
+            <span className={styles.balanceValue}>{localProfile.coinsBalance.toLocaleString()}</span>
+            <span className={styles.balanceLabel}>{tc.coins ?? "coins"}</span>
           </div>
         </div>
 
         {/* Stats row */}
         <Grid cols={4} gap="md" responsive>
-          <Kpi label={tc.stats.earned}       value={profile.totalEarned.toLocaleString()}    tone="success" />
-          <Kpi label={tc.stats.redeemed}     value={profile.totalRedeemed.toLocaleString()}  tone="info"    />
-          <Kpi label={tc.stats.expired}      value={profile.totalExpired.toLocaleString()}   tone="neutral" />
-          <Kpi label={tc.stats.transactions} value={String(profile.transactions.length)}     tone="warning" />
+          <Kpi label={tc.stats.earned}       value={localProfile.totalEarned.toLocaleString()}    tone="success" />
+          <Kpi label={tc.stats.redeemed}     value={localProfile.totalRedeemed.toLocaleString()}  tone="info"    />
+          <Kpi label={tc.stats.expired}      value={localProfile.totalExpired.toLocaleString()}   tone="neutral" />
+          <Kpi label={tc.stats.transactions} value={String(localProfile.transactions.length)}     tone="warning" />
         </Grid>
 
         {/* Tabs */}
@@ -261,6 +287,23 @@ export default function LoyaltyProfile() {
           </div>
         )}
       </Stack>
+
+      {confirmOpen && (
+        <Modal
+          isOpen
+          onClose={() => setConfirmOpen(false)}
+          title={tc.adjustment.confirmTitle ?? tc.adjustment.title}
+          size="sm"
+          footer={
+            <div className={styles.adjustFooter}>
+              <Button variant="ghost" onClick={() => setConfirmOpen(false)}>{t.common.cancel}</Button>
+              <Button variant="primary" onClick={applyAdjustment}>{tc.adjustment.submit}</Button>
+            </div>
+          }
+        >
+          <p className={styles.confirmMsg}>{tc.adjustment.confirmMsg}</p>
+        </Modal>
+      )}
     </Container>
   );
 }

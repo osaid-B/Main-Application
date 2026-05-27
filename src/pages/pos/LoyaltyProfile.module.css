@@ -394,3 +394,5 @@
   display: flex;
   justify-content: flex-end;
 }
+
+.confirmMsg { font-size: 14px; color: var(--app-text); line-height: 1.5; }

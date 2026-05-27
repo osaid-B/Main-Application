@@ -85,7 +85,7 @@ const COMPANY_SECTIONS: NavSection[] = [
       { icon: FileCheck2, label: "Quotes", path: "/quotes" },
       { icon: Truck, label: "Suppliers", path: "/suppliers" },
       { icon: UserCircle, label: "Employees", path: "/employees" },
-      { icon: Briefcase, label: "Departments", path: "/departments", comingSoon: true },
+      { icon: Briefcase, label: "Departments", path: "/departments" },
     ],
   },
   {

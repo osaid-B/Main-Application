@@ -330,3 +330,15 @@
 .reviewRow:last-child { border-bottom: 0; }
 .reviewLabel { color: var(--app-text-muted); white-space: nowrap; }
 .reviewValue { font-weight: 600; color: var(--app-text); text-align: end; }
+
+.confirmFooter {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--app-space-2);
+}
+
+.confirmMsg {
+  font-size: 14px;
+  color: var(--app-text);
+  line-height: 1.5;
+}

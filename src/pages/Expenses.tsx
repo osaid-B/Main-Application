@@ -7,6 +7,7 @@ import { Input } from "../components/ui/Input";
 import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
 import { Modal } from "../components/ui/Modal";
+import TableFooter from "../components/ui/TableFooter";
 import { useSettings } from "../context/SettingsContext";
 import { EXPENSES, EXPENSE_CATEGORIES } from "../data/expensesMock";
 import { type Expense, type ExpenseStatus } from "../data/types";
@@ -31,6 +32,9 @@ export default function Expenses() {
   const [selected, setSelected]           = useState<Set<string>>(new Set());
   const [isAdding, setIsAdding]           = useState(false);
   const [editing, setEditing]             = useState<Expense | null>(null);
+  const [deleteTarget, setDeleteTarget]   = useState<string | null>(null);
+  const [page, setPage]                   = useState(0);
+  const PAGE_SIZE = 15;
 
   const filtered = expenses.filter((e) => {
     if (filterCat && e.category !== filterCat) return false;
@@ -78,9 +82,16 @@ export default function Expenses() {
   }
 
   function deleteExpense(id: string) {
-    if (!window.confirm(tc.confirmDelete)) return;
-    setExpenses((prev) => prev.map((e) => e.id === id ? { ...e, isDeleted: true } : e));
+    setDeleteTarget(id);
   }
+
+  function confirmDeleteExpense() {
+    if (!deleteTarget) return;
+    setExpenses((prev) => prev.map((e) => e.id === deleteTarget ? { ...e, isDeleted: true } : e));
+    setDeleteTarget(null);
+  }
+
+  const pagedRows = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
   function saveExpense(data: Omit<Expense, "id">) {
     if (editing) {
@@ -175,7 +186,7 @@ export default function Expenses() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((expense) => (
+              {pagedRows.map((expense) => (
                 <tr key={expense.id} className={selected.has(expense.id) ? styles.rowSelected : ""}>
                   <td>
                     <input
@@ -226,7 +237,7 @@ export default function Expenses() {
                   </td>
                 </tr>
               ))}
-              {filtered.length === 0 && (
+              {pagedRows.length === 0 && (
                 <tr>
                   <td colSpan={8} className={styles.empty}>{tc.noExpenses}</td>
                 </tr>
@@ -234,7 +245,32 @@ export default function Expenses() {
             </tbody>
           </table>
         </div>
+        <TableFooter
+          total={filtered.length}
+          page={page}
+          rowsPerPage={PAGE_SIZE}
+          onRowsPerPageChange={() => setPage(0)}
+          onPageChange={setPage}
+        />
       </Stack>
+
+      {/* Delete confirm modal */}
+      {deleteTarget && (
+        <Modal
+          isOpen
+          onClose={() => setDeleteTarget(null)}
+          title={t.common.confirmDelete}
+          size="sm"
+          footer={
+            <div className={styles.confirmFooter}>
+              <Button variant="ghost" onClick={() => setDeleteTarget(null)}>{t.common.cancel}</Button>
+              <Button variant="primary" onClick={confirmDeleteExpense}>{t.common.delete}</Button>
+            </div>
+          }
+        >
+          <p className={styles.confirmMsg}>{tc.confirmDelete}</p>
+        </Modal>
+      )}
 
       {/* Add / Edit modal (multi-step) */}
       {(isAdding || editing !== null) && (

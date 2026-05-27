@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   ResponsiveContainer,
   LineChart,
@@ -14,6 +14,7 @@ import {
 import { Container } from "../components/layout/Container";
 import { Grid } from "../components/layout/Grid";
 import { Stack } from "../components/layout/Stack";
+import { Button } from "../components/ui/Button";
 import { useSettings } from "../context/SettingsContext";
 import {
   MONTHLY_FINANCIALS,
@@ -53,6 +54,31 @@ export default function Reports() {
     ? ((CURRENT.netProfit / CURRENT.revenue) * 100).toFixed(1) + "%"
     : "0%";
 
+  function exportTabCSV(activeTab: TabId) {
+    let rows: string[][];
+    if (activeTab === "sales") {
+      rows = [
+        ["Name", "Transactions", "Amount", "Share %"],
+        ...SALES_BY_CASHIER.map((r) => [r.name, String(r.transactions), String(r.amount), r.share.toFixed(1)]),
+      ];
+    } else if (activeTab === "pl") {
+      rows = [["Label", "Amount"], ...PL_ITEMS.map((r) => [r.label, String(r.amount)])];
+    } else {
+      rows = [
+        ["Month", "Revenue", "Expenses", "Gross Profit", "Net Profit"],
+        ...MONTHLY_FINANCIALS.map((r) => [r.month, String(r.revenue), String(r.expenses), String(r.grossProfit), String(r.netProfit)]),
+      ];
+    }
+    const csv = rows.map((r) => r.join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `report-${activeTab}-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   return (
     <Container maxWidth="full" padding="md">
       <Stack gap="lg">
@@ -61,6 +87,9 @@ export default function Reports() {
             <h1 className={styles.title}>{tc.pageTitle}</h1>
             <p className={styles.subtitle}>{tc.pageSubtitle}</p>
           </div>
+          <Button variant="secondary" size="sm" onClick={() => exportTabCSV(tab)}>
+            {t.common.export} CSV
+          </Button>
         </header>
 
         {/* KPI cards */}
@@ -385,6 +414,14 @@ function CustomTab({
 }) {
   const canGenerate = customFrom && customTo;
 
+  // Filter MONTHLY_FINANCIALS to months within the selected range
+  const filteredData = useMemo(() => {
+    if (!generated || !customFrom || !customTo) return MONTHLY_FINANCIALS;
+    return MONTHLY_FINANCIALS.filter((row) => {
+      return row.month >= customFrom.slice(0, 7) && row.month <= customTo.slice(0, 7);
+    });
+  }, [generated, customFrom, customTo]);
+
   return (
     <Stack gap="lg">
       <div className={styles.customBar}>
@@ -417,7 +454,41 @@ function CustomTab({
       </div>
 
       {generated ? (
-        <OverviewTab tc={tc} formatCurrency={formatCurrency} />
+        filteredData.length > 0 ? (
+          <div className={styles.tableWrap}>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th>{tc.table.period}</th>
+                  <th className={styles.numEnd}>{tc.table.revenue}</th>
+                  <th className={styles.numEnd}>{tc.table.expenses}</th>
+                  <th className={styles.numEnd}>{tc.table.grossProfit}</th>
+                  <th className={styles.numEnd}>{tc.table.netProfit}</th>
+                  <th className={styles.numEnd}>{tc.table.margin}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredData.map((row) => {
+                  const m = row.revenue > 0 ? ((row.netProfit / row.revenue) * 100).toFixed(1) : "0";
+                  return (
+                    <tr key={row.month}>
+                      <td className={styles.mono}>{row.month}</td>
+                      <td className={`${styles.numEnd} ${styles.mono}`}>{formatCurrency(row.revenue)}</td>
+                      <td className={`${styles.numEnd} ${styles.mono}`}>{formatCurrency(row.expenses)}</td>
+                      <td className={`${styles.numEnd} ${styles.mono}`}>{formatCurrency(row.grossProfit)}</td>
+                      <td className={`${styles.numEnd} ${styles.mono}`}>{formatCurrency(row.netProfit)}</td>
+                      <td className={`${styles.numEnd} ${styles.mono} ${styles.marginCell}`}>{m}%</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className={styles.emptyState}>
+            <p className={styles.emptyText}>{tc.custom.noData}</p>
+          </div>
+        )
       ) : (
         <div className={styles.emptyState}>
           <p className={styles.emptyText}>{tc.custom.noData}</p>
@@ -445,10 +516,11 @@ function Kpi({
   formatCurrency: (n: number) => string;
   invertDelta?: boolean;
 }) {
+  const { t } = useSettings();
   const isPositive = delta !== undefined ? (invertDelta ? delta < 0 : delta > 0) : true;
   const sign = delta !== undefined && delta > 0 ? "+" : "";
   const deltaStr = delta !== undefined
-    ? `${sign}${formatCurrency(Math.abs(delta))} vs prev`
+    ? `${sign}${formatCurrency(Math.abs(delta))} ${t.reports.vsPrev ?? "vs prev"}`
     : undefined;
 
   return (

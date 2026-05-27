@@ -153,3 +153,52 @@
 .action_expired  { background: color-mix(in srgb, var(--atlas-danger) 12%, transparent); color: var(--atlas-danger); }
 .action_manual   { background: color-mix(in srgb, var(--atlas-orange) 12%, transparent); color: var(--atlas-orange); }
 .action_reversed { background: color-mix(in srgb, var(--app-text-muted) 12%, transparent); color: var(--app-text-muted); }
+
+/* Filter bar */
+.filterBar {
+  display: flex;
+  align-items: center;
+  gap: var(--app-space-3);
+  flex-wrap: wrap;
+}
+
+.actionTabs {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.actionTab {
+  padding: 5px 12px;
+  border-radius: var(--app-radius-sm);
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid var(--app-border);
+  background: transparent;
+  color: var(--app-text-muted);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.actionTab:hover { background: var(--app-surface-hover); color: var(--app-text); }
+.actionTabActive { background: var(--app-accent); color: #fff; border-color: var(--app-accent); }
+
+.dateRange {
+  display: flex;
+  align-items: center;
+  gap: var(--app-space-2);
+  margin-inline-start: auto;
+}
+
+.dateInput {
+  padding: 5px 8px;
+  border-radius: var(--app-radius-sm);
+  border: 1px solid var(--app-border);
+  background: var(--app-surface);
+  color: var(--app-text);
+  font-size: 12px;
+}
+
+.dateSep { color: var(--app-text-muted); font-size: 12px; }
+
+.empty { text-align: center; padding: 32px; color: var(--app-text-muted); font-size: 13px; }

@@ -5,6 +5,7 @@ import { Button } from "../components/ui/Button";
 import { Modal } from "../components/ui/Modal";
 import { Input } from "../components/ui/Input";
 import { useSettings } from "../context/SettingsContext";
+import { useToast } from "../components/ui/Toast";
 import { ROLES } from "../data/permissionsMock";
 import { type Role, type PermissionAction, type PermissionModule } from "../data/types";
 import styles from "./Permissions.module.css";
@@ -29,6 +30,7 @@ const MODULE_LABELS: Record<string, { label: string; labelAr: string }> = {
 export default function Permissions() {
   const { t } = useSettings();
   const tc = t.permissions;
+  const { toast } = useToast();
 
   const [roles, setRoles] = useState<Role[]>(ROLES);
   const [selectedRoleId, setSelectedRoleId] = useState<string | null>(null);
@@ -73,12 +75,10 @@ export default function Permissions() {
   }
 
   function deleteRole(role: Role) {
-    if (role.userCount > 0) {
-      if (!window.confirm(tc.confirm.deleteMsg.replace("{{n}}", String(role.userCount)))) return;
-    }
     setRoles((prev) => prev.filter((r) => r.id !== role.id));
     setDeleteTarget(null);
     if (selectedRoleId === role.id) setSelectedRoleId(null);
+    toast(tc.confirm.deletedToast ?? `Role "${role.name}" deleted.`, { type: "success" });
   }
 
   return (
@@ -189,7 +189,7 @@ export default function Permissions() {
                   <Button
                     variant="primary"
                     size="sm"
-                    onClick={() => window.alert("Changes saved (mock).")}
+                    onClick={() => toast(t.common.saveChanges + " ✓", { type: "success" })}
                   >
                     {t.common.saveChanges}
                   </Button>

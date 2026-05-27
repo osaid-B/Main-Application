@@ -1301,23 +1301,36 @@ export const translations = {
       },
       coinsHistory: {
         pageTitle: "Loyalty Coins History",
-        pageSubtitle: "Track earned and redeemed loyalty points.",
-        searchPlaceholder: "Search by customer or transaction…",
-        filterBtn: "Filter",
-        noHistory: "No history found.",
-        cols: {
-          customer: "Customer",
-          date: "Date",
-          type: "Type",
-          points: "Points",
-          balance: "Balance",
-          description: "Description",
-        },
-        types: {
+        pageSubtitle: "Every coin earned, redeemed, reversed, or manually adjusted across all POS lanes.",
+        breadcrumb: "LOYALTY · COINS LEDGER · LAST 30 DAYS",
+        searchPlaceholder: "Search by customer, invoice, reason, or user…",
+        exportCsv: "Export CSV",
+        noHistory: "No coin transactions match your filters.",
+        walkIn: "walk-in",
+        actions: {
+          all: "All",
           earned: "Earned",
           redeemed: "Redeemed",
+          reversed: "Reversed",
+          manual: "Manual",
           expired: "Expired",
-          adjusted: "Adjusted",
+        },
+        cols: {
+          timestamp: "TIMESTAMP",
+          customer: "CUSTOMER",
+          action: "ACTION",
+          invoiceRef: "INVOICE / REF",
+          reason: "REASON",
+          user: "USER",
+          branch: "BRANCH",
+          deltaCoins: "Δ COINS",
+          balance: "BALANCE",
+        },
+        kpi: {
+          issued: "COINS ISSUED (30D)",
+          redeemed: "COINS REDEEMED (30D)",
+          outstanding: "OUTSTANDING LIABILITY",
+          expiring: "EXPIRING NEXT 30D",
         },
       },
       coinsReports: {
@@ -1347,6 +1360,9 @@ export const translations = {
           coins: "Coins",
           trigger: "Trigger",
           balanceAfter: "Balance After",
+        },
+        filters: {
+          all: "All",
         },
       },
 
@@ -1430,8 +1446,12 @@ export const translations = {
           add: "Add Coins",
           deduct: "Deduct Coins",
           submit: "Submit Adjustment",
+          confirmTitle: "Confirm Adjustment",
           confirmMsg: "Are you sure you want to apply this adjustment?",
+          toast: "Adjustment recorded successfully.",
         },
+        memberSince: "Member since",
+        coins: "coins",
       },
 
       payment: {
@@ -1814,12 +1834,14 @@ export const translations = {
         deleteTitle: "Delete Role",
         deleteMsg: "This role is assigned to {{n}} users. Deleting it will remove their role assignment.",
         cannotDelete: "Cannot delete: role has active users.",
+        deletedToast: "Role deleted successfully.",
       },
     },
 
     reports: {
       pageTitle: "Financial Reports",
       pageSubtitle: "Consolidated financial overview — sales, expenses, profit & loss.",
+      vsPrev: "vs prev",
       tabs: {
         overview: "Overview",
         sales: "Sales",
@@ -3524,23 +3546,36 @@ export const translations = {
       },
       coinsHistory: {
         pageTitle: "سجل نقاط الولاء",
-        pageSubtitle: "تتبع النقاط المكتسبة والمستردة.",
-        searchPlaceholder: "ابحث بالزبون أو المعاملة…",
-        filterBtn: "فلتر",
-        noHistory: "ما في سجل.",
-        cols: {
-          customer: "الزبون",
-          date: "التاريخ",
-          type: "النوع",
-          points: "النقاط",
-          balance: "الرصيد",
-          description: "التفاصيل",
-        },
-        types: {
+        pageSubtitle: "كل نقطة مكتسبة أو مستردة أو معكوسة أو معدّلة يدوياً عبر جميع نقاط البيع.",
+        breadcrumb: "الولاء · سجل العملات · آخر 30 يوم",
+        searchPlaceholder: "ابحث بالزبون أو الفاتورة أو السبب أو المستخدم…",
+        exportCsv: "تصدير CSV",
+        noHistory: "لا توجد معاملات تطابق الفلاتر.",
+        walkIn: "زبون عابر",
+        actions: {
+          all: "الكل",
           earned: "مكتسبة",
           redeemed: "مستردة",
+          reversed: "معكوسة",
+          manual: "يدوي",
           expired: "منتهية",
-          adjusted: "معدّلة",
+        },
+        cols: {
+          timestamp: "الوقت",
+          customer: "الزبون",
+          action: "النوع",
+          invoiceRef: "الفاتورة / المرجع",
+          reason: "السبب",
+          user: "المستخدم",
+          branch: "الفرع",
+          deltaCoins: "Δ النقاط",
+          balance: "الرصيد",
+        },
+        kpi: {
+          issued: "نقاط ممنوحة (30 يوم)",
+          redeemed: "نقاط مستردة (30 يوم)",
+          outstanding: "الالتزامات القائمة",
+          expiring: "تنتهي خلال 30 يوم",
         },
       },
       coinsReports: {
@@ -3570,6 +3605,9 @@ export const translations = {
           coins: "النقاط",
           trigger: "السبب",
           balanceAfter: "الرصيد بعد",
+        },
+        filters: {
+          all: "الكل",
         },
       },
 
@@ -3653,8 +3691,12 @@ export const translations = {
           add: "إضافة نقاط",
           deduct: "خصم نقاط",
           submit: "تأكيد التعديل",
+          confirmTitle: "تأكيد التعديل",
           confirmMsg: "هل أنت متأكد من تطبيق هذا التعديل؟",
+          toast: "تم تسجيل التعديل بنجاح.",
         },
+        memberSince: "عضو منذ",
+        coins: "نقطة",
       },
 
       payment: {
@@ -4037,12 +4079,14 @@ export const translations = {
         deleteTitle: "حذف الدور",
         deleteMsg: "هذا الدور مخصص لـ {{n}} مستخدمين. سيؤدي الحذف إلى إلغاء الدور عنهم.",
         cannotDelete: "لا يمكن الحذف: هناك مستخدمون نشطون بهذا الدور.",
+        deletedToast: "تم حذف الدور بنجاح.",
       },
     },
 
     reports: {
       pageTitle: "التقارير المالية",
       pageSubtitle: "نظرة مالية شاملة — المبيعات والمصروفات والأرباح والخسائر.",
+      vsPrev: "مقابل السابق",
       tabs: {
         overview: "نظرة عامة",
         sales: "المبيعات",

@@ -7,49 +7,45 @@ import { Input } from "../../components/ui/Input";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { Avatar } from "../../components/ui/Avatar";
+import { useSettings } from "../../context/SettingsContext";
 import { COIN_TRANSACTIONS, POS_LOYALTY_KPIS, type CoinAction } from "../../data/posMock";
 import styles from "./CoinsHistory.module.css";
 
-const ACTION_FILTERS: Array<{ value: CoinAction | "all"; label: string }> = [
-  { value: "all",      label: "All" },
-  { value: "earned",   label: "Earned" },
-  { value: "redeemed", label: "Redeemed" },
-  { value: "reversed", label: "Reversed" },
-  { value: "manual",   label: "Manual" },
-  { value: "expired",  label: "Expired" },
-];
-
 const ACTION_VARIANT: Record<CoinAction, "success" | "danger" | "warning" | "info" | "neutral"> = {
-  earned: "success",
+  earned:   "success",
   redeemed: "danger",
   reversed: "warning",
-  manual: "info",
-  expired: "neutral",
-};
-
-const ACTION_LABEL: Record<CoinAction, string> = {
-  earned: "Earned",
-  redeemed: "Redeemed",
-  reversed: "Reversed",
-  manual: "Manual",
-  expired: "Expired",
+  manual:   "info",
+  expired:  "neutral",
 };
 
 export default function CoinsHistory() {
+  const { t } = useSettings();
+  const tc = t.pos.coinsHistory;
+
+  const ACTION_FILTERS: Array<{ value: CoinAction | "all"; label: string }> = [
+    { value: "all",      label: tc.actions.all      },
+    { value: "earned",   label: tc.actions.earned   },
+    { value: "redeemed", label: tc.actions.redeemed },
+    { value: "reversed", label: tc.actions.reversed },
+    { value: "manual",   label: tc.actions.manual   },
+    { value: "expired",  label: tc.actions.expired  },
+  ];
+
   const [filter, setFilter] = useState<CoinAction | "all">("all");
-  const [query, setQuery] = useState("");
+  const [query,  setQuery]  = useState("");
 
   const filtered = useMemo(() => {
-    return COIN_TRANSACTIONS.filter((t) => {
-      if (filter !== "all" && t.action !== filter) return false;
+    return COIN_TRANSACTIONS.filter((tx) => {
+      if (filter !== "all" && tx.action !== filter) return false;
       if (!query) return true;
       const q = query.toLowerCase();
       return (
-        (t.customerName?.toLowerCase().includes(q) ?? false) ||
-        (t.customerCode?.toLowerCase().includes(q) ?? false) ||
-        (t.invoice?.toLowerCase().includes(q) ?? false) ||
-        t.reason.toLowerCase().includes(q) ||
-        t.user.toLowerCase().includes(q)
+        (tx.customerName?.toLowerCase().includes(q) ?? false) ||
+        (tx.customerCode?.toLowerCase().includes(q) ?? false) ||
+        (tx.invoice?.toLowerCase().includes(q) ?? false) ||
+        tx.reason.toLowerCase().includes(q) ||
+        tx.user.toLowerCase().includes(q)
       );
     });
   }, [filter, query]);
@@ -59,28 +55,24 @@ export default function CoinsHistory() {
       <Stack gap="lg">
         <header className={styles.header}>
           <div>
-            <div className={styles.breadcrumb}>LOYALTY · COINS LEDGER · LAST 30 DAYS</div>
-            <h1 className={styles.title}>Coins Transaction History</h1>
-            <p className={styles.subtitle}>
-              Every coin earned, redeemed, reversed, or manually adjusted across all POS lanes.
-            </p>
+            <div className={styles.breadcrumb}>{tc.breadcrumb}</div>
+            <h1 className={styles.title}>{tc.pageTitle}</h1>
+            <p className={styles.subtitle}>{tc.pageSubtitle}</p>
           </div>
-          <Button variant="secondary" size="sm">Export CSV</Button>
+          <Button variant="secondary" size="sm">{tc.exportCsv}</Button>
         </header>
 
-        {/* KPIs */}
         <Grid cols={4} gap="md" responsive>
-          <Kpi label="COINS ISSUED (30D)"      value={POS_LOYALTY_KPIS.issued30d.value}    subtitle={POS_LOYALTY_KPIS.issued30d.trend}   tone="success" />
-          <Kpi label="COINS REDEEMED (30D)"    value={POS_LOYALTY_KPIS.redeemed30d.value}  subtitle={POS_LOYALTY_KPIS.redeemed30d.subtitle ?? ""}  tone="info" />
-          <Kpi label="OUTSTANDING LIABILITY"   value={POS_LOYALTY_KPIS.outstanding.value}  subtitle={POS_LOYALTY_KPIS.outstanding.subtitle ?? ""}  tone="warning" />
-          <Kpi label="EXPIRING NEXT 30D"        value={POS_LOYALTY_KPIS.expiring30d.value}  subtitle={POS_LOYALTY_KPIS.expiring30d.subtitle ?? ""}  tone="danger" />
+          <Kpi label={tc.kpi.issued}      value={POS_LOYALTY_KPIS.issued30d.value}   subtitle={POS_LOYALTY_KPIS.issued30d.trend}              tone="success" />
+          <Kpi label={tc.kpi.redeemed}    value={POS_LOYALTY_KPIS.redeemed30d.value} subtitle={POS_LOYALTY_KPIS.redeemed30d.subtitle ?? ""}    tone="info"    />
+          <Kpi label={tc.kpi.outstanding} value={POS_LOYALTY_KPIS.outstanding.value} subtitle={POS_LOYALTY_KPIS.outstanding.subtitle ?? ""}    tone="warning" />
+          <Kpi label={tc.kpi.expiring}    value={POS_LOYALTY_KPIS.expiring30d.value} subtitle={POS_LOYALTY_KPIS.expiring30d.subtitle ?? ""}    tone="danger"  />
         </Grid>
 
-        {/* Filters */}
         <div className={styles.filters}>
           <Input
             variant="search"
-            placeholder="Search by customer, invoice, reason, or user…"
+            placeholder={tc.searchPlaceholder}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             leftIcon={<Search size={14} />}
@@ -102,52 +94,55 @@ export default function CoinsHistory() {
           </div>
         </div>
 
-        {/* Table */}
         <div className={styles.tableWrap}>
           <table className={styles.table}>
             <thead>
               <tr>
-                <th>TIMESTAMP</th>
-                <th>CUSTOMER</th>
-                <th>ACTION</th>
-                <th>INVOICE / REF</th>
-                <th>REASON</th>
-                <th>USER</th>
-                <th>BRANCH</th>
-                <th className={styles.numCol}>Δ COINS</th>
-                <th className={styles.numCol}>BALANCE</th>
+                <th>{tc.cols.timestamp}</th>
+                <th>{tc.cols.customer}</th>
+                <th>{tc.cols.action}</th>
+                <th>{tc.cols.invoiceRef}</th>
+                <th>{tc.cols.reason}</th>
+                <th>{tc.cols.user}</th>
+                <th>{tc.cols.branch}</th>
+                <th className={styles.numCol}>{tc.cols.deltaCoins}</th>
+                <th className={styles.numCol}>{tc.cols.balance}</th>
               </tr>
             </thead>
             <tbody>
-              {filtered.map((t) => (
-                <tr key={t.id}>
-                  <td className={styles.mono}>{t.timestamp}</td>
+              {filtered.map((tx) => (
+                <tr key={tx.id}>
+                  <td className={styles.mono}>{tx.timestamp}</td>
                   <td>
-                    {t.customerName ? (
+                    {tx.customerName ? (
                       <div className={styles.custCell}>
-                        <Avatar size="xs" name={t.customerName} tone="accent" />
+                        <Avatar size="xs" name={tx.customerName} tone="accent" />
                         <div>
-                          <strong>{t.customerName}</strong>
-                          <span>{t.customerCode}</span>
+                          <strong>{tx.customerName}</strong>
+                          <span>{tx.customerCode}</span>
                         </div>
                       </div>
                     ) : (
-                      <span className={styles.walkIn}>walk-in</span>
+                      <span className={styles.walkIn}>{tc.walkIn}</span>
                     )}
                   </td>
-                  <td><Badge variant={ACTION_VARIANT[t.action]} size="sm">{ACTION_LABEL[t.action]}</Badge></td>
-                  <td className={styles.mono}>{t.invoice ?? "—"}</td>
-                  <td className={styles.reasonCell}>{t.reason}</td>
-                  <td>{t.user}</td>
-                  <td className={styles.branchCell}>{t.branch}</td>
-                  <td className={`${styles.numCol} ${styles.mono} ${t.delta >= 0 ? styles.gain : styles.loss}`}>
-                    {t.delta >= 0 ? `+${t.delta}` : t.delta}
+                  <td>
+                    <Badge variant={ACTION_VARIANT[tx.action]} size="sm">
+                      {tc.actions[tx.action]}
+                    </Badge>
                   </td>
-                  <td className={`${styles.numCol} ${styles.mono}`}>{t.balanceAfter.toLocaleString()}</td>
+                  <td className={styles.mono}>{tx.invoice ?? "—"}</td>
+                  <td className={styles.reasonCell}>{tx.reason}</td>
+                  <td>{tx.user}</td>
+                  <td className={styles.branchCell}>{tx.branch}</td>
+                  <td className={`${styles.numCol} ${styles.mono} ${tx.delta >= 0 ? styles.gain : styles.loss}`}>
+                    {tx.delta >= 0 ? `+${tx.delta}` : tx.delta}
+                  </td>
+                  <td className={`${styles.numCol} ${styles.mono}`}>{tx.balanceAfter.toLocaleString()}</td>
                 </tr>
               ))}
               {filtered.length === 0 && (
-                <tr><td colSpan={9} className={styles.empty}>No coin transactions match your filters.</td></tr>
+                <tr><td colSpan={9} className={styles.empty}>{tc.noHistory}</td></tr>
               )}
             </tbody>
           </table>
