@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useToast } from "../../components/ui/Toast";
 import { Container } from "../../components/layout/Container";
 import { Stack } from "../../components/layout/Stack";
@@ -39,8 +40,10 @@ export default function LoyaltyProfile() {
   const { t } = useSettings();
   const tc = t.pos.loyaltyProfile;
 
-  // In a real app, we'd read ?id= from URL params
-  const profile: LoyaltyMemberProfile = LOYALTY_PROFILES[0];
+  const [searchParams] = useSearchParams();
+  const requestedId = searchParams.get("id");
+  const profile: LoyaltyMemberProfile =
+    LOYALTY_PROFILES.find((p) => p.customerId === requestedId) ?? LOYALTY_PROFILES[0];
 
   const { toast } = useToast();
 
