@@ -48,10 +48,67 @@ errors introduced by task changes.
 
 ### Decisions
 - KpiCard: inline Kpi sub-component (no global KpiCard exists)
-- EmptyState: inline pattern (no global component exists)
+- EmptyState: global EmptyState component created at src/components/ui/EmptyState.tsx
 - DataTable: table + CSS module pattern (no global DataTable exists)
 - Categories split view: left = category list, right = products in selected category; products linked via `Product.category` string
 - CustomerLoyaltyProfile: URL param `/pos/loyalty/profile?id=CUST-001`; falls back to first record
 - Org chart (Departments): CSS-only tree, no external lib
 - Permissions matrix: checkbox-based toggle grid
 - CoinsReports charts: recharts LineChart + BarChart (already in stack)
+
+---
+
+## STABILIZATION RUN — main branch (2026-05-27)
+
+### Section 1 — Scan
+| Item | Result |
+|------|--------|
+| window.alert/confirm | ✅ 0 found |
+| comingSoon: true flags | ✅ no new pages flagged |
+
+### Section 2 — DataContext/FactoryContext Wiring
+| Page | Status |
+|------|--------|
+| FactoryDashboard | ✅ useFactory() |
+| FactoryOrders | ✅ useFactory() + updateOrderStatus |
+| FactoryBoms | ✅ useFactory() — deps fixed |
+| FactoryQc | ✅ useFactory() |
+| FactoryRawMaterials | ✅ useFactory() |
+| FactoryFinishedGoods | ✅ useFactory() — deps fixed |
+| FactoryWarehouse | ✅ useFactory() |
+| FactorySources | ✅ useFactory() — deps fixed |
+| FactoryImports | ✅ useFactory() — deps fixed |
+| FactoryBatches | ✅ useFactory() — deps fixed |
+| FactoryCosting | ✅ useFactory() — deps fixed |
+| Cross-page: order done → FG onHand | ✅ wired in FactoryContext.updateOrderStatus |
+
+### Section 3 — Auth Guards
+| Guard | Roles | Status |
+|-------|-------|--------|
+| /permissions | Admin | ✅ RoleGuard |
+| /factory/* | Admin, Factory | ✅ RoleGuard |
+| /reports | Admin, Manager | ✅ RoleGuard |
+| /expenses | Admin, Manager, Finance | ✅ RoleGuard |
+| AuthContext role extension | Admin/Manager/Finance/Factory/Cashier | ✅ 5 test accounts |
+
+### Section 4 — UI Polish
+| Item | Status |
+|------|--------|
+| EmptyState component | ✅ created |
+| useLoadingDelay hook | ✅ created (300ms) |
+| All 11 factory pages — loading + empty state | ✅ done |
+| Departments, Permissions, Reports, Expenses | ✅ done |
+| Sidebar wiring | ✅ all routes present |
+
+### Section 5 — i18n
+| Item | Status |
+|------|--------|
+| window.alert/confirm = 0 | ✅ |
+| OrgChart "staff" → t.departments.orgNodeStaff | ✅ |
+| RoleGuard toast → t.common.accessDenied/Msg | ✅ |
+| common.accessDenied/Msg — en + ar | ✅ |
+| departments.orgNodeStaff — en + ar | ✅ |
+
+### Final build
+- npm run lint: ✅ 0 errors, 0 warnings
+- npm run build: ✅ clean (chunk size warning is pre-existing)
