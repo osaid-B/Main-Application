@@ -400,6 +400,8 @@ export const translations = {
       currencyJOD: "Jordanian Dinar (د.أ)",
       currencyUSD: "US Dollar ($)",
       vatApplyByDefault: "Apply VAT by default on new invoices",
+      arabicNumerals: "Use Arabic-Indic numerals (٠١٢٣٤٥٦٧٨٩)",
+      arabicNumeralsHint: "Numbers will display as: ١٢٣٤٥٦٧٨٩٠",
     },
 
     header: {
@@ -3285,6 +3287,8 @@ export const translations = {
       currencyJOD: "دينار أردني (د.أ)",
       currencyUSD: "دولار أمريكي ($)",
       vatApplyByDefault: "تطبيق ضريبة القيمة المضافة تلقائياً على الفواتير الجديدة",
+      arabicNumerals: "استخدام الأرقام العربية الهندية (٠١٢٣٤٥٦٧٨٩)",
+      arabicNumeralsHint: "ستظهر الأرقام بالشكل: ١٢٣٤٥٦٧٨٩٠",
     },
 
     header: {
