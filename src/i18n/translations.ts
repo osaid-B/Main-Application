@@ -2661,6 +2661,16 @@ export const translations = {
           lineTotal: "Total",
           notes: "Notes",
         },
+        form: {
+          title: "New Import Order",
+          supplier: "Supplier Name",
+          origin: "Country of Origin",
+          currency: "Currency",
+          orderDate: "Order Date",
+          eta: "Estimated Arrival",
+          notes: "Notes (optional)",
+          save: "Create Import",
+        },
       },
       batches: {
         breadcrumb: "Factory / Batches",
@@ -5346,6 +5356,16 @@ export const translations = {
           unitCost: "تكلفة الوحدة",
           lineTotal: "الإجمالي",
           notes: "ملاحظات",
+        },
+        form: {
+          title: "أمر استيراد جديد",
+          supplier: "اسم المورد",
+          origin: "بلد المنشأ",
+          currency: "العملة",
+          orderDate: "تاريخ الطلب",
+          eta: "الوصول المتوقع",
+          notes: "ملاحظات (اختياري)",
+          save: "إنشاء الاستيراد",
         },
       },
       batches: {
