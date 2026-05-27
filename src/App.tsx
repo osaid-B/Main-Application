@@ -1,9 +1,11 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import ProtectedRoute from "./components/ProtectedRoute";
+import RoleGuard from "./components/RoleGuard";
 import MainLayout from "./components/layout/MainLayout";
 import { useAuth } from "./context/AuthContext";
 import { SettingsProvider } from "./context/SettingsContext";
 import { DataProvider } from "./context/DataContext";
+import { FactoryProvider } from "./context/FactoryContext";
 
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
@@ -88,10 +90,14 @@ function AppRoutes() {
           {/* Finance & Accounting */}
           <Route path="/general-ledger" element={<ComingSoon title="General Ledger" />} />
           <Route path="/chart-of-accounts" element={<ComingSoon title="Chart of Accounts" />} />
-          <Route path="/reports" element={<Reports />} />
-          <Route path="/reports/profit-loss" element={<ComingSoon title="Profit & Loss" />} />
-          <Route path="/reports/balance-sheet" element={<ComingSoon title="Balance Sheet" />} />
-          <Route path="/expenses" element={<Expenses />} />
+          <Route element={<RoleGuard roles={["Admin", "Manager"]} />}>
+            <Route path="/reports" element={<Reports />} />
+            <Route path="/reports/profit-loss" element={<ComingSoon title="Profit & Loss" />} />
+            <Route path="/reports/balance-sheet" element={<ComingSoon title="Balance Sheet" />} />
+          </Route>
+          <Route element={<RoleGuard roles={["Admin", "Manager", "Finance"]} />}>
+            <Route path="/expenses" element={<Expenses />} />
+          </Route>
 
           {/* Inventory & Operations */}
           <Route path="/inventory" element={<ComingSoon title="Inventory" />} />
@@ -103,24 +109,28 @@ function AppRoutes() {
 
           {/* Org & Access */}
           <Route path="/departments" element={<Departments />} />
-          <Route path="/permissions" element={<Permissions />} />
+          <Route element={<RoleGuard roles={["Admin"]} />}>
+            <Route path="/permissions" element={<Permissions />} />
+          </Route>
 
           {/* System */}
           <Route path="/audit-log" element={<ComingSoon title="Audit Log" />} />
 
-          {/* Factory workspace */}
+          {/* Factory workspace — Factory role + Admin */}
           <Route path="/factory" element={<Navigate to="/factory/dashboard" replace />} />
-          <Route path="/factory/dashboard" element={<FactoryDashboard />} />
-          <Route path="/factory/orders" element={<FactoryOrders />} />
-          <Route path="/factory/boms" element={<FactoryBoms />} />
-          <Route path="/factory/qc" element={<FactoryQc />} />
-          <Route path="/factory/inventory/raw" element={<FactoryRawMaterials />} />
-          <Route path="/factory/inventory/finished" element={<FactoryFinishedGoods />} />
-          <Route path="/factory/inventory/warehouse" element={<FactoryWarehouse />} />
-          <Route path="/factory/inventory/sources" element={<FactorySources />} />
-          <Route path="/factory/imports" element={<FactoryImports />} />
-          <Route path="/factory/batches" element={<FactoryBatches />} />
-          <Route path="/factory/costing" element={<FactoryCosting />} />
+          <Route element={<RoleGuard roles={["Admin", "Factory"]} />}>
+            <Route path="/factory/dashboard" element={<FactoryDashboard />} />
+            <Route path="/factory/orders" element={<FactoryOrders />} />
+            <Route path="/factory/boms" element={<FactoryBoms />} />
+            <Route path="/factory/qc" element={<FactoryQc />} />
+            <Route path="/factory/inventory/raw" element={<FactoryRawMaterials />} />
+            <Route path="/factory/inventory/finished" element={<FactoryFinishedGoods />} />
+            <Route path="/factory/inventory/warehouse" element={<FactoryWarehouse />} />
+            <Route path="/factory/inventory/sources" element={<FactorySources />} />
+            <Route path="/factory/imports" element={<FactoryImports />} />
+            <Route path="/factory/batches" element={<FactoryBatches />} />
+            <Route path="/factory/costing" element={<FactoryCosting />} />
+          </Route>
 
           {/* POS workspace */}
           <Route path="/pos" element={<Navigate to="/pos/checkout" replace />} />
@@ -149,7 +159,9 @@ export default function App() {
   return (
     <SettingsProvider>
       <DataProvider>
-        <AppRoutes />
+        <FactoryProvider>
+          <AppRoutes />
+        </FactoryProvider>
       </DataProvider>
     </SettingsProvider>
   );

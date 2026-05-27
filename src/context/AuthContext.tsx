@@ -1,13 +1,17 @@
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 
+export type UserRole = "Admin" | "Manager" | "Finance" | "Factory" | "Cashier";
+
 type User = {
   username: string;
+  role: UserRole;
 };
 
 type AuthContextType = {
   user: User | null;
   isAuthenticated: boolean;
+  hasRole: (...roles: UserRole[]) => boolean;
   login: (username: string, password: string) => boolean;
   logout: () => void;
 };
@@ -16,14 +20,26 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const AUTH_STORAGE_KEY = "dashboard_auth_user";
 
+const VALID_ROLES: UserRole[] = ["Admin", "Manager", "Finance", "Factory", "Cashier"];
+
 function isValidUser(value: unknown): value is User {
   return (
     typeof value === "object" &&
     value !== null &&
     "username" in value &&
-    typeof (value as User).username === "string"
+    typeof (value as User).username === "string" &&
+    "role" in value &&
+    VALID_ROLES.includes((value as User).role)
   );
 }
+
+const CREDENTIALS: Record<string, { password: string; role: UserRole }> = {
+  admin:   { password: "1234", role: "Admin" },
+  manager: { password: "1234", role: "Manager" },
+  finance: { password: "1234", role: "Finance" },
+  factory: { password: "1234", role: "Factory" },
+  cashier: { password: "1234", role: "Cashier" },
+};
 
 function readStoredUser(): User | null {
   const storedUser = localStorage.getItem(AUTH_STORAGE_KEY);
@@ -47,11 +63,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(() => readStoredUser());
 
   const login = useCallback((username: string, password: string) => {
-    const trimmedUsername = username.trim();
+    const trimmedUsername = username.trim().toLowerCase();
     const trimmedPassword = password.trim();
+    const cred = CREDENTIALS[trimmedUsername];
 
-    if (trimmedUsername === "admin" && trimmedPassword === "1234") {
-      const loggedInUser = { username: trimmedUsername };
+    if (cred && trimmedPassword === cred.password) {
+      const loggedInUser: User = { username: trimmedUsername, role: cred.role };
       setUser(loggedInUser);
       localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(loggedInUser));
       return true;
@@ -59,6 +76,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return false;
   }, []);
+
+  const hasRole = useCallback((...roles: UserRole[]) => {
+    if (!user) return false;
+    return roles.includes(user.role);
+  }, [user]);
 
   const logout = useCallback(() => {
     setUser(null);
@@ -69,10 +91,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     () => ({
       user,
       isAuthenticated: !!user,
+      hasRole,
       login,
       logout,
     }),
-    [login, logout, user]
+    [hasRole, login, logout, user]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
