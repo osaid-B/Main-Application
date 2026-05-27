@@ -16,6 +16,7 @@ import { Grid } from "../components/layout/Grid";
 import { Stack } from "../components/layout/Stack";
 import { Button } from "../components/ui/Button";
 import { useSettings } from "../context/SettingsContext";
+import { useData } from "../context/DataContext";
 import { Skeleton } from "../components/ui/Skeleton";
 import { useLoadingDelay } from "../hooks/useLoadingDelay";
 import {
@@ -38,6 +39,7 @@ const PREV    = MONTHLY_FINANCIALS[MONTHLY_FINANCIALS.length - 2];
 export default function Reports() {
   const { t, formatCurrency } = useSettings();
   const tc = t.reports;
+  const { totalRevenue, expenses } = useData();
 
   const [tab, setTab] = useState<TabId>("overview");
   const [customFrom, setCustomFrom] = useState("");
@@ -54,8 +56,13 @@ export default function Reports() {
     { id: "custom",    label: tc.tabs.custom     },
   ];
 
-  const margin = CURRENT.revenue > 0
-    ? ((CURRENT.netProfit / CURRENT.revenue) * 100).toFixed(1) + "%"
+  const liveExpenses = useMemo(
+    () => expenses.filter((e) => !e.isDeleted).reduce((s, e) => s + Number(e.amount || 0), 0),
+    [expenses]
+  );
+  const liveNetProfit = totalRevenue - liveExpenses;
+  const margin = totalRevenue > 0
+    ? ((liveNetProfit / totalRevenue) * 100).toFixed(1) + "%"
     : "0%";
 
   function exportTabCSV(activeTab: TabId) {
@@ -100,26 +107,26 @@ export default function Reports() {
         <Grid cols={4} gap="md" responsive>
           <Kpi
             label={tc.kpi.revenue}
-            value={formatCurrency(CURRENT.revenue)}
+            value={formatCurrency(totalRevenue)}
             sub={tc.kpi.revenueSub}
-            delta={CURRENT.revenue - PREV.revenue}
+            delta={totalRevenue - PREV.revenue}
             tone="info"
             formatCurrency={formatCurrency}
           />
           <Kpi
             label={tc.kpi.expenses}
-            value={formatCurrency(CURRENT.expenses)}
+            value={formatCurrency(liveExpenses)}
             sub={tc.kpi.expensesSub}
-            delta={CURRENT.expenses - PREV.expenses}
+            delta={liveExpenses - PREV.expenses}
             tone="warning"
             formatCurrency={formatCurrency}
             invertDelta
           />
           <Kpi
             label={tc.kpi.netProfit}
-            value={formatCurrency(CURRENT.netProfit)}
+            value={formatCurrency(liveNetProfit)}
             sub={tc.kpi.netProfitSub}
-            delta={CURRENT.netProfit - PREV.netProfit}
+            delta={liveNetProfit - PREV.netProfit}
             tone="success"
             formatCurrency={formatCurrency}
           />
