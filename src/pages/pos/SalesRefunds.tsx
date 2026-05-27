@@ -25,7 +25,7 @@ const STATUS_VARIANT: Record<RefundStatus, "warning" | "info" | "success" | "dan
   rejected:  "danger",
 };
 
-const TODAY = "2026-05-27";
+const TODAY = new Date().toISOString().slice(0, 10);
 
 export default function SalesRefunds() {
   const { t, formatCurrency } = useSettings();

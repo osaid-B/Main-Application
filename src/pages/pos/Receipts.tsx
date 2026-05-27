@@ -30,8 +30,8 @@ const METHOD_VARIANT: Record<PosPaymentMethod, "info" | "success" | "neutral" | 
   split:  "warning",
 };
 
-const TODAY     = "2026-05-26";
-const YESTERDAY = "2026-05-25";
+const TODAY     = new Date().toISOString().slice(0, 10);
+const YESTERDAY = (() => { const d = new Date(); d.setDate(d.getDate() - 1); return d.toISOString().slice(0, 10); })();
 
 const ACTIVE_CASHIERS = POS_CASHIERS.filter((c) => !c.isDeleted);
 
