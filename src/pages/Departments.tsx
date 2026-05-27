@@ -8,10 +8,10 @@ import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
 import { Modal } from "../components/ui/Modal";
 import { useSettings } from "../context/SettingsContext";
+import { useData } from "../context/DataContext";
 import { Skeleton } from "../components/ui/Skeleton";
 import { EmptyState } from "../components/ui/EmptyState";
 import { useLoadingDelay } from "../hooks/useLoadingDelay";
-import { DEPARTMENTS } from "../data/departmentsMock";
 import { type Department } from "../data/types";
 import styles from "./Departments.module.css";
 
@@ -32,8 +32,7 @@ const DEPT_MEMBERS: Record<string, string[]> = {
 export default function Departments() {
   const { t, formatCurrency } = useSettings();
   const tc = t.departments;
-
-  const [departments, setDepartments] = useState<Department[]>(DEPARTMENTS);
+  const { departments, addDepartment, updateDepartment, employees } = useData();
   const [view, setView] = useState<ViewMode>("table");
   const [query, setQuery] = useState("");
   const [isAdding, setIsAdding] = useState(false);
@@ -59,11 +58,11 @@ export default function Departments() {
 
   function saveDepartment(data: Omit<Department, "id">) {
     if (editing) {
-      setDepartments((prev) => prev.map((d) => (d.id === editing.id ? { ...d, ...data } : d)));
+      updateDepartment({ ...editing, ...data });
       setEditing(null);
     } else {
       const id = `dept-${String(departments.length + 1).padStart(2, "0")}`;
-      setDepartments((prev) => [...prev, { ...data, id }]);
+      addDepartment({ ...data, id });
       setIsAdding(false);
     }
   }

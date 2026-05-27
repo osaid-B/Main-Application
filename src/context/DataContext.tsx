@@ -1,6 +1,7 @@
 import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
 import type {
   Customer,
+  Department,
   Employee,
   Expense,
   Invoice,
@@ -12,6 +13,7 @@ import type {
 } from "../data/types";
 import {
   getCustomers, saveCustomers,
+  getDepartments, saveDepartments,
   getEmployees, saveEmployees,
   getExpenses, saveExpenses,
   getInvoiceItems,
@@ -27,6 +29,7 @@ import { isSuccessfulPaymentStatus, roundMoney } from "../data/relations";
 interface DataContextValue {
   // Raw entity lists
   customers: Customer[];
+  departments: Department[];
   products: Product[];
   suppliers: Supplier[];
   invoices: Invoice[];
@@ -63,6 +66,10 @@ interface DataContextValue {
   updateEmployee: (e: Employee) => void;
   deleteEmployee: (id: string) => void;
 
+  // Department CRUD
+  addDepartment: (d: Department) => void;
+  updateDepartment: (d: Department) => void;
+
   // Expense CRUD
   addExpense: (e: Expense) => void;
   updateExpense: (e: Expense) => void;
@@ -98,6 +105,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [employees, setEmployees] = useState<Employee[]>(() => getEmployees());
   const [purchases, setPurchases] = useState<Purchase[]>(() => getPurchases());
   const [expenses, setExpenses] = useState<Expense[]>(() => getExpenses());
+  const [departments, setDepartments] = useState<Department[]>(() => getDepartments());
 
   // ── Customer CRUD ────────────────────────────────────────────────────────────
 
@@ -204,6 +212,20 @@ export function DataProvider({ children }: { children: ReactNode }) {
     const next = employees.map((x) => (x.id === id ? { ...x, isDeleted: true } : x));
     setEmployees(next);
     saveEmployees(next);
+  }
+
+  // ── Department CRUD ──────────────────────────────────────────────────────────
+
+  function addDepartment(d: Department) {
+    const next = [...departments, d];
+    setDepartments(next);
+    saveDepartments(next);
+  }
+
+  function updateDepartment(d: Department) {
+    const next = departments.map((x) => (x.id === d.id ? d : x));
+    setDepartments(next);
+    saveDepartments(next);
   }
 
   // ── Expense CRUD ─────────────────────────────────────────────────────────────
@@ -324,6 +346,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const value: DataContextValue = {
     customers,
+    departments,
     products,
     suppliers,
     invoices,
@@ -334,6 +357,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     expenses,
     productCategories,
     addCustomer, updateCustomer, deleteCustomer,
+    addDepartment, updateDepartment,
     addProduct, updateProduct, deleteProduct, setProductCategories,
     addSupplier, updateSupplier, deleteSupplier,
     addPayment, updatePayment, deletePayment,
