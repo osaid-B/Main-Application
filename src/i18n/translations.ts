@@ -512,6 +512,7 @@ export const translations = {
         view: "View",
         edit: "Edit",
         delete: "Delete",
+        loyalty: "Loyalty Profile",
       },
       ariaMore: "More actions",
       status: {
@@ -1121,6 +1122,7 @@ export const translations = {
         salaryType: "Salary Type",
         hourlyRate: "Hourly Rate",
         fixedSalary: "Fixed Salary",
+        department: "Department",
         notes: "Notes",
         hourly: "Hourly",
         fixed: "Fixed",
@@ -1333,6 +1335,9 @@ export const translations = {
           redeemed: "COINS REDEEMED (30D)",
           outstanding: "OUTSTANDING LIABILITY",
           expiring: "EXPIRING NEXT 30D",
+          last30days: "Last 30 days",
+          allCustomers: "All customers",
+          allTime: "All time",
         },
       },
       coinsReports: {
@@ -2122,7 +2127,7 @@ export const translations = {
       status: { active: "In Stock", outOfStock: "Out of Stock", low: "Low Stock" },
       filters: { allCategories: "All Categories", allStatuses: "All Statuses" },
       actions: { edit: "Edit Price", toggle: "Toggle Active" },
-      editPrice: { title: "Edit Price", label: "Price (₪)", save: "Save" },
+      editPrice: { title: "Edit Price", label: "Price (₪)", save: "Save", invalidPrice: "Invalid price" },
     },
 
     shortcuts: {
@@ -2447,6 +2452,7 @@ export const translations = {
           started: "Order marked In Progress.",
           completed: "Order marked Complete.",
           cancelled: "Order cancelled.",
+          lowStock: "Insufficient raw materials",
         },
       },
       boms: {
@@ -2649,7 +2655,7 @@ export const translations = {
           customsRef: "Customs Ref",
           actions: "Actions",
         },
-        actions: { view: "View" },
+        actions: { view: "View", receive: "Receive into Stock", received: "Received into stock" },
         drawer: {
           title: "Import Details",
           close: "Close",
@@ -2660,6 +2666,16 @@ export const translations = {
           unitCost: "Unit Cost",
           lineTotal: "Total",
           notes: "Notes",
+        },
+        form: {
+          title: "New Import Order",
+          supplier: "Supplier Name",
+          origin: "Country of Origin",
+          currency: "Currency",
+          orderDate: "Order Date",
+          eta: "Estimated Arrival",
+          notes: "Notes (optional)",
+          save: "Create Import",
         },
       },
       batches: {
@@ -2723,6 +2739,7 @@ export const translations = {
           units: "Units",
           perUnit: "Per Unit",
           variance: "Variance",
+          liveBomCost: "Live BOM Cost",
         },
       },
     },
@@ -3229,6 +3246,7 @@ export const translations = {
         view: "عرض",
         edit: "تعديل",
         delete: "حذف",
+        loyalty: "ملف الولاء",
       },
       ariaMore: "مزيد من الإجراءات",
       status: {
@@ -3838,6 +3856,7 @@ export const translations = {
         salaryType: "نوع الراتب",
         hourlyRate: "الأجر بالساعة",
         fixedSalary: "الراتب الثابت",
+        department: "القسم",
         notes: "ملاحظات",
         hourly: "بالساعة",
         fixed: "ثابت",
@@ -4050,6 +4069,9 @@ export const translations = {
           redeemed: "نقاط مستردة (30 يوم)",
           outstanding: "الالتزامات القائمة",
           expiring: "تنتهي خلال 30 يوم",
+          last30days: "آخر 30 يوم",
+          allCustomers: "جميع الزبائن",
+          allTime: "طوال الوقت",
         },
       },
       coinsReports: {
@@ -4808,7 +4830,7 @@ export const translations = {
       status: { active: "متوفر", outOfStock: "نفد", low: "منخفض" },
       filters: { allCategories: "جميع الفئات", allStatuses: "جميع الحالات" },
       actions: { edit: "تعديل السعر", toggle: "تبديل الحالة" },
-      editPrice: { title: "تعديل السعر", label: "السعر (₪)", save: "حفظ" },
+      editPrice: { title: "تعديل السعر", label: "السعر (₪)", save: "حفظ", invalidPrice: "سعر غير صالح" },
     },
 
     shortcuts: {
@@ -5133,6 +5155,7 @@ export const translations = {
           started: "تم تغيير حالة الأمر إلى جارٍ.",
           completed: "تم اكتمال الأمر.",
           cancelled: "تم إلغاء الأمر.",
+          lowStock: "مواد خام غير كافية",
         },
       },
       boms: {
@@ -5335,7 +5358,7 @@ export const translations = {
           customsRef: "مرجع الجمارك",
           actions: "الإجراءات",
         },
-        actions: { view: "عرض" },
+        actions: { view: "عرض", receive: "استلام في المخزون", received: "تم الاستلام في المخزون" },
         drawer: {
           title: "تفاصيل الاستيراد",
           close: "إغلاق",
@@ -5346,6 +5369,16 @@ export const translations = {
           unitCost: "تكلفة الوحدة",
           lineTotal: "الإجمالي",
           notes: "ملاحظات",
+        },
+        form: {
+          title: "أمر استيراد جديد",
+          supplier: "اسم المورد",
+          origin: "بلد المنشأ",
+          currency: "العملة",
+          orderDate: "تاريخ الطلب",
+          eta: "الوصول المتوقع",
+          notes: "ملاحظات (اختياري)",
+          save: "إنشاء الاستيراد",
         },
       },
       batches: {
@@ -5409,6 +5442,7 @@ export const translations = {
           units: "الوحدات",
           perUnit: "لكل وحدة",
           variance: "الانحراف",
+          liveBomCost: "تكلفة BOM الحية",
         },
       },
     },

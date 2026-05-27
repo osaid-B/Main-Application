@@ -407,6 +407,7 @@ export type Employee = {
   advance: number;
   advances?: EmployeeAdvance[];
   notes?: string;
+  departmentId?: string;
   attendanceRecords?: AttendanceRecord[];
   dailyAttendance?: DailyAttendanceEntry[];
   isDeleted?: boolean;

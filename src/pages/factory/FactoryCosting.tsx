@@ -14,7 +14,7 @@ import styles from "./factory.module.css";
 export default function FactoryCosting() {
   const { t, formatCurrency } = useSettings();
   const tc = t.factory.costing;
-  const { costingEntries: COSTING_ENTRIES } = useFactory();
+  const { costingEntries: COSTING_ENTRIES, boms, rawMaterials } = useFactory();
 
   const [query, setQuery]           = useState("");
   const [periodFilter, setPeriod]   = useState("");
@@ -31,6 +31,18 @@ export default function FactoryCosting() {
       return e.productName.toLowerCase().includes(q) || e.productionOrderId.toLowerCase().includes(q);
     });
   }, [COSTING_ENTRIES, query, periodFilter]);
+
+  function computeLiveBomCost(productionOrderId: string): number | null {
+    const entry = COSTING_ENTRIES.find((e) => e.productionOrderId === productionOrderId);
+    if (!entry) return null;
+    // find bom by product name match (costing entries store productName, not productId)
+    const bom = boms.find((b) => b.productName === entry.productName || b.productId === productionOrderId);
+    if (!bom) return null;
+    return bom.lines.reduce((sum, line) => {
+      const mat = rawMaterials.find((m) => m.id === line.materialId);
+      return sum + (mat ? mat.unitCost * line.quantity : 0);
+    }, 0);
+  }
 
   const costedEntries = COSTING_ENTRIES.filter((e) => e.unitsProduced > 0);
   const totalCost     = costedEntries.reduce((s, e) => s + e.totalCost, 0);
@@ -88,6 +100,7 @@ export default function FactoryCosting() {
                   <th className={styles.numEnd}>{tc.cols.units}</th>
                   <th className={styles.numEnd}>{tc.cols.perUnit}</th>
                   <th className={styles.numEnd}>{tc.cols.variance}</th>
+                  <th className={styles.numEnd}>{tc.cols.liveBomCost}</th>
                 </tr>
               </thead>
               <tbody>
@@ -97,6 +110,7 @@ export default function FactoryCosting() {
                     : e.variance < 0
                     ? { color: "var(--atlas-green)" }
                     : {};
+                  const liveBomCost = computeLiveBomCost(e.productionOrderId);
                   return (
                     <tr key={e.id}>
                       <td><span className={styles.mono}>{e.id}</span></td>
@@ -111,6 +125,9 @@ export default function FactoryCosting() {
                       <td className={`${styles.numEnd} ${styles.mono}`}>{e.costPerUnit > 0 ? formatCurrency(e.costPerUnit) : "—"}</td>
                       <td className={`${styles.numEnd} ${styles.mono}`} style={varClass}>
                         {e.variance !== 0 ? formatCurrency(Math.abs(e.variance)) : "—"}
+                      </td>
+                      <td className={`${styles.numEnd} ${styles.mono}`} style={{ color: "var(--app-text-muted)", fontSize: 12 }}>
+                        {liveBomCost !== null ? formatCurrency(liveBomCost) : "—"}
                       </td>
                     </tr>
                   );

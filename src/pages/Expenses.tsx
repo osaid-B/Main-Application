@@ -9,10 +9,11 @@ import { Button } from "../components/ui/Button";
 import { Modal } from "../components/ui/Modal";
 import TableFooter from "../components/ui/TableFooter";
 import { useSettings } from "../context/SettingsContext";
+import { useData } from "../context/DataContext";
 import { Skeleton } from "../components/ui/Skeleton";
 import { EmptyState } from "../components/ui/EmptyState";
 import { useLoadingDelay } from "../hooks/useLoadingDelay";
-import { EXPENSES, EXPENSE_CATEGORIES } from "../data/expensesMock";
+import { EXPENSE_CATEGORIES } from "../data/expensesMock";
 import { type Expense, type ExpenseStatus } from "../data/types";
 import styles from "./Expenses.module.css";
 
@@ -28,8 +29,8 @@ export default function Expenses() {
   const { t, formatCurrency } = useSettings();
   const tc = t.expenses;
 
+  const { expenses, addExpense, updateExpense, deleteExpense: deleteExpenseCtx } = useData();
   const isLoading = useLoadingDelay();
-  const [expenses, setExpenses]           = useState<Expense[]>(EXPENSES);
   const [query, setQuery]                 = useState("");
   const [filterCat, setFilterCat]         = useState("");
   const [filterStatus, setFilterStatus]   = useState<ExpenseStatus | "">("");
@@ -79,9 +80,9 @@ export default function Expenses() {
   }
 
   function bulkApprove() {
-    setExpenses((prev) =>
-      prev.map((e) => selected.has(e.id) && e.status === "pending" ? { ...e, status: "approved" } : e)
-    );
+    expenses
+      .filter((e) => selected.has(e.id) && e.status === "pending")
+      .forEach((e) => updateExpense({ ...e, status: "approved" as ExpenseStatus }));
     setSelected(new Set());
   }
 
@@ -91,7 +92,7 @@ export default function Expenses() {
 
   function confirmDeleteExpense() {
     if (!deleteTarget) return;
-    setExpenses((prev) => prev.map((e) => e.id === deleteTarget ? { ...e, isDeleted: true } : e));
+    deleteExpenseCtx(deleteTarget);
     setDeleteTarget(null);
   }
 
@@ -99,11 +100,11 @@ export default function Expenses() {
 
   function saveExpense(data: Omit<Expense, "id">) {
     if (editing) {
-      setExpenses((prev) => prev.map((e) => e.id === editing.id ? { ...e, ...data } : e));
+      updateExpense({ ...editing, ...data });
       setEditing(null);
     } else {
       const id = `EX-${Date.now().toString().slice(-6)}`;
-      setExpenses((prev) => [...prev, { ...data, id }]);
+      addExpense({ ...data, id });
       setIsAdding(false);
     }
   }

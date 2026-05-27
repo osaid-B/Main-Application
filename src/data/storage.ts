@@ -4,8 +4,10 @@ import type {
   BankAccount,
   BankTransfer,
   Customer,
+  Department,
   DepositBatch,
   Employee,
+  Expense,
   Invoice,
   InvoiceItem,
   OCRExtraction,
@@ -38,6 +40,8 @@ import {
 } from "./mockData";
 
 const CUSTOMERS_KEY = "dashboard_customers";
+const EXPENSES_KEY = "dashboard_expenses";
+const DEPARTMENTS_KEY = "dashboard_departments";
 const SUPPLIERS_KEY = "dashboard_suppliers";
 const PRODUCTS_KEY = "dashboard_products";
 const PRODUCT_CATEGORIES_KEY = "dashboard_product_categories";
@@ -111,6 +115,24 @@ function normalizeEmployees(employees: Employee[]): Employee[] {
         }))
       : [],
   }));
+}
+
+/* Departments */
+import { DEPARTMENTS as departmentsData } from "./departmentsMock";
+export function getDepartments(): Department[] {
+  return readStorage<Department[]>(DEPARTMENTS_KEY, departmentsData);
+}
+export function saveDepartments(departments: Department[]) {
+  writeStorage(DEPARTMENTS_KEY, departments);
+}
+
+/* Expenses */
+import { EXPENSES as expensesData } from "./expensesMock";
+export function getExpenses(): Expense[] {
+  return readStorage<Expense[]>(EXPENSES_KEY, expensesData);
+}
+export function saveExpenses(expenses: Expense[]) {
+  writeStorage(EXPENSES_KEY, expenses);
 }
 
 /* Customers */

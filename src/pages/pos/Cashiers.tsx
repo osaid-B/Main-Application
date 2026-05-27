@@ -9,8 +9,8 @@ import { Button } from "../../components/ui/Button";
 import { Avatar } from "../../components/ui/Avatar";
 import { Modal } from "../../components/ui/Modal";
 import { useSettings } from "../../context/SettingsContext";
+import { useData } from "../../context/DataContext";
 import {
-  POS_CASHIERS as INITIAL_CASHIERS,
   type PosCashier,
   type CashierStatus,
   type CashierShift,
@@ -26,8 +26,8 @@ const STATUS_VARIANT: Record<CashierStatus, "success" | "neutral" | "warning"> =
 export default function Cashiers() {
   const { t, formatCurrency } = useSettings();
   const tc = t.pos.cashiers;
+  const { cashiers, addCashier, updateCashier } = useData();
 
-  const [cashiers, setCashiers]       = useState<PosCashier[]>(INITIAL_CASHIERS);
   const [query,    setQuery]          = useState("");
   const [editing,  setEditing]        = useState<PosCashier | null>(null);
   const [isAdding, setIsAdding]       = useState(false);
@@ -63,25 +63,19 @@ export default function Cashiers() {
   }
 
   function applyToggle(id: string) {
-    setCashiers((prev) =>
-      prev.map((c) => {
-        if (c.id !== id) return c;
-        const next: CashierStatus = c.status === "active" ? "inactive" : "active";
-        return { ...c, status: next };
-      }),
-    );
+    const cashier = cashiers.find((c) => c.id === id);
+    if (!cashier) return;
+    const next: CashierStatus = cashier.status === "active" ? "inactive" : "active";
+    updateCashier({ ...cashier, status: next });
   }
 
   function saveCashier(data: Omit<PosCashier, "id" | "todaySales" | "transactions" | "lastActive" | "isDeleted">) {
     if (editing) {
-      setCashiers((prev) => prev.map((c) => (c.id === editing.id ? { ...c, ...data } : c)));
+      updateCashier({ ...editing, ...data });
       setEditing(null);
     } else {
       const id = `CSH-${String(cashiers.length + 1).padStart(2, "0")}`;
-      setCashiers((prev) => [
-        ...prev,
-        { ...data, id, todaySales: 0, transactions: 0, lastActive: new Date().toISOString() },
-      ]);
+      addCashier({ ...data, id, todaySales: 0, transactions: 0, lastActive: new Date().toISOString() });
       setIsAdding(false);
     }
   }

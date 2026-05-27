@@ -1,6 +1,7 @@
 import "./Suppliers.css";
 import { createPortal } from "react-dom";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Archive,
   AlertTriangle,
@@ -708,6 +709,7 @@ function statusTone(status: SupplierStatus) {
 
 export default function Suppliers() {
   const { t } = useSettings();
+  const navigate = useNavigate();
   const { suppliers, addSupplier, updateSupplier, deleteSupplier: deleteSupplierCtx } = useData();
   const [purchases] = useState<Purchase[]>(() => getPurchases());
   const [productCategories] = useState<string[]>(() => getProductCategories());
@@ -1268,6 +1270,10 @@ export default function Suppliers() {
       return;
     }
 
+    setProfiles((prev) =>
+      prev.map((p) => p.supplierId === confirmAction.supplierId ? { ...p, status: "Inactive" as SupplierStatus } : p),
+    );
+    saveProfiles(profiles.map((p) => p.supplierId === confirmAction.supplierId ? { ...p, status: "Inactive" as SupplierStatus } : p));
     setConfirmAction(null);
     setMenuState(null);
     setToast(`${supplier?.supplierName || "Supplier"} archived`);
@@ -2003,7 +2009,13 @@ export default function Suppliers() {
                 <div className="detail-table-card">
                   <div className="detail-card-head">
                     <h3>{t.suppliers.tabs.purchases}</h3>
-                    <Button variant="primary" size="md" type="button" className="drawer-primary-btn">
+                    <Button
+                      variant="primary"
+                      size="md"
+                      type="button"
+                      className="drawer-primary-btn"
+                      onClick={() => navigate(`/purchases?supplierId=${detailSupplier?.supplierId ?? ""}`)}
+                    >
                       Add Purchase
                     </Button>
                   </div>

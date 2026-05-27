@@ -26,7 +26,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { Button } from "../components/ui/Button";
-import { getEmployees, saveEmployees } from "../data/storage";
+import { useData } from "../context/DataContext";
 import type {
   Employee,
   EmployeeAdvance,
@@ -44,6 +44,7 @@ type EmployeeForm = {
   hourlyRate: string;
   fixedSalary: string;
   notes: string;
+  departmentId: string;
 };
 
 type EmployeeFormErrors = {
@@ -107,6 +108,7 @@ const EMPTY_FORM: EmployeeForm = {
   hourlyRate: "10",
   fixedSalary: "0",
   notes: "",
+  departmentId: "",
 };
 
 const DELETE_CONFIRMATION_CODE = "123";
@@ -386,6 +388,7 @@ function EmployeeFormModal({
   submitLabel: string;
 }) {
   const { t } = useSettings();
+  const { departments } = useData();
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-card employees-modal-card" onClick={(e) => e.stopPropagation()}>
@@ -438,6 +441,15 @@ function EmployeeFormModal({
                 {errors.fixedSalary && <p className="form-error">{errors.fixedSalary}</p>}
               </div>
             )}
+            <div>
+              <label className="modal-label">{t.employees.form.department ?? "Department"}</label>
+              <select className="modal-input" value={values.departmentId} onChange={(e) => onChange("departmentId", e.target.value)}>
+                <option value="">{t.departments?.form?.none ?? "—"}</option>
+                {departments.filter((d) => d.status === "active").map((d) => (
+                  <option key={d.id} value={d.id}>{d.name}</option>
+                ))}
+              </select>
+            </div>
             <div className="employees-form-grid-full">
               <label className="modal-label">{t.employees.form.notes}</label>
               <textarea className="modal-input" rows={4} value={values.notes} onChange={(e) => onChange("notes", e.target.value)} />
@@ -1687,7 +1699,7 @@ function EmployeesSection({
 
 export default function Employees() {
   const { t } = useSettings();
-  const [employees, setEmployees] = useState<Employee[]>(() => getEmployees());
+  const { employees, addEmployee, updateEmployee, deleteEmployee: deleteEmployeeCtx } = useData();
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState<MainTab>("today");
   const [attendanceRange, setAttendanceRange] = useState<AttendanceRange>("today");
@@ -1706,7 +1718,6 @@ export default function Employees() {
   const [reportSortKey, setReportSortKey] = useState<ReportSortKey>("name");
   const [reportSortDirection, setReportSortDirection] = useState<ReportSortDirection>("asc");
 
-  useEffect(() => { saveEmployees(employees); }, [employees]);
 
   useEffect(() => {
     if (!toast) return;
@@ -1776,7 +1787,7 @@ export default function Employees() {
   const openAddModal = () => { setEditingEmployee(null); setForm(EMPTY_FORM); setFormErrors({}); setShowEmployeeModal(true); };
   const openEditModal = (emp: Employee) => {
     setEditingEmployee(emp);
-    setForm({ name: emp.name, phone: emp.phone, workStart: emp.workStart, workEnd: emp.workEnd, salaryType: emp.salaryType, hourlyRate: String(emp.hourlyRate ?? 0), fixedSalary: String(emp.fixedSalary ?? 0), notes: emp.notes ?? "" });
+    setForm({ name: emp.name, phone: emp.phone, workStart: emp.workStart, workEnd: emp.workEnd, salaryType: emp.salaryType, hourlyRate: String(emp.hourlyRate ?? 0), fixedSalary: String(emp.fixedSalary ?? 0), notes: emp.notes ?? "", departmentId: emp.departmentId ?? "" });
     setFormErrors({});
     setShowEmployeeModal(true);
   };
@@ -1787,13 +1798,7 @@ export default function Employees() {
     if (Object.keys(errors).length > 0) return;
 
     if (editingEmployee) {
-      setEmployees((prev) =>
-        prev.map((emp) =>
-          emp.id === editingEmployee.id
-            ? { ...emp, name: form.name.trim(), phone: form.phone.trim(), workStart: form.workStart, workEnd: form.workEnd, salaryType: form.salaryType, hourlyRate: form.salaryType === "hourly" ? Number(form.hourlyRate) : undefined, fixedSalary: form.salaryType === "fixed" ? Number(form.fixedSalary) : undefined, notes: form.notes.trim() }
-            : emp
-        )
-      );
+      updateEmployee({ ...editingEmployee, name: form.name.trim(), phone: form.phone.trim(), workStart: form.workStart, workEnd: form.workEnd, salaryType: form.salaryType, hourlyRate: form.salaryType === "hourly" ? Number(form.hourlyRate) : undefined, fixedSalary: form.salaryType === "fixed" ? Number(form.fixedSalary) : undefined, notes: form.notes.trim(), departmentId: form.departmentId || undefined });
       resetFormState();
       setToast({ type: "success", message: t.employees.toast.updated });
       return;
@@ -1811,28 +1816,27 @@ export default function Employees() {
       advance: 0,
       advances: [],
       notes: form.notes.trim(),
+      departmentId: form.departmentId || undefined,
       attendanceRecords: [],
       dailyAttendance: [],
       isDeleted: false,
     };
 
-    setEmployees((prev) => [newEmployee, ...prev]);
+    addEmployee(newEmployee);
     resetFormState();
     setToast({ type: "success", message: t.employees.toast.created });
   };
 
   const handleApplyPresentToAll = () => {
-    setEmployees((prev) =>
-      prev.map((emp) =>
-        upsertDailyAttendance(emp, {
-          date: selectedAttendanceDate,
-          status: "present",
-          workedHours: getDefaultWorkedHours(emp, "present"),
-          advanceAmount: 0,
-          notes: "",
-        })
-      )
-    );
+    employees.forEach((emp) => {
+      updateEmployee(upsertDailyAttendance(emp, {
+        date: selectedAttendanceDate,
+        status: "present",
+        workedHours: getDefaultWorkedHours(emp, "present"),
+        advanceAmount: 0,
+        notes: "",
+      }));
+    });
     setToast({ type: "success", message: "Default present attendance applied to all employees." });
   };
 
@@ -1841,17 +1845,14 @@ export default function Employees() {
     date: string,
     payload: { status: DailyAttendanceStatus; workedHours: number; advanceAmount: number; notes?: string }
   ) => {
-    setEmployees((prev) =>
-      prev.map((emp) => {
-        if (emp.id !== employeeId) return emp;
-        const updated = upsertDailyAttendance(emp, { date, status: payload.status, workedHours: payload.workedHours, advanceAmount: payload.advanceAmount, notes: payload.notes?.trim() || undefined });
-        const nextAdvances = getEmployeeAdvances(updated).filter((item) => item.date !== date);
-        if (payload.advanceAmount > 0) {
-          nextAdvances.unshift({ id: `ADV-${employeeId}-${date}`, amount: payload.advanceAmount, date, notes: payload.notes?.trim() || "Daily attendance advance" });
-        }
-        return { ...updated, advances: nextAdvances, advance: nextAdvances.reduce((sum, item) => sum + Number(item.amount || 0), 0) };
-      })
-    );
+    const emp = employees.find((e) => e.id === employeeId);
+    if (!emp) return;
+    const updated = upsertDailyAttendance(emp, { date, status: payload.status, workedHours: payload.workedHours, advanceAmount: payload.advanceAmount, notes: payload.notes?.trim() || undefined });
+    const nextAdvances = getEmployeeAdvances(updated).filter((item) => item.date !== date);
+    if (payload.advanceAmount > 0) {
+      nextAdvances.unshift({ id: `ADV-${employeeId}-${date}`, amount: payload.advanceAmount, date, notes: payload.notes?.trim() || "Daily attendance advance" });
+    }
+    updateEmployee({ ...updated, advances: nextAdvances, advance: nextAdvances.reduce((sum, item) => sum + Number(item.amount || 0), 0) });
   };
 
   const handleUpdateEmployeeDay = (
@@ -2009,7 +2010,7 @@ export default function Employees() {
           onClose={() => setDeleteDialog(null)}
           onConfirm={() => {
             if (!deleteDialog || deleteDialog.confirmText !== DELETE_CONFIRMATION_CODE) return;
-            setEmployees((prev) => prev.filter((emp) => emp.id !== deleteDialog.employeeId));
+            deleteEmployeeCtx(deleteDialog.employeeId);
             setDeleteDialog(null);
             setToast({ type: "success", message: t.employees.toast.deleted });
           }}

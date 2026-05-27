@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Plus } from "lucide-react";
 import { Container } from "../components/layout/Container";
 import { Button } from "../components/ui/Button";
@@ -9,6 +9,8 @@ import { useToast } from "../components/ui/Toast";
 import { Skeleton } from "../components/ui/Skeleton";
 import { useLoadingDelay } from "../hooks/useLoadingDelay";
 import { ROLES } from "../data/permissionsMock";
+
+const PERMISSIONS_STORAGE_KEY = "dashboard_permissions_roles";
 import { type Role, type PermissionAction, type PermissionModule } from "../data/types";
 import styles from "./Permissions.module.css";
 
@@ -34,13 +36,23 @@ export default function Permissions() {
   const tc = t.permissions;
   const { toast } = useToast();
 
-  const [roles, setRoles] = useState<Role[]>(ROLES);
+  const [roles, setRoles] = useState<Role[]>(() => {
+    try {
+      const raw = localStorage.getItem(PERMISSIONS_STORAGE_KEY);
+      if (raw) return JSON.parse(raw) as Role[];
+    } catch { /* ignore */ }
+    return ROLES;
+  });
   const [selectedRoleId, setSelectedRoleId] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Role | null>(null);
 
   const isLoading = useLoadingDelay();
   const selectedRole = roles.find((r) => r.id === selectedRoleId) ?? null;
+
+  useEffect(() => {
+    localStorage.setItem(PERMISSIONS_STORAGE_KEY, JSON.stringify(roles));
+  }, [roles]);
 
   function togglePermission(roleId: string, module: string, action: PermissionAction) {
     setRoles((prev) =>

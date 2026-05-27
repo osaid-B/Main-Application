@@ -571,6 +571,7 @@ export interface PosCashier {
   transactions: number;
   lastActive: string;
   pin?: string;
+  employeeId?: string;
   isDeleted?: boolean;
 }
 

@@ -10,13 +10,13 @@ import {
   CASH_FLOW,
   COMPANY_KPIS,
   DEPARTMENTS,
-  OPEN_INVOICES,
   REVENUE_BY_DEPT,
   type CompanyKPI,
   type DepartmentRow,
   type OpenInvoice,
 } from "../data/companyMock";
 import { useSettings } from "../context/SettingsContext";
+import { useData } from "../context/DataContext";
 import styles from "./CompanyOverview.module.css";
 
 const KPI_BAR_COLOR: Record<CompanyKPI["color"], string> = {
@@ -48,7 +48,16 @@ function downloadCsv(filename: string, headers: string[], rows: (string | number
 
 export default function CompanyOverview() {
   const [dateRange, setDateRange] = useState<"month" | "6months">("6months");
-  const { t } = useSettings();
+  const { t, formatCurrency } = useSettings();
+  const {
+    totalRevenue,
+    receivablesTotal,
+    payablesDue,
+    openInvoicesCount,
+    headcount,
+    customers,
+    invoices,
+  } = useData();
 
   const cashFlowData = useMemo(
     () => (dateRange === "month" ? CASH_FLOW.slice(-1) : CASH_FLOW),
@@ -105,9 +114,14 @@ export default function CompanyOverview() {
           </div>
         </header>
 
-        {/* 6 KPIs (3x2) */}
+        {/* 6 KPIs (3x2) — live from DataContext */}
         <Grid cols={3} gap="md" responsive>
-          {COMPANY_KPIS.map((kpi) => <KpiCard key={kpi.label} kpi={kpi} />)}
+          <KpiCard kpi={{ label: "REVENUE",      value: formatCurrency(totalRevenue),    trend: 0, color: "green"  }} />
+          <KpiCard kpi={{ label: "RECEIVABLES",  value: formatCurrency(receivablesTotal), trend: 0, color: "orange", subtitle: `${openInvoicesCount} invoices open` }} />
+          <KpiCard kpi={{ label: "PAYABLES",     value: formatCurrency(payablesDue),     trend: 0, color: "blue"   }} />
+          <KpiCard kpi={{ label: "CUSTOMERS",    value: String(customers.filter((c) => !c.isDeleted).length), trend: 0, color: "purple" }} />
+          <KpiCard kpi={{ label: "HEADCOUNT",    value: String(headcount), trend: 0, color: "purple" }} />
+          <KpiCard kpi={{ label: "OPEN INVOICES", value: String(openInvoicesCount), trend: 0, color: "orange" }} />
         </Grid>
 
         {/* Cash flow + Revenue donut */}
@@ -190,7 +204,21 @@ export default function CompanyOverview() {
                 </tr>
               </thead>
               <tbody>
-                {OPEN_INVOICES.map((i) => <InvoiceRow key={i.invoice} inv={i} />)}
+                {invoices
+                  .filter((inv) => inv.status !== "Paid")
+                  .slice(0, 8)
+                  .map((inv) => {
+                    const customer = customers.find((c) => c.id === inv.customerId);
+                    const liveInv: OpenInvoice = {
+                      invoice: inv.id,
+                      customer: customer?.name ?? inv.customerId,
+                      issue: inv.date ?? "",
+                      due: inv.date ?? "",
+                      amount: Number(inv.remainingAmount ?? inv.total ?? inv.amount ?? 0),
+                      status: inv.status === "Partial" ? "due-soon" : "due-soon",
+                    };
+                    return <InvoiceRow key={inv.id} inv={liveInv} />;
+                  })}
               </tbody>
             </table>
           </section>

@@ -33,12 +33,13 @@ function formatBalance(n: number, currency: string): string {
 
 export default function Customers() {
   const navigate = useNavigate();
-  const { customers, deleteCustomer } = useData();
+  const { customers, deleteCustomer, customerBalanceMap, customerLastOrderMap } = useData();
   const { t } = useSettings();
   const [query, setQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
   const [classFilter, setClassFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [showFilters, setShowFilters] = useState(true);
 
   const active = useMemo(
     () => customers.filter((c) => !c.isDeleted),
@@ -67,8 +68,8 @@ export default function Customers() {
     total: active.length,
     vip: active.filter((c) => c.classification === "vip").length,
     active: active.filter((c) => (c.status ?? "active") === "active").length,
-    withBalance: active.filter((c) => (c.outstandingBalance ?? 0) > 0).length,
-  }), [active]);
+    withBalance: active.filter((c) => (customerBalanceMap.get(c.id) ?? c.outstandingBalance ?? 0) > 0).length,
+  }), [active, customerBalanceMap]);
 
   return (
     <Container maxWidth="full" padding="md">
@@ -82,8 +83,26 @@ export default function Customers() {
             <p className={styles.subtitle}>{t.customers.pageSubtitle}</p>
           </div>
           <div className={styles.actions}>
-            <Button variant="secondary" size="sm" leftIcon={<Filter size={14} />}>{t.customers.filter}</Button>
-            <Button variant="secondary" size="sm" leftIcon={<Download size={14} />}>{t.customers.export}</Button>
+            <Button variant="secondary" size="sm" leftIcon={<Filter size={14} />} onClick={() => setShowFilters((v) => !v)}>{t.customers.filter}</Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              leftIcon={<Download size={14} />}
+              onClick={() => {
+                const csv = [
+                  ["ID", "Name", "Phone", "Type", "Classification", "Status", "Balance"],
+                  ...filtered.map((c) => [c.id, c.name, c.phone ?? "", c.type ?? "", c.classification ?? "", c.status ?? "active", String(c.outstandingBalance ?? 0)]),
+                ].map((r) => r.map((v) => `"${v}"`).join(",")).join("\n");
+                const a = Object.assign(document.createElement("a"), {
+                  href: URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8;" })),
+                  download: `customers-${new Date().toISOString().slice(0, 10)}.csv`,
+                });
+                a.click();
+                URL.revokeObjectURL(a.href);
+              }}
+            >
+              {t.customers.export}
+            </Button>
             <Button variant="primary" size="sm" leftIcon={<Plus size={14} />} onClick={() => navigate("/customers/new")}>
               {t.customers.addCustomer}
             </Button>
@@ -99,7 +118,7 @@ export default function Customers() {
         </div>
 
         {/* Filters bar */}
-        <div className={styles.filters}>
+        {showFilters && <div className={styles.filters}>
           <Input
             variant="search"
             placeholder={t.customers.searchPlaceholder}
@@ -141,7 +160,7 @@ export default function Customers() {
               { value: "archived", label: t.customers.filters.archived },
             ]}
           />
-        </div>
+        </div>}
 
         {/* Table */}
         <div className={styles.tableWrap}>
@@ -163,9 +182,12 @@ export default function Customers() {
                 <CustomerRow
                   key={c.id}
                   c={c}
+                  liveBalance={customerBalanceMap.get(c.id)}
+                  liveLastOrder={customerLastOrderMap.get(c.id)}
                   onView={() => navigate(`/customers/${c.id}`)}
                   onEdit={() => navigate(`/customers/${c.id}/edit`)}
                   onDelete={() => deleteCustomer(c.id)}
+                  onLoyalty={() => navigate(`/pos/loyalty/profile?id=${c.id}`)}
                 />
               ))}
               {filtered.length === 0 && (
@@ -196,14 +218,20 @@ function StatPill({ label, value, tone }: { label: string; value: string; tone: 
 
 function CustomerRow({
   c,
+  liveBalance,
+  liveLastOrder,
   onView,
   onEdit,
   onDelete,
+  onLoyalty,
 }: {
   c: Customer;
+  liveBalance?: number;
+  liveLastOrder?: string;
   onView: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  onLoyalty: () => void;
 }) {
   const { t } = useSettings();
   const status = c.status ?? "active";
@@ -213,7 +241,7 @@ function CustomerRow({
     ? (status as "active" | "inactive" | "archived")
     : "active";
   const statusColor = statusNorm === "active" ? "green" : statusNorm === "inactive" ? "gray" : "red";
-  const balance = c.outstandingBalance ?? 0;
+  const balance = liveBalance ?? c.outstandingBalance ?? 0;
   const limit = c.creditLimit ?? 0;
   const balanceTone = balance > limit * 0.7 ? "danger" : balance > 0 ? "warning" : "neutral";
   const alerts = c.alerts ?? [];
@@ -277,7 +305,7 @@ function CustomerRow({
         </span>
       </td>
       <td className={styles.timeCell}>
-        {c.lastOrderDate ? relativeDate(c.lastOrderDate) : c.joinedAt ? relativeDate(c.joinedAt) : "—"}
+        {(liveLastOrder ?? c.lastOrderDate) ? relativeDate((liveLastOrder ?? c.lastOrderDate)!) : c.joinedAt ? relativeDate(c.joinedAt) : "—"}
       </td>
       <td>
         <span className={`${styles.statusPill} ${styles[`statusPill_${statusNorm}`]}`}>
@@ -313,6 +341,14 @@ function CustomerRow({
                 onClick={() => { setMenuOpen(false); onEdit(); }}
               >
                 <Pencil size={12} aria-hidden /> {t.customers.rowMenu.edit}
+              </button>
+              <button
+                type="button"
+                className={styles.rowMenuItem}
+                role="menuitem"
+                onClick={() => { setMenuOpen(false); onLoyalty(); }}
+              >
+                {t.customers.rowMenu.loyalty ?? "Loyalty Profile"}
               </button>
               <button
                 type="button"

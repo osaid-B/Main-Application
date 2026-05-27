@@ -11,6 +11,7 @@ import { useSettings } from "../../context/SettingsContext";
 import { useToast } from "../../components/ui/Toast";
 import {
   POS_REFUNDS,
+  POS_CASHIERS,
   type SaleRefund,
   type RefundStatus,
   type RefundReason,
@@ -33,7 +34,7 @@ export default function SalesRefunds() {
 
   const [refunds, setRefunds]         = useState<SaleRefund[]>(POS_REFUNDS);
   const [query, setQuery]             = useState("");
-  const [cashierFilter] = useState("");
+  const [cashierFilter, setCashierFilter] = useState("");
   const [statusFilter, setStatusFilter]   = useState<RefundStatus | "">("");
   const [reasonFilter, setReasonFilter]   = useState<RefundReason | "">("");
   const [detailTarget, setDetailTarget]   = useState<SaleRefund | null>(null);
@@ -103,6 +104,12 @@ export default function SalesRefunds() {
               fullWidth
             />
           </div>
+          <select className={styles.filterSelect} value={cashierFilter} onChange={(e) => setCashierFilter(e.target.value)}>
+            <option value="">{tc.filters.allCashiers ?? "All Cashiers"}</option>
+            {POS_CASHIERS.filter((c) => !c.isDeleted).map((c) => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
           <select className={styles.filterSelect} value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as RefundStatus | "")}>
             <option value="">{tc.filters.allStatuses}</option>
             {(["pending", "approved", "completed", "rejected"] as RefundStatus[]).map((s) => (
@@ -271,10 +278,12 @@ function NewRefundModal({
 }) {
   const { t } = useSettings();
   const tc = t.salesRefunds;
-  const [originalTxId, setOriginalTxId] = useState("");
-  const [reason, setReason] = useState<RefundReason>("defective");
-  const [cashierName] = useState("Ahmad Qasim");
-  const [cashierId]   = useState("CSH-01");
+  const activeCashiers = POS_CASHIERS.filter((c) => !c.isDeleted);
+  const [originalTxId, setOriginalTxId]   = useState("");
+  const [reason, setReason]               = useState<RefundReason>("defective");
+  const [cashierId, setCashierId]         = useState(activeCashiers[0]?.id ?? "");
+
+  const selectedCashier = activeCashiers.find((c) => c.id === cashierId);
 
   return (
     <Modal
@@ -285,7 +294,18 @@ function NewRefundModal({
       footer={
         <div className={styles.modalFooter}>
           <Button variant="ghost" onClick={onClose}>{t.common.cancel}</Button>
-          <Button variant="primary" onClick={() => onSave({ originalTxId, reason, cashierId, cashierName, date: new Date().toISOString().slice(0, 10), refundAmount: 0 })} disabled={!originalTxId.trim()}>
+          <Button
+            variant="primary"
+            onClick={() => onSave({
+              originalTxId,
+              reason,
+              cashierId,
+              cashierName: selectedCashier?.name ?? "",
+              date: new Date().toISOString().slice(0, 10),
+              refundAmount: 0,
+            })}
+            disabled={!originalTxId.trim() || !cashierId}
+          >
             {tc.form.submit}
           </Button>
         </div>
@@ -294,6 +314,12 @@ function NewRefundModal({
       <div className={styles.formGrid}>
         <label className={styles.formLabel}>{tc.form.originalTx}</label>
         <input className={styles.formInput} value={originalTxId} onChange={(e) => setOriginalTxId(e.target.value)} placeholder="TXN-03000" />
+        <label className={styles.formLabel}>{tc.cols.cashier}</label>
+        <select className={styles.filterSelect} value={cashierId} onChange={(e) => setCashierId(e.target.value)}>
+          {activeCashiers.map((c) => (
+            <option key={c.id} value={c.id}>{c.name}</option>
+          ))}
+        </select>
         <label className={styles.formLabel}>{tc.form.reason}</label>
         <select className={styles.filterSelect} value={reason} onChange={(e) => setReason(e.target.value as RefundReason)}>
           {(["defective", "wrong_item", "customer_change", "overcharge", "other"] as RefundReason[]).map((r) => (

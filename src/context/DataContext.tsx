@@ -1,7 +1,9 @@
 import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
 import type {
   Customer,
+  Department,
   Employee,
+  Expense,
   Invoice,
   InvoiceItem,
   Payment,
@@ -11,7 +13,9 @@ import type {
 } from "../data/types";
 import {
   getCustomers, saveCustomers,
+  getDepartments, saveDepartments,
   getEmployees, saveEmployees,
+  getExpenses, saveExpenses,
   getInvoiceItems,
   getInvoices, saveInvoices,
   getPayments, savePayments,
@@ -21,10 +25,12 @@ import {
   getSuppliers, saveSuppliers,
 } from "../data/storage";
 import { isSuccessfulPaymentStatus, roundMoney } from "../data/relations";
+import { POS_CASHIERS, type PosCashier } from "../data/posMock";
 
 interface DataContextValue {
   // Raw entity lists
   customers: Customer[];
+  departments: Department[];
   products: Product[];
   suppliers: Supplier[];
   invoices: Invoice[];
@@ -32,6 +38,7 @@ interface DataContextValue {
   payments: Payment[];
   employees: Employee[];
   purchases: Purchase[];
+  expenses: Expense[];
   productCategories: string[];
 
   // Customer CRUD
@@ -60,6 +67,20 @@ interface DataContextValue {
   updateEmployee: (e: Employee) => void;
   deleteEmployee: (id: string) => void;
 
+  // Cashier CRUD
+  cashiers: PosCashier[];
+  addCashier: (c: PosCashier) => void;
+  updateCashier: (c: PosCashier) => void;
+
+  // Department CRUD
+  addDepartment: (d: Department) => void;
+  updateDepartment: (d: Department) => void;
+
+  // Expense CRUD
+  addExpense: (e: Expense) => void;
+  updateExpense: (e: Expense) => void;
+  deleteExpense: (id: string) => void;
+
   // Invoice CRUD
   addInvoice: (inv: Invoice) => void;
   updateInvoice: (inv: Invoice) => void;
@@ -75,6 +96,10 @@ interface DataContextValue {
   totalPaymentsCount: number;
   payablesDue: number;
   headcount: number;
+
+  // Cross-entity derived maps
+  customerBalanceMap: Map<string, number>;
+  customerLastOrderMap: Map<string, string>;
 }
 
 const DataContext = createContext<DataContextValue | null>(null);
@@ -89,6 +114,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [payments, setPayments] = useState<Payment[]>(() => getPayments());
   const [employees, setEmployees] = useState<Employee[]>(() => getEmployees());
   const [purchases, setPurchases] = useState<Purchase[]>(() => getPurchases());
+  const [expenses, setExpenses] = useState<Expense[]>(() => getExpenses());
+  const [departments, setDepartments] = useState<Department[]>(() => getDepartments());
+  const [cashiers, setCashiers] = useState<PosCashier[]>(() => POS_CASHIERS);
 
   // ── Customer CRUD ────────────────────────────────────────────────────────────
 
@@ -195,6 +223,54 @@ export function DataProvider({ children }: { children: ReactNode }) {
     const next = employees.map((x) => (x.id === id ? { ...x, isDeleted: true } : x));
     setEmployees(next);
     saveEmployees(next);
+    // cascade: deactivate any cashier linked to this employee
+    setCashiers((prev) =>
+      prev.map((c) => (c.employeeId === id && c.status === "active" ? { ...c, status: "inactive" as const } : c))
+    );
+  }
+
+  // ── Cashier CRUD ─────────────────────────────────────────────────────────────
+
+  function addCashier(c: PosCashier) {
+    setCashiers((prev) => [...prev, c]);
+  }
+
+  function updateCashier(c: PosCashier) {
+    setCashiers((prev) => prev.map((x) => (x.id === c.id ? c : x)));
+  }
+
+  // ── Department CRUD ──────────────────────────────────────────────────────────
+
+  function addDepartment(d: Department) {
+    const next = [...departments, d];
+    setDepartments(next);
+    saveDepartments(next);
+  }
+
+  function updateDepartment(d: Department) {
+    const next = departments.map((x) => (x.id === d.id ? d : x));
+    setDepartments(next);
+    saveDepartments(next);
+  }
+
+  // ── Expense CRUD ─────────────────────────────────────────────────────────────
+
+  function addExpense(e: Expense) {
+    const next = [...expenses, e];
+    setExpenses(next);
+    saveExpenses(next);
+  }
+
+  function updateExpense(e: Expense) {
+    const next = expenses.map((x) => (x.id === e.id ? e : x));
+    setExpenses(next);
+    saveExpenses(next);
+  }
+
+  function deleteExpense(id: string) {
+    const next = expenses.map((x) => (x.id === id ? { ...x, isDeleted: true } : x));
+    setExpenses(next);
+    saveExpenses(next);
   }
 
   // ── Invoice CRUD ─────────────────────────────────────────────────────────────
@@ -293,8 +369,28 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const headcount = useMemo(() => activeEmployees.length, [activeEmployees]);
 
+  const customerBalanceMap = useMemo(() => {
+    const map = new Map<string, number>();
+    invoices.forEach((inv) => {
+      if (inv.status === "Paid") return;
+      const amount = Number(inv.remainingAmount ?? inv.amount ?? 0);
+      map.set(inv.customerId, (map.get(inv.customerId) ?? 0) + amount);
+    });
+    return map;
+  }, [invoices]);
+
+  const customerLastOrderMap = useMemo(() => {
+    const map = new Map<string, string>();
+    invoices.forEach((inv) => {
+      const existing = map.get(inv.customerId);
+      if (!existing || inv.date > existing) map.set(inv.customerId, inv.date);
+    });
+    return map;
+  }, [invoices]);
+
   const value: DataContextValue = {
     customers,
+    departments,
     products,
     suppliers,
     invoices,
@@ -302,12 +398,16 @@ export function DataProvider({ children }: { children: ReactNode }) {
     payments,
     employees,
     purchases,
+    expenses,
     productCategories,
     addCustomer, updateCustomer, deleteCustomer,
+    addDepartment, updateDepartment,
     addProduct, updateProduct, deleteProduct, setProductCategories,
     addSupplier, updateSupplier, deleteSupplier,
     addPayment, updatePayment, deletePayment,
     addEmployee, updateEmployee, deleteEmployee,
+    cashiers, addCashier, updateCashier,
+    addExpense, updateExpense, deleteExpense,
     addInvoice, updateInvoice,
     totalRevenue,
     receivablesTotal,
@@ -319,6 +419,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
     totalPaymentsCount,
     payablesDue,
     headcount,
+    customerBalanceMap,
+    customerLastOrderMap,
   };
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;

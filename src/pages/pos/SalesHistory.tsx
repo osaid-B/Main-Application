@@ -9,6 +9,7 @@ import { Button } from "../../components/ui/Button";
 import { Modal } from "../../components/ui/Modal";
 import { useSettings } from "../../context/SettingsContext";
 import {
+  POS_CASHIERS,
   POS_SALES_HISTORY,
   type SaleTransaction,
   type SaleStatus,
@@ -25,10 +26,9 @@ const METHOD_VARIANT = {
   cash: "success", card: "info", wallet: "neutral", split: "warning",
 } as const;
 
-const CASHIER_NAMES = ["Ahmad Qasim", "Mona Ibrahim", "Laila Mansour", "Karim Nasser", "Hana Saeed"];
-const CASHIER_IDS   = ["CSH-01", "CSH-02", "CSH-03", "CSH-04", "CSH-05"];
+const ACTIVE_CASHIERS = POS_CASHIERS.filter((c) => !c.isDeleted);
 
-const TODAY = "2026-05-27";
+const TODAY = new Date().toISOString().slice(0, 10);
 
 export default function SalesHistory() {
   const { t, formatCurrency } = useSettings();
@@ -102,7 +102,7 @@ export default function SalesHistory() {
           </div>
           <select className={styles.filterSelect} value={cashierFilter} onChange={(e) => setCashierFilter(e.target.value)}>
             <option value="">{tc.filters.allCashiers}</option>
-            {CASHIER_IDS.map((id, i) => <option key={id} value={id}>{CASHIER_NAMES[i]}</option>)}
+            {ACTIVE_CASHIERS.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
           <select className={styles.filterSelect} value={methodFilter} onChange={(e) => setMethodFilter(e.target.value as typeof methodFilter)}>
             <option value="">{tc.filters.allMethods}</option>

@@ -10,8 +10,9 @@ import { useSettings } from "../../context/SettingsContext";
 import { Skeleton } from "../../components/ui/Skeleton";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { useFactory } from "../../context/FactoryContext";
+import { useToast } from "../../components/ui/Toast";
 import { useLoadingDelay } from "../../hooks/useLoadingDelay";
-import type { ImportOrderStatus } from "../../data/types";
+import type { ImportOrder, ImportOrderStatus } from "../../data/types";
 import styles from "./factory.module.css";
 
 const STATUS_VARIANT: Record<ImportOrderStatus, "info" | "warning" | "neutral" | "success" | "danger"> = {
@@ -25,11 +26,13 @@ const STATUS_VARIANT: Record<ImportOrderStatus, "info" | "warning" | "neutral" |
 export default function FactoryImports() {
   const { t, formatCurrency } = useSettings();
   const tc = t.factory.imports;
-  const { importOrders: IMPORT_ORDERS } = useFactory();
+  const { importOrders: IMPORT_ORDERS, addImportOrder, receiveImport } = useFactory();
+  const { toast } = useToast();
 
   const [query, setQuery]         = useState("");
   const [statusFilter, setFilter] = useState<ImportOrderStatus | "">("");
-  const [detailTarget, setDetail] = useState<typeof IMPORT_ORDERS[0] | null>(null);
+  const [detailTarget, setDetail] = useState<ImportOrder | null>(null);
+  const [showNewForm, setShowNewForm] = useState(false);
 
   const isLoading = useLoadingDelay();
 
@@ -51,7 +54,7 @@ export default function FactoryImports() {
             <h1 className={styles.title}>{tc.pageTitle}</h1>
             <p className={styles.subtitle}>{tc.pageSubtitle}</p>
           </div>
-          <Button variant="primary" size="sm" leftIcon={<Plus size={14} />}>{tc.newImport}</Button>
+          <Button variant="primary" size="sm" leftIcon={<Plus size={14} />} onClick={() => setShowNewForm(true)}>{tc.newImport}</Button>
         </header>
 
         <div className={styles.filterBar}>
@@ -101,8 +104,20 @@ export default function FactoryImports() {
                     <td className={styles.mono}>{imp.estimatedArrival}</td>
                     <td><Badge variant={STATUS_VARIANT[imp.status]} size="sm">{tc.status[imp.status]}</Badge></td>
                     <td className={styles.mono} style={{ fontSize: 11, color: "var(--app-text-muted)" }}>{imp.customsRef ?? "—"}</td>
-                    <td>
+                    <td style={{ display: "flex", gap: 6 }}>
                       <button type="button" className={styles.actionBtn} onClick={() => setDetail(imp)}>{tc.actions.view}</button>
+                      {imp.status !== "received" && imp.status !== "cancelled" && (
+                        <button
+                          type="button"
+                          className={styles.actionBtn}
+                          onClick={() => {
+                            receiveImport(imp.id);
+                            toast(tc.actions.received ?? "Received into stock", { type: "success" });
+                          }}
+                        >
+                          {tc.actions.receive ?? "Receive"}
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -112,9 +127,31 @@ export default function FactoryImports() {
         </div>
       </Stack>
 
+      {showNewForm && (
+        <NewImportModal
+          onSave={(order) => {
+            addImportOrder(order);
+            setShowNewForm(false);
+            toast(tc.newImport + " ✓", { type: "success" });
+          }}
+          onClose={() => setShowNewForm(false)}
+        />
+      )}
+
       {detailTarget && (
         <Modal isOpen onClose={() => setDetail(null)} title={`${tc.drawer.title} — ${detailTarget.id}`} size="md"
-          footer={<Button variant="secondary" onClick={() => setDetail(null)}>{tc.drawer.close}</Button>}>
+          footer={
+            <div style={{ display: "flex", gap: 8 }}>
+              {detailTarget.status !== "received" && detailTarget.status !== "cancelled" && (
+                <Button variant="primary" onClick={() => {
+                  receiveImport(detailTarget.id);
+                  toast(tc.actions.received ?? "Received into stock", { type: "success" });
+                  setDetail(null);
+                }}>{tc.actions.receive ?? "Receive into Stock"}</Button>
+              )}
+              <Button variant="secondary" onClick={() => setDetail(null)}>{tc.drawer.close}</Button>
+            </div>
+          }>
           <div className={styles.drawerMeta}>
             <span>{tc.cols.supplier}</span><span>{detailTarget.supplierName}</span>
             <span>{tc.cols.origin}</span><span>{detailTarget.origin}</span>
@@ -160,5 +197,69 @@ export default function FactoryImports() {
         </Modal>
       )}
     </Container>
+  );
+}
+
+function NewImportModal({ onSave, onClose }: { onSave: (order: ImportOrder) => void; onClose: () => void }) {
+  const { t } = useSettings();
+  const tc = t.factory.imports;
+  const today = new Date().toISOString().slice(0, 10);
+
+  const [supplier, setSupplier]   = useState("");
+  const [origin, setOrigin]       = useState("");
+  const [currency]                = useState("USD");
+  const [orderDate, setOrderDate] = useState(today);
+  const [eta, setEta]             = useState("");
+  const [notes, setNotes]         = useState("");
+
+  function handleSave() {
+    if (!supplier.trim() || !origin.trim() || !eta) return;
+    const seq = String(Date.now()).slice(-4);
+    const order: ImportOrder = {
+      id: `IMP-${seq}`,
+      supplierName: supplier.trim(),
+      origin: origin.trim(),
+      currency,
+      orderDate,
+      estimatedArrival: eta,
+      items: [],
+      totalValue: 0,
+      status: "ordered",
+      notes: notes.trim() || undefined,
+    };
+    onSave(order);
+  }
+
+  return (
+    <Modal
+      isOpen
+      onClose={onClose}
+      title={tc.form.title}
+      size="sm"
+      footer={
+        <div style={{ display: "flex", gap: "var(--space-2)", justifyContent: "flex-end" }}>
+          <Button variant="ghost" onClick={onClose}>{t.common.cancel}</Button>
+          <Button variant="primary" onClick={handleSave} disabled={!supplier.trim() || !origin.trim() || !eta}>
+            {tc.form.save}
+          </Button>
+        </div>
+      }
+    >
+      <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
+        <Input label={tc.form.supplier} value={supplier} onChange={(e) => setSupplier(e.target.value)} required />
+        <Input label={tc.form.origin} value={origin} onChange={(e) => setOrigin(e.target.value)} required />
+        <div style={{ display: "flex", gap: "var(--space-2)" }}>
+          <div style={{ flex: 1 }}>
+            <label style={{ display: "block", fontSize: 12, marginBottom: 4, color: "var(--app-text-muted)" }}>{tc.form.orderDate}</label>
+            <input type="date" value={orderDate} onChange={(e) => setOrderDate(e.target.value)} style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--app-border)", borderRadius: "var(--radius-sm)", background: "var(--app-surface)", color: "var(--app-text)", fontSize: 13 }} />
+          </div>
+          <div style={{ flex: 1 }}>
+            <label style={{ display: "block", fontSize: 12, marginBottom: 4, color: "var(--app-text-muted)" }}>{tc.form.eta}</label>
+            <input type="date" value={eta} onChange={(e) => setEta(e.target.value)} required style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--app-border)", borderRadius: "var(--radius-sm)", background: "var(--app-surface)", color: "var(--app-text)", fontSize: 13 }} />
+          </div>
+        </div>
+        <Input label={tc.form.notes} value={notes} onChange={(e) => setNotes(e.target.value)} />
+      </div>
+    </Modal>
   );
 }
