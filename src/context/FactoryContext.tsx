@@ -1,4 +1,6 @@
-import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
+import { useRealtimeSubscriptions } from "../hooks/useRealtimeSubscriptions";
+import type { FactoryOrderRow } from "../types/database";
 import type {
   ProductionOrder,
   ProductionOrderStatus,
@@ -71,6 +73,26 @@ export function FactoryProvider({ children }: { children: ReactNode }) {
   const [importOrders, setImportOrders]   = useState<ImportOrder[]>(IMPORT_ORDERS);
   const [batches]                         = useState<ProductionBatch[]>(PRODUCTION_BATCHES);
   const [costingEntries]                  = useState<CostingEntry[]>(COSTING_ENTRIES);
+
+  // ── Realtime: keep factory orders in sync with DB changes ────────────────────
+  const handleFactoryOrderChange = useCallback((row: FactoryOrderRow) => {
+    setFactoryOrders((prev) => {
+      const exists = prev.find((o) => o.id === row.id);
+      const updated: ProductionOrder = {
+        id: row.id,
+        productId: row.product_id,
+        quantity: row.quantity,
+        startDate: row.start_date,
+        dueDate: row.due_date,
+        status: row.status,
+        bom: [],
+      };
+      if (exists) return prev.map((o) => (o.id === row.id ? { ...o, ...updated } : o));
+      return [...prev, updated];
+    });
+  }, []);
+
+  useRealtimeSubscriptions({ onFactoryOrderChange: handleFactoryOrderChange });
 
   function updateOrderStatus(id: string, status: ProductionOrderStatus): string[] {
     const order = factoryOrders.find((o) => o.id === id);
