@@ -10,6 +10,7 @@ import { Modal } from "../../components/ui/Modal";
 import { useSettings } from "../../context/SettingsContext";
 import {
   POS_RECEIPTS,
+  POS_CASHIERS,
   type PosReceipt,
   type PosReceiptStatus,
   type PosPaymentMethod,
@@ -32,14 +33,7 @@ const METHOD_VARIANT: Record<PosPaymentMethod, "info" | "success" | "neutral" | 
 const TODAY     = "2026-05-26";
 const YESTERDAY = "2026-05-25";
 
-const CASHIER_IDS = ["CSH-01", "CSH-02", "CSH-03", "CSH-04", "CSH-05"] as const;
-const CASHIER_NAMES: Record<string, string> = {
-  "CSH-01": "Ahmad Qasim",
-  "CSH-02": "Mona Ibrahim",
-  "CSH-03": "Laila Mansour",
-  "CSH-04": "Karim Nasser",
-  "CSH-05": "Hana Saeed",
-};
+const ACTIVE_CASHIERS = POS_CASHIERS.filter((c) => !c.isDeleted);
 
 export default function Receipts() {
   const { t, formatCurrency } = useSettings();
@@ -94,7 +88,24 @@ export default function Receipts() {
             <h1 className={styles.title}>{tc.pageTitle}</h1>
             <p className={styles.subtitle}>{tc.pageSubtitle}</p>
           </div>
-          <Button variant="secondary" size="sm">{tc.export}</Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => {
+              const csv = [
+                ["ID", "Date", "Cashier", "Items", "Total", "Method", "Status"],
+                ...filtered.map((r) => [r.id, r.date, r.cashierName, String(r.itemsCount), String(r.total), r.paymentMethod, r.status]),
+              ].map((row) => row.join(",")).join("\n");
+              const a = Object.assign(document.createElement("a"), {
+                href: URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8;" })),
+                download: `receipts-${new Date().toISOString().slice(0, 10)}.csv`,
+              });
+              a.click();
+              URL.revokeObjectURL(a.href);
+            }}
+          >
+            {tc.export}
+          </Button>
         </header>
 
         <Grid cols={4} gap="md" responsive>
@@ -120,8 +131,8 @@ export default function Receipts() {
               aria-label={tc.filters.cashier}
             >
               <option value="">{tc.filters.allCashiers}</option>
-              {CASHIER_IDS.map((id) => (
-                <option key={id} value={id}>{CASHIER_NAMES[id]}</option>
+              {ACTIVE_CASHIERS.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
               ))}
             </select>
             <select
