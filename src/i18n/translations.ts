@@ -512,6 +512,7 @@ export const translations = {
         view: "View",
         edit: "Edit",
         delete: "Delete",
+        loyalty: "Loyalty Profile",
       },
       ariaMore: "More actions",
       status: {
@@ -3242,6 +3243,7 @@ export const translations = {
         view: "عرض",
         edit: "تعديل",
         delete: "حذف",
+        loyalty: "ملف الولاء",
       },
       ariaMore: "مزيد من الإجراءات",
       status: {

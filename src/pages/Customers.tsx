@@ -33,7 +33,7 @@ function formatBalance(n: number, currency: string): string {
 
 export default function Customers() {
   const navigate = useNavigate();
-  const { customers, deleteCustomer } = useData();
+  const { customers, deleteCustomer, customerBalanceMap, customerLastOrderMap } = useData();
   const { t } = useSettings();
   const [query, setQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
@@ -68,8 +68,8 @@ export default function Customers() {
     total: active.length,
     vip: active.filter((c) => c.classification === "vip").length,
     active: active.filter((c) => (c.status ?? "active") === "active").length,
-    withBalance: active.filter((c) => (c.outstandingBalance ?? 0) > 0).length,
-  }), [active]);
+    withBalance: active.filter((c) => (customerBalanceMap.get(c.id) ?? c.outstandingBalance ?? 0) > 0).length,
+  }), [active, customerBalanceMap]);
 
   return (
     <Container maxWidth="full" padding="md">
@@ -182,9 +182,12 @@ export default function Customers() {
                 <CustomerRow
                   key={c.id}
                   c={c}
+                  liveBalance={customerBalanceMap.get(c.id)}
+                  liveLastOrder={customerLastOrderMap.get(c.id)}
                   onView={() => navigate(`/customers/${c.id}`)}
                   onEdit={() => navigate(`/customers/${c.id}/edit`)}
                   onDelete={() => deleteCustomer(c.id)}
+                  onLoyalty={() => navigate(`/pos/loyalty/profile?id=${c.id}`)}
                 />
               ))}
               {filtered.length === 0 && (
@@ -215,14 +218,20 @@ function StatPill({ label, value, tone }: { label: string; value: string; tone: 
 
 function CustomerRow({
   c,
+  liveBalance,
+  liveLastOrder,
   onView,
   onEdit,
   onDelete,
+  onLoyalty,
 }: {
   c: Customer;
+  liveBalance?: number;
+  liveLastOrder?: string;
   onView: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  onLoyalty: () => void;
 }) {
   const { t } = useSettings();
   const status = c.status ?? "active";
@@ -232,7 +241,7 @@ function CustomerRow({
     ? (status as "active" | "inactive" | "archived")
     : "active";
   const statusColor = statusNorm === "active" ? "green" : statusNorm === "inactive" ? "gray" : "red";
-  const balance = c.outstandingBalance ?? 0;
+  const balance = liveBalance ?? c.outstandingBalance ?? 0;
   const limit = c.creditLimit ?? 0;
   const balanceTone = balance > limit * 0.7 ? "danger" : balance > 0 ? "warning" : "neutral";
   const alerts = c.alerts ?? [];
@@ -296,7 +305,7 @@ function CustomerRow({
         </span>
       </td>
       <td className={styles.timeCell}>
-        {c.lastOrderDate ? relativeDate(c.lastOrderDate) : c.joinedAt ? relativeDate(c.joinedAt) : "—"}
+        {(liveLastOrder ?? c.lastOrderDate) ? relativeDate((liveLastOrder ?? c.lastOrderDate)!) : c.joinedAt ? relativeDate(c.joinedAt) : "—"}
       </td>
       <td>
         <span className={`${styles.statusPill} ${styles[`statusPill_${statusNorm}`]}`}>
@@ -332,6 +341,14 @@ function CustomerRow({
                 onClick={() => { setMenuOpen(false); onEdit(); }}
               >
                 <Pencil size={12} aria-hidden /> {t.customers.rowMenu.edit}
+              </button>
+              <button
+                type="button"
+                className={styles.rowMenuItem}
+                role="menuitem"
+                onClick={() => { setMenuOpen(false); onLoyalty(); }}
+              >
+                {t.customers.rowMenu.loyalty ?? "Loyalty Profile"}
               </button>
               <button
                 type="button"

@@ -90,6 +90,10 @@ interface DataContextValue {
   totalPaymentsCount: number;
   payablesDue: number;
   headcount: number;
+
+  // Cross-entity derived maps
+  customerBalanceMap: Map<string, number>;
+  customerLastOrderMap: Map<string, string>;
 }
 
 const DataContext = createContext<DataContextValue | null>(null);
@@ -344,6 +348,25 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const headcount = useMemo(() => activeEmployees.length, [activeEmployees]);
 
+  const customerBalanceMap = useMemo(() => {
+    const map = new Map<string, number>();
+    invoices.forEach((inv) => {
+      if (inv.status === "Paid") return;
+      const amount = Number(inv.remainingAmount ?? inv.amount ?? 0);
+      map.set(inv.customerId, (map.get(inv.customerId) ?? 0) + amount);
+    });
+    return map;
+  }, [invoices]);
+
+  const customerLastOrderMap = useMemo(() => {
+    const map = new Map<string, string>();
+    invoices.forEach((inv) => {
+      const existing = map.get(inv.customerId);
+      if (!existing || inv.date > existing) map.set(inv.customerId, inv.date);
+    });
+    return map;
+  }, [invoices]);
+
   const value: DataContextValue = {
     customers,
     departments,
@@ -374,6 +397,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
     totalPaymentsCount,
     payablesDue,
     headcount,
+    customerBalanceMap,
+    customerLastOrderMap,
   };
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;

@@ -25,9 +25,9 @@ import {
 import {
   getCustomers,
   getEmployees,
-  getProducts,
   getSuppliers,
 } from "../data/storage";
+import { useData } from "../context/DataContext";
 import type { Customer, Employee, Product, Supplier } from "../data/types";
 
 type TabKey = "customer" | "supplier" | "internal";
@@ -568,6 +568,7 @@ function seedInvoices(
 
 export default function Invoices() {
   const { t } = useSettings();
+  const { products } = useData();
 
   const TAB_CONFIG: Record<TabKey, { label: string; tableTitle: string; icon: typeof Users }> = {
     customer: { label: t.invoices.tabs.customer, tableTitle: t.invoices.tabs.customer, icon: Users },
@@ -577,7 +578,6 @@ export default function Invoices() {
 
   const [customers] = useState<Customer[]>(() => getCustomers());
   const [suppliers] = useState<Supplier[]>(() => getSuppliers());
-  const [products] = useState<Product[]>(() => getProducts());
   const [employees] = useState<Employee[]>(() => getEmployees());
 
   const [records, setRecords] = useState<InvoiceRecord[]>(() => {
