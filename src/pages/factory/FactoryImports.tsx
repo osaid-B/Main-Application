@@ -7,8 +7,8 @@ import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { Modal } from "../../components/ui/Modal";
 import { useSettings } from "../../context/SettingsContext";
+import { useFactory } from "../../context/FactoryContext";
 import type { ImportOrderStatus } from "../../data/types";
-import { IMPORT_ORDERS } from "../../data/factoryMock";
 import styles from "./factory.module.css";
 
 const STATUS_VARIANT: Record<ImportOrderStatus, "info" | "warning" | "neutral" | "success" | "danger"> = {
@@ -22,6 +22,7 @@ const STATUS_VARIANT: Record<ImportOrderStatus, "info" | "warning" | "neutral" |
 export default function FactoryImports() {
   const { t, formatCurrency } = useSettings();
   const tc = t.factory.imports;
+  const { importOrders: IMPORT_ORDERS } = useFactory();
 
   const [query, setQuery]         = useState("");
   const [statusFilter, setFilter] = useState<ImportOrderStatus | "">("");
@@ -34,7 +35,7 @@ export default function FactoryImports() {
       const q = query.toLowerCase();
       return imp.id.toLowerCase().includes(q) || imp.supplierName.toLowerCase().includes(q);
     });
-  }, [query, statusFilter]);
+  }, [IMPORT_ORDERS, query, statusFilter]);
 
   return (
     <Container maxWidth="full" padding="md">

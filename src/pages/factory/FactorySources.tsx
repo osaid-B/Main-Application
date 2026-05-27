@@ -6,12 +6,13 @@ import { Grid } from "../../components/layout/Grid";
 import { Input } from "../../components/ui/Input";
 import { Badge } from "../../components/ui/Badge";
 import { useSettings } from "../../context/SettingsContext";
-import { SOURCE_RECORDS } from "../../data/factoryMock";
+import { useFactory } from "../../context/FactoryContext";
 import styles from "./factory.module.css";
 
 export default function FactorySources() {
   const { t, formatCurrency } = useSettings();
   const tc = t.factory.sources;
+  const { sourceRecords: SOURCE_RECORDS } = useFactory();
 
   const [query, setQuery]         = useState("");
   const [originFilter, setOrig]   = useState<"local" | "imported" | "">("");
@@ -27,7 +28,7 @@ export default function FactorySources() {
       const q = query.toLowerCase();
       return r.materialName.toLowerCase().includes(q) || r.supplier.toLowerCase().includes(q) || r.materialNameAr.includes(q);
     });
-  }, [query, originFilter, catFilter]);
+  }, [SOURCE_RECORDS, query, originFilter, catFilter]);
 
   const totalValue    = SOURCE_RECORDS.reduce((s, r) => s + r.totalValue, 0);
   const localValue    = SOURCE_RECORDS.filter((r) => r.origin === "local").reduce((s, r) => s + r.totalValue, 0);

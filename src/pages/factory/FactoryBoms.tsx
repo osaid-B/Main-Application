@@ -6,12 +6,13 @@ import { Input } from "../../components/ui/Input";
 import { Button } from "../../components/ui/Button";
 import { Modal } from "../../components/ui/Modal";
 import { useSettings } from "../../context/SettingsContext";
-import { FACTORY_BOMS } from "../../data/factoryMock";
+import { useFactory } from "../../context/FactoryContext";
 import styles from "./factory.module.css";
 
 export default function FactoryBoms() {
   const { t, formatCurrency } = useSettings();
   const tc = t.factory.boms;
+  const { boms: FACTORY_BOMS } = useFactory();
 
   const [query, setQuery]         = useState("");
   const [detailTarget, setDetail] = useState<typeof FACTORY_BOMS[0] | null>(null);
@@ -24,7 +25,7 @@ export default function FactoryBoms() {
       b.productName.toLowerCase().includes(q) ||
       b.productNameAr.includes(q)
     );
-  }, [query]);
+  }, [FACTORY_BOMS, query]);
 
   function totalStdCost(bom: typeof FACTORY_BOMS[0]) {
     return bom.lines.reduce((s, l) => s + l.quantity * l.unitCost, 0);

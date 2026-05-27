@@ -5,12 +5,13 @@ import { Stack } from "../../components/layout/Stack";
 import { Grid } from "../../components/layout/Grid";
 import { Input } from "../../components/ui/Input";
 import { useSettings } from "../../context/SettingsContext";
-import { COSTING_ENTRIES } from "../../data/factoryMock";
+import { useFactory } from "../../context/FactoryContext";
 import styles from "./factory.module.css";
 
 export default function FactoryCosting() {
   const { t, formatCurrency } = useSettings();
   const tc = t.factory.costing;
+  const { costingEntries: COSTING_ENTRIES } = useFactory();
 
   const [query, setQuery]           = useState("");
   const [periodFilter, setPeriod]   = useState("");
@@ -24,7 +25,7 @@ export default function FactoryCosting() {
       const q = query.toLowerCase();
       return e.productName.toLowerCase().includes(q) || e.productionOrderId.toLowerCase().includes(q);
     });
-  }, [query, periodFilter]);
+  }, [COSTING_ENTRIES, query, periodFilter]);
 
   const costedEntries = COSTING_ENTRIES.filter((e) => e.unitsProduced > 0);
   const totalCost     = costedEntries.reduce((s, e) => s + e.totalCost, 0);

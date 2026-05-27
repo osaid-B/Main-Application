@@ -5,8 +5,8 @@ import { Stack } from "../../components/layout/Stack";
 import { Input } from "../../components/ui/Input";
 import { Badge } from "../../components/ui/Badge";
 import { useSettings } from "../../context/SettingsContext";
+import { useFactory } from "../../context/FactoryContext";
 import type { BatchStatus, QcStatus } from "../../data/types";
-import { PRODUCTION_BATCHES } from "../../data/factoryMock";
 import styles from "./factory.module.css";
 
 const BATCH_STATUS_VARIANT: Record<BatchStatus, "success" | "info" | "danger" | "neutral"> = {
@@ -26,6 +26,7 @@ const QC_VARIANT: Record<QcStatus, "success" | "danger" | "warning" | "info"> = 
 export default function FactoryBatches() {
   const { t, formatCurrency } = useSettings();
   const tc = t.factory.batches;
+  const { batches: PRODUCTION_BATCHES } = useFactory();
 
   const [query, setQuery]         = useState("");
   const [statusFilter, setFilter] = useState<BatchStatus | "">("");
@@ -39,7 +40,7 @@ export default function FactoryBatches() {
       const q = query.toLowerCase();
       return b.id.toLowerCase().includes(q) || b.productName.toLowerCase().includes(q);
     });
-  }, [query, statusFilter, qcFilter]);
+  }, [PRODUCTION_BATCHES, query, statusFilter, qcFilter]);
 
   return (
     <Container maxWidth="full" padding="md">
