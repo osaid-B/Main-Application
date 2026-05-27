@@ -26,7 +26,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { Button } from "../components/ui/Button";
-import { getEmployees, saveEmployees } from "../data/storage";
+import { useData } from "../context/DataContext";
 import type {
   Employee,
   EmployeeAdvance,
@@ -1687,7 +1687,7 @@ function EmployeesSection({
 
 export default function Employees() {
   const { t } = useSettings();
-  const [employees, setEmployees] = useState<Employee[]>(() => getEmployees());
+  const { employees, addEmployee, updateEmployee, deleteEmployee: deleteEmployeeCtx } = useData();
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState<MainTab>("today");
   const [attendanceRange, setAttendanceRange] = useState<AttendanceRange>("today");
@@ -1706,7 +1706,6 @@ export default function Employees() {
   const [reportSortKey, setReportSortKey] = useState<ReportSortKey>("name");
   const [reportSortDirection, setReportSortDirection] = useState<ReportSortDirection>("asc");
 
-  useEffect(() => { saveEmployees(employees); }, [employees]);
 
   useEffect(() => {
     if (!toast) return;
@@ -1787,13 +1786,7 @@ export default function Employees() {
     if (Object.keys(errors).length > 0) return;
 
     if (editingEmployee) {
-      setEmployees((prev) =>
-        prev.map((emp) =>
-          emp.id === editingEmployee.id
-            ? { ...emp, name: form.name.trim(), phone: form.phone.trim(), workStart: form.workStart, workEnd: form.workEnd, salaryType: form.salaryType, hourlyRate: form.salaryType === "hourly" ? Number(form.hourlyRate) : undefined, fixedSalary: form.salaryType === "fixed" ? Number(form.fixedSalary) : undefined, notes: form.notes.trim() }
-            : emp
-        )
-      );
+      updateEmployee({ ...editingEmployee, name: form.name.trim(), phone: form.phone.trim(), workStart: form.workStart, workEnd: form.workEnd, salaryType: form.salaryType, hourlyRate: form.salaryType === "hourly" ? Number(form.hourlyRate) : undefined, fixedSalary: form.salaryType === "fixed" ? Number(form.fixedSalary) : undefined, notes: form.notes.trim() });
       resetFormState();
       setToast({ type: "success", message: t.employees.toast.updated });
       return;
@@ -1816,23 +1809,21 @@ export default function Employees() {
       isDeleted: false,
     };
 
-    setEmployees((prev) => [newEmployee, ...prev]);
+    addEmployee(newEmployee);
     resetFormState();
     setToast({ type: "success", message: t.employees.toast.created });
   };
 
   const handleApplyPresentToAll = () => {
-    setEmployees((prev) =>
-      prev.map((emp) =>
-        upsertDailyAttendance(emp, {
-          date: selectedAttendanceDate,
-          status: "present",
-          workedHours: getDefaultWorkedHours(emp, "present"),
-          advanceAmount: 0,
-          notes: "",
-        })
-      )
-    );
+    employees.forEach((emp) => {
+      updateEmployee(upsertDailyAttendance(emp, {
+        date: selectedAttendanceDate,
+        status: "present",
+        workedHours: getDefaultWorkedHours(emp, "present"),
+        advanceAmount: 0,
+        notes: "",
+      }));
+    });
     setToast({ type: "success", message: "Default present attendance applied to all employees." });
   };
 
@@ -1841,17 +1832,14 @@ export default function Employees() {
     date: string,
     payload: { status: DailyAttendanceStatus; workedHours: number; advanceAmount: number; notes?: string }
   ) => {
-    setEmployees((prev) =>
-      prev.map((emp) => {
-        if (emp.id !== employeeId) return emp;
-        const updated = upsertDailyAttendance(emp, { date, status: payload.status, workedHours: payload.workedHours, advanceAmount: payload.advanceAmount, notes: payload.notes?.trim() || undefined });
-        const nextAdvances = getEmployeeAdvances(updated).filter((item) => item.date !== date);
-        if (payload.advanceAmount > 0) {
-          nextAdvances.unshift({ id: `ADV-${employeeId}-${date}`, amount: payload.advanceAmount, date, notes: payload.notes?.trim() || "Daily attendance advance" });
-        }
-        return { ...updated, advances: nextAdvances, advance: nextAdvances.reduce((sum, item) => sum + Number(item.amount || 0), 0) };
-      })
-    );
+    const emp = employees.find((e) => e.id === employeeId);
+    if (!emp) return;
+    const updated = upsertDailyAttendance(emp, { date, status: payload.status, workedHours: payload.workedHours, advanceAmount: payload.advanceAmount, notes: payload.notes?.trim() || undefined });
+    const nextAdvances = getEmployeeAdvances(updated).filter((item) => item.date !== date);
+    if (payload.advanceAmount > 0) {
+      nextAdvances.unshift({ id: `ADV-${employeeId}-${date}`, amount: payload.advanceAmount, date, notes: payload.notes?.trim() || "Daily attendance advance" });
+    }
+    updateEmployee({ ...updated, advances: nextAdvances, advance: nextAdvances.reduce((sum, item) => sum + Number(item.amount || 0), 0) });
   };
 
   const handleUpdateEmployeeDay = (
@@ -2009,7 +1997,7 @@ export default function Employees() {
           onClose={() => setDeleteDialog(null)}
           onConfirm={() => {
             if (!deleteDialog || deleteDialog.confirmText !== DELETE_CONFIRMATION_CODE) return;
-            setEmployees((prev) => prev.filter((emp) => emp.id !== deleteDialog.employeeId));
+            deleteEmployeeCtx(deleteDialog.employeeId);
             setDeleteDialog(null);
             setToast({ type: "success", message: t.employees.toast.deleted });
           }}
