@@ -30,7 +30,7 @@ import {
 } from "../data/reportsMock";
 import styles from "./Reports.module.css";
 
-type TabId = "overview" | "sales" | "expenses" | "pl" | "custom";
+type TabId = "overview" | "sales" | "expenses" | "pl" | "custom" | "vat";
 
 // Previous month baseline for delta calculations
 const PREV = MONTHLY_FINANCIALS[MONTHLY_FINANCIALS.length - 2];
@@ -53,6 +53,7 @@ export default function Reports() {
     { id: "expenses",  label: tc.tabs.expenses   },
     { id: "pl",        label: tc.tabs.pl         },
     { id: "custom",    label: tc.tabs.custom     },
+    { id: "vat",       label: tc.tabs.vat        },
   ];
 
   const liveExpenses = useMemo(
@@ -180,6 +181,9 @@ export default function Reports() {
                 generated={generated}
                 setGenerated={setGenerated}
               />
+            )}
+            {tab === "vat" && (
+              <VatTab tc={tc} formatCurrency={formatCurrency} totalRevenue={totalRevenue} />
             )}
           </>
         )}
@@ -550,5 +554,101 @@ function Kpi({
         </span>
       )}
     </article>
+  );
+}
+
+
+/* ---------- VAT Report tab ---------- */
+function VatTab({
+  tc,
+  formatCurrency,
+  totalRevenue,
+}: {
+  tc: ReturnType<typeof useSettings>["t"]["reports"];
+  formatCurrency: (n: number) => string;
+  totalRevenue: number;
+}) {
+  const tv = tc.vat;
+  const VAT_RATE = 0.16;
+
+  // Synthetic quarterly data based on live totalRevenue
+  const quarters = [
+    { q: "Q1 2026", taxable: totalRevenue * 0.22, inputVat: totalRevenue * 0.022 },
+    { q: "Q2 2026", taxable: totalRevenue * 0.27, inputVat: totalRevenue * 0.028 },
+    { q: "Q3 2026", taxable: totalRevenue * 0.25, inputVat: totalRevenue * 0.025 },
+    { q: "Q4 2026", taxable: totalRevenue * 0.26, inputVat: totalRevenue * 0.026 },
+  ].map((r) => ({
+    ...r,
+    outputVat: r.taxable * VAT_RATE,
+    net: r.taxable * VAT_RATE - r.inputVat,
+  }));
+
+  const totals = quarters.reduce(
+    (acc, q) => ({
+      taxable: acc.taxable + q.taxable,
+      outputVat: acc.outputVat + q.outputVat,
+      inputVat: acc.inputVat + q.inputVat,
+      net: acc.net + q.net,
+    }),
+    { taxable: 0, outputVat: 0, inputVat: 0, net: 0 }
+  );
+
+  return (
+    <Stack gap="lg">
+      <div className={styles.chartCard}>
+        <div className={styles.chartTitle}>{tv.title}</div>
+        <p style={{ fontSize: 13, color: "var(--app-text-muted)", marginBottom: 16 }}>{tv.subtitle}</p>
+
+        {/* KPI row */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12, marginBottom: 24 }}>
+          {[
+            { label: tv.taxableRevenue, value: formatCurrency(totals.taxable) },
+            { label: tv.vatCollected,   value: formatCurrency(totals.outputVat) },
+            { label: tv.vatPaid,        value: formatCurrency(totals.inputVat) },
+            { label: tv.vatOwed,        value: formatCurrency(totals.net) },
+          ].map((kpi) => (
+            <div key={kpi.label} style={{ padding: "12px 16px", background: "var(--app-subtle)", borderRadius: "var(--app-radius-md)" }}>
+              <span style={{ fontSize: 12, color: "var(--app-text-muted)", display: "block" }}>{kpi.label}</span>
+              <strong style={{ fontSize: 18, color: "var(--app-text)" }}>{kpi.value}</strong>
+            </div>
+          ))}
+        </div>
+
+        {/* Quarterly table */}
+        <div className={styles.tableWrap}>
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                <th>{tv.cols.period}</th>
+                <th className={styles.numEnd}>{tv.cols.taxable}</th>
+                <th className={styles.numEnd}>{tv.cols.outputVat}</th>
+                <th className={styles.numEnd}>{tv.cols.inputVat}</th>
+                <th className={styles.numEnd}>{tv.cols.net}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {quarters.map((q) => (
+                <tr key={q.q}>
+                  <td>{q.q}</td>
+                  <td className={styles.numEnd}>{formatCurrency(q.taxable)}</td>
+                  <td className={styles.numEnd}>{formatCurrency(q.outputVat)}</td>
+                  <td className={styles.numEnd}>{formatCurrency(q.inputVat)}</td>
+                  <td className={styles.numEnd} style={{ fontWeight: 600, color: q.net > 0 ? "var(--app-danger)" : "var(--app-success)" }}>
+                    {formatCurrency(q.net)}
+                  </td>
+                </tr>
+              ))}
+              <tr style={{ fontWeight: 700, borderTop: "2px solid var(--app-border)" }}>
+                <td>Total</td>
+                <td className={styles.numEnd}>{formatCurrency(totals.taxable)}</td>
+                <td className={styles.numEnd}>{formatCurrency(totals.outputVat)}</td>
+                <td className={styles.numEnd}>{formatCurrency(totals.inputVat)}</td>
+                <td className={styles.numEnd} style={{ color: "var(--app-danger)" }}>{formatCurrency(totals.net)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </Stack>
   );
 }
