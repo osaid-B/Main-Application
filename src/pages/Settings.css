@@ -254,3 +254,36 @@
   padding: 1px 6px;
   border-radius: 4px;
 }
+
+/* Local (Palestinian) settings */
+.settings-local-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-5);
+  padding-top: var(--app-space-4);
+}
+.settings-local-field { display: flex; flex-direction: column; gap: var(--app-space-2); }
+.settings-local-field--full { grid-column: 1 / -1; }
+.settings-local-label { font-size: 13px; font-weight: 500; color: var(--app-text-secondary); }
+.settings-option-list--inline { flex-direction: row; flex-wrap: wrap; }
+.settings-option-card--sm { padding: var(--app-space-2) var(--app-space-3) !important; }
+.settings-vat-row { display: flex; align-items: center; gap: var(--app-space-2); }
+.settings-vat-input {
+  width: 80px;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-sm);
+  padding: var(--app-space-1) var(--app-space-2);
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+  background: var(--app-surface);
+  color: var(--app-text);
+}
+.settings-vat-pct { font-size: 16px; font-weight: 600; color: var(--app-text-secondary); }
+.settings-vat-toggle-label {
+  display: flex;
+  align-items: center;
+  gap: var(--app-space-2);
+  cursor: pointer;
+  font-size: 14px;
+}

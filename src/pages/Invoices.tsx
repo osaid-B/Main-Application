@@ -65,6 +65,9 @@ type InvoiceRecord = {
   currency: string;
   status: InvoiceStatus;
   paymentMethod: PaymentMethod;
+  subtotal: number;
+  vatRate: number;
+  vatAmount: number;
   totalAmount: number;
   paidAmount: number;
   remainingAmount: number;
@@ -95,6 +98,8 @@ type InvoiceFormState = {
   quantity: string;
   unitPrice: string;
   paidAmount: string;
+  vatEnabled: boolean;
+  vatRate: string;
   notes: string;
   linkedRecord: string;
   department: string;
@@ -141,6 +146,8 @@ const EMPTY_FORM: InvoiceFormState = {
   quantity: "1",
   unitPrice: "0",
   paidAmount: "0",
+  vatEnabled: true,
+  vatRate: "16",
   notes: "",
   linkedRecord: "",
   department: "",
@@ -256,6 +263,9 @@ function buildLinkedRecord(type: TabKey, invoiceId: string) {
 }
 
 function normalizeInvoiceRecord(invoice: InvoiceRecord): InvoiceRecord {
+  const subtotal = invoice.subtotal ?? invoice.totalAmount;
+  const vatRate = invoice.vatRate ?? 0;
+  const vatAmount = invoice.vatAmount ?? 0;
   return {
     ...invoice,
     dueDate: invoice.dueDate || invoice.issueDate || TODAY,
@@ -263,6 +273,9 @@ function normalizeInvoiceRecord(invoice: InvoiceRecord): InvoiceRecord {
     currency: invoice.currency || "ILS",
     paymentMethod: normalizePaymentMethod(invoice.paymentMethod),
     linkedRecord: invoice.linkedRecord || buildLinkedRecord(invoice.type, invoice.id),
+    subtotal,
+    vatRate,
+    vatAmount,
   };
 }
 
@@ -389,9 +402,12 @@ function seedInvoices(
       currency: "ILS",
       status: "Partial",
       paymentMethod: "Bank Transfer",
-      totalAmount: firstPrice,
-      paidAmount: Math.min(420, firstPrice),
-      remainingAmount: Math.max(firstPrice - 420, 0),
+      subtotal: firstPrice,
+      vatRate: 16,
+      vatAmount: Math.round(firstPrice * 16) / 100,
+      totalAmount: firstPrice + Math.round(firstPrice * 16) / 100,
+      paidAmount: Math.min(420, firstPrice + Math.round(firstPrice * 16) / 100),
+      remainingAmount: Math.max(firstPrice + Math.round(firstPrice * 16) / 100 - 420, 0),
       items: [
         {
           id: "line-customer-1",
@@ -419,9 +435,12 @@ function seedInvoices(
       currency: "ILS",
       status: "Unpaid",
       paymentMethod: "Card",
-      totalAmount: secondPrice,
+      subtotal: secondPrice,
+      vatRate: 16,
+      vatAmount: Math.round(secondPrice * 16) / 100,
+      totalAmount: secondPrice + Math.round(secondPrice * 16) / 100,
       paidAmount: 0,
-      remainingAmount: secondPrice,
+      remainingAmount: secondPrice + Math.round(secondPrice * 16) / 100,
       items: [
         {
           id: "line-customer-2",
@@ -449,9 +468,12 @@ function seedInvoices(
       currency: "ILS",
       status: "Unpaid",
       paymentMethod: "Bank Transfer",
-      totalAmount: thirdPrice,
+      subtotal: thirdPrice,
+      vatRate: 16,
+      vatAmount: Math.round(thirdPrice * 16) / 100,
+      totalAmount: thirdPrice + Math.round(thirdPrice * 16) / 100,
       paidAmount: 0,
-      remainingAmount: thirdPrice,
+      remainingAmount: thirdPrice + Math.round(thirdPrice * 16) / 100,
       items: [
         {
           id: "line-supplier-1",
@@ -479,6 +501,9 @@ function seedInvoices(
       currency: "ILS",
       status: "Paid",
       paymentMethod: "Cash",
+      subtotal: 741,
+      vatRate: 16,
+      vatAmount: 118,
       totalAmount: 859,
       paidAmount: 859,
       remainingAmount: 0,
@@ -508,6 +533,9 @@ function seedInvoices(
       currency: "ILS",
       status: "Partial",
       paymentMethod: "Bank Transfer",
+      subtotal: 782,
+      vatRate: 16,
+      vatAmount: 125,
       totalAmount: 907,
       paidAmount: 450,
       remainingAmount: 457,
@@ -541,6 +569,9 @@ function seedInvoices(
       currency: "ILS",
       status: "Unpaid",
       paymentMethod: "Bank Transfer",
+      subtotal: 475,
+      vatRate: 16,
+      vatAmount: 76,
       totalAmount: 551,
       paidAmount: 0,
       remainingAmount: 551,
@@ -906,8 +937,10 @@ export default function Invoices() {
       paymentMethod: normalizePaymentMethod(invoice.paymentMethod),
       productId: firstLine?.productId ?? "",
       quantity: String(firstLine?.quantity ?? 1),
-      unitPrice: String(firstLine?.unitPrice ?? invoice.totalAmount),
+      unitPrice: String(firstLine?.unitPrice ?? invoice.subtotal ?? invoice.totalAmount),
       paidAmount: String(invoice.paidAmount),
+      vatEnabled: (invoice.vatRate ?? 0) > 0,
+      vatRate: String(invoice.vatRate ?? 16),
       notes: invoice.notes,
       linkedRecord: invoice.linkedRecord,
       department: invoice.department ?? "",
@@ -998,7 +1031,10 @@ export default function Invoices() {
 
     const quantity = Math.max(1, normalizeNumber(formState.quantity));
     const unitPrice = Math.max(0, normalizeNumber(formState.unitPrice));
-    const totalAmount = quantity * unitPrice;
+    const subtotal = quantity * unitPrice;
+    const vatRate = formState.vatEnabled ? Math.max(0, normalizeNumber(formState.vatRate)) : 0;
+    const vatAmount = Math.round(subtotal * vatRate) / 100;
+    const totalAmount = subtotal + vatAmount;
     const paidAmount = Math.min(Math.max(0, normalizeNumber(formState.paidAmount)), totalAmount);
     const remainingAmount = Math.max(totalAmount - paidAmount, 0);
     const status = statusFromAmounts(paidAmount, totalAmount);
@@ -1031,6 +1067,9 @@ export default function Invoices() {
       currency: formState.currency || "ILS",
       status,
       paymentMethod: formState.paymentMethod,
+      subtotal,
+      vatRate,
+      vatAmount,
       totalAmount,
       paidAmount,
       remainingAmount,
@@ -1706,13 +1745,69 @@ export default function Invoices() {
                         </label>
                       </div>
 
+                      {/* VAT toggle */}
+                      <div className="invoice-vat-row">
+                        <label className="invoice-vat-toggle">
+                          <input
+                            type="checkbox"
+                            checked={formState.vatEnabled}
+                            onChange={(e) => setFormState((s) => ({ ...s, vatEnabled: e.target.checked }))}
+                          />
+                          <span>{t.invoices.form.vatEnabled}</span>
+                        </label>
+                        {formState.vatEnabled && (
+                          <label className="invoice-vat-rate-label">
+                            <span>%</span>
+                            <input
+                              type="number"
+                              min="0"
+                              max="100"
+                              step="1"
+                              className="invoice-vat-rate-input"
+                              value={formState.vatRate}
+                              onChange={(e) => setFormState((s) => ({ ...s, vatRate: e.target.value }))}
+                            />
+                          </label>
+                        )}
+                      </div>
+
                       <div className="invoice-auto-price-box">
                         <div>
-                          <span>{t.invoices.form.total}</span>
+                          <span>{t.invoices.form.subtotal}</span>
                           <strong>
                             {money(
                               normalizeNumber(formState.quantity) *
                                 normalizeNumber(formState.unitPrice),
+                              formState.currency
+                            )}
+                          </strong>
+                        </div>
+
+                        {formState.vatEnabled && (
+                          <div>
+                            <span>{t.invoices.form.vatLine} {formState.vatRate}%</span>
+                            <strong>
+                              {money(
+                                Math.round(
+                                  normalizeNumber(formState.quantity) *
+                                    normalizeNumber(formState.unitPrice) *
+                                    normalizeNumber(formState.vatRate)
+                                ) / 100,
+                                formState.currency
+                              )}
+                            </strong>
+                          </div>
+                        )}
+
+                        <div>
+                          <span>{t.invoices.form.total}</span>
+                          <strong>
+                            {money(
+                              (() => {
+                                const sub = normalizeNumber(formState.quantity) * normalizeNumber(formState.unitPrice);
+                                const vat = formState.vatEnabled ? Math.round(sub * normalizeNumber(formState.vatRate)) / 100 : 0;
+                                return sub + vat;
+                              })(),
                               formState.currency
                             )}
                           </strong>
@@ -1728,9 +1823,11 @@ export default function Invoices() {
                           <strong>
                             {money(
                               Math.max(
-                                normalizeNumber(formState.quantity) *
-                                  normalizeNumber(formState.unitPrice) -
-                                  normalizeNumber(formState.paidAmount),
+                                (() => {
+                                  const sub = normalizeNumber(formState.quantity) * normalizeNumber(formState.unitPrice);
+                                  const vat = formState.vatEnabled ? Math.round(sub * normalizeNumber(formState.vatRate)) / 100 : 0;
+                                  return sub + vat;
+                                })() - normalizeNumber(formState.paidAmount),
                                 0
                               ),
                               formState.currency

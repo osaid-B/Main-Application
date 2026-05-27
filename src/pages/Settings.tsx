@@ -1,4 +1,5 @@
-import { Eye, Globe2, MoonStar, Palette, ShieldCheck, Sliders } from "lucide-react";
+import { Eye, Globe2, MapPin, MoonStar, Palette, ShieldCheck, Sliders } from "lucide-react";
+import { useState } from "react";
 import { useSettings } from "../context/SettingsContext";
 import { useSidebarPreferences } from "../context/SidebarPreferencesContext";
 import { Badge } from "../components/ui/Badge";
@@ -6,10 +7,26 @@ import { Button } from "../components/ui/Button";
 import { ALL_ITEMS } from "../components/layout/Sidebar";
 import "./Settings.css";
 
+const LOCAL_SETTINGS_KEY = "atlas-local-settings";
+
+function loadLocalSettings() {
+  try {
+    const raw = localStorage.getItem(LOCAL_SETTINGS_KEY);
+    if (raw) return JSON.parse(raw) as { currency: string; vatRate: number; vatByDefault: boolean };
+  } catch { /* ignore */ }
+  return { currency: "ILS", vatRate: 16, vatByDefault: true };
+}
+
 export default function Settings() {
   const { language, theme, setLanguage, setTheme, isArabic, t } = useSettings();
   const prefs = useSidebarPreferences();
   const ts = t.sidebar;
+  const [localSettings, setLocalSettings] = useState(loadLocalSettings);
+
+  function saveLocalSettings(next: typeof localSettings) {
+    setLocalSettings(next);
+    localStorage.setItem(LOCAL_SETTINGS_KEY, JSON.stringify(next));
+  }
 
   const hiddenItemDetails = prefs.hiddenItems
     .map((path) => ALL_ITEMS.find((i) => i.path === path))
@@ -176,6 +193,77 @@ export default function Settings() {
                 })}
               </ul>
             )}
+          </div>
+        </article>
+      </section>
+
+      {/* Local settings — Palestinian market */}
+      <section className="settings-main-grid">
+        <article className="settings-panel app-subtle-card" style={{ gridColumn: "1 / -1" }}>
+          <div className="settings-panel-header">
+            <div>
+              <Badge variant="neutral" className="settings-panel-chip">
+                <MapPin size={11} style={{ display: "inline", marginInlineEnd: 4 }} />
+                {t.settings.localSettings}
+              </Badge>
+              <h2>{t.settings.localSettingsTitle}</h2>
+              <p>{t.settings.localSettingsDesc}</p>
+            </div>
+          </div>
+
+          <div className="settings-local-grid">
+            <div className="settings-local-field">
+              <label className="settings-local-label">{t.settings.defaultCurrency}</label>
+              <div className="settings-option-list settings-option-list--inline">
+                {[
+                  { code: "ILS", label: t.settings.currencyILS },
+                  { code: "JOD", label: t.settings.currencyJOD },
+                  { code: "USD", label: t.settings.currencyUSD },
+                ].map((c) => (
+                  <button
+                    key={c.code}
+                    type="button"
+                    className={`settings-option-card settings-option-card--sm ${localSettings.currency === c.code ? "active" : ""}`}
+                    onClick={() => saveLocalSettings({ ...localSettings, currency: c.code })}
+                  >
+                    <div className="settings-option-copy">
+                      <strong>{c.code}</strong>
+                      <span>{c.label}</span>
+                    </div>
+                    <span className="settings-option-state">
+                      {localSettings.currency === c.code ? t.common.selected : t.common.use}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="settings-local-field">
+              <label className="settings-local-label">{t.settings.defaultVatRate}</label>
+              <div className="settings-vat-row">
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="1"
+                  className="settings-vat-input"
+                  value={localSettings.vatRate}
+                  onChange={(e) => saveLocalSettings({ ...localSettings, vatRate: Number(e.target.value) })}
+                />
+                <span className="settings-vat-pct">%</span>
+              </div>
+            </div>
+
+            <div className="settings-local-field settings-local-field--full">
+              <label className="settings-vat-toggle-label">
+                <input
+                  type="checkbox"
+                  checked={localSettings.vatByDefault}
+                  onChange={(e) => saveLocalSettings({ ...localSettings, vatByDefault: e.target.checked })}
+                />
+                <span>{t.settings.vatApplyByDefault}</span>
+              </label>
+            </div>
           </div>
         </article>
       </section>

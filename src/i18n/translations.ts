@@ -391,6 +391,15 @@ export const translations = {
       foundationReady: "Foundation ready",
       ltrHelper: "LTR workspace and system labels",
       rtlHelper: "RTL workspace and localized terminology",
+      localSettings: "Local Settings",
+      localSettingsTitle: "Palestinian Market Configuration",
+      localSettingsDesc: "Currency defaults, VAT rate, and regional preferences for the Palestinian market.",
+      defaultCurrency: "Default Currency",
+      defaultVatRate: "Default VAT Rate",
+      currencyILS: "Israeli New Shekel (₪)",
+      currencyJOD: "Jordanian Dinar (د.أ)",
+      currencyUSD: "US Dollar ($)",
+      vatApplyByDefault: "Apply VAT by default on new invoices",
     },
 
     header: {
@@ -746,6 +755,9 @@ export const translations = {
         noCustomers: "No customers found",
         noContactInfo: "No contact info",
         generalItem: "General item",
+        subtotal: "Subtotal",
+        vatEnabled: "Apply VAT (16%)",
+        vatLine: "VAT",
       },
       detail: {
         invoiceSection: "Invoice",
@@ -3182,6 +3194,15 @@ export const translations = {
       foundationReady: "الأساس جاهز",
       ltrHelper: "واجهة من اليسار لليمين",
       rtlHelper: "واجهة من اليمين لليسار بالعربي",
+      localSettings: "الإعدادات المحلية",
+      localSettingsTitle: "إعدادات السوق الفلسطيني",
+      localSettingsDesc: "العملة الافتراضية ونسبة ضريبة القيمة المضافة والتفضيلات الإقليمية للسوق الفلسطيني.",
+      defaultCurrency: "العملة الافتراضية",
+      defaultVatRate: "نسبة ضريبة القيمة المضافة الافتراضية",
+      currencyILS: "شيكل إسرائيلي جديد (₪)",
+      currencyJOD: "دينار أردني (د.أ)",
+      currencyUSD: "دولار أمريكي ($)",
+      vatApplyByDefault: "تطبيق ضريبة القيمة المضافة تلقائياً على الفواتير الجديدة",
     },
 
     header: {
@@ -3537,6 +3558,9 @@ export const translations = {
         noCustomers: "ما في زباين",
         noContactInfo: "ما في بيانات تواصل",
         generalItem: "منتج عام",
+        subtotal: "المجموع قبل الضريبة",
+        vatEnabled: "تطبيق ضريبة القيمة المضافة (16%)",
+        vatLine: "ضريبة القيمة المضافة",
       },
       detail: {
         invoiceSection: "الفاتورة",
