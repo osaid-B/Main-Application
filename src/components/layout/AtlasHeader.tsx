@@ -4,6 +4,7 @@ import { Button } from "../ui/Button";
 import { useWorkspace, WORKSPACES, type Workspace } from "../../contexts/WorkspaceContext";
 import { useAI } from "../../context/AIContext";
 import { useSettings } from "../../context/SettingsContext";
+import { useData } from "../../context/DataContext";
 import "./AtlasHeader.css";
 
 const TABS: Workspace[] = ["company", "factory", "pos"];
@@ -13,6 +14,8 @@ export default function AtlasHeader() {
   const { workspace, setWorkspace } = useWorkspace();
   const { openAI } = useAI();
   const { t } = useSettings();
+  const { lowStockCount, openInvoicesCount } = useData();
+  const alertCount = lowStockCount + (openInvoicesCount > 5 ? 1 : 0);
 
   const pageTitles = t.header.pageTitles as unknown as Record<string, string>;
   const pageTitle =
@@ -86,7 +89,7 @@ export default function AtlasHeader() {
           onClick={() => window.dispatchEvent(new CustomEvent("atlas:open-alerts"))}
         >
           <Bell size={15} />
-          <span className="atlas-notif-badge" aria-hidden>6</span>
+          {alertCount > 0 && <span className="atlas-notif-badge" aria-hidden>{alertCount}</span>}
         </button>
 
         <Button
