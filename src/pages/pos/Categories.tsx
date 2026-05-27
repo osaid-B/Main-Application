@@ -7,17 +7,18 @@ import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { Modal } from "../../components/ui/Modal";
 import { useSettings } from "../../context/SettingsContext";
+import { useData } from "../../context/DataContext";
 import {
   POS_PRODUCT_CATEGORIES as INITIAL_CATS,
-  POS_PRODUCTS,
   type PosProductCategory,
   type PosCategoryStatus,
 } from "../../data/posMock";
 import styles from "./Categories.module.css";
 
 export default function Categories() {
-  const { t } = useSettings();
+  const { t, formatCurrency } = useSettings();
   const tc = t.pos.categories;
+  const { products } = useData();
 
   const [categories, setCategories] = useState<PosProductCategory[]>(INITIAL_CATS);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -27,17 +28,19 @@ export default function Categories() {
 
   const selectedCategory = categories.find((c) => c.id === selectedId) ?? null;
 
+  const activeProducts = useMemo(() => products.filter((p) => !p.isDeleted && !p.archived), [products]);
+
   const categoryProducts = useMemo(() => {
     if (!selectedCategory) return [];
     const catName = selectedCategory.name.toLowerCase();
-    return POS_PRODUCTS.filter((p) => p.category.toLowerCase() === catName);
-  }, [selectedCategory]);
+    return activeProducts.filter((p) => p.category.toLowerCase() === catName);
+  }, [selectedCategory, activeProducts]);
 
   const filteredProducts = useMemo(() => {
     if (!productQuery) return categoryProducts;
     const q = productQuery.toLowerCase();
     return categoryProducts.filter((p) =>
-      p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q),
+      p.name.toLowerCase().includes(q) || p.id.toLowerCase().includes(q),
     );
   }, [categoryProducts, productQuery]);
 
@@ -125,7 +128,9 @@ export default function Categories() {
                     <Badge variant={c.status === "active" ? "success" : "neutral"} size="sm">
                       {tc.status[c.status]}
                     </Badge>
-                    <span className={styles.productCount}>{c.productCount}</span>
+                    <span className={styles.productCount}>
+                      {activeProducts.filter((p) => p.category.toLowerCase() === c.name.toLowerCase()).length}
+                    </span>
                   </div>
                   <div className={styles.catRowActions} onClick={(e) => e.stopPropagation()}>
                     <button type="button" className={styles.iconBtn} onClick={() => moveUp(c.id)} aria-label={tc.actions2.moveUp} disabled={idx === 0}>
@@ -176,27 +181,22 @@ export default function Categories() {
                     <thead>
                       <tr>
                         <th>{tc.cols.name}</th>
-                        <th>{t.common.code}</th>
+                        <th>ID</th>
                         <th className={styles.numEnd}>{t.common.price}</th>
-                        <th className={styles.numEnd}>Stock</th>
+                        <th className={styles.numEnd}>{tc.cols.products}</th>
                         <th>{tc.cols.status}</th>
                       </tr>
                     </thead>
                     <tbody>
                       {filteredProducts.map((p) => (
                         <tr key={p.id}>
-                          <td>
-                            <div className={styles.productCell}>
-                              <span className={styles.productEmoji}>{p.emoji}</span>
-                              <span className={styles.catName}>{p.name}</span>
-                            </div>
-                          </td>
-                          <td><span className={styles.mono}>{p.sku}</span></td>
-                          <td className={`${styles.numEnd} ${styles.mono}`}>₪{p.price.toFixed(2)}</td>
+                          <td><span className={styles.catName}>{p.name}</span></td>
+                          <td><span className={styles.mono}>{p.id}</span></td>
+                          <td className={`${styles.numEnd} ${styles.mono}`}>{formatCurrency(p.price)}</td>
                           <td className={`${styles.numEnd} ${styles.mono}`}>{p.stock}</td>
                           <td>
                             <Badge variant={p.stock > 0 ? "success" : "danger"} size="sm">
-                              {p.stock > 0 ? t.common.active : "Out of Stock"}
+                              {p.stock > 0 ? t.common.active : t.common.inactive}
                             </Badge>
                           </td>
                         </tr>

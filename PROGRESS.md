@@ -13,51 +13,6 @@ errors introduced by task changes.
 
 ---
 
-## AUTONOMOUS RUN — feat/all-new-pages (11 pages)
-
-**Stack note:** User prompt referenced "Next.js 14 / Tailwind" — actual stack per CLAUDE.md: React 19.2 + Vite 8, CSS Modules, tokens from foundation.css. Following CLAUDE.md.
-
-**Component map (reused everywhere):** Button, Badge, Input, Modal, Avatar, Select, Skeleton, Grid, Stack, Container — all from src/components/ui/ and src/components/layout/.
-
-### BATCH A — POS Core (enhancements)
-| # | Page | Route | Status |
-|---|------|--------|--------|
-| A1 | Receipts | /pos/receipts | 🔄 In progress |
-| A2 | Cashiers | /pos/cashiers | ⬜ Queued |
-| A3 | StockCounts | /pos/stock | ⬜ Queued |
-| A4 | Categories | /pos/categories | ⬜ Queued |
-
-### BATCH B — Loyalty
-| # | Page | Route | Status |
-|---|------|--------|--------|
-| B1 | CoinsReports | /pos/loyalty/reports | ⬜ Queued |
-| B2 | CoinsSettings | /pos/loyalty/settings | ⬜ Queued |
-| B3 | CustomerProfile | /pos/loyalty/profile | ⬜ Queued |
-
-### BATCH C — Org & Access
-| # | Page | Route | Status |
-|---|------|--------|--------|
-| C1 | Departments | /departments | ⬜ Queued |
-| C2 | Permissions | /permissions | ⬜ Queued |
-
-### BATCH D — Financial
-| # | Page | Route | Status |
-|---|------|--------|--------|
-| D1 | Reports | /reports | ⬜ Queued |
-| D2 | Expenses | /expenses | ⬜ Queued |
-
-### Decisions
-- KpiCard: inline Kpi sub-component (no global KpiCard exists)
-- EmptyState: global EmptyState component created at src/components/ui/EmptyState.tsx
-- DataTable: table + CSS module pattern (no global DataTable exists)
-- Categories split view: left = category list, right = products in selected category; products linked via `Product.category` string
-- CustomerLoyaltyProfile: URL param `/pos/loyalty/profile?id=CUST-001`; falls back to first record
-- Org chart (Departments): CSS-only tree, no external lib
-- Permissions matrix: checkbox-based toggle grid
-- CoinsReports charts: recharts LineChart + BarChart (already in stack)
-
----
-
 ## STABILIZATION RUN — main branch (2026-05-27)
 
 ### Section 1 — Scan
@@ -112,3 +67,79 @@ errors introduced by task changes.
 ### Final build
 - npm run lint: ✅ 0 errors, 0 warnings
 - npm run build: ✅ clean (chunk size warning is pre-existing)
+
+---
+
+## FULL FUNCTIONAL AUDIT — feat/data-wiring (2026-05-27)
+
+### STEP 0 — Audit Report
+
+| # | Page | Route | Broken actions | Missing data links |
+|---|------|-------|---------------|-------------------|
+| 1 | Categories | /pos/categories | None — add/edit/move/toggle all work | Products in right panel from POS_PRODUCTS mock (separate from DataContext products — acceptable) |
+| 2 | PosProducts | /pos/products | savePrice: no toast on invalid input | KPI values computed from local POS_PRODUCTS copy (not DataContext); price edit doesn't persist past reload |
+| 3 | StockCounts | /pos/stock | "Complete count" doesn't update product.stock in DataContext | Session data resets on reload (local state only) |
+| 4 | SalesHistory | /pos/history | Export CSV ✓ wired | Cashier filter uses hardcoded CASHIER_IDS array; KPIs computed from mock array, not live |
+| 5 | SalesRefunds | /pos/refunds | cashierFilter declared but setter missing → always empty string; new refund hardcodes cashier "Ahmad Qasim/CSH-01" | Refund data in local state only; new refund doesn't link to original sale |
+| 6 | Receipts | /pos/receipts | Export button has no onClick handler | KPI stat cards computed from local RECEIPTS mock; no DataContext |
+| 7 | CoinsReports | /pos/loyalty/reports | None | KPI cards use hardcoded string values from POS_LOYALTY_KPIS mock (not computed from COIN_TRANSACTIONS) |
+| 8 | CoinsHistory | /pos/loyalty | Export CSV button has no onClick handler | KPI cards use hardcoded POS_LOYALTY_KPIS.*.value strings; not computed from live COIN_TRANSACTIONS |
+| 9 | LoyaltyProfile | /pos/loyalty/profile | None — tab/adjust/pagination work | Always shows LOYALTY_PROFILES[0]; ignores ?id= URL param; adjustments in local state only |
+| 10 | Cashiers | /pos/cashiers | None — add/edit/deactivate/PIN work in local state | todaySales + transactions from static POS_CASHIERS mock (not computed from SalesHistory); data resets on reload |
+| 11 | Customers | /customers | Filter button no onClick; Export button no onClick | Customer outstandingBalance from DataContext ✓; lastOrderDate static |
+| 12 | Suppliers | /suppliers | "Add Purchase" button in supplier detail has no onClick | Archive sets toast but doesn't apply isDeleted flag correctly |
+| 13 | Employees | /employees | All tabs/CRUD/attendance work (uses storage directly) | No DataContext integration (uses getEmployees/saveEmployees raw); no department field → can't link to Departments |
+| 14 | Invoices | /invoices | Customer search clears customerId on every keystroke before selection; supplier dropdown has no onChange binding | Mostly DataContext ✓; customer balance not updated when invoice is created |
+| 15 | Expenses | /expenses | Bulk approve doesn't validate permissions | All local state — Expense not in DataContext; dept dropdown is freetext, not from Departments |
+| 16 | Payments | /payments | "Bank Reconciliation" quick-action is a toast stub | Mostly DataContext ✓ |
+| 17 | Products | /products | None | DataContext ✓ |
+| 18 | Departments | /departments | Add/edit saves to local state only (not persisted) | headcount is static mock; not computed from Employees; no DataContext |
+| 19 | Permissions | /permissions | All UI works | Changes stored in local useState only — lost on reload; RoleGuard uses hardcoded roles, doesn't read Permissions data |
+| 20 | Reports | /reports | Export CSV ✓ wired; Generate (custom tab) works | ALL charts from mock (MONTHLY_FINANCIALS, SALES_BY_CASHIER, PL_ITEMS); no DataContext |
+| 21 | CompanyOverview | /company | Export CSV ✓ wired | ALL KPIs + tables + charts from mock (COMPANY_KPIS, OPEN_INVOICES, DEPARTMENTS, CASH_FLOW); no DataContext |
+| 22 | Dashboard | /dashboard | Date range toggle ✓; Export CSV ✓; New action ✓ | openInvoicesCount/totalCustomers/totalPaymentsCount/lowStockCount/outOfStockCount from DataContext ✓; revenue chart + timeline from mock |
+| 23 | FactoryDashboard | /factory/dashboard | None | useFactory() ✓; KPIs from context |
+| 24 | FactoryOrders | /factory/orders | None | useFactory() ✓; updateOrderStatus → FinishedGoods ✓ |
+| 25 | FactoryBoms | /factory/boms | None | useFactory() ✓ |
+| 26 | FactoryQc | /factory/qc | None | useFactory() ✓ |
+| 27 | FactoryRawMaterials | /factory/raw | No add/edit/adjust buttons exist | useFactory() ✓ (read-only display) |
+| 28 | FactoryFinishedGoods | /factory/finished | No transfer/write-off buttons exist | useFactory() ✓ (read-only display) |
+| 29 | FactoryWarehouse | /factory/warehouse | No actions | useFactory() ✓ (read-only display) |
+| 30 | FactorySources | /factory/sources | No add/edit buttons | useFactory() ✓ (read-only display) |
+| 31 | FactoryImports | /factory/imports | "Add Import" button has NO onClick handler | useFactory() ✓; View modal ✓ |
+| 32 | FactoryBatches | /factory/batches | No action buttons | useFactory() ✓ (read-only display) |
+| 33 | FactoryCosting | /factory/costing | No action buttons | useFactory() ✓ (read-only display) |
+
+### Critical findings summary
+- **7 broken/missing onClick handlers**: Receipts export, CoinsHistory export, FactoryImports "Add Import", SalesRefunds cashier filter (no setter), Customers filter + export, Suppliers "Add Purchase"
+- **6 pages all-mock (no DataContext)**: CompanyOverview, Reports, CoinsHistory KPIs, CoinsReports KPIs, Cashiers stats, LoyaltyProfile always-first-record
+- **3 pages with persistence gap**: Departments (local state), Permissions (local state), Expenses (local state)
+- **1 cross-context gap**: Employees uses raw storage, no DataContext, no department field
+
+---
+
+### STEP 1 — Fix Log (per page)
+
+| # | Page | Status | Notes |
+|---|------|--------|-------|
+| 1 | Categories | ⬜ | |
+| 2 | PosProducts | ⬜ | |
+| 3 | StockCounts | ⬜ | |
+| 4 | SalesHistory | ⬜ | |
+| 5 | SalesRefunds | ⬜ | |
+| 6 | Receipts | ⬜ | |
+| 7 | CoinsReports | ⬜ | |
+| 8 | CoinsHistory | ⬜ | |
+| 9 | LoyaltyProfile | ⬜ | |
+| 10 | Cashiers | ⬜ | |
+| 11 | Customers | ⬜ | |
+| 12 | Suppliers | ⬜ | |
+| 13 | Employees | ⬜ | |
+| 14 | Invoices | ⬜ | |
+| 15 | Expenses | ⬜ | |
+| 16 | Payments | ⬜ | |
+| 17 | Departments | ⬜ | |
+| 18 | Permissions | ⬜ | |
+| 19 | Reports | ⬜ | |
+| 20 | CompanyOverview | ⬜ | |
+| 21 | FactoryImports | ⬜ | |
