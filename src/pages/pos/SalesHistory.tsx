@@ -77,7 +77,7 @@ export default function SalesHistory() {
             <h1 className={styles.title}>{tc.pageTitle}</h1>
             <p className={styles.subtitle}>{tc.pageSubtitle}</p>
           </div>
-          <Button variant="secondary" size="sm" onClick={() => exportCSV(filtered, formatCurrency)}>
+          <Button variant="secondary" size="sm" onClick={() => exportCSV(filtered)}>
             {tc.export}
           </Button>
         </header>
@@ -228,7 +228,7 @@ function TxDrawer({ tx, onClose }: { tx: SaleTransaction; onClose: () => void })
   );
 }
 
-function exportCSV(rows: SaleTransaction[], _fmt: (n: number) => string) {
+function exportCSV(rows: SaleTransaction[]) {
   const header = ["ID", "Date", "Time", "Cashier", "Customer", "Items", "Subtotal", "Discount", "Tax", "Total", "Method", "Status"];
   const body = rows.map((tx) => [tx.id, tx.date, tx.time, tx.cashierName, tx.customerName ?? "", tx.lines.length, tx.subtotal, tx.discount, tx.tax, tx.total, tx.paymentMethod, tx.status].join(","));
   const csv = [header.join(","), ...body].join("\n");
