@@ -2,6 +2,7 @@ import { createContext, useContext, useMemo, useState, type ReactNode } from "re
 import type {
   Customer,
   Employee,
+  Expense,
   Invoice,
   InvoiceItem,
   Payment,
@@ -12,6 +13,7 @@ import type {
 import {
   getCustomers, saveCustomers,
   getEmployees, saveEmployees,
+  getExpenses, saveExpenses,
   getInvoiceItems,
   getInvoices, saveInvoices,
   getPayments, savePayments,
@@ -32,6 +34,7 @@ interface DataContextValue {
   payments: Payment[];
   employees: Employee[];
   purchases: Purchase[];
+  expenses: Expense[];
   productCategories: string[];
 
   // Customer CRUD
@@ -59,6 +62,11 @@ interface DataContextValue {
   addEmployee: (e: Employee) => void;
   updateEmployee: (e: Employee) => void;
   deleteEmployee: (id: string) => void;
+
+  // Expense CRUD
+  addExpense: (e: Expense) => void;
+  updateExpense: (e: Expense) => void;
+  deleteExpense: (id: string) => void;
 
   // Invoice CRUD
   addInvoice: (inv: Invoice) => void;
@@ -89,6 +97,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [payments, setPayments] = useState<Payment[]>(() => getPayments());
   const [employees, setEmployees] = useState<Employee[]>(() => getEmployees());
   const [purchases, setPurchases] = useState<Purchase[]>(() => getPurchases());
+  const [expenses, setExpenses] = useState<Expense[]>(() => getExpenses());
 
   // ── Customer CRUD ────────────────────────────────────────────────────────────
 
@@ -197,6 +206,26 @@ export function DataProvider({ children }: { children: ReactNode }) {
     saveEmployees(next);
   }
 
+  // ── Expense CRUD ─────────────────────────────────────────────────────────────
+
+  function addExpense(e: Expense) {
+    const next = [...expenses, e];
+    setExpenses(next);
+    saveExpenses(next);
+  }
+
+  function updateExpense(e: Expense) {
+    const next = expenses.map((x) => (x.id === e.id ? e : x));
+    setExpenses(next);
+    saveExpenses(next);
+  }
+
+  function deleteExpense(id: string) {
+    const next = expenses.map((x) => (x.id === id ? { ...x, isDeleted: true } : x));
+    setExpenses(next);
+    saveExpenses(next);
+  }
+
   // ── Invoice CRUD ─────────────────────────────────────────────────────────────
 
   function addInvoice(inv: Invoice) {
@@ -302,12 +331,14 @@ export function DataProvider({ children }: { children: ReactNode }) {
     payments,
     employees,
     purchases,
+    expenses,
     productCategories,
     addCustomer, updateCustomer, deleteCustomer,
     addProduct, updateProduct, deleteProduct, setProductCategories,
     addSupplier, updateSupplier, deleteSupplier,
     addPayment, updatePayment, deletePayment,
     addEmployee, updateEmployee, deleteEmployee,
+    addExpense, updateExpense, deleteExpense,
     addInvoice, updateInvoice,
     totalRevenue,
     receivablesTotal,
