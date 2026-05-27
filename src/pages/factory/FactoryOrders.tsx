@@ -46,7 +46,10 @@ export default function FactoryOrders() {
   }
 
   function handleStatusChange(id: string, status: ProductionOrderStatus) {
-    updateOrderStatus(id, status);
+    const shortStock = updateOrderStatus(id, status);
+    if (shortStock.length > 0) {
+      toast(`${tc.toast.lowStock ?? "Low stock"}: ${shortStock.join(", ")}`, { type: "warning" });
+    }
     const msg = status === "in-progress" ? tc.toast.started : status === "done" ? tc.toast.completed : tc.toast.cancelled;
     toast(msg, { type: status === "cancelled" ? "info" : "success" });
   }

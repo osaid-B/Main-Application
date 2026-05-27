@@ -2452,6 +2452,7 @@ export const translations = {
           started: "Order marked In Progress.",
           completed: "Order marked Complete.",
           cancelled: "Order cancelled.",
+          lowStock: "Insufficient raw materials",
         },
       },
       boms: {
@@ -2654,7 +2655,7 @@ export const translations = {
           customsRef: "Customs Ref",
           actions: "Actions",
         },
-        actions: { view: "View" },
+        actions: { view: "View", receive: "Receive into Stock", received: "Received into stock" },
         drawer: {
           title: "Import Details",
           close: "Close",
@@ -2738,6 +2739,7 @@ export const translations = {
           units: "Units",
           perUnit: "Per Unit",
           variance: "Variance",
+          liveBomCost: "Live BOM Cost",
         },
       },
     },
@@ -5153,6 +5155,7 @@ export const translations = {
           started: "تم تغيير حالة الأمر إلى جارٍ.",
           completed: "تم اكتمال الأمر.",
           cancelled: "تم إلغاء الأمر.",
+          lowStock: "مواد خام غير كافية",
         },
       },
       boms: {
@@ -5355,7 +5358,7 @@ export const translations = {
           customsRef: "مرجع الجمارك",
           actions: "الإجراءات",
         },
-        actions: { view: "عرض" },
+        actions: { view: "عرض", receive: "استلام في المخزون", received: "تم الاستلام في المخزون" },
         drawer: {
           title: "تفاصيل الاستيراد",
           close: "إغلاق",
@@ -5439,6 +5442,7 @@ export const translations = {
           units: "الوحدات",
           perUnit: "لكل وحدة",
           variance: "الانحراف",
+          liveBomCost: "تكلفة BOM الحية",
         },
       },
     },

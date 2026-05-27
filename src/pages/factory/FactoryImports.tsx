@@ -26,7 +26,7 @@ const STATUS_VARIANT: Record<ImportOrderStatus, "info" | "warning" | "neutral" |
 export default function FactoryImports() {
   const { t, formatCurrency } = useSettings();
   const tc = t.factory.imports;
-  const { importOrders: IMPORT_ORDERS, addImportOrder } = useFactory();
+  const { importOrders: IMPORT_ORDERS, addImportOrder, receiveImport } = useFactory();
   const { toast } = useToast();
 
   const [query, setQuery]         = useState("");
@@ -104,8 +104,20 @@ export default function FactoryImports() {
                     <td className={styles.mono}>{imp.estimatedArrival}</td>
                     <td><Badge variant={STATUS_VARIANT[imp.status]} size="sm">{tc.status[imp.status]}</Badge></td>
                     <td className={styles.mono} style={{ fontSize: 11, color: "var(--app-text-muted)" }}>{imp.customsRef ?? "—"}</td>
-                    <td>
+                    <td style={{ display: "flex", gap: 6 }}>
                       <button type="button" className={styles.actionBtn} onClick={() => setDetail(imp)}>{tc.actions.view}</button>
+                      {imp.status !== "received" && imp.status !== "cancelled" && (
+                        <button
+                          type="button"
+                          className={styles.actionBtn}
+                          onClick={() => {
+                            receiveImport(imp.id);
+                            toast(tc.actions.received ?? "Received into stock", { type: "success" });
+                          }}
+                        >
+                          {tc.actions.receive ?? "Receive"}
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -128,7 +140,18 @@ export default function FactoryImports() {
 
       {detailTarget && (
         <Modal isOpen onClose={() => setDetail(null)} title={`${tc.drawer.title} — ${detailTarget.id}`} size="md"
-          footer={<Button variant="secondary" onClick={() => setDetail(null)}>{tc.drawer.close}</Button>}>
+          footer={
+            <div style={{ display: "flex", gap: 8 }}>
+              {detailTarget.status !== "received" && detailTarget.status !== "cancelled" && (
+                <Button variant="primary" onClick={() => {
+                  receiveImport(detailTarget.id);
+                  toast(tc.actions.received ?? "Received into stock", { type: "success" });
+                  setDetail(null);
+                }}>{tc.actions.receive ?? "Receive into Stock"}</Button>
+              )}
+              <Button variant="secondary" onClick={() => setDetail(null)}>{tc.drawer.close}</Button>
+            </div>
+          }>
           <div className={styles.drawerMeta}>
             <span>{tc.cols.supplier}</span><span>{detailTarget.supplierName}</span>
             <span>{tc.cols.origin}</span><span>{detailTarget.origin}</span>

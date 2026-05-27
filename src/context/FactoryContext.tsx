@@ -52,9 +52,10 @@ interface FactoryContextValue {
   };
 
   // Actions
-  updateOrderStatus: (id: string, status: ProductionOrderStatus) => void;
+  updateOrderStatus: (id: string, status: ProductionOrderStatus) => string[];
   updateFinishedGoodQty: (id: string, delta: number) => void;
   addImportOrder: (order: ImportOrder) => void;
+  receiveImport: (id: string) => void;
 }
 
 const FactoryContext = createContext<FactoryContextValue | null>(null);
@@ -63,7 +64,7 @@ export function FactoryProvider({ children }: { children: ReactNode }) {
   const [factoryOrders, setFactoryOrders] = useState<ProductionOrder[]>(FACTORY_ORDERS);
   const [qualityChecks]                   = useState<QualityCheck[]>(FACTORY_QC);
   const [boms]                            = useState<BomTemplate[]>(FACTORY_BOMS);
-  const [rawMaterials]                    = useState<RawMaterial[]>(RAW_MATERIALS);
+  const [rawMaterials, setRawMaterials]   = useState<RawMaterial[]>(RAW_MATERIALS);
   const [finishedGoods, setFinishedGoods] = useState<FinishedGood[]>(FINISHED_GOODS);
   const [warehouseLocations]              = useState<WarehouseLocation[]>(WAREHOUSE_LOCATIONS);
   const [sourceRecords]                   = useState<SourceRecord[]>(SOURCE_RECORDS);
@@ -71,20 +72,64 @@ export function FactoryProvider({ children }: { children: ReactNode }) {
   const [batches]                         = useState<ProductionBatch[]>(PRODUCTION_BATCHES);
   const [costingEntries]                  = useState<CostingEntry[]>(COSTING_ENTRIES);
 
-  function updateOrderStatus(id: string, status: ProductionOrderStatus) {
-    setFactoryOrders((prev) => prev.map((o) => o.id === id ? { ...o, status } : o));
+  function updateOrderStatus(id: string, status: ProductionOrderStatus): string[] {
+    const order = factoryOrders.find((o) => o.id === id);
+    const bom = order ? boms.find((b) => b.productId === order.productId) : null;
+    const insufficient: string[] = [];
 
-    // When order is marked done → add produced qty to matching finished good
-    if (status === "done") {
-      const order = factoryOrders.find((o) => o.id === id);
-      if (order) {
-        setFinishedGoods((prev) => prev.map((g) =>
-          g.productionOrderId === id
-            ? { ...g, onHand: g.onHand + order.quantity, lastProducedDate: new Date().toISOString().slice(0, 10) }
-            : g
-        ));
+    // Check stock against BOM when starting
+    if ((status === "in-progress" || status === "done") && order && bom) {
+      for (const line of bom.lines) {
+        const mat = rawMaterials.find((m) => m.id === line.materialId);
+        const needed = line.quantity * order.quantity;
+        if (mat && mat.onHand < needed) {
+          insufficient.push(mat.name);
+        }
       }
     }
+
+    setFactoryOrders((prev) => prev.map((o) => o.id === id ? { ...o, status } : o));
+
+    // When order is marked done → deduct raw materials + add produced qty to finished good
+    if (status === "done" && order) {
+      if (bom) {
+        setRawMaterials((prev) =>
+          prev.map((m) => {
+            const line = bom.lines.find((l) => l.materialId === m.id);
+            if (!line) return m;
+            return { ...m, onHand: Math.max(0, m.onHand - line.quantity * order.quantity) };
+          })
+        );
+      }
+      setFinishedGoods((prev) => {
+        const today = new Date().toISOString().slice(0, 10);
+        const existing = prev.find((g) => g.productionOrderId === id);
+        if (existing) {
+          return prev.map((g) =>
+            g.productionOrderId === id
+              ? { ...g, onHand: g.onHand + order.quantity, lastProducedDate: today }
+              : g
+          );
+        }
+        // Create a new FG entry for orders without a pre-existing finished good record
+        const fg: import("../data/types").FinishedGood = {
+          id: `FG-${id}`,
+          name: FACTORY_PRODUCTS.find((p) => p.id === order.productId)?.name ?? order.productId,
+          nameAr: FACTORY_PRODUCTS.find((p) => p.id === order.productId)?.nameAr ?? order.productId,
+          sku: order.productId,
+          category: "Other",
+          onHand: order.quantity,
+          reserved: 0,
+          unitCost: 0,
+          sellingPrice: 0,
+          productionOrderId: id,
+          lastProducedDate: today,
+        };
+        return [...prev, fg];
+      });
+    }
+
+    return insufficient;
   }
 
   function updateFinishedGoodQty(id: string, delta: number) {
@@ -94,6 +139,37 @@ export function FactoryProvider({ children }: { children: ReactNode }) {
   function addImportOrder(order: ImportOrder) {
     setImportOrders((prev) => [order, ...prev]);
   }
+
+  function receiveImport(id: string) {
+    const imp = importOrders.find((o) => o.id === id);
+    if (!imp || imp.status === "received" || imp.status === "cancelled") return;
+    setImportOrders((prev) =>
+      prev.map((o) => o.id === id ? { ...o, status: "received" as const, actualArrival: new Date().toISOString().slice(0, 10) } : o)
+    );
+    // Increment raw material onHand by matching on item name
+    setRawMaterials((prev) =>
+      prev.map((mat) => {
+        const item = imp.items.find((i) => i.name.toLowerCase() === mat.name.toLowerCase());
+        if (!item) return mat;
+        return { ...mat, onHand: mat.onHand + item.quantity, lastPurchaseDate: new Date().toISOString().slice(0, 10) };
+      })
+    );
+  }
+
+  // Derive batch qcStatus + batch status from live QC checks
+  const batchesLive = useMemo(() =>
+    batches.map((b) => {
+      const batchQcChecks = qualityChecks.filter((q) => q.batchId === b.id);
+      if (batchQcChecks.length === 0) return b;
+      const hasFail = batchQcChecks.some((q) => q.status === "fail");
+      const allPass = batchQcChecks.every((q) => q.status === "pass");
+      const hasConditional = batchQcChecks.some((q) => q.status === "conditional");
+      const hasPending = batchQcChecks.some((q) => q.status === "pending");
+      const derivedQc = hasFail ? "fail" : allPass ? "pass" : hasConditional ? "conditional" : hasPending ? "pending" : "pass";
+      const derivedStatus = hasFail ? "quarantine" : b.status;
+      return { ...b, qcStatus: derivedQc as import("../data/types").QcStatus, status: derivedStatus as import("../data/types").BatchStatus };
+    }),
+  [batches, qualityChecks]);
 
   const kpi = useMemo(() => ({
     activeOrders:       factoryOrders.filter((o) => o.status === "in-progress").length,
@@ -105,16 +181,16 @@ export function FactoryProvider({ children }: { children: ReactNode }) {
     })(),
     rawMaterialAlerts:  rawMaterials.filter((r) => r.onHand <= r.reorderPoint).length,
     openImports:        importOrders.filter((i) => i.status !== "received" && i.status !== "cancelled").length,
-    openBatches:        batches.filter((b) => b.status === "open").length,
+    openBatches:        batchesLive.filter((b) => b.status === "open").length,
     totalFinishedOnHand: finishedGoods.reduce((s, g) => s + g.onHand, 0),
-  }), [factoryOrders, qualityChecks, rawMaterials, importOrders, batches, finishedGoods]);
+  }), [factoryOrders, qualityChecks, rawMaterials, importOrders, batchesLive, finishedGoods]);
 
   const value: FactoryContextValue = {
     factoryOrders, qualityChecks, boms, rawMaterials, finishedGoods,
-    warehouseLocations, sourceRecords, importOrders, batches, costingEntries,
+    warehouseLocations, sourceRecords, importOrders, batches: batchesLive, costingEntries,
     factoryProducts: FACTORY_PRODUCTS,
     kpi,
-    updateOrderStatus, updateFinishedGoodQty, addImportOrder,
+    updateOrderStatus, updateFinishedGoodQty, addImportOrder, receiveImport,
   };
 
   return <FactoryContext.Provider value={value}>{children}</FactoryContext.Provider>;
