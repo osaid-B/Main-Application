@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { NavLink } from "react-router-dom";
 import {
   ArrowLeftRight,
@@ -51,6 +51,7 @@ import {
 import type { ComponentType } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { useSidebarPreferences } from "../../context/SidebarPreferencesContext";
+import { useSettings } from "../../context/SettingsContext";
 import { Avatar } from "../ui/Avatar";
 import { useWorkspace, type Workspace } from "../../contexts/WorkspaceContext";
 import "./Sidebar.atlas.css";
@@ -204,6 +205,84 @@ const SECTIONS_BY_WORKSPACE: Record<Workspace, NavSection[]> = {
   factory: FACTORY_SECTIONS,
 };
 
+// All items across all workspaces — exported for Settings hidden-items list
+export const ALL_ITEMS: NavItem[] = [
+  ...COMPANY_SECTIONS,
+  ...POS_SECTIONS,
+  ...FACTORY_SECTIONS,
+].flatMap((s) => s.items);
+
+interface ContextMenuState {
+  x: number;
+  y: number;
+  item: NavItem;
+}
+
+function NavContextMenu({
+  menu,
+  onClose,
+  prefs,
+  onHideWithUndo,
+  ts,
+}: {
+  menu: ContextMenuState;
+  onClose: () => void;
+  prefs: ReturnType<typeof useSidebarPreferences>;
+  onHideWithUndo: (path: string) => void;
+  ts: ReturnType<typeof useSettings>["t"]["sidebar"];
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const hidden = prefs.isHidden(menu.item.path);
+  const pinned = prefs.isPinned(menu.item.path);
+
+  useEffect(() => {
+    function handle(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
+    }
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    document.addEventListener("mousedown", handle);
+    document.addEventListener("keydown", handleKey);
+    return () => {
+      document.removeEventListener("mousedown", handle);
+      document.removeEventListener("keydown", handleKey);
+    };
+  }, [onClose]);
+
+  return (
+    <div
+      ref={ref}
+      className="atlas-ctx-menu"
+      style={{ top: menu.y, left: menu.x }}
+      role="menu"
+    >
+      <button
+        type="button"
+        role="menuitem"
+        className="atlas-ctx-item"
+        onClick={() => {
+          if (hidden) { prefs.showItem(menu.item.path); }
+          else { onHideWithUndo(menu.item.path); }
+          onClose();
+        }}
+      >
+        {hidden ? <Eye size={13} /> : <EyeOff size={13} />}
+        <span>{hidden ? ts.ctxShow : ts.ctxHide}</span>
+      </button>
+      <button
+        type="button"
+        role="menuitem"
+        className="atlas-ctx-item"
+        onClick={() => { if (pinned) prefs.unpinItem(menu.item.path); else prefs.pinItem(menu.item.path); onClose(); }}
+      >
+        {pinned ? <X size={13} /> : <Star size={13} />}
+        <span>{pinned ? ts.ctxUnpin : ts.ctxPin}</span>
+      </button>
+    </div>
+  );
+}
+
 export default function Sidebar({
   mobile = false,
   isOpen = false,
@@ -214,15 +293,45 @@ export default function Sidebar({
   const { user, logout } = useAuth();
   const { workspace } = useWorkspace();
   const prefs = useSidebarPreferences();
+  const { t } = useSettings();
+  const ts = t.sidebar;
   const [editMode, setEditMode] = useState(false);
+  const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
+  const [undoToast, setUndoToast] = useState<{ path: string; label: string } | null>(null);
+  const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const userName = user?.username ?? "Sara Halim";
   const userRole = "Owner";
 
   const sections = SECTIONS_BY_WORKSPACE[workspace];
 
+  // Resolve pinned item metadata from any workspace's item list
+  const pinnedItems = prefs.pinnedItems
+    .map((path) => ALL_ITEMS.find((i) => i.path === path))
+    .filter((i): i is NavItem => i !== undefined);
+
   function sectionKey(title: string) {
     return `${workspace}:${title}`;
+  }
+
+  function openContextMenu(e: React.MouseEvent, item: NavItem) {
+    e.preventDefault();
+    setContextMenu({ x: e.clientX, y: e.clientY, item });
+  }
+
+  function hideWithUndo(path: string) {
+    const item = ALL_ITEMS.find((i) => i.path === path);
+    prefs.hideItem(path);
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+    setUndoToast({ path, label: item?.label ?? path });
+    undoTimerRef.current = setTimeout(() => setUndoToast(null), 5000);
+  }
+
+  function undoHide() {
+    if (!undoToast) return;
+    prefs.showItem(undoToast.path);
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+    setUndoToast(null);
   }
 
   return (
@@ -250,7 +359,7 @@ export default function Sidebar({
             type="button"
             className="atlas-sidebar-toggle"
             onClick={onToggleCollapsed}
-            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            aria-label={collapsed ? ts.expandNavigation : ts.collapseNavigation}
           >
             {collapsed ? <PanelLeftOpen size={14} /> : <PanelLeftClose size={14} />}
           </button>
@@ -259,7 +368,7 @@ export default function Sidebar({
             type="button"
             className="atlas-sidebar-toggle"
             onClick={onClose}
-            aria-label="Close navigation"
+            aria-label={ts.closeNavigation}
           >
             <X size={14} />
           </button>
@@ -275,6 +384,37 @@ export default function Sidebar({
       )}
 
       <nav className="atlas-sidebar-nav" aria-label="Main navigation">
+        {/* Pinned section — appears at top when user has pinned items */}
+        {!editMode && pinnedItems.length > 0 && (
+          <div className="atlas-nav-section">
+            {(!collapsed || mobile) && (
+              <div className="atlas-nav-section-header">
+                <h4 className="atlas-nav-section-title">{ts.pinnedSection}</h4>
+              </div>
+            )}
+            <ul className="atlas-nav-list">
+              {pinnedItems.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <li key={item.path}>
+                    <NavLink
+                      to={item.path}
+                      className={({ isActive }) =>
+                        ["atlas-nav-link", isActive ? "is-active" : ""].filter(Boolean).join(" ")
+                      }
+                      onClick={() => { if (mobile && onClose) onClose(); }}
+                      onContextMenu={(e) => openContextMenu(e, item)}
+                    >
+                      <Icon size={16} />
+                      {(!collapsed || mobile) && <span className="atlas-nav-label">{item.label}</span>}
+                    </NavLink>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
+
         {sections.map((section) => {
           const key = sectionKey(section.title);
           const isSectionCollapsed = !editMode && prefs.isSectionCollapsed(key);
@@ -346,8 +486,9 @@ export default function Sidebar({
                             if (item.comingSoon) e.preventDefault();
                             if (mobile && onClose) onClose();
                           }}
+                          onContextMenu={(e) => openContextMenu(e, item)}
                           aria-disabled={item.comingSoon || undefined}
-                          title={item.comingSoon ? "Coming soon" : undefined}
+                          title={item.comingSoon ? ts.comingSoon : undefined}
                         >
                           <Icon size={16} />
                           {(!collapsed || mobile) && (
@@ -378,14 +519,14 @@ export default function Sidebar({
                 className="atlas-customize-done"
                 onClick={() => setEditMode(false)}
               >
-                Done
+                {ts.done}
               </button>
               <button
                 type="button"
                 className="atlas-customize-reset"
                 onClick={() => { prefs.resetToDefaults(); setEditMode(false); }}
               >
-                Reset to defaults
+                {ts.resetDefaults}
               </button>
             </div>
           ) : (
@@ -393,13 +534,33 @@ export default function Sidebar({
               type="button"
               className="atlas-customize-btn"
               onClick={() => setEditMode(true)}
-              aria-label="Customize sidebar"
+              aria-label={ts.customize}
             >
               <Sliders size={13} />
-              <span>Customize</span>
+              <span>{ts.customize}</span>
             </button>
           )}
         </div>
+      )}
+
+      {/* Undo toast */}
+      {undoToast && (
+        <div className="atlas-undo-toast" role="status">
+          <span>{ts.hiddenToast}</span>
+          <button type="button" className="atlas-undo-btn" onClick={undoHide}>
+            {ts.undoHide}
+          </button>
+        </div>
+      )}
+
+      {contextMenu && (
+        <NavContextMenu
+          menu={contextMenu}
+          onClose={() => setContextMenu(null)}
+          prefs={prefs}
+          onHideWithUndo={hideWithUndo}
+          ts={ts}
+        />
       )}
 
       <footer className="atlas-sidebar-user">

@@ -7,6 +7,7 @@ import { Button } from "../components/ui/Button";
 import { Badge } from "../components/ui/Badge";
 import { useNotifications } from "../context/NotificationsContext";
 import type { Notification, NotificationCategory, NotificationSeverity } from "../context/NotificationsContext";
+import { useSettings } from "../context/SettingsContext";
 import styles from "./Notifications.module.css";
 
 type TabId = "all" | "unread" | NotificationCategory;
@@ -34,44 +35,50 @@ const SEV_BORDER: Record<NotificationSeverity, string> = {
   success: styles.sevSuccess,
 };
 
-function relTime(ts: Date): string {
-  const ms = Date.now() - ts.getTime();
-  const min = Math.floor(ms / 60_000);
-  if (min < 1) return "just now";
-  if (min < 60) return `${min}m ago`;
-  const h = Math.floor(min / 60);
-  if (h < 24) return `${h}h ago`;
-  const d = Math.floor(h / 24);
-  if (d === 1) return "yesterday";
-  if (d < 7) return `${d}d ago`;
+type T = ReturnType<typeof useSettings>["t"];
+
+function relTime(ts: Date, t: T): string {
+  const rl = t.notifications.relTime;
+  const diffMs = Date.now() - ts.getTime();
+  const diffMin = Math.floor(diffMs / 60_000);
+  if (diffMin < 1) return rl.justNow;
+  if (diffMin < 60) return `${rl.prefix}${diffMin}${rl.mAgo}`;
+  const diffH = Math.floor(diffMin / 60);
+  if (diffH < 24) return `${rl.prefix}${diffH}${rl.hAgo}`;
+  const diffD = Math.floor(diffH / 24);
+  if (diffD === 1) return rl.yesterday;
+  if (diffD < 7) return `${rl.prefix}${diffD}${rl.dAgo}`;
   return ts.toLocaleDateString();
 }
 
-function dateGroup(ts: Date): string {
+function dateGroup(ts: Date, t: T): string {
+  const dg = t.notifications.dateGroup;
   const now = new Date();
   const diffD = Math.floor((now.getTime() - ts.getTime()) / 86_400_000);
-  if (diffD === 0) return "Today";
-  if (diffD === 1) return "Yesterday";
-  if (diffD < 7) return "This Week";
-  return "Older";
+  if (diffD === 0) return dg.today;
+  if (diffD === 1) return dg.yesterday;
+  if (diffD < 7) return dg.thisWeek;
+  return dg.older;
 }
-
-const GROUP_ORDER = ["Today", "Yesterday", "This Week", "Older"];
 
 export default function Notifications() {
   const navigate = useNavigate();
+  const { t } = useSettings();
+  const tn = t.notifications;
   const { notifications, unreadCount, markAsRead, markAllAsRead, dismiss, clearAll } = useNotifications();
 
   const [tab, setTab] = useState<TabId>("all");
 
+  const groupOrder = [tn.dateGroup.today, tn.dateGroup.yesterday, tn.dateGroup.thisWeek, tn.dateGroup.older];
+
   const TABS: { id: TabId; label: string }[] = [
-    { id: "all",       label: "All" },
-    { id: "unread",    label: unreadCount > 0 ? `Unread (${unreadCount})` : "Unread" },
-    { id: "invoice",   label: "Invoices" },
-    { id: "inventory", label: "Inventory" },
-    { id: "factory",   label: "Factory" },
-    { id: "pos",       label: "POS" },
-    { id: "loyalty",   label: "Loyalty" },
+    { id: "all",       label: tn.tabs.all },
+    { id: "unread",    label: unreadCount > 0 ? `${tn.tabs.unread} (${unreadCount})` : tn.tabs.unread },
+    { id: "invoice",   label: tn.tabs.invoice },
+    { id: "inventory", label: tn.tabs.inventory },
+    { id: "factory",   label: tn.tabs.factory },
+    { id: "pos",       label: tn.tabs.pos },
+    { id: "loyalty",   label: tn.tabs.loyalty },
   ];
 
   const displayed = useMemo(() =>
@@ -85,13 +92,14 @@ export default function Notifications() {
   const grouped = useMemo(() => {
     const map = new Map<string, Notification[]>();
     for (const n of displayed) {
-      const g = dateGroup(n.timestamp);
+      const g = dateGroup(n.timestamp, t);
       const arr = map.get(g) ?? [];
       arr.push(n);
       map.set(g, arr);
     }
-    return GROUP_ORDER.filter((g) => map.has(g)).map((g) => ({ group: g, items: map.get(g)! }));
-  }, [displayed]);
+    return groupOrder.filter((g) => map.has(g)).map((g) => ({ group: g, items: map.get(g)! }));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [displayed, t]);
 
   function handleAction(n: Notification) {
     markAsRead(n.id);
@@ -104,18 +112,18 @@ export default function Notifications() {
         {/* Header */}
         <header className={styles.header}>
           <div>
-            <h1 className={styles.title}>Notifications</h1>
-            <p className={styles.subtitle}>Activity alerts from all modules</p>
+            <h1 className={styles.title}>{tn.pageTitle}</h1>
+            <p className={styles.subtitle}>{tn.pageSubtitle}</p>
           </div>
           <div className={styles.headerActions}>
             {unreadCount > 0 && (
               <Button variant="secondary" size="sm" leftIcon={<CheckCheck size={13} />} onClick={markAllAsRead}>
-                Mark all read
+                {tn.markAllRead}
               </Button>
             )}
             {notifications.length > 0 && (
               <Button variant="ghost" size="sm" leftIcon={<Trash2 size={13} />} onClick={clearAll}>
-                Clear all
+                {tn.clearAll}
               </Button>
             )}
           </div>
@@ -141,7 +149,7 @@ export default function Notifications() {
         {displayed.length === 0 ? (
           <div className={styles.empty}>
             <CheckCheck size={40} strokeWidth={1} />
-            <p>All caught up! No notifications to show.</p>
+            <p>{tn.empty} {tn.noNotificationsMore}</p>
           </div>
         ) : (
           <div className={styles.groups}>
@@ -171,7 +179,7 @@ export default function Notifications() {
                               <Badge variant={SEV_VARIANT[n.severity]} size="sm">{n.severity}</Badge>
                             </div>
                             <div className={styles.cardRight}>
-                              <span className={styles.cardTime}>{relTime(n.timestamp)}</span>
+                              <span className={styles.cardTime}>{relTime(n.timestamp, t)}</span>
                               <button
                                 type="button"
                                 className={styles.dismissBtn}

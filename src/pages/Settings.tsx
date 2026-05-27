@@ -1,10 +1,19 @@
-import { Globe2, MoonStar, Palette, ShieldCheck } from "lucide-react";
+import { Eye, Globe2, MoonStar, Palette, ShieldCheck, Sliders } from "lucide-react";
 import { useSettings } from "../context/SettingsContext";
+import { useSidebarPreferences } from "../context/SidebarPreferencesContext";
 import { Badge } from "../components/ui/Badge";
+import { Button } from "../components/ui/Button";
+import { ALL_ITEMS } from "../components/layout/Sidebar";
 import "./Settings.css";
 
 export default function Settings() {
   const { language, theme, setLanguage, setTheme, isArabic, t } = useSettings();
+  const prefs = useSidebarPreferences();
+  const ts = t.sidebar;
+
+  const hiddenItemDetails = prefs.hiddenItems
+    .map((path) => ALL_ITEMS.find((i) => i.path === path))
+    .filter((i): i is (typeof ALL_ITEMS)[0] => i !== undefined);
 
   const languageOptions = [
     { value: "en", label: t.common.english, helper: t.settings.ltrHelper },
@@ -117,6 +126,56 @@ export default function Settings() {
                 </span>
               </button>
             ))}
+          </div>
+        </article>
+      </section>
+
+      {/* Sidebar customization */}
+      <section className="settings-main-grid">
+        <article className="settings-panel app-subtle-card" style={{ gridColumn: "1 / -1" }}>
+          <div className="settings-panel-header">
+            <div>
+              <Badge variant="neutral" className="settings-panel-chip">
+                <Sliders size={11} style={{ display: "inline", marginInlineEnd: 4 }} />
+                {ts.customize}
+              </Badge>
+              <h2>{ts.settingsTitle}</h2>
+              <p>{ts.settingsDesc}</p>
+            </div>
+          </div>
+
+          <div className="settings-hidden-items">
+            <p className="settings-hidden-label">
+              <strong>{ts.hiddenItemsLabel}</strong>
+              {hiddenItemDetails.length > 0 && (
+                <span className="settings-hidden-count">{hiddenItemDetails.length}</span>
+              )}
+            </p>
+
+            {hiddenItemDetails.length === 0 ? (
+              <p className="settings-hidden-empty">{ts.noHiddenItems}</p>
+            ) : (
+              <ul className="settings-hidden-list">
+                {hiddenItemDetails.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <li key={item.path} className="settings-hidden-row">
+                      <span className="settings-hidden-icon"><Icon size={14} /></span>
+                      <span className="settings-hidden-name">{item.label}</span>
+                      <code className="settings-hidden-path">{item.path}</code>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        leftIcon={<Eye size={12} />}
+                        onClick={() => prefs.showItem(item.path)}
+                      >
+                        {ts.showItem}
+                      </Button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
           </div>
         </article>
       </section>

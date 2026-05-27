@@ -198,3 +198,59 @@
     align-items: flex-start;
   }
 }
+
+/* ── Sidebar hidden items section ───────────────────────────────────────── */
+.settings-hidden-items { padding: 0 var(--app-space-4) var(--app-space-4); }
+.settings-hidden-label {
+  display: flex;
+  align-items: center;
+  gap: var(--app-space-2);
+  font-size: 13px;
+  margin: 0 0 var(--app-space-3);
+  color: var(--app-text);
+}
+.settings-hidden-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--app-accent);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+}
+.settings-hidden-empty {
+  font-size: 13px;
+  color: var(--app-text-muted);
+  margin: 0;
+  padding: var(--app-space-3) 0;
+}
+.settings-hidden-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-2);
+}
+.settings-hidden-row {
+  display: flex;
+  align-items: center;
+  gap: var(--app-space-3);
+  padding: var(--app-space-2) var(--app-space-3);
+  border-radius: var(--app-radius-md);
+  border: 1px solid var(--app-border);
+  background: var(--app-surface);
+}
+.settings-hidden-icon { color: var(--app-text-muted); flex-shrink: 0; display: flex; }
+.settings-hidden-name { font-size: 13px; font-weight: 500; color: var(--app-text); flex: 1; }
+.settings-hidden-path {
+  font-size: 11px;
+  color: var(--app-text-light);
+  background: var(--app-surface-muted);
+  padding: 1px 6px;
+  border-radius: 4px;
+}

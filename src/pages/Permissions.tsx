@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Plus } from "lucide-react";
+import { ChevronDown, ChevronRight, Plus } from "lucide-react";
 import { Container } from "../components/layout/Container";
 import { Button } from "../components/ui/Button";
 import { Modal } from "../components/ui/Modal";
@@ -19,6 +19,39 @@ const ACTIONS: PermissionAction[] = ["view", "create", "edit", "delete", "export
 const VIEW_ONLY: Record<PermissionAction, boolean> = {
   view: true, create: false, edit: false, delete: false, export: false,
 };
+
+const SIDEBAR_ROLE_KEY = "atlas-sidebar-section-roles";
+
+// All section names across workspaces for role visibility control
+const SIDEBAR_SECTIONS = [
+  { workspace: "Company",  title: "OVERVIEW" },
+  { workspace: "Company",  title: "RELATIONS" },
+  { workspace: "Company",  title: "ACCOUNTING" },
+  { workspace: "Company",  title: "REPORTS" },
+  { workspace: "Company",  title: "INVENTORY" },
+  { workspace: "Company",  title: "ADMIN" },
+  { workspace: "POS",      title: "REGISTER" },
+  { workspace: "POS",      title: "CATALOG" },
+  { workspace: "POS",      title: "LOYALTY" },
+  { workspace: "POS",      title: "ADMIN" },
+  { workspace: "Factory",  title: "OPERATIONS" },
+  { workspace: "Factory",  title: "INVENTORY" },
+  { workspace: "Factory",  title: "SOURCING" },
+] as const;
+
+type SidebarRoleConfig = Record<string, string[]>; // roleId → denied section keys ("workspace:TITLE")
+
+function loadSidebarRoleConfig(): SidebarRoleConfig {
+  try {
+    const raw = localStorage.getItem(SIDEBAR_ROLE_KEY);
+    if (raw) return JSON.parse(raw) as SidebarRoleConfig;
+  } catch { /* ignore */ }
+  return {};
+}
+
+function saveSidebarRoleConfig(config: SidebarRoleConfig) {
+  localStorage.setItem(SIDEBAR_ROLE_KEY, JSON.stringify(config));
+}
 
 const MODULES = ["pos", "customers", "invoices", "inventory", "reports", "employees", "settings"];
 const MODULE_LABELS: Record<string, { label: string; labelAr: string }> = {
@@ -46,6 +79,8 @@ export default function Permissions() {
   const [selectedRoleId, setSelectedRoleId] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Role | null>(null);
+  const [sidebarConfig, setSidebarConfig] = useState<SidebarRoleConfig>(loadSidebarRoleConfig);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const isLoading = useLoadingDelay();
   const selectedRole = roles.find((r) => r.id === selectedRoleId) ?? null;
@@ -218,6 +253,74 @@ export default function Permissions() {
         </section>
       </div>
       )}
+
+      {/* Sidebar Visibility Section */}
+      <div className={styles.sidebarSection}>
+        <button
+          type="button"
+          className={styles.sidebarSectionHeader}
+          onClick={() => setSidebarOpen((v) => !v)}
+          aria-expanded={sidebarOpen}
+        >
+          <div>
+            <strong>{t.sidebar.adminSectionTitle}</strong>
+            <p>{t.sidebar.adminSectionDesc}</p>
+          </div>
+          {sidebarOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+        </button>
+
+        {sidebarOpen && (
+          <div className={styles.sidebarMatrix}>
+            <table className={styles.sidebarTable}>
+              <thead>
+                <tr>
+                  <th>{tc.matrix.section ?? "Section"}</th>
+                  {roles.map((r) => <th key={r.id}>{r.name}</th>)}
+                </tr>
+              </thead>
+              <tbody>
+                {SIDEBAR_SECTIONS.map((sec) => {
+                  const key = `${sec.workspace}:${sec.title}`;
+                  return (
+                    <tr key={key}>
+                      <td>
+                        <span className={styles.sidebarSecLabel}>{sec.workspace}</span>
+                        <strong>{sec.title}</strong>
+                      </td>
+                      {roles.map((role) => {
+                        const denied = (sidebarConfig[role.id] ?? []).includes(key);
+                        return (
+                          <td key={role.id} className={styles.sidebarCell}>
+                            <button
+                              type="button"
+                              className={`${styles.sidebarToggle} ${denied ? styles.sidebarDenied : styles.sidebarAllowed}`}
+                              onClick={() => {
+                                const current = sidebarConfig[role.id] ?? [];
+                                const next: SidebarRoleConfig = {
+                                  ...sidebarConfig,
+                                  [role.id]: denied
+                                    ? current.filter((k) => k !== key)
+                                    : [...new Set([...current, key])],
+                                };
+                                setSidebarConfig(next);
+                                saveSidebarRoleConfig(next);
+                              }}
+                              aria-label={`${denied ? t.sidebar.cannotAccess : t.sidebar.canAccess}: ${sec.title} for ${role.name}`}
+                              title={denied ? t.sidebar.cannotAccess : t.sidebar.canAccess}
+                            >
+                              {denied ? "✕" : "✓"}
+                            </button>
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
 
       {/* Add Role Modal */}
       {isAdding && (

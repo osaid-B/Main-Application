@@ -412,3 +412,66 @@
   text-decoration: underline;
 }
 .atlas-customize-reset:hover { color: var(--atlas-danger, #ef4444); }
+
+/* ── Right-click context menu ───────────────────────────────────────────── */
+.atlas-ctx-menu {
+  position: fixed;
+  z-index: 9999;
+  min-width: 180px;
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-md);
+  box-shadow: var(--app-shadow-md, 0 8px 24px rgba(0,0,0,.18));
+  padding: var(--app-space-1) 0;
+  overflow: hidden;
+}
+.atlas-ctx-item {
+  display: flex;
+  align-items: center;
+  gap: var(--app-space-2);
+  width: 100%;
+  padding: 8px var(--app-space-3);
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--app-text);
+  text-align: start;
+  transition: background .1s;
+}
+.atlas-ctx-item:hover { background: var(--app-surface-hover); }
+.atlas-ctx-item svg { flex-shrink: 0; color: var(--app-text-muted); }
+
+/* ── Undo toast ──────────────────────────────────────────────────────────── */
+.atlas-undo-toast {
+  position: absolute;
+  inset-block-end: 72px;
+  inset-inline-start: var(--app-space-3);
+  inset-inline-end: var(--app-space-3);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--app-space-2);
+  padding: var(--app-space-2) var(--app-space-3);
+  background: var(--app-text);
+  color: var(--app-surface);
+  border-radius: var(--app-radius-md);
+  font-size: 12px;
+  z-index: 50;
+  animation: atlas-toast-in .18s ease;
+}
+.atlas-undo-btn {
+  background: none;
+  border: none;
+  color: var(--atlas-blue, #3b82f6);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+}
+.atlas-undo-btn:hover { text-decoration: underline; }
+@keyframes atlas-toast-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}

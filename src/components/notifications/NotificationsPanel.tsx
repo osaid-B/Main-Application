@@ -23,23 +23,24 @@ const SEV_CLASS: Record<NotificationSeverity, string> = {
 };
 
 type TabId = "all" | "unread" | NotificationCategory;
+type T = ReturnType<typeof useSettings>["t"];
 
-function relTime(ts: Date): string {
+function relTime(ts: Date, t: T): string {
+  const rl = t.notifications.relTime;
   const diffMs = Date.now() - ts.getTime();
   const diffMin = Math.floor(diffMs / 60_000);
-  if (diffMin < 1) return "just now";
-  if (diffMin < 60) return `${diffMin}m ago`;
+  if (diffMin < 1) return rl.justNow;
+  if (diffMin < 60) return `${rl.prefix}${diffMin}${rl.mAgo}`;
   const diffH = Math.floor(diffMin / 60);
-  if (diffH < 24) return `${diffH}h ago`;
+  if (diffH < 24) return `${rl.prefix}${diffH}${rl.hAgo}`;
   const diffD = Math.floor(diffH / 24);
-  if (diffD === 1) return "yesterday";
-  if (diffD < 7) return `${diffD}d ago`;
+  if (diffD === 1) return rl.yesterday;
+  if (diffD < 7) return `${rl.prefix}${diffD}${rl.dAgo}`;
   return ts.toLocaleDateString();
 }
 
 export default function NotificationsPanel() {
   const { t } = useSettings();
-  const tc = (t as Record<string, unknown>).notifications as Record<string, string & Record<string, string>>;
   const navigate = useNavigate();
   const { notifications, unreadCount, markAsRead, markAllAsRead, dismiss, clearAll } = useNotifications();
 
@@ -69,13 +70,15 @@ export default function NotificationsPanel() {
     return () => document.removeEventListener("keydown", handler);
   }, [isOpen]);
 
+  const tn = t.notifications;
   const TABS: { id: TabId; label: string }[] = [
-    { id: "all",       label: tc?.tabs?.all      ?? "All" },
-    { id: "unread",    label: `${tc?.tabs?.unread ?? "Unread"}${unreadCount > 0 ? ` (${unreadCount})` : ""}` },
-    { id: "invoice",   label: tc?.tabs?.invoice   ?? "Invoices" },
-    { id: "inventory", label: tc?.tabs?.inventory ?? "Inventory" },
-    { id: "factory",   label: tc?.tabs?.factory   ?? "Factory" },
-    { id: "pos",       label: tc?.tabs?.pos       ?? "POS" },
+    { id: "all",       label: tn.tabs.all },
+    { id: "unread",    label: unreadCount > 0 ? `${tn.tabs.unread} (${unreadCount})` : tn.tabs.unread },
+    { id: "invoice",   label: tn.tabs.invoice },
+    { id: "inventory", label: tn.tabs.inventory },
+    { id: "factory",   label: tn.tabs.factory },
+    { id: "pos",       label: tn.tabs.pos },
+    { id: "loyalty",   label: tn.tabs.loyalty },
   ];
 
   const displayed = notifications.filter((n) => {
@@ -99,7 +102,7 @@ export default function NotificationsPanel() {
         ref={triggerRef}
         type="button"
         className="atlas-icon-btn"
-        aria-label={tc?.bell ?? "Notifications"}
+        aria-label={tn.bell}
         aria-haspopup="true"
         aria-expanded={isOpen}
         onClick={() => setIsOpen((v) => !v)}
@@ -117,24 +120,24 @@ export default function NotificationsPanel() {
           ref={panelRef}
           className={styles.panel}
           role="dialog"
-          aria-label={tc?.panelTitle ?? "Notifications"}
+          aria-label={tn.panelTitle}
         >
           {/* Header */}
           <div className={styles.panelHeader}>
-            <span className={styles.panelTitle}>{tc?.panelTitle ?? "Notifications"}</span>
+            <span className={styles.panelTitle}>{tn.panelTitle}</span>
             <div className={styles.panelActions}>
               {unreadCount > 0 && (
-                <button type="button" className={styles.actionLink} onClick={markAllAsRead} title={tc?.markAllRead ?? "Mark all read"}>
+                <button type="button" className={styles.actionLink} onClick={markAllAsRead} title={tn.markAllRead}>
                   <CheckCheck size={13} />
                 </button>
               )}
               {notifications.length > 0 && (
-                <button type="button" className={styles.actionLink} onClick={clearAll} title={tc?.clearAll ?? "Clear all"}>
+                <button type="button" className={styles.actionLink} onClick={clearAll} title={tn.clearAll}>
                   <X size={13} />
                 </button>
               )}
-              <button type="button" className={styles.actionLink} onClick={() => { setIsOpen(false); navigate("/notifications"); }} title={tc?.viewAll ?? "View all"}>
-                {tc?.viewAll ?? "View all"}
+              <button type="button" className={styles.actionLink} onClick={() => { setIsOpen(false); navigate("/notifications"); }} title={tn.viewAll}>
+                {tn.viewAll}
               </button>
             </div>
           </div>
@@ -160,10 +163,10 @@ export default function NotificationsPanel() {
             {displayed.length === 0 ? (
               <div className={styles.empty}>
                 <Check size={28} strokeWidth={1.5} />
-                <p>{tc?.empty ?? "All caught up!"}</p>
+                <p>{tn.empty}</p>
               </div>
             ) : (
-              displayed.map((n) => <NotifCard key={n.id} n={n} onAction={handleAction} onDismiss={dismiss} onClick={handleCardClick} />)
+              displayed.map((n) => <NotifCard key={n.id} n={n} onAction={handleAction} onDismiss={dismiss} onClick={handleCardClick} t={t} />)
             )}
           </div>
         </div>
@@ -173,12 +176,13 @@ export default function NotificationsPanel() {
 }
 
 function NotifCard({
-  n, onAction, onDismiss, onClick,
+  n, onAction, onDismiss, onClick, t,
 }: {
   n: Notification;
   onAction: (n: Notification) => void;
   onDismiss: (id: string) => void;
   onClick: (n: Notification) => void;
+  t: T;
 }) {
   const Icon = CAT_ICON[n.category];
   return (
@@ -196,7 +200,7 @@ function NotifCard({
       <div className={styles.cardBody}>
         <div className={styles.cardTop}>
           <span className={styles.cardTitle}>{n.title}</span>
-          <span className={styles.cardTime}>{relTime(n.timestamp)}</span>
+          <span className={styles.cardTime}>{relTime(n.timestamp, t)}</span>
         </div>
         <p className={styles.cardText}>{n.body}</p>
         {n.actionLabel && (
