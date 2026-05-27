@@ -1,16 +1,20 @@
 import { useMemo, useState } from "react";
-import { Search } from "lucide-react";
+import { Search, Package } from "lucide-react";
 import { Container } from "../../components/layout/Container";
 import { Stack } from "../../components/layout/Stack";
 import { Grid } from "../../components/layout/Grid";
 import { Input } from "../../components/ui/Input";
 import { useSettings } from "../../context/SettingsContext";
-import { FINISHED_GOODS } from "../../data/factoryMock";
+import { Skeleton } from "../../components/ui/Skeleton";
+import { EmptyState } from "../../components/ui/EmptyState";
+import { useFactory } from "../../context/FactoryContext";
+import { useLoadingDelay } from "../../hooks/useLoadingDelay";
 import styles from "./factory.module.css";
 
 export default function FactoryFinishedGoods() {
   const { t, formatCurrency } = useSettings();
   const tc = t.factory.finishedGoods;
+  const { finishedGoods: FINISHED_GOODS } = useFactory();
 
   const [query, setQuery]     = useState("");
   const [catFilter, setCat]   = useState("");
@@ -24,8 +28,9 @@ export default function FactoryFinishedGoods() {
       const q = query.toLowerCase();
       return g.name.toLowerCase().includes(q) || g.sku.toLowerCase().includes(q) || g.nameAr.includes(q);
     });
-  }, [query, catFilter]);
+  }, [FINISHED_GOODS, query, catFilter]);
 
+  const isLoading = useLoadingDelay();
   const totalOnHand = FINISHED_GOODS.reduce((s, g) => s + g.onHand, 0);
   const totalReserved = FINISHED_GOODS.reduce((s, g) => s + g.reserved, 0);
   const totalAvail = totalOnHand - totalReserved;
@@ -59,45 +64,48 @@ export default function FactoryFinishedGoods() {
         </div>
 
         <div className={styles.tableWrap}>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th>{tc.cols.name}</th>
-                <th>{tc.cols.sku}</th>
-                <th>{tc.cols.category}</th>
-                <th className={styles.numEnd}>{tc.cols.onHand}</th>
-                <th className={styles.numEnd}>{tc.cols.reserved}</th>
-                <th className={styles.numEnd}>{tc.cols.available}</th>
-                <th className={styles.numEnd}>{tc.cols.unitCost}</th>
-                <th className={styles.numEnd}>{tc.cols.sellingPrice}</th>
-                <th className={styles.numEnd}>{tc.cols.margin}</th>
-                <th>{tc.cols.lastProduced}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((g) => {
-                const avail  = g.onHand - g.reserved;
-                const margin = g.sellingPrice > 0 ? ((g.sellingPrice - g.unitCost) / g.sellingPrice * 100).toFixed(1) : "—";
-                return (
-                  <tr key={g.id}>
-                    <td>{g.name}</td>
-                    <td><span className={styles.mono}>{g.sku}</span></td>
-                    <td><span className={styles.tag}>{g.category}</span></td>
-                    <td className={`${styles.numEnd} ${styles.mono}`}>{g.onHand.toLocaleString()}</td>
-                    <td className={`${styles.numEnd} ${styles.mono}`}>{g.reserved.toLocaleString()}</td>
-                    <td className={`${styles.numEnd} ${styles.mono}`}>{avail.toLocaleString()}</td>
-                    <td className={`${styles.numEnd} ${styles.mono}`}>{formatCurrency(g.unitCost)}</td>
-                    <td className={`${styles.numEnd} ${styles.mono}`}>{formatCurrency(g.sellingPrice)}</td>
-                    <td className={`${styles.numEnd} ${styles.mono}`}>{margin}%</td>
-                    <td className={styles.mono}>{g.lastProducedDate ?? "—"}</td>
-                  </tr>
-                );
-              })}
-              {filtered.length === 0 && (
-                <tr><td colSpan={10} className={styles.empty}>{tc.noData}</td></tr>
-              )}
-            </tbody>
-          </table>
+          {isLoading ? (
+            <Skeleton variant="rect" height={280} />
+          ) : filtered.length === 0 ? (
+            <EmptyState icon={<Package size={32} />} title={tc.noData} />
+          ) : (
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th>{tc.cols.name}</th>
+                  <th>{tc.cols.sku}</th>
+                  <th>{tc.cols.category}</th>
+                  <th className={styles.numEnd}>{tc.cols.onHand}</th>
+                  <th className={styles.numEnd}>{tc.cols.reserved}</th>
+                  <th className={styles.numEnd}>{tc.cols.available}</th>
+                  <th className={styles.numEnd}>{tc.cols.unitCost}</th>
+                  <th className={styles.numEnd}>{tc.cols.sellingPrice}</th>
+                  <th className={styles.numEnd}>{tc.cols.margin}</th>
+                  <th>{tc.cols.lastProduced}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((g) => {
+                  const avail  = g.onHand - g.reserved;
+                  const margin = g.sellingPrice > 0 ? ((g.sellingPrice - g.unitCost) / g.sellingPrice * 100).toFixed(1) : "—";
+                  return (
+                    <tr key={g.id}>
+                      <td>{g.name}</td>
+                      <td><span className={styles.mono}>{g.sku}</span></td>
+                      <td><span className={styles.tag}>{g.category}</span></td>
+                      <td className={`${styles.numEnd} ${styles.mono}`}>{g.onHand.toLocaleString()}</td>
+                      <td className={`${styles.numEnd} ${styles.mono}`}>{g.reserved.toLocaleString()}</td>
+                      <td className={`${styles.numEnd} ${styles.mono}`}>{avail.toLocaleString()}</td>
+                      <td className={`${styles.numEnd} ${styles.mono}`}>{formatCurrency(g.unitCost)}</td>
+                      <td className={`${styles.numEnd} ${styles.mono}`}>{formatCurrency(g.sellingPrice)}</td>
+                      <td className={`${styles.numEnd} ${styles.mono}`}>{margin}%</td>
+                      <td className={styles.mono}>{g.lastProducedDate ?? "—"}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
         </div>
       </Stack>
     </Container>

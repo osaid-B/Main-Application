@@ -1,11 +1,14 @@
 import { useMemo, useState } from "react";
-import { Search } from "lucide-react";
+import { Search, DollarSign } from "lucide-react";
 import { Container } from "../../components/layout/Container";
 import { Stack } from "../../components/layout/Stack";
 import { Grid } from "../../components/layout/Grid";
 import { Input } from "../../components/ui/Input";
 import { useSettings } from "../../context/SettingsContext";
+import { Skeleton } from "../../components/ui/Skeleton";
+import { EmptyState } from "../../components/ui/EmptyState";
 import { useFactory } from "../../context/FactoryContext";
+import { useLoadingDelay } from "../../hooks/useLoadingDelay";
 import styles from "./factory.module.css";
 
 export default function FactoryCosting() {
@@ -17,6 +20,8 @@ export default function FactoryCosting() {
   const [periodFilter, setPeriod]   = useState("");
 
   const periods = [...new Set(COSTING_ENTRIES.map((e) => e.period))].sort().reverse();
+
+  const isLoading = useLoadingDelay();
 
   const filtered = useMemo(() => {
     return COSTING_ENTRIES.filter((e) => {
@@ -64,52 +69,55 @@ export default function FactoryCosting() {
         </div>
 
         <div className={styles.tableWrap}>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th>{tc.cols.costId}</th>
-                <th>{tc.cols.order}</th>
-                <th>{tc.cols.product}</th>
-                <th>{tc.cols.period}</th>
-                <th className={styles.numEnd}>{tc.cols.rawMaterial}</th>
-                <th className={styles.numEnd}>{tc.cols.labor}</th>
-                <th className={styles.numEnd}>{tc.cols.overhead}</th>
-                <th className={styles.numEnd}>{tc.cols.total}</th>
-                <th className={styles.numEnd}>{tc.cols.units}</th>
-                <th className={styles.numEnd}>{tc.cols.perUnit}</th>
-                <th className={styles.numEnd}>{tc.cols.variance}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((e) => {
-                const varClass = e.variance > 0
-                  ? { color: "var(--atlas-danger)" }
-                  : e.variance < 0
-                  ? { color: "var(--atlas-green)" }
-                  : {};
-                return (
-                  <tr key={e.id}>
-                    <td><span className={styles.mono}>{e.id}</span></td>
-                    <td><span className={styles.mono}>{e.productionOrderId}</span></td>
-                    <td>{e.productName}</td>
-                    <td><span className={styles.tag}>{e.period}</span></td>
-                    <td className={`${styles.numEnd} ${styles.mono}`}>{e.rawMaterialCost > 0 ? formatCurrency(e.rawMaterialCost) : "—"}</td>
-                    <td className={`${styles.numEnd} ${styles.mono}`}>{e.laborCost > 0 ? formatCurrency(e.laborCost) : "—"}</td>
-                    <td className={`${styles.numEnd} ${styles.mono}`}>{e.overheadCost > 0 ? formatCurrency(e.overheadCost) : "—"}</td>
-                    <td className={`${styles.numEnd} ${styles.mono}`}>{e.totalCost > 0 ? formatCurrency(e.totalCost) : "—"}</td>
-                    <td className={`${styles.numEnd} ${styles.mono}`}>{e.unitsProduced > 0 ? e.unitsProduced.toLocaleString() : "—"}</td>
-                    <td className={`${styles.numEnd} ${styles.mono}`}>{e.costPerUnit > 0 ? formatCurrency(e.costPerUnit) : "—"}</td>
-                    <td className={`${styles.numEnd} ${styles.mono}`} style={varClass}>
-                      {e.variance !== 0 ? formatCurrency(Math.abs(e.variance)) : "—"}
-                    </td>
-                  </tr>
-                );
-              })}
-              {filtered.length === 0 && (
-                <tr><td colSpan={11} className={styles.empty}>{tc.noData}</td></tr>
-              )}
-            </tbody>
-          </table>
+          {isLoading ? (
+            <Skeleton variant="rect" height={280} />
+          ) : filtered.length === 0 ? (
+            <EmptyState icon={<DollarSign size={32} />} title={tc.noData} />
+          ) : (
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th>{tc.cols.costId}</th>
+                  <th>{tc.cols.order}</th>
+                  <th>{tc.cols.product}</th>
+                  <th>{tc.cols.period}</th>
+                  <th className={styles.numEnd}>{tc.cols.rawMaterial}</th>
+                  <th className={styles.numEnd}>{tc.cols.labor}</th>
+                  <th className={styles.numEnd}>{tc.cols.overhead}</th>
+                  <th className={styles.numEnd}>{tc.cols.total}</th>
+                  <th className={styles.numEnd}>{tc.cols.units}</th>
+                  <th className={styles.numEnd}>{tc.cols.perUnit}</th>
+                  <th className={styles.numEnd}>{tc.cols.variance}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((e) => {
+                  const varClass = e.variance > 0
+                    ? { color: "var(--atlas-danger)" }
+                    : e.variance < 0
+                    ? { color: "var(--atlas-green)" }
+                    : {};
+                  return (
+                    <tr key={e.id}>
+                      <td><span className={styles.mono}>{e.id}</span></td>
+                      <td><span className={styles.mono}>{e.productionOrderId}</span></td>
+                      <td>{e.productName}</td>
+                      <td><span className={styles.tag}>{e.period}</span></td>
+                      <td className={`${styles.numEnd} ${styles.mono}`}>{e.rawMaterialCost > 0 ? formatCurrency(e.rawMaterialCost) : "—"}</td>
+                      <td className={`${styles.numEnd} ${styles.mono}`}>{e.laborCost > 0 ? formatCurrency(e.laborCost) : "—"}</td>
+                      <td className={`${styles.numEnd} ${styles.mono}`}>{e.overheadCost > 0 ? formatCurrency(e.overheadCost) : "—"}</td>
+                      <td className={`${styles.numEnd} ${styles.mono}`}>{e.totalCost > 0 ? formatCurrency(e.totalCost) : "—"}</td>
+                      <td className={`${styles.numEnd} ${styles.mono}`}>{e.unitsProduced > 0 ? e.unitsProduced.toLocaleString() : "—"}</td>
+                      <td className={`${styles.numEnd} ${styles.mono}`}>{e.costPerUnit > 0 ? formatCurrency(e.costPerUnit) : "—"}</td>
+                      <td className={`${styles.numEnd} ${styles.mono}`} style={varClass}>
+                        {e.variance !== 0 ? formatCurrency(Math.abs(e.variance)) : "—"}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
         </div>
       </Stack>
     </Container>

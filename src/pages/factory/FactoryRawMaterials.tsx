@@ -1,15 +1,19 @@
 import { useMemo, useState } from "react";
-import { Search } from "lucide-react";
+import { Search, Boxes } from "lucide-react";
 import { Container } from "../../components/layout/Container";
 import { Stack } from "../../components/layout/Stack";
 import { Grid } from "../../components/layout/Grid";
 import { Input } from "../../components/ui/Input";
 import { Badge } from "../../components/ui/Badge";
 import { useSettings } from "../../context/SettingsContext";
-import { RAW_MATERIALS } from "../../data/factoryMock";
+import { Skeleton } from "../../components/ui/Skeleton";
+import { EmptyState } from "../../components/ui/EmptyState";
+import { useFactory } from "../../context/FactoryContext";
+import { useLoadingDelay } from "../../hooks/useLoadingDelay";
+import type { RawMaterial } from "../../data/types";
 import styles from "./factory.module.css";
 
-function materialStatus(m: typeof RAW_MATERIALS[0]): "ok" | "low" | "critical" {
+function materialStatus(m: RawMaterial): "ok" | "low" | "critical" {
   if (m.onHand === 0) return "critical";
   if (m.onHand <= m.reorderPoint) return "low";
   return "ok";
@@ -20,27 +24,29 @@ const STATUS_VARIANT = { ok: "success", low: "warning", critical: "danger" } as 
 export default function FactoryRawMaterials() {
   const { t, formatCurrency } = useSettings();
   const tc = t.factory.rawMaterials;
+  const { rawMaterials } = useFactory();
 
   const [query, setQuery]       = useState("");
   const [catFilter, setCat]     = useState("");
   const [originFilter, setOrig] = useState<"local" | "imported" | "">("");
 
-  const categories = [...new Set(RAW_MATERIALS.map((m) => m.category))];
+  const categories = [...new Set(rawMaterials.map((m) => m.category))];
 
   const filtered = useMemo(() => {
-    return RAW_MATERIALS.filter((m) => {
+    return rawMaterials.filter((m) => {
       if (catFilter && m.category !== catFilter) return false;
       if (originFilter && m.origin !== originFilter) return false;
       if (!query) return true;
       const q = query.toLowerCase();
       return m.name.toLowerCase().includes(q) || m.supplier.toLowerCase().includes(q) || m.nameAr.includes(q);
     });
-  }, [query, catFilter, originFilter]);
+  }, [rawMaterials, query, catFilter, originFilter]);
 
-  const totalItems    = RAW_MATERIALS.length;
-  const belowReorder  = RAW_MATERIALS.filter((m) => m.onHand <= m.reorderPoint).length;
-  const localCount    = RAW_MATERIALS.filter((m) => m.origin === "local").length;
-  const importedCount = RAW_MATERIALS.filter((m) => m.origin === "imported").length;
+  const isLoading = useLoadingDelay();
+  const totalItems    = rawMaterials.length;
+  const belowReorder  = rawMaterials.filter((m) => m.onHand <= m.reorderPoint).length;
+  const localCount    = rawMaterials.filter((m) => m.origin === "local").length;
+  const importedCount = rawMaterials.filter((m) => m.origin === "imported").length;
 
   return (
     <Container maxWidth="full" padding="md">
@@ -76,42 +82,45 @@ export default function FactoryRawMaterials() {
         </div>
 
         <div className={styles.tableWrap}>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th>{tc.cols.name}</th>
-                <th>{tc.cols.category}</th>
-                <th>{tc.cols.origin}</th>
-                <th>{tc.cols.supplier}</th>
-                <th className={styles.numEnd}>{tc.cols.onHand}</th>
-                <th className={styles.numEnd}>{tc.cols.reorderPoint}</th>
-                <th className={styles.numEnd}>{tc.cols.unitCost}</th>
-                <th className={styles.numEnd}>{tc.cols.totalValue}</th>
-                <th>{tc.cols.status}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((m) => {
-                const st = materialStatus(m);
-                return (
-                  <tr key={m.id}>
-                    <td>{m.name}</td>
-                    <td><span className={styles.tag}>{m.category}</span></td>
-                    <td><span className={styles.tag}>{tc.originLabel[m.origin]}</span></td>
-                    <td>{m.supplier}</td>
-                    <td className={`${styles.numEnd} ${styles.mono}`}>{m.onHand.toLocaleString()} {m.unit}</td>
-                    <td className={`${styles.numEnd} ${styles.mono}`}>{m.reorderPoint.toLocaleString()} {m.unit}</td>
-                    <td className={`${styles.numEnd} ${styles.mono}`}>{formatCurrency(m.unitCost)}</td>
-                    <td className={`${styles.numEnd} ${styles.mono}`}>{formatCurrency(m.onHand * m.unitCost)}</td>
-                    <td><Badge variant={STATUS_VARIANT[st]} size="sm">{tc.status[st]}</Badge></td>
-                  </tr>
-                );
-              })}
-              {filtered.length === 0 && (
-                <tr><td colSpan={9} className={styles.empty}>{tc.noData}</td></tr>
-              )}
-            </tbody>
-          </table>
+          {isLoading ? (
+            <Skeleton variant="rect" height={280} />
+          ) : filtered.length === 0 ? (
+            <EmptyState icon={<Boxes size={32} />} title={tc.noData} />
+          ) : (
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th>{tc.cols.name}</th>
+                  <th>{tc.cols.category}</th>
+                  <th>{tc.cols.origin}</th>
+                  <th>{tc.cols.supplier}</th>
+                  <th className={styles.numEnd}>{tc.cols.onHand}</th>
+                  <th className={styles.numEnd}>{tc.cols.reorderPoint}</th>
+                  <th className={styles.numEnd}>{tc.cols.unitCost}</th>
+                  <th className={styles.numEnd}>{tc.cols.totalValue}</th>
+                  <th>{tc.cols.status}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((m) => {
+                  const st = materialStatus(m);
+                  return (
+                    <tr key={m.id}>
+                      <td>{m.name}</td>
+                      <td><span className={styles.tag}>{m.category}</span></td>
+                      <td><span className={styles.tag}>{tc.originLabel[m.origin]}</span></td>
+                      <td>{m.supplier}</td>
+                      <td className={`${styles.numEnd} ${styles.mono}`}>{m.onHand.toLocaleString()} {m.unit}</td>
+                      <td className={`${styles.numEnd} ${styles.mono}`}>{m.reorderPoint.toLocaleString()} {m.unit}</td>
+                      <td className={`${styles.numEnd} ${styles.mono}`}>{formatCurrency(m.unitCost)}</td>
+                      <td className={`${styles.numEnd} ${styles.mono}`}>{formatCurrency(m.onHand * m.unitCost)}</td>
+                      <td><Badge variant={STATUS_VARIANT[st]} size="sm">{tc.status[st]}</Badge></td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
         </div>
       </Stack>
     </Container>

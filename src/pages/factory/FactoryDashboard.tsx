@@ -3,11 +3,7 @@ import { Stack } from "../../components/layout/Stack";
 import { Grid } from "../../components/layout/Grid";
 import { Badge } from "../../components/ui/Badge";
 import { useSettings } from "../../context/SettingsContext";
-import {
-  FACTORY_DASHBOARD_KPI,
-  FACTORY_ORDERS,
-  FACTORY_QC,
-} from "../../data/factoryMock";
+import { useFactory } from "../../context/FactoryContext";
 import styles from "./factory.module.css";
 
 const ORDER_STATUS_VARIANT = {
@@ -26,12 +22,14 @@ const QC_STATUS_VARIANT = {
 
 export default function FactoryDashboard() {
   const { t, formatCurrency } = useSettings();
+  const { factoryOrders, qualityChecks, finishedGoods, kpi } = useFactory();
   const tc = t.factory.dashboard;
   const to = t.factory.orders;
   const tq = t.factory.qc;
 
-  const recentOrders = FACTORY_ORDERS.slice(0, 5);
-  const recentQc     = FACTORY_QC.slice(0, 5);
+  const recentOrders = factoryOrders.slice(0, 5);
+  const recentQc     = qualityChecks.slice(0, 5);
+  const totalFGValue = finishedGoods.reduce((s, g) => s + g.onHand * g.unitCost, 0);
 
   return (
     <Container maxWidth="full" padding="md">
@@ -45,12 +43,12 @@ export default function FactoryDashboard() {
         </header>
 
         <Grid cols={3} gap="md" responsive>
-          <Kpi label={tc.kpi.activeOrders}    value={String(FACTORY_DASHBOARD_KPI.activeOrders)}    tone="warning" />
-          <Kpi label={tc.kpi.plannedOrders}   value={String(FACTORY_DASHBOARD_KPI.plannedOrders)}   tone="info"    />
-          <Kpi label={tc.kpi.completedOrders} value={String(FACTORY_DASHBOARD_KPI.completedOrders)} tone="success" />
-          <Kpi label={tc.kpi.qcPassRate}      value={`${FACTORY_DASHBOARD_KPI.qcPassRate}%`}        tone="success" />
-          <Kpi label={tc.kpi.rawAlerts}       value={String(FACTORY_DASHBOARD_KPI.rawMaterialAlerts)} tone="danger" />
-          <Kpi label={tc.kpi.openImports}     value={String(FACTORY_DASHBOARD_KPI.openImports)}     tone="neutral" />
+          <Kpi label={tc.kpi.activeOrders}    value={String(kpi.activeOrders)}    tone="warning" />
+          <Kpi label={tc.kpi.plannedOrders}   value={String(kpi.plannedOrders)}   tone="info"    />
+          <Kpi label={tc.kpi.completedOrders} value={String(kpi.completedOrders)} tone="success" />
+          <Kpi label={tc.kpi.qcPassRate}      value={`${kpi.qcPassRate}%`}        tone="success" />
+          <Kpi label={tc.kpi.rawAlerts}       value={String(kpi.rawMaterialAlerts)} tone="danger" />
+          <Kpi label={tc.kpi.openImports}     value={String(kpi.openImports)}     tone="neutral" />
         </Grid>
 
         <div className={styles.summaryGrid}>
@@ -103,11 +101,10 @@ export default function FactoryDashboard() {
           </div>
         </div>
 
-        {/* Inventory snapshot */}
         <div className={styles.summaryCard}>
-          <div className={styles.summaryCardTitle}>Finished Goods on Hand</div>
+          <div className={styles.summaryCardTitle}>{t.factory.finishedGoods.pageTitle}</div>
           <p style={{ margin: 0, fontSize: 13, color: "var(--app-text-muted)" }}>
-            {formatCurrency(0)} total value · {FACTORY_DASHBOARD_KPI.totalFinishedOnHand.toLocaleString()} units
+            {formatCurrency(totalFGValue)} {t.common.total} · {kpi.totalFinishedOnHand.toLocaleString()} {t.common.quantity}
           </p>
         </div>
       </Stack>

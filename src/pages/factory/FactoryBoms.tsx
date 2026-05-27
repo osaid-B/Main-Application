@@ -1,12 +1,15 @@
 import { useMemo, useState } from "react";
-import { Search } from "lucide-react";
+import { FileText, Search } from "lucide-react";
 import { Container } from "../../components/layout/Container";
 import { Stack } from "../../components/layout/Stack";
 import { Input } from "../../components/ui/Input";
 import { Button } from "../../components/ui/Button";
 import { Modal } from "../../components/ui/Modal";
 import { useSettings } from "../../context/SettingsContext";
+import { Skeleton } from "../../components/ui/Skeleton";
+import { EmptyState } from "../../components/ui/EmptyState";
 import { useFactory } from "../../context/FactoryContext";
+import { useLoadingDelay } from "../../hooks/useLoadingDelay";
 import styles from "./factory.module.css";
 
 export default function FactoryBoms() {
@@ -26,6 +29,8 @@ export default function FactoryBoms() {
       b.productNameAr.includes(q)
     );
   }, [FACTORY_BOMS, query]);
+
+  const isLoading = useLoadingDelay();
 
   function totalStdCost(bom: typeof FACTORY_BOMS[0]) {
     return bom.lines.reduce((s, l) => s + l.quantity * l.unitCost, 0);
@@ -49,35 +54,38 @@ export default function FactoryBoms() {
         </div>
 
         <div className={styles.tableWrap}>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th>{tc.cols.bomId}</th>
-                <th>{tc.cols.product}</th>
-                <th>{tc.cols.version}</th>
-                <th>{tc.cols.effectiveDate}</th>
-                <th className={styles.numEnd}>{tc.cols.lines}</th>
-                <th>{tc.cols.actions}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((bom) => (
-                <tr key={bom.id}>
-                  <td><span className={styles.mono}>{bom.id}</span></td>
-                  <td>{bom.productName}</td>
-                  <td><span className={styles.tag}>{bom.version}</span></td>
-                  <td className={styles.mono}>{bom.effectiveDate}</td>
-                  <td className={`${styles.numEnd} ${styles.mono}`}>{bom.lines.length}</td>
-                  <td>
-                    <button type="button" className={styles.actionBtn} onClick={() => setDetail(bom)}>{tc.actions.view}</button>
-                  </td>
+          {isLoading ? (
+            <Skeleton variant="rect" height={240} />
+          ) : filtered.length === 0 ? (
+            <EmptyState icon={<FileText size={32} />} title={tc.noData} />
+          ) : (
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th>{tc.cols.bomId}</th>
+                  <th>{tc.cols.product}</th>
+                  <th>{tc.cols.version}</th>
+                  <th>{tc.cols.effectiveDate}</th>
+                  <th className={styles.numEnd}>{tc.cols.lines}</th>
+                  <th>{tc.cols.actions}</th>
                 </tr>
-              ))}
-              {filtered.length === 0 && (
-                <tr><td colSpan={6} className={styles.empty}>{tc.noData}</td></tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {filtered.map((bom) => (
+                  <tr key={bom.id}>
+                    <td><span className={styles.mono}>{bom.id}</span></td>
+                    <td>{bom.productName}</td>
+                    <td><span className={styles.tag}>{bom.version}</span></td>
+                    <td className={styles.mono}>{bom.effectiveDate}</td>
+                    <td className={`${styles.numEnd} ${styles.mono}`}>{bom.lines.length}</td>
+                    <td>
+                      <button type="button" className={styles.actionBtn} onClick={() => setDetail(bom)}>{tc.actions.view}</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </Stack>
 

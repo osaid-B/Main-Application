@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, Briefcase } from "lucide-react";
 import { Container } from "../components/layout/Container";
 import { Stack } from "../components/layout/Stack";
 import { Grid } from "../components/layout/Grid";
@@ -8,6 +8,9 @@ import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
 import { Modal } from "../components/ui/Modal";
 import { useSettings } from "../context/SettingsContext";
+import { Skeleton } from "../components/ui/Skeleton";
+import { EmptyState } from "../components/ui/EmptyState";
+import { useLoadingDelay } from "../hooks/useLoadingDelay";
 import { DEPARTMENTS } from "../data/departmentsMock";
 import { type Department } from "../data/types";
 import styles from "./Departments.module.css";
@@ -43,6 +46,7 @@ export default function Departments() {
     return d.name.toLowerCase().includes(q) || d.nameAr.includes(q) || (d.headName ?? "").toLowerCase().includes(q);
   });
 
+  const isLoading = useLoadingDelay();
   const totalDepts    = departments.length;
   const totalHead     = departments.reduce((s, d) => s + d.headcount, 0);
   const totalOpen     = departments.reduce((s, d) => s + d.openPositions, 0);
@@ -113,7 +117,9 @@ export default function Departments() {
           </div>
         </div>
 
-        {view === "table" ? (
+        {isLoading ? (
+          <Skeleton variant="rect" height={320} />
+        ) : view === "table" ? (
           <div className={styles.tableWrap}>
             <table className={styles.table}>
               <thead>
@@ -171,7 +177,7 @@ export default function Departments() {
                 })}
                 {filtered.length === 0 && (
                   <tr>
-                    <td colSpan={7} className={styles.empty}>{tc.noDepts}</td>
+                    <td colSpan={7}><EmptyState icon={<Briefcase size={28} />} title={tc.noDepts} /></td>
                   </tr>
                 )}
               </tbody>

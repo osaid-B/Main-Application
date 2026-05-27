@@ -1,13 +1,16 @@
 import { useMemo, useState } from "react";
-import { Search } from "lucide-react";
+import { Search, ShieldCheck } from "lucide-react";
 import { Container } from "../../components/layout/Container";
 import { Stack } from "../../components/layout/Stack";
 import { Grid } from "../../components/layout/Grid";
 import { Input } from "../../components/ui/Input";
 import { Badge } from "../../components/ui/Badge";
 import { useSettings } from "../../context/SettingsContext";
+import { Skeleton } from "../../components/ui/Skeleton";
+import { EmptyState } from "../../components/ui/EmptyState";
+import { useFactory } from "../../context/FactoryContext";
+import { useLoadingDelay } from "../../hooks/useLoadingDelay";
 import type { QcStatus } from "../../data/types";
-import { FACTORY_QC } from "../../data/factoryMock";
 import styles from "./factory.module.css";
 
 const QC_VARIANT: Record<QcStatus, "success" | "danger" | "warning" | "info"> = {
@@ -20,17 +23,20 @@ const QC_VARIANT: Record<QcStatus, "success" | "danger" | "warning" | "info"> = 
 export default function FactoryQc() {
   const { t } = useSettings();
   const tc = t.factory.qc;
+  const { qualityChecks } = useFactory();
 
   const [query, setQuery]             = useState("");
   const [statusFilter, setFilter]     = useState<QcStatus | "">("");
 
-  const passCount        = FACTORY_QC.filter((q) => q.status === "pass").length;
-  const failCount        = FACTORY_QC.filter((q) => q.status === "fail").length;
-  const pendingCount     = FACTORY_QC.filter((q) => q.status === "pending").length;
-  const conditionalCount = FACTORY_QC.filter((q) => q.status === "conditional").length;
+  const passCount        = qualityChecks.filter((q) => q.status === "pass").length;
+  const failCount        = qualityChecks.filter((q) => q.status === "fail").length;
+  const pendingCount     = qualityChecks.filter((q) => q.status === "pending").length;
+  const conditionalCount = qualityChecks.filter((q) => q.status === "conditional").length;
+
+  const isLoading = useLoadingDelay();
 
   const filtered = useMemo(() => {
-    return FACTORY_QC.filter((q) => {
+    return qualityChecks.filter((q) => {
       if (statusFilter && q.status !== statusFilter) return false;
       if (!query) return true;
       const qs = query.toLowerCase();
@@ -41,7 +47,7 @@ export default function FactoryQc() {
         q.inspector.toLowerCase().includes(qs)
       );
     });
-  }, [query, statusFilter]);
+  }, [qualityChecks, query, statusFilter]);
 
   return (
     <Container maxWidth="full" padding="md">
@@ -74,43 +80,46 @@ export default function FactoryQc() {
         </div>
 
         <div className={styles.tableWrap}>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th>{tc.cols.checkId}</th>
-                <th>{tc.cols.batch}</th>
-                <th>{tc.cols.product}</th>
-                <th>{tc.cols.order}</th>
-                <th>{tc.cols.date}</th>
-                <th>{tc.cols.inspector}</th>
-                <th className={styles.numEnd}>{tc.cols.sampleSize}</th>
-                <th className={styles.numEnd}>{tc.cols.failedUnits}</th>
-                <th className={styles.numEnd}>{tc.cols.defectRate}</th>
-                <th>{tc.cols.status}</th>
-                <th>{tc.cols.notes}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((q) => (
-                <tr key={q.id}>
-                  <td><span className={styles.mono}>{q.id}</span></td>
-                  <td><span className={styles.mono}>{q.batchId}</span></td>
-                  <td>{q.productName}</td>
-                  <td><span className={styles.mono}>{q.productionOrderId}</span></td>
-                  <td className={styles.mono}>{q.inspectionDate}</td>
-                  <td>{q.inspector}</td>
-                  <td className={`${styles.numEnd} ${styles.mono}`}>{q.sampleSize || "—"}</td>
-                  <td className={`${styles.numEnd} ${styles.mono}`}>{q.failedUnits || "—"}</td>
-                  <td className={`${styles.numEnd} ${styles.mono}`}>{q.defectRate > 0 ? `${q.defectRate}%` : "—"}</td>
-                  <td><Badge variant={QC_VARIANT[q.status]} size="sm">{tc.status[q.status]}</Badge></td>
-                  <td style={{ maxWidth: 200, color: "var(--app-text-muted)", fontSize: 11 }}>{q.notes ?? "—"}</td>
+          {isLoading ? (
+            <Skeleton variant="rect" height={240} />
+          ) : filtered.length === 0 ? (
+            <EmptyState icon={<ShieldCheck size={32} />} title={tc.noData} />
+          ) : (
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th>{tc.cols.checkId}</th>
+                  <th>{tc.cols.batch}</th>
+                  <th>{tc.cols.product}</th>
+                  <th>{tc.cols.order}</th>
+                  <th>{tc.cols.date}</th>
+                  <th>{tc.cols.inspector}</th>
+                  <th className={styles.numEnd}>{tc.cols.sampleSize}</th>
+                  <th className={styles.numEnd}>{tc.cols.failedUnits}</th>
+                  <th className={styles.numEnd}>{tc.cols.defectRate}</th>
+                  <th>{tc.cols.status}</th>
+                  <th>{tc.cols.notes}</th>
                 </tr>
-              ))}
-              {filtered.length === 0 && (
-                <tr><td colSpan={11} className={styles.empty}>{tc.noData}</td></tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {filtered.map((q) => (
+                  <tr key={q.id}>
+                    <td><span className={styles.mono}>{q.id}</span></td>
+                    <td><span className={styles.mono}>{q.batchId}</span></td>
+                    <td>{q.productName}</td>
+                    <td><span className={styles.mono}>{q.productionOrderId}</span></td>
+                    <td className={styles.mono}>{q.inspectionDate}</td>
+                    <td>{q.inspector}</td>
+                    <td className={`${styles.numEnd} ${styles.mono}`}>{q.sampleSize || "—"}</td>
+                    <td className={`${styles.numEnd} ${styles.mono}`}>{q.failedUnits || "—"}</td>
+                    <td className={`${styles.numEnd} ${styles.mono}`}>{q.defectRate > 0 ? `${q.defectRate}%` : "—"}</td>
+                    <td><Badge variant={QC_VARIANT[q.status]} size="sm">{tc.status[q.status]}</Badge></td>
+                    <td style={{ maxWidth: 200, color: "var(--app-text-muted)", fontSize: 11 }}>{q.notes ?? "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </Stack>
     </Container>

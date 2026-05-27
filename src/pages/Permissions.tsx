@@ -6,6 +6,8 @@ import { Modal } from "../components/ui/Modal";
 import { Input } from "../components/ui/Input";
 import { useSettings } from "../context/SettingsContext";
 import { useToast } from "../components/ui/Toast";
+import { Skeleton } from "../components/ui/Skeleton";
+import { useLoadingDelay } from "../hooks/useLoadingDelay";
 import { ROLES } from "../data/permissionsMock";
 import { type Role, type PermissionAction, type PermissionModule } from "../data/types";
 import styles from "./Permissions.module.css";
@@ -37,6 +39,7 @@ export default function Permissions() {
   const [isAdding, setIsAdding] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Role | null>(null);
 
+  const isLoading = useLoadingDelay();
   const selectedRole = roles.find((r) => r.id === selectedRoleId) ?? null;
 
   function togglePermission(roleId: string, module: string, action: PermissionAction) {
@@ -90,6 +93,9 @@ export default function Permissions() {
         </div>
       </header>
 
+      {isLoading ? (
+        <Skeleton variant="rect" height={400} />
+      ) : (
       <div className={styles.twoPanel}>
         {/* Left: roles list */}
         <aside className={styles.rolesPanel}>
@@ -199,6 +205,7 @@ export default function Permissions() {
           )}
         </section>
       </div>
+      )}
 
       {/* Add Role Modal */}
       {isAdding && (

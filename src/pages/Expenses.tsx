@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, Receipt } from "lucide-react";
 import { Container } from "../components/layout/Container";
 import { Stack } from "../components/layout/Stack";
 import { Grid } from "../components/layout/Grid";
@@ -9,6 +9,9 @@ import { Button } from "../components/ui/Button";
 import { Modal } from "../components/ui/Modal";
 import TableFooter from "../components/ui/TableFooter";
 import { useSettings } from "../context/SettingsContext";
+import { Skeleton } from "../components/ui/Skeleton";
+import { EmptyState } from "../components/ui/EmptyState";
+import { useLoadingDelay } from "../hooks/useLoadingDelay";
 import { EXPENSES, EXPENSE_CATEGORIES } from "../data/expensesMock";
 import { type Expense, type ExpenseStatus } from "../data/types";
 import styles from "./Expenses.module.css";
@@ -25,6 +28,7 @@ export default function Expenses() {
   const { t, formatCurrency } = useSettings();
   const tc = t.expenses;
 
+  const isLoading = useLoadingDelay();
   const [expenses, setExpenses]           = useState<Expense[]>(EXPENSES);
   const [query, setQuery]                 = useState("");
   const [filterCat, setFilterCat]         = useState("");
@@ -165,6 +169,9 @@ export default function Expenses() {
         </div>
 
         {/* Table */}
+        {isLoading ? (
+          <Skeleton variant="rect" height={300} />
+        ) : (
         <div className={styles.tableWrap}>
           <table className={styles.table}>
             <thead>
@@ -239,12 +246,13 @@ export default function Expenses() {
               ))}
               {pagedRows.length === 0 && (
                 <tr>
-                  <td colSpan={8} className={styles.empty}>{tc.noExpenses}</td>
+                  <td colSpan={8}><EmptyState icon={<Receipt size={28} />} title={tc.noExpenses} /></td>
                 </tr>
               )}
             </tbody>
           </table>
         </div>
+        )}
         <TableFooter
           total={filtered.length}
           page={page}

@@ -16,6 +16,8 @@ import { Grid } from "../components/layout/Grid";
 import { Stack } from "../components/layout/Stack";
 import { Button } from "../components/ui/Button";
 import { useSettings } from "../context/SettingsContext";
+import { Skeleton } from "../components/ui/Skeleton";
+import { useLoadingDelay } from "../hooks/useLoadingDelay";
 import {
   MONTHLY_FINANCIALS,
   SALES_BY_CASHIER,
@@ -41,6 +43,8 @@ export default function Reports() {
   const [customFrom, setCustomFrom] = useState("");
   const [customTo,   setCustomTo]   = useState("");
   const [generated,  setGenerated]  = useState(false);
+
+  const isLoading = useLoadingDelay();
 
   const TABS: { id: TabId; label: string }[] = [
     { id: "overview",  label: tc.tabs.overview  },
@@ -143,29 +147,35 @@ export default function Reports() {
         </div>
 
         {/* Tab panels */}
-        {tab === "overview" && (
-          <OverviewTab tc={tc} formatCurrency={formatCurrency} />
-        )}
-        {tab === "sales" && (
-          <SalesTab tc={tc} formatCurrency={formatCurrency} />
-        )}
-        {tab === "expenses" && (
-          <ExpensesTableTab tc={tc} formatCurrency={formatCurrency} />
-        )}
-        {tab === "pl" && (
-          <PLTab tc={tc} formatCurrency={formatCurrency} />
-        )}
-        {tab === "custom" && (
-          <CustomTab
-            tc={tc}
-            formatCurrency={formatCurrency}
-            customFrom={customFrom}
-            customTo={customTo}
-            setCustomFrom={setCustomFrom}
-            setCustomTo={setCustomTo}
-            generated={generated}
-            setGenerated={setGenerated}
-          />
+        {isLoading ? (
+          <Skeleton variant="rect" height={360} />
+        ) : (
+          <>
+            {tab === "overview" && (
+              <OverviewTab tc={tc} formatCurrency={formatCurrency} />
+            )}
+            {tab === "sales" && (
+              <SalesTab tc={tc} formatCurrency={formatCurrency} />
+            )}
+            {tab === "expenses" && (
+              <ExpensesTableTab tc={tc} formatCurrency={formatCurrency} />
+            )}
+            {tab === "pl" && (
+              <PLTab tc={tc} formatCurrency={formatCurrency} />
+            )}
+            {tab === "custom" && (
+              <CustomTab
+                tc={tc}
+                formatCurrency={formatCurrency}
+                customFrom={customFrom}
+                customTo={customTo}
+                setCustomFrom={setCustomFrom}
+                setCustomTo={setCustomTo}
+                generated={generated}
+                setGenerated={setGenerated}
+              />
+            )}
+          </>
         )}
       </Stack>
     </Container>

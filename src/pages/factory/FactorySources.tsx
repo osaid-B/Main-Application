@@ -1,12 +1,15 @@
 import { useMemo, useState } from "react";
-import { Search } from "lucide-react";
+import { Search, Globe } from "lucide-react";
 import { Container } from "../../components/layout/Container";
 import { Stack } from "../../components/layout/Stack";
 import { Grid } from "../../components/layout/Grid";
 import { Input } from "../../components/ui/Input";
 import { Badge } from "../../components/ui/Badge";
 import { useSettings } from "../../context/SettingsContext";
+import { Skeleton } from "../../components/ui/Skeleton";
+import { EmptyState } from "../../components/ui/EmptyState";
 import { useFactory } from "../../context/FactoryContext";
+import { useLoadingDelay } from "../../hooks/useLoadingDelay";
 import styles from "./factory.module.css";
 
 export default function FactorySources() {
@@ -30,6 +33,7 @@ export default function FactorySources() {
     });
   }, [SOURCE_RECORDS, query, originFilter, catFilter]);
 
+  const isLoading = useLoadingDelay();
   const totalValue    = SOURCE_RECORDS.reduce((s, r) => s + r.totalValue, 0);
   const localValue    = SOURCE_RECORDS.filter((r) => r.origin === "local").reduce((s, r) => s + r.totalValue, 0);
   const importedValue = SOURCE_RECORDS.filter((r) => r.origin === "imported").reduce((s, r) => s + r.totalValue, 0);
@@ -69,41 +73,44 @@ export default function FactorySources() {
         </div>
 
         <div className={styles.tableWrap}>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th>{tc.cols.material}</th>
-                <th>{tc.cols.origin}</th>
-                <th>{tc.cols.supplier}</th>
-                <th>{tc.cols.country}</th>
-                <th className={styles.numEnd}>{tc.cols.quantity}</th>
-                <th className={styles.numEnd}>{tc.cols.unitCost}</th>
-                <th className={styles.numEnd}>{tc.cols.totalValue}</th>
-                <th>{tc.cols.purchaseDate}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((r) => (
-                <tr key={r.id}>
-                  <td>{r.materialName}</td>
-                  <td>
-                    <Badge variant={r.origin === "local" ? "success" : "info"} size="sm">
-                      {tc.originLabel[r.origin]}
-                    </Badge>
-                  </td>
-                  <td>{r.supplier}</td>
-                  <td>{r.country}</td>
-                  <td className={`${styles.numEnd} ${styles.mono}`}>{r.quantity.toLocaleString()} {r.unit}</td>
-                  <td className={`${styles.numEnd} ${styles.mono}`}>{formatCurrency(r.unitCost)}</td>
-                  <td className={`${styles.numEnd} ${styles.mono}`}>{formatCurrency(r.totalValue)}</td>
-                  <td className={styles.mono}>{r.purchaseDate}</td>
+          {isLoading ? (
+            <Skeleton variant="rect" height={280} />
+          ) : filtered.length === 0 ? (
+            <EmptyState icon={<Globe size={32} />} title={tc.noData} />
+          ) : (
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th>{tc.cols.material}</th>
+                  <th>{tc.cols.origin}</th>
+                  <th>{tc.cols.supplier}</th>
+                  <th>{tc.cols.country}</th>
+                  <th className={styles.numEnd}>{tc.cols.quantity}</th>
+                  <th className={styles.numEnd}>{tc.cols.unitCost}</th>
+                  <th className={styles.numEnd}>{tc.cols.totalValue}</th>
+                  <th>{tc.cols.purchaseDate}</th>
                 </tr>
-              ))}
-              {filtered.length === 0 && (
-                <tr><td colSpan={8} className={styles.empty}>{tc.noData}</td></tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {filtered.map((r) => (
+                  <tr key={r.id}>
+                    <td>{r.materialName}</td>
+                    <td>
+                      <Badge variant={r.origin === "local" ? "success" : "info"} size="sm">
+                        {tc.originLabel[r.origin]}
+                      </Badge>
+                    </td>
+                    <td>{r.supplier}</td>
+                    <td>{r.country}</td>
+                    <td className={`${styles.numEnd} ${styles.mono}`}>{r.quantity.toLocaleString()} {r.unit}</td>
+                    <td className={`${styles.numEnd} ${styles.mono}`}>{formatCurrency(r.unitCost)}</td>
+                    <td className={`${styles.numEnd} ${styles.mono}`}>{formatCurrency(r.totalValue)}</td>
+                    <td className={styles.mono}>{r.purchaseDate}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </Stack>
     </Container>

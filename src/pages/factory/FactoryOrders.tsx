@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Search, Plus } from "lucide-react";
+import { ClipboardList, Search, Plus } from "lucide-react";
 import { Container } from "../../components/layout/Container";
 import { Stack } from "../../components/layout/Stack";
 import { Input } from "../../components/ui/Input";
@@ -8,8 +8,11 @@ import { Button } from "../../components/ui/Button";
 import { Modal } from "../../components/ui/Modal";
 import { useSettings } from "../../context/SettingsContext";
 import { useToast } from "../../components/ui/Toast";
-import type { ProductionOrderStatus } from "../../data/types";
-import { FACTORY_ORDERS, FACTORY_PRODUCTS, FACTORY_BOMS } from "../../data/factoryMock";
+import { Skeleton } from "../../components/ui/Skeleton";
+import { EmptyState } from "../../components/ui/EmptyState";
+import { useFactory } from "../../context/FactoryContext";
+import { useLoadingDelay } from "../../hooks/useLoadingDelay";
+import type { ProductionOrderStatus, ProductionOrder } from "../../data/types";
 import styles from "./factory.module.css";
 
 const STATUS_VARIANT: Record<ProductionOrderStatus, "success" | "warning" | "info" | "neutral"> = {
@@ -23,32 +26,33 @@ export default function FactoryOrders() {
   const { t } = useSettings();
   const tc = t.factory.orders;
   const { toast } = useToast();
+  const { factoryOrders, boms, factoryProducts, updateOrderStatus } = useFactory();
 
-  const [orders, setOrders]       = useState(FACTORY_ORDERS);
   const [query, setQuery]         = useState("");
   const [statusFilter, setFilter] = useState<ProductionOrderStatus | "">("");
-  const [detailTarget, setDetail] = useState<typeof FACTORY_ORDERS[0] | null>(null);
+  const [detailTarget, setDetail] = useState<ProductionOrder | null>(null);
 
   const filtered = useMemo(() => {
-    return orders.filter((o) => {
+    return factoryOrders.filter((o) => {
       if (statusFilter && o.status !== statusFilter) return false;
       if (!query) return true;
       const q = query.toLowerCase();
       return o.id.toLowerCase().includes(q) || o.productId.toLowerCase().includes(q);
     });
-  }, [orders, query, statusFilter]);
+  }, [factoryOrders, query, statusFilter]);
 
   function getProductName(id: string) {
-    return FACTORY_PRODUCTS.find((p) => p.id === id)?.name ?? id;
+    return factoryProducts.find((p) => p.id === id)?.name ?? id;
   }
 
-  function updateStatus(id: string, status: ProductionOrderStatus) {
-    setOrders((prev) => prev.map((o) => o.id === id ? { ...o, status } : o));
+  function handleStatusChange(id: string, status: ProductionOrderStatus) {
+    updateOrderStatus(id, status);
     const msg = status === "in-progress" ? tc.toast.started : status === "done" ? tc.toast.completed : tc.toast.cancelled;
     toast(msg, { type: status === "cancelled" ? "info" : "success" });
   }
 
-  const bom = detailTarget ? FACTORY_BOMS.find((b) => b.productId === detailTarget.productId) : null;
+  const isLoading = useLoadingDelay();
+  const bom = detailTarget ? boms.find((b) => b.productId === detailTarget.productId) : null;
 
   return (
     <Container maxWidth="full" padding="md">
@@ -78,48 +82,51 @@ export default function FactoryOrders() {
         </div>
 
         <div className={styles.tableWrap}>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th>{tc.cols.orderId}</th>
-                <th>{tc.cols.product}</th>
-                <th className={styles.numEnd}>{tc.cols.quantity}</th>
-                <th>{tc.cols.startDate}</th>
-                <th>{tc.cols.dueDate}</th>
-                <th>{tc.cols.status}</th>
-                <th>{tc.cols.actions}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((o) => (
-                <tr key={o.id}>
-                  <td><span className={styles.mono}>{o.id}</span></td>
-                  <td>{getProductName(o.productId)}</td>
-                  <td className={`${styles.numEnd} ${styles.mono}`}>{o.quantity.toLocaleString()}</td>
-                  <td className={styles.mono}>{o.startDate}</td>
-                  <td className={styles.mono}>{o.dueDate}</td>
-                  <td><Badge variant={STATUS_VARIANT[o.status]} size="sm">{tc.status[o.status]}</Badge></td>
-                  <td>
-                    <div className={styles.rowActions}>
-                      <button type="button" className={styles.actionBtn} onClick={() => setDetail(o)}>{tc.actions.view}</button>
-                      {o.status === "planned" && (
-                        <button type="button" className={styles.actionBtn} onClick={() => updateStatus(o.id, "in-progress")}>{tc.actions.start}</button>
-                      )}
-                      {o.status === "in-progress" && (
-                        <button type="button" className={styles.actionBtn} onClick={() => updateStatus(o.id, "done")}>{tc.actions.complete}</button>
-                      )}
-                      {(o.status === "planned" || o.status === "in-progress") && (
-                        <button type="button" className={styles.actionBtn} onClick={() => updateStatus(o.id, "cancelled")}>{tc.actions.cancel}</button>
-                      )}
-                    </div>
-                  </td>
+          {isLoading ? (
+            <Skeleton variant="rect" height={280} />
+          ) : filtered.length === 0 ? (
+            <EmptyState icon={<ClipboardList size={32} />} title={tc.noData} />
+          ) : (
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th>{tc.cols.orderId}</th>
+                  <th>{tc.cols.product}</th>
+                  <th className={styles.numEnd}>{tc.cols.quantity}</th>
+                  <th>{tc.cols.startDate}</th>
+                  <th>{tc.cols.dueDate}</th>
+                  <th>{tc.cols.status}</th>
+                  <th>{tc.cols.actions}</th>
                 </tr>
-              ))}
-              {filtered.length === 0 && (
-                <tr><td colSpan={7} className={styles.empty}>{tc.noData}</td></tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {filtered.map((o) => (
+                  <tr key={o.id}>
+                    <td><span className={styles.mono}>{o.id}</span></td>
+                    <td>{getProductName(o.productId)}</td>
+                    <td className={`${styles.numEnd} ${styles.mono}`}>{o.quantity.toLocaleString()}</td>
+                    <td className={styles.mono}>{o.startDate}</td>
+                    <td className={styles.mono}>{o.dueDate}</td>
+                    <td><Badge variant={STATUS_VARIANT[o.status]} size="sm">{tc.status[o.status]}</Badge></td>
+                    <td>
+                      <div className={styles.rowActions}>
+                        <button type="button" className={styles.actionBtn} onClick={() => setDetail(o)}>{tc.actions.view}</button>
+                        {o.status === "planned" && (
+                          <button type="button" className={styles.actionBtn} onClick={() => handleStatusChange(o.id, "in-progress")}>{tc.actions.start}</button>
+                        )}
+                        {o.status === "in-progress" && (
+                          <button type="button" className={styles.actionBtn} onClick={() => handleStatusChange(o.id, "done")}>{tc.actions.complete}</button>
+                        )}
+                        {(o.status === "planned" || o.status === "in-progress") && (
+                          <button type="button" className={styles.actionBtn} onClick={() => handleStatusChange(o.id, "cancelled")}>{tc.actions.cancel}</button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </Stack>
 

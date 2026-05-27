@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Search, Plus } from "lucide-react";
+import { Search, Plus, Ship } from "lucide-react";
 import { Container } from "../../components/layout/Container";
 import { Stack } from "../../components/layout/Stack";
 import { Input } from "../../components/ui/Input";
@@ -7,7 +7,10 @@ import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { Modal } from "../../components/ui/Modal";
 import { useSettings } from "../../context/SettingsContext";
+import { Skeleton } from "../../components/ui/Skeleton";
+import { EmptyState } from "../../components/ui/EmptyState";
 import { useFactory } from "../../context/FactoryContext";
+import { useLoadingDelay } from "../../hooks/useLoadingDelay";
 import type { ImportOrderStatus } from "../../data/types";
 import styles from "./factory.module.css";
 
@@ -27,6 +30,8 @@ export default function FactoryImports() {
   const [query, setQuery]         = useState("");
   const [statusFilter, setFilter] = useState<ImportOrderStatus | "">("");
   const [detailTarget, setDetail] = useState<typeof IMPORT_ORDERS[0] | null>(null);
+
+  const isLoading = useLoadingDelay();
 
   const filtered = useMemo(() => {
     return IMPORT_ORDERS.filter((imp) => {
@@ -62,45 +67,48 @@ export default function FactoryImports() {
         </div>
 
         <div className={styles.tableWrap}>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th>{tc.cols.importId}</th>
-                <th>{tc.cols.supplier}</th>
-                <th>{tc.cols.origin}</th>
-                <th className={styles.numEnd}>{tc.cols.items}</th>
-                <th className={styles.numEnd}>{tc.cols.totalValue}</th>
-                <th>{tc.cols.currency}</th>
-                <th>{tc.cols.orderDate}</th>
-                <th>{tc.cols.eta}</th>
-                <th>{tc.cols.status}</th>
-                <th>{tc.cols.customsRef}</th>
-                <th>{tc.cols.actions}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((imp) => (
-                <tr key={imp.id}>
-                  <td><span className={styles.mono}>{imp.id}</span></td>
-                  <td>{imp.supplierName}</td>
-                  <td>{imp.origin}</td>
-                  <td className={`${styles.numEnd} ${styles.mono}`}>{imp.items.length}</td>
-                  <td className={`${styles.numEnd} ${styles.mono}`}>{formatCurrency(imp.totalValue)}</td>
-                  <td><span className={styles.tag}>{imp.currency}</span></td>
-                  <td className={styles.mono}>{imp.orderDate}</td>
-                  <td className={styles.mono}>{imp.estimatedArrival}</td>
-                  <td><Badge variant={STATUS_VARIANT[imp.status]} size="sm">{tc.status[imp.status]}</Badge></td>
-                  <td className={styles.mono} style={{ fontSize: 11, color: "var(--app-text-muted)" }}>{imp.customsRef ?? "—"}</td>
-                  <td>
-                    <button type="button" className={styles.actionBtn} onClick={() => setDetail(imp)}>{tc.actions.view}</button>
-                  </td>
+          {isLoading ? (
+            <Skeleton variant="rect" height={280} />
+          ) : filtered.length === 0 ? (
+            <EmptyState icon={<Ship size={32} />} title={tc.noData} />
+          ) : (
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th>{tc.cols.importId}</th>
+                  <th>{tc.cols.supplier}</th>
+                  <th>{tc.cols.origin}</th>
+                  <th className={styles.numEnd}>{tc.cols.items}</th>
+                  <th className={styles.numEnd}>{tc.cols.totalValue}</th>
+                  <th>{tc.cols.currency}</th>
+                  <th>{tc.cols.orderDate}</th>
+                  <th>{tc.cols.eta}</th>
+                  <th>{tc.cols.status}</th>
+                  <th>{tc.cols.customsRef}</th>
+                  <th>{tc.cols.actions}</th>
                 </tr>
-              ))}
-              {filtered.length === 0 && (
-                <tr><td colSpan={11} className={styles.empty}>{tc.noData}</td></tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {filtered.map((imp) => (
+                  <tr key={imp.id}>
+                    <td><span className={styles.mono}>{imp.id}</span></td>
+                    <td>{imp.supplierName}</td>
+                    <td>{imp.origin}</td>
+                    <td className={`${styles.numEnd} ${styles.mono}`}>{imp.items.length}</td>
+                    <td className={`${styles.numEnd} ${styles.mono}`}>{formatCurrency(imp.totalValue)}</td>
+                    <td><span className={styles.tag}>{imp.currency}</span></td>
+                    <td className={styles.mono}>{imp.orderDate}</td>
+                    <td className={styles.mono}>{imp.estimatedArrival}</td>
+                    <td><Badge variant={STATUS_VARIANT[imp.status]} size="sm">{tc.status[imp.status]}</Badge></td>
+                    <td className={styles.mono} style={{ fontSize: 11, color: "var(--app-text-muted)" }}>{imp.customsRef ?? "—"}</td>
+                    <td>
+                      <button type="button" className={styles.actionBtn} onClick={() => setDetail(imp)}>{tc.actions.view}</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </Stack>
 

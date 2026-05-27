@@ -1,11 +1,14 @@
 import { useMemo, useState } from "react";
-import { Search } from "lucide-react";
+import { Search, Layers } from "lucide-react";
 import { Container } from "../../components/layout/Container";
 import { Stack } from "../../components/layout/Stack";
 import { Input } from "../../components/ui/Input";
 import { Badge } from "../../components/ui/Badge";
 import { useSettings } from "../../context/SettingsContext";
+import { Skeleton } from "../../components/ui/Skeleton";
+import { EmptyState } from "../../components/ui/EmptyState";
 import { useFactory } from "../../context/FactoryContext";
+import { useLoadingDelay } from "../../hooks/useLoadingDelay";
 import type { BatchStatus, QcStatus } from "../../data/types";
 import styles from "./factory.module.css";
 
@@ -31,6 +34,8 @@ export default function FactoryBatches() {
   const [query, setQuery]         = useState("");
   const [statusFilter, setFilter] = useState<BatchStatus | "">("");
   const [qcFilter, setQcFilter]   = useState<QcStatus | "">("");
+
+  const isLoading = useLoadingDelay();
 
   const filtered = useMemo(() => {
     return PRODUCTION_BATCHES.filter((b) => {
@@ -72,43 +77,46 @@ export default function FactoryBatches() {
         </div>
 
         <div className={styles.tableWrap}>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th>{tc.cols.batchId}</th>
-                <th>{tc.cols.order}</th>
-                <th>{tc.cols.product}</th>
-                <th className={styles.numEnd}>{tc.cols.quantity}</th>
-                <th>{tc.cols.producedDate}</th>
-                <th>{tc.cols.expiryDate}</th>
-                <th>{tc.cols.status}</th>
-                <th>{tc.cols.qcStatus}</th>
-                <th className={styles.numEnd}>{tc.cols.unitCost}</th>
-                <th className={styles.numEnd}>{tc.cols.totalCost}</th>
-                <th>{tc.cols.notes}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((b) => (
-                <tr key={b.id}>
-                  <td><span className={styles.mono}>{b.id}</span></td>
-                  <td><span className={styles.mono}>{b.productionOrderId}</span></td>
-                  <td>{b.productName}</td>
-                  <td className={`${styles.numEnd} ${styles.mono}`}>{b.quantity > 0 ? b.quantity.toLocaleString() : "—"}</td>
-                  <td className={styles.mono}>{b.producedDate || "—"}</td>
-                  <td className={styles.mono}>{b.expiryDate || "—"}</td>
-                  <td><Badge variant={BATCH_STATUS_VARIANT[b.status]} size="sm">{tc.status[b.status]}</Badge></td>
-                  <td><Badge variant={QC_VARIANT[b.qcStatus]} size="sm">{tc.qcStatus[b.qcStatus]}</Badge></td>
-                  <td className={`${styles.numEnd} ${styles.mono}`}>{b.unitCost > 0 ? formatCurrency(b.unitCost) : "—"}</td>
-                  <td className={`${styles.numEnd} ${styles.mono}`}>{b.totalCost > 0 ? formatCurrency(b.totalCost) : "—"}</td>
-                  <td style={{ fontSize: 11, color: "var(--app-text-muted)", maxWidth: 160 }}>{b.notes ?? "—"}</td>
+          {isLoading ? (
+            <Skeleton variant="rect" height={280} />
+          ) : filtered.length === 0 ? (
+            <EmptyState icon={<Layers size={32} />} title={tc.noData} />
+          ) : (
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th>{tc.cols.batchId}</th>
+                  <th>{tc.cols.order}</th>
+                  <th>{tc.cols.product}</th>
+                  <th className={styles.numEnd}>{tc.cols.quantity}</th>
+                  <th>{tc.cols.producedDate}</th>
+                  <th>{tc.cols.expiryDate}</th>
+                  <th>{tc.cols.status}</th>
+                  <th>{tc.cols.qcStatus}</th>
+                  <th className={styles.numEnd}>{tc.cols.unitCost}</th>
+                  <th className={styles.numEnd}>{tc.cols.totalCost}</th>
+                  <th>{tc.cols.notes}</th>
                 </tr>
-              ))}
-              {filtered.length === 0 && (
-                <tr><td colSpan={11} className={styles.empty}>{tc.noData}</td></tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {filtered.map((b) => (
+                  <tr key={b.id}>
+                    <td><span className={styles.mono}>{b.id}</span></td>
+                    <td><span className={styles.mono}>{b.productionOrderId}</span></td>
+                    <td>{b.productName}</td>
+                    <td className={`${styles.numEnd} ${styles.mono}`}>{b.quantity > 0 ? b.quantity.toLocaleString() : "—"}</td>
+                    <td className={styles.mono}>{b.producedDate || "—"}</td>
+                    <td className={styles.mono}>{b.expiryDate || "—"}</td>
+                    <td><Badge variant={BATCH_STATUS_VARIANT[b.status]} size="sm">{tc.status[b.status]}</Badge></td>
+                    <td><Badge variant={QC_VARIANT[b.qcStatus]} size="sm">{tc.qcStatus[b.qcStatus]}</Badge></td>
+                    <td className={`${styles.numEnd} ${styles.mono}`}>{b.unitCost > 0 ? formatCurrency(b.unitCost) : "—"}</td>
+                    <td className={`${styles.numEnd} ${styles.mono}`}>{b.totalCost > 0 ? formatCurrency(b.totalCost) : "—"}</td>
+                    <td style={{ fontSize: 11, color: "var(--app-text-muted)", maxWidth: 160 }}>{b.notes ?? "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </Stack>
     </Container>
