@@ -122,24 +122,28 @@ errors introduced by task changes.
 
 | # | Page | Status | Notes |
 |---|------|--------|-------|
-| 1 | Categories | ⬜ | |
-| 2 | PosProducts | ⬜ | |
-| 3 | StockCounts | ⬜ | |
-| 4 | SalesHistory | ⬜ | |
-| 5 | SalesRefunds | ⬜ | |
-| 6 | Receipts | ⬜ | |
-| 7 | CoinsReports | ⬜ | |
-| 8 | CoinsHistory | ⬜ | |
-| 9 | LoyaltyProfile | ⬜ | |
-| 10 | Cashiers | ⬜ | |
-| 11 | Customers | ⬜ | |
-| 12 | Suppliers | ⬜ | |
-| 13 | Employees | ⬜ | |
-| 14 | Invoices | ⬜ | |
-| 15 | Expenses | ⬜ | |
-| 16 | Payments | ⬜ | |
-| 17 | Departments | ⬜ | |
-| 18 | Permissions | ⬜ | |
-| 19 | Reports | ⬜ | |
-| 20 | CompanyOverview | ⬜ | |
-| 21 | FactoryImports | ⬜ | |
+| 1 | Categories | ✅ | Products from DataContext; count computed dynamically |
+| 2 | PosProducts | ✅ | KPIs from DataContext; updateProduct persists price |
+| 3 | StockCounts | ✅ | Complete count writes stock back to DataContext |
+| 4 | SalesHistory | ✅ | Cashier filter from POS_CASHIERS; TODAY computed dynamically |
+| 5 | SalesRefunds | ✅ | cashierFilter setter fixed; cashier select from POS_CASHIERS |
+| 6 | Receipts | ✅ | Export CSV wired; cashier names from POS_CASHIERS |
+| 7 | CoinsReports | ✅ | KPIs computed from COIN_TRANSACTIONS (was already done) |
+| 8 | CoinsHistory | ✅ | KPIs computed from COIN_TRANSACTIONS; Export CSV wired |
+| 9 | LoyaltyProfile | ✅ | Reads ?id= URL param; falls back to first profile |
+| 10 | Cashiers | ✅ | todaySales from static mock — acceptable (no SalesHistory in DataContext) |
+| 11 | Customers | ✅ | Filter toggle wired; Export CSV wired |
+| 12 | Suppliers | ✅ | Archive applies isDeleted; "Add Purchase" navigates to /purchases |
+| 13 | Employees | ✅ | Migrated from raw storage to DataContext add/update/delete |
+| 14 | Invoices | ✅ | Customer search by design clears until selection; supplier dropdown has onChange |
+| 15 | Expenses | ✅ | DataContext wired; add/update/delete persist |
+| 16 | Payments | ✅ | Bank Reconciliation is intentional "coming soon" stub |
+| 17 | Departments | ✅ | DataContext wired; add/update persist |
+| 18 | Permissions | ✅ | localStorage persistence via useEffect |
+| 19 | Reports | ✅ | Top KPI cards wired to DataContext totalRevenue/expenses/netProfit |
+| 20 | CompanyOverview | ✅ | Live KPIs + invoices from DataContext |
+| 21 | FactoryImports | ✅ | Add Import modal + addImportOrder in FactoryContext |
+
+### Final STEP 1 build
+- npm run lint: ✅ 0 errors, 0 warnings
+- npm run build: ✅ clean (chunk size warning is pre-existing)
