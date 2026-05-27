@@ -8,7 +8,7 @@ import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { Avatar } from "../../components/ui/Avatar";
 import { useSettings } from "../../context/SettingsContext";
-import { COIN_TRANSACTIONS, POS_LOYALTY_KPIS, type CoinAction } from "../../data/posMock";
+import { COIN_TRANSACTIONS, type CoinAction } from "../../data/posMock";
 import styles from "./CoinsHistory.module.css";
 
 const ACTION_VARIANT: Record<CoinAction, "success" | "danger" | "warning" | "info" | "neutral"> = {
@@ -35,6 +35,32 @@ export default function CoinsHistory() {
   const [filter, setFilter] = useState<CoinAction | "all">("all");
   const [query,  setQuery]  = useState("");
 
+  const cutoff30d = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 30);
+    return d.toISOString().slice(0, 10);
+  }, []);
+
+  const issued30d = useMemo(() =>
+    COIN_TRANSACTIONS
+      .filter((tx) => tx.action === "earned" && tx.timestamp.slice(0, 10) >= cutoff30d)
+      .reduce((s, tx) => s + tx.delta, 0),
+  [cutoff30d]);
+
+  const redeemed30d = useMemo(() =>
+    COIN_TRANSACTIONS
+      .filter((tx) => tx.action === "redeemed" && tx.timestamp.slice(0, 10) >= cutoff30d)
+      .reduce((s, tx) => s + Math.abs(tx.delta), 0),
+  [cutoff30d]);
+
+  const outstanding = useMemo(() => {
+    const latestBalance = new Map<string, number>();
+    for (const tx of COIN_TRANSACTIONS) {
+      if (tx.customerCode) latestBalance.set(tx.customerCode, tx.balanceAfter);
+    }
+    return Array.from(latestBalance.values()).reduce((s, v) => s + v, 0);
+  }, []);
+
   const filtered = useMemo(() => {
     return COIN_TRANSACTIONS.filter((tx) => {
       if (filter !== "all" && tx.action !== filter) return false;
@@ -59,14 +85,31 @@ export default function CoinsHistory() {
             <h1 className={styles.title}>{tc.pageTitle}</h1>
             <p className={styles.subtitle}>{tc.pageSubtitle}</p>
           </div>
-          <Button variant="secondary" size="sm">{tc.exportCsv}</Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => {
+              const csv = [
+                ["Timestamp", "Customer", "Action", "Invoice", "Delta", "Balance", "Reason"],
+                ...filtered.map((tx) => [tx.timestamp, tx.customerName ?? "", tx.action, tx.invoice ?? "", String(tx.delta), String(tx.balanceAfter), tx.reason]),
+              ].map((r) => r.join(",")).join("\n");
+              const a = Object.assign(document.createElement("a"), {
+                href: URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8;" })),
+                download: `coins-history-${new Date().toISOString().slice(0, 10)}.csv`,
+              });
+              a.click();
+              URL.revokeObjectURL(a.href);
+            }}
+          >
+            {tc.exportCsv}
+          </Button>
         </header>
 
         <Grid cols={4} gap="md" responsive>
-          <Kpi label={tc.kpi.issued}      value={POS_LOYALTY_KPIS.issued30d.value}   subtitle={POS_LOYALTY_KPIS.issued30d.trend}              tone="success" />
-          <Kpi label={tc.kpi.redeemed}    value={POS_LOYALTY_KPIS.redeemed30d.value} subtitle={POS_LOYALTY_KPIS.redeemed30d.subtitle ?? ""}    tone="info"    />
-          <Kpi label={tc.kpi.outstanding} value={POS_LOYALTY_KPIS.outstanding.value} subtitle={POS_LOYALTY_KPIS.outstanding.subtitle ?? ""}    tone="warning" />
-          <Kpi label={tc.kpi.expiring}    value={POS_LOYALTY_KPIS.expiring30d.value} subtitle={POS_LOYALTY_KPIS.expiring30d.subtitle ?? ""}    tone="danger"  />
+          <Kpi label={tc.kpi.issued}      value={issued30d.toLocaleString()}      subtitle={tc.kpi.last30days ?? "Last 30 days"} tone="success" />
+          <Kpi label={tc.kpi.redeemed}    value={redeemed30d.toLocaleString()}    subtitle={tc.kpi.last30days ?? "Last 30 days"} tone="info"    />
+          <Kpi label={tc.kpi.outstanding} value={outstanding.toLocaleString()}    subtitle={tc.kpi.allCustomers ?? "All customers"} tone="warning" />
+          <Kpi label={tc.kpi.expiring}    value={String(COIN_TRANSACTIONS.filter((tx) => tx.action === "expired").length)} subtitle={tc.kpi.allTime ?? "All time"} tone="danger"  />
         </Grid>
 
         <div className={styles.filters}>
