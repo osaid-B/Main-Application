@@ -8,6 +8,7 @@ import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { Modal } from "../../components/ui/Modal";
 import { useSettings } from "../../context/SettingsContext";
+import { useData } from "../../context/DataContext";
 import {
   POS_STOCK_COUNTS as INITIAL_COUNTS,
   type PosStockCount,
@@ -26,6 +27,8 @@ const STATUS_VARIANT: Record<StockCountStatus, "warning" | "info" | "success" | 
 export default function StockCounts() {
   const { t, formatCurrency } = useSettings();
   const tc = t.pos.stockCounts;
+
+  const { products, updateProduct } = useData();
 
   const [counts, setCounts] = useState<PosStockCount[]>(INITIAL_COUNTS);
   const [query, setQuery] = useState("");
@@ -55,10 +58,16 @@ export default function StockCounts() {
   }
 
   function completeCount(id: string) {
+    const target = counts.find((c) => c.id === id);
+    if (target) {
+      target.items.forEach((item) => {
+        const product = products.find((p) => p.id === item.productId);
+        if (product) updateProduct({ ...product, stock: item.counted });
+      });
+    }
     setCounts((prev) =>
       prev.map((c) => (c.id === id ? { ...c, status: "completed" as StockCountStatus } : c)),
     );
-    // Update the detail view with the new status
     setDetail((prev) => prev && prev.id === id ? { ...prev, status: "completed" } : prev);
   }
 
