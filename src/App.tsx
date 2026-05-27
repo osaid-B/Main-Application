@@ -31,6 +31,9 @@ import PosReceipts from "./pages/pos/Receipts";
 import PosCashiers from "./pages/pos/Cashiers";
 import PosStockCounts from "./pages/pos/StockCounts";
 import PosCategories from "./pages/pos/Categories";
+import SalesHistory from "./pages/pos/SalesHistory";
+import SalesRefunds from "./pages/pos/SalesRefunds";
+import PosProducts from "./pages/pos/PosProducts";
 import Departments from "./pages/Departments";
 import Permissions from "./pages/Permissions";
 import Reports from "./pages/Reports";
@@ -97,9 +100,9 @@ function AppRoutes() {
           {/* POS workspace */}
           <Route path="/pos" element={<Navigate to="/pos/checkout" replace />} />
           <Route path="/pos/checkout" element={<PosCheckout />} />
-          <Route path="/pos/history" element={<ComingSoon title="Sales History" />} />
-          <Route path="/pos/refunds" element={<ComingSoon title="Refunds" />} />
-          <Route path="/pos/products" element={<ComingSoon title="POS Products" />} />
+          <Route path="/pos/history" element={<SalesHistory />} />
+          <Route path="/pos/refunds" element={<SalesRefunds />} />
+          <Route path="/pos/products" element={<PosProducts />} />
           <Route path="/pos/categories" element={<PosCategories />} />
           <Route path="/pos/stock" element={<PosStockCounts />} />
           <Route path="/pos/loyalty/profile" element={<LoyaltyProfile />} />

@@ -829,3 +829,93 @@ export const LOYALTY_PROFILES: LoyaltyMemberProfile[] = [
     ],
   },
 ];
+
+// ─── Sales History ────────────────────────────────────────────────────────────
+
+export type SaleStatus = "completed" | "refunded" | "voided";
+
+export interface SaleLine {
+  productId: string;
+  name: string;
+  qty: number;
+  unitPrice: number;
+  total: number;
+}
+
+export interface SaleTransaction {
+  id: string;
+  date: string;
+  time: string;
+  cashierId: string;
+  cashierName: string;
+  customerName?: string;
+  lines: SaleLine[];
+  subtotal: number;
+  discount: number;
+  tax: number;
+  total: number;
+  paymentMethod: "cash" | "card" | "wallet" | "split";
+  status: SaleStatus;
+  receiptId: string;
+}
+
+export const POS_SALES_HISTORY: SaleTransaction[] = [
+  { id: "TXN-03000", date: "2026-05-27", time: "08:14", cashierId: "CSH-01", cashierName: "Ahmad Qasim",   customerName: "محمد العمري",  lines: [{ productId: "p-003", name: "كولا 330مل",         qty: 2, unitPrice: 4.50, total: 9.00 }, { productId: "p-014", name: "شيبس مشوي 50جم", qty: 1, unitPrice: 3.00, total: 3.00 }], subtotal: 12.00, discount: 0,    tax: 1.08, total: 13.08, paymentMethod: "cash",   status: "completed", receiptId: "RCP-9001" },
+  { id: "TXN-03001", date: "2026-05-27", time: "08:45", cashierId: "CSH-02", cashierName: "Mona Ibrahim",                                lines: [{ productId: "p-007", name: "أرز بسمتي 1كجم",      qty: 2, unitPrice: 9.75, total: 19.50 }], subtotal: 19.50, discount: 0,    tax: 1.76, total: 21.26, paymentMethod: "card",   status: "completed", receiptId: "RCP-9002" },
+  { id: "TXN-03002", date: "2026-05-27", time: "09:02", cashierId: "CSH-01", cashierName: "Ahmad Qasim",   customerName: "سارة أبو حمد", lines: [{ productId: "p-015", name: "شوكولاتة حليب 100جم", qty: 1, unitPrice: 7.50, total: 7.50 }, { productId: "p-019", name: "حليب كامل الدسم 1ل", qty: 2, unitPrice: 5.50, total: 11.00 }], subtotal: 18.50, discount: 0.93, tax: 1.58, total: 19.15, paymentMethod: "wallet", status: "refunded",  receiptId: "RCP-9003" },
+  { id: "TXN-03003", date: "2026-05-27", time: "09:30", cashierId: "CSH-03", cashierName: "Laila Mansour",                               lines: [{ productId: "p-009", name: "معكرونة 500جم",        qty: 3, unitPrice: 5.50, total: 16.50 }], subtotal: 16.50, discount: 0,    tax: 1.49, total: 17.99, paymentMethod: "cash",   status: "completed", receiptId: "RCP-9004" },
+  { id: "TXN-03004", date: "2026-05-27", time: "10:15", cashierId: "CSH-04", cashierName: "Karim Nasser",  customerName: "خالد الشريف",  lines: [{ productId: "p-008", name: "زيت زيتون 500مل",     qty: 1, unitPrice: 22.00, total: 22.00 }], subtotal: 22.00, discount: 0,    tax: 1.98, total: 23.98, paymentMethod: "card",   status: "completed", receiptId: "RCP-9005" },
+  { id: "TXN-03005", date: "2026-05-27", time: "11:00", cashierId: "CSH-05", cashierName: "Hana Saeed",                                  lines: [{ productId: "p-020", name: "جبنة بيضاء 500جم",    qty: 2, unitPrice: 13.00, total: 26.00 }, { productId: "p-021", name: "لبن زبادي 400جم", qty: 1, unitPrice: 4.75, total: 4.75 }], subtotal: 30.75, discount: 0, tax: 2.77, total: 33.52, paymentMethod: "split",  status: "completed", receiptId: "RCP-9006" },
+  { id: "TXN-03006", date: "2026-05-27", time: "11:40", cashierId: "CSH-01", cashierName: "Ahmad Qasim",                                 lines: [{ productId: "p-001", name: "مياه معدنية 500مل",   qty: 6, unitPrice: 2.50, total: 15.00 }], subtotal: 15.00, discount: 0,    tax: 1.35, total: 16.35, paymentMethod: "cash",   status: "voided",    receiptId: "RCP-9007" },
+  { id: "TXN-03007", date: "2026-05-27", time: "12:05", cashierId: "CSH-02", cashierName: "Mona Ibrahim",  customerName: "نور الدين رضا", lines: [{ productId: "p-017", name: "مكسرات مشكلة 250جم", qty: 2, unitPrice: 14.00, total: 28.00 }], subtotal: 28.00, discount: 1.40, tax: 2.39, total: 28.99, paymentMethod: "card",   status: "completed", receiptId: "RCP-9008" },
+  { id: "TXN-03008", date: "2026-05-26", time: "08:30", cashierId: "CSH-03", cashierName: "Laila Mansour",                               lines: [{ productId: "p-010", name: "سكر أبيض 1كجم",        qty: 2, unitPrice: 4.00, total: 8.00 }, { productId: "p-011", name: "طحين 2كجم", qty: 1, unitPrice: 7.25, total: 7.25 }], subtotal: 15.25, discount: 0, tax: 1.37, total: 16.62, paymentMethod: "cash", status: "completed", receiptId: "RCP-9009" },
+  { id: "TXN-03009", date: "2026-05-26", time: "09:15", cashierId: "CSH-04", cashierName: "Karim Nasser",  customerName: "ريم حسين",     lines: [{ productId: "p-005", name: "قهوة سريعة 200جم",    qty: 1, unitPrice: 18.50, total: 18.50 }, { productId: "p-004", name: "شاي أخضر علبة", qty: 1, unitPrice: 12.00, total: 12.00 }], subtotal: 30.50, discount: 0, tax: 2.75, total: 33.25, paymentMethod: "wallet", status: "completed", receiptId: "RCP-9010" },
+  { id: "TXN-03010", date: "2026-05-26", time: "10:00", cashierId: "CSH-05", cashierName: "Hana Saeed",    customerName: "محمد العمري",  lines: [{ productId: "p-013", name: "تونا معلبة",           qty: 3, unitPrice: 8.50, total: 25.50 }], subtotal: 25.50, discount: 0,    tax: 2.30, total: 27.80, paymentMethod: "cash",   status: "refunded",  receiptId: "RCP-9011" },
+  { id: "TXN-03011", date: "2026-05-26", time: "10:45", cashierId: "CSH-01", cashierName: "Ahmad Qasim",                                 lines: [{ productId: "p-016", name: "بسكويت شاي 200جم",     qty: 4, unitPrice: 4.50, total: 18.00 }], subtotal: 18.00, discount: 0,    tax: 1.62, total: 19.62, paymentMethod: "card",   status: "completed", receiptId: "RCP-9012" },
+  { id: "TXN-03012", date: "2026-05-26", time: "11:30", cashierId: "CSH-02", cashierName: "Mona Ibrahim",  customerName: "سارة أبو حمد", lines: [{ productId: "p-022", name: "زبدة 200جم",           qty: 1, unitPrice: 8.00, total: 8.00 }, { productId: "p-023", name: "صابون يدين سائل 500مل", qty: 1, unitPrice: 7.00, total: 7.00 }], subtotal: 15.00, discount: 0, tax: 1.35, total: 16.35, paymentMethod: "split", status: "completed", receiptId: "RCP-9013" },
+  { id: "TXN-03013", date: "2026-05-26", time: "12:20", cashierId: "CSH-03", cashierName: "Laila Mansour",                               lines: [{ productId: "p-002", name: "عصير برتقال 1ل",        qty: 3, unitPrice: 6.00, total: 18.00 }], subtotal: 18.00, discount: 0,    tax: 1.62, total: 19.62, paymentMethod: "cash",   status: "completed", receiptId: "RCP-9014" },
+  { id: "TXN-03014", date: "2026-05-25", time: "09:00", cashierId: "CSH-04", cashierName: "Karim Nasser",  customerName: "خالد الشريف",  lines: [{ productId: "p-007", name: "أرز بسمتي 1كجم",      qty: 3, unitPrice: 9.75, total: 29.25 }, { productId: "p-012", name: "صلصة طماطم 400جم", qty: 2, unitPrice: 6.00, total: 12.00 }], subtotal: 41.25, discount: 2.06, tax: 3.53, total: 42.72, paymentMethod: "card", status: "completed", receiptId: "RCP-9015" },
+  { id: "TXN-03015", date: "2026-05-25", time: "09:50", cashierId: "CSH-05", cashierName: "Hana Saeed",                                  lines: [{ productId: "p-019", name: "حليب كامل الدسم 1ل",  qty: 4, unitPrice: 5.50, total: 22.00 }], subtotal: 22.00, discount: 0,    tax: 1.98, total: 23.98, paymentMethod: "cash",   status: "completed", receiptId: "RCP-9016" },
+  { id: "TXN-03016", date: "2026-05-25", time: "10:30", cashierId: "CSH-01", cashierName: "Ahmad Qasim",   customerName: "نور الدين رضا", lines: [{ productId: "p-008", name: "زيت زيتون 500مل",     qty: 2, unitPrice: 22.00, total: 44.00 }], subtotal: 44.00, discount: 0, tax: 3.96, total: 47.96, paymentMethod: "wallet", status: "completed", receiptId: "RCP-9017" },
+  { id: "TXN-03017", date: "2026-05-25", time: "11:15", cashierId: "CSH-02", cashierName: "Mona Ibrahim",  customerName: "ريم حسين",     lines: [{ productId: "p-015", name: "شوكولاتة حليب 100جم", qty: 3, unitPrice: 7.50, total: 22.50 }, { productId: "p-016", name: "بسكويت شاي 200جم", qty: 2, unitPrice: 4.50, total: 9.00 }], subtotal: 31.50, discount: 0, tax: 2.84, total: 34.34, paymentMethod: "card", status: "completed", receiptId: "RCP-9018" },
+  { id: "TXN-03018", date: "2026-05-24", time: "08:00", cashierId: "CSH-03", cashierName: "Laila Mansour", customerName: "محمد العمري",  lines: [{ productId: "p-014", name: "شيبس مشوي 50جم",       qty: 5, unitPrice: 3.00, total: 15.00 }, { productId: "p-003", name: "كولا 330مل", qty: 3, unitPrice: 4.50, total: 13.50 }], subtotal: 28.50, discount: 0, tax: 2.57, total: 31.07, paymentMethod: "cash", status: "completed", receiptId: "RCP-9019" },
+  { id: "TXN-03019", date: "2026-05-24", time: "09:40", cashierId: "CSH-04", cashierName: "Karim Nasser",                                lines: [{ productId: "p-020", name: "جبنة بيضاء 500جم",    qty: 1, unitPrice: 13.00, total: 13.00 }, { productId: "p-021", name: "لبن زبادي 400جم", qty: 2, unitPrice: 4.75, total: 9.50 }], subtotal: 22.50, discount: 0, tax: 2.03, total: 24.53, paymentMethod: "card", status: "completed", receiptId: "RCP-9020" },
+  { id: "TXN-03020", date: "2026-05-24", time: "10:20", cashierId: "CSH-05", cashierName: "Hana Saeed",    customerName: "سارة أبو حمد", lines: [{ productId: "p-001", name: "مياه معدنية 500مل",   qty: 12, unitPrice: 2.50, total: 30.00 }], subtotal: 30.00, discount: 1.50, tax: 2.57, total: 31.07, paymentMethod: "wallet", status: "completed", receiptId: "RCP-9021" },
+];
+
+// ─── Sales Refunds ────────────────────────────────────────────────────────────
+
+export type RefundStatus = "pending" | "approved" | "completed" | "rejected";
+export type RefundReason = "defective" | "wrong_item" | "customer_change" | "overcharge" | "other";
+
+export interface SaleRefund {
+  id: string;
+  originalTxId: string;
+  date: string;
+  cashierId: string;
+  cashierName: string;
+  customerName?: string;
+  refundAmount: number;
+  reason: RefundReason;
+  status: RefundStatus;
+  rejectionNote?: string;
+  lines: SaleLine[];
+}
+
+export const POS_REFUNDS: SaleRefund[] = [
+  { id: "RFD-001", originalTxId: "TXN-03000", date: "2026-05-27", cashierId: "CSH-01", cashierName: "Ahmad Qasim",   customerName: "محمد العمري",  refundAmount: 12.50, reason: "defective",      status: "pending",   lines: [{ productId: "p-003", name: "كولا 330مل",          qty: 1, unitPrice: 4.50, total: 4.50  }] },
+  { id: "RFD-002", originalTxId: "TXN-03002", date: "2026-05-27", cashierId: "CSH-02", cashierName: "Mona Ibrahim",  customerName: "سارة أبو حمد", refundAmount: 7.50,  reason: "wrong_item",     status: "approved",  lines: [{ productId: "p-015", name: "شوكولاتة حليب 100جم", qty: 1, unitPrice: 7.50, total: 7.50  }] },
+  { id: "RFD-003", originalTxId: "TXN-03004", date: "2026-05-26", cashierId: "CSH-03", cashierName: "Laila Mansour",                               refundAmount: 22.00, reason: "customer_change", status: "completed", lines: [{ productId: "p-008", name: "زيت زيتون 500مل",      qty: 1, unitPrice: 22.00, total: 22.00 }] },
+  { id: "RFD-004", originalTxId: "TXN-03006", date: "2026-05-26", cashierId: "CSH-04", cashierName: "Karim Nasser",  customerName: "خالد الشريف",  refundAmount: 9.75,  reason: "overcharge",      status: "rejected",  rejectionNote: "No receipt provided.", lines: [] },
+  { id: "RFD-005", originalTxId: "TXN-03008", date: "2026-05-25", cashierId: "CSH-05", cashierName: "Hana Saeed",                                  refundAmount: 5.50,  reason: "defective",       status: "pending",   lines: [{ productId: "p-019", name: "حليب كامل الدسم 1ل",  qty: 1, unitPrice: 5.50, total: 5.50  }] },
+  { id: "RFD-006", originalTxId: "TXN-03010", date: "2026-05-25", cashierId: "CSH-01", cashierName: "Ahmad Qasim",   customerName: "محمد العمري",  refundAmount: 13.00, reason: "wrong_item",      status: "completed", lines: [{ productId: "p-020", name: "جبنة بيضاء 500جم",    qty: 1, unitPrice: 13.00, total: 13.00 }] },
+  { id: "RFD-007", originalTxId: "TXN-03012", date: "2026-05-24", cashierId: "CSH-02", cashierName: "Mona Ibrahim",                                refundAmount: 4.50,  reason: "other",           status: "approved",  lines: [] },
+  { id: "RFD-008", originalTxId: "TXN-03014", date: "2026-05-24", cashierId: "CSH-03", cashierName: "Laila Mansour", customerName: "سارة أبو حمد", refundAmount: 9.00,  reason: "defective",       status: "pending",   lines: [{ productId: "p-003", name: "كولا 330مل",          qty: 2, unitPrice: 4.50, total: 9.00  }] },
+  { id: "RFD-009", originalTxId: "TXN-03016", date: "2026-05-23", cashierId: "CSH-04", cashierName: "Karim Nasser",  customerName: "خالد الشريف",  refundAmount: 18.50, reason: "overcharge",      status: "completed", lines: [{ productId: "p-005", name: "قهوة سريعة 200جم",    qty: 1, unitPrice: 18.50, total: 18.50 }] },
+  { id: "RFD-010", originalTxId: "TXN-03018", date: "2026-05-23", cashierId: "CSH-05", cashierName: "Hana Saeed",                                  refundAmount: 6.00,  reason: "customer_change", status: "rejected",  rejectionNote: "Past 7-day return window.", lines: [] },
+  { id: "RFD-011", originalTxId: "TXN-03020", date: "2026-05-22", cashierId: "CSH-01", cashierName: "Ahmad Qasim",   customerName: "نور الدين رضا", refundAmount: 3.00, reason: "defective",       status: "approved",  lines: [{ productId: "p-014", name: "شيبس مشوي 50جم",     qty: 1, unitPrice: 3.00, total: 3.00  }] },
+  { id: "RFD-012", originalTxId: "TXN-03001", date: "2026-05-22", cashierId: "CSH-02", cashierName: "Mona Ibrahim",  customerName: "ريم حسين",     refundAmount: 14.00, reason: "wrong_item",      status: "completed", lines: [{ productId: "p-017", name: "مكسرات مشكلة 250جم",  qty: 1, unitPrice: 14.00, total: 14.00 }] },
+  { id: "RFD-013", originalTxId: "TXN-03003", date: "2026-05-21", cashierId: "CSH-03", cashierName: "Laila Mansour",                               refundAmount: 5.50,  reason: "other",           status: "pending",   lines: [] },
+  { id: "RFD-014", originalTxId: "TXN-03005", date: "2026-05-21", cashierId: "CSH-04", cashierName: "Karim Nasser",  customerName: "محمد العمري",  refundAmount: 8.50,  reason: "defective",       status: "completed", lines: [{ productId: "p-013", name: "تونا معلبة",           qty: 1, unitPrice: 8.50, total: 8.50  }] },
+  { id: "RFD-015", originalTxId: "TXN-03007", date: "2026-05-20", cashierId: "CSH-05", cashierName: "Hana Saeed",    customerName: "سارة أبو حمد", refundAmount: 7.25,  reason: "overcharge",      status: "approved",  lines: [{ productId: "p-011", name: "طحين 2كجم",             qty: 1, unitPrice: 7.25, total: 7.25  }] },
+];
