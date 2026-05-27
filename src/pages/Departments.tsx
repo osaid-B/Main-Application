@@ -211,6 +211,8 @@ export default function Departments() {
 }
 
 function OrgChart({ departments }: { departments: Department[] }) {
+  const { t } = useSettings();
+  const staffLabel = t.departments.orgNodeStaff;
   const topLevel = departments.filter((d) => !d.parentId);
 
   return (
@@ -219,6 +221,7 @@ function OrgChart({ departments }: { departments: Department[] }) {
         <OrgNode
           key={dept.id}
           dept={dept}
+          staffLabel={staffLabel}
           children={departments.filter((d) => d.parentId === dept.id)}
         />
       ))}
@@ -226,12 +229,12 @@ function OrgChart({ departments }: { departments: Department[] }) {
   );
 }
 
-function OrgNode({ dept, children }: { dept: Department; children: Department[] }) {
+function OrgNode({ dept, children, staffLabel }: { dept: Department; children: Department[]; staffLabel: string }) {
   return (
     <div className={styles.orgBranch}>
       <div className={styles.orgNode}>
         <div className={styles.orgNodeName}>{dept.name}</div>
-        <div className={styles.orgNodeMeta}>{dept.headcount} staff</div>
+        <div className={styles.orgNodeMeta}>{dept.headcount} {staffLabel}</div>
       </div>
       {children.length > 0 && (
         <div className={styles.orgChildren}>
@@ -239,7 +242,7 @@ function OrgNode({ dept, children }: { dept: Department; children: Department[] 
             <div key={child.id} className={styles.orgChildNode}>
               <div className={styles.orgNode}>
                 <div className={styles.orgNodeName}>{child.name}</div>
-                <div className={styles.orgNodeMeta}>{child.headcount} staff</div>
+                <div className={styles.orgNodeMeta}>{child.headcount} {staffLabel}</div>
               </div>
             </div>
           ))}

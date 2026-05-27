@@ -81,6 +81,8 @@ export const translations = {
       noMatch: "No results match your filters.",
       today: "Today",
       yesterday: "Yesterday",
+      accessDenied: "Access denied",
+      accessDeniedMsg: "You don't have permission to access this page.",
     },
 
     sidebar: {
@@ -1799,6 +1801,7 @@ export const translations = {
         revenue: "Revenue",
         openPositions: "Open Positions",
       },
+      orgNodeStaff: "staff",
     },
 
     permissions: {
@@ -2807,6 +2810,8 @@ export const translations = {
       noMatch: "ما في نتائج تطابق الفلتر.",
       today: "اليوم",
       yesterday: "أمس",
+      accessDenied: "وصول مرفوض",
+      accessDeniedMsg: "ما عندك صلاحية الوصول لهذه الصفحة.",
     },
 
     sidebar: {
@@ -4513,6 +4518,7 @@ export const translations = {
         revenue: "الإيرادات",
         openPositions: "الشواغر",
       },
+      orgNodeStaff: "موظف",
     },
 
     permissions: {
