@@ -1333,6 +1333,9 @@ export const translations = {
           redeemed: "COINS REDEEMED (30D)",
           outstanding: "OUTSTANDING LIABILITY",
           expiring: "EXPIRING NEXT 30D",
+          last30days: "Last 30 days",
+          allCustomers: "All customers",
+          allTime: "All time",
         },
       },
       coinsReports: {
@@ -2122,7 +2125,7 @@ export const translations = {
       status: { active: "In Stock", outOfStock: "Out of Stock", low: "Low Stock" },
       filters: { allCategories: "All Categories", allStatuses: "All Statuses" },
       actions: { edit: "Edit Price", toggle: "Toggle Active" },
-      editPrice: { title: "Edit Price", label: "Price (₪)", save: "Save" },
+      editPrice: { title: "Edit Price", label: "Price (₪)", save: "Save", invalidPrice: "Invalid price" },
     },
 
     shortcuts: {
@@ -4060,6 +4063,9 @@ export const translations = {
           redeemed: "نقاط مستردة (30 يوم)",
           outstanding: "الالتزامات القائمة",
           expiring: "تنتهي خلال 30 يوم",
+          last30days: "آخر 30 يوم",
+          allCustomers: "جميع الزبائن",
+          allTime: "طوال الوقت",
         },
       },
       coinsReports: {
@@ -4818,7 +4824,7 @@ export const translations = {
       status: { active: "متوفر", outOfStock: "نفد", low: "منخفض" },
       filters: { allCategories: "جميع الفئات", allStatuses: "جميع الحالات" },
       actions: { edit: "تعديل السعر", toggle: "تبديل الحالة" },
-      editPrice: { title: "تعديل السعر", label: "السعر (₪)", save: "حفظ" },
+      editPrice: { title: "تعديل السعر", label: "السعر (₪)", save: "حفظ", invalidPrice: "سعر غير صالح" },
     },
 
     shortcuts: {

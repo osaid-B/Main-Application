@@ -10,7 +10,6 @@ import {
   CASH_FLOW,
   COMPANY_KPIS,
   DEPARTMENTS,
-  OPEN_INVOICES,
   REVENUE_BY_DEPT,
   type CompanyKPI,
   type DepartmentRow,
@@ -117,12 +116,12 @@ export default function CompanyOverview() {
 
         {/* 6 KPIs (3x2) — live from DataContext */}
         <Grid cols={3} gap="md" responsive>
-          <KpiCard kpi={{ label: t.company.kpi?.revenue     ?? "REVENUE",    value: formatCurrency(totalRevenue),    trend: 0, color: "green"  }} />
-          <KpiCard kpi={{ label: t.company.kpi?.receivables ?? "RECEIVABLES", value: formatCurrency(receivablesTotal), trend: 0, color: "orange", subtitle: `${openInvoicesCount} invoices open` }} />
-          <KpiCard kpi={{ label: t.company.kpi?.payables    ?? "PAYABLES",   value: formatCurrency(payablesDue),     trend: 0, color: "blue"   }} />
-          <KpiCard kpi={{ label: t.company.kpi?.customers   ?? "CUSTOMERS",  value: String(customers.filter((c) => !c.isDeleted).length), trend: 0, color: "purple" }} />
-          <KpiCard kpi={{ label: t.company.kpi?.headcount   ?? "HEADCOUNT",  value: String(headcount), trend: 0, color: "purple" }} />
-          <KpiCard kpi={{ label: t.company.kpi?.openInvoices ?? "OPEN INVOICES", value: String(openInvoicesCount), trend: 0, color: "orange" }} />
+          <KpiCard kpi={{ label: "REVENUE",      value: formatCurrency(totalRevenue),    trend: 0, color: "green"  }} />
+          <KpiCard kpi={{ label: "RECEIVABLES",  value: formatCurrency(receivablesTotal), trend: 0, color: "orange", subtitle: `${openInvoicesCount} invoices open` }} />
+          <KpiCard kpi={{ label: "PAYABLES",     value: formatCurrency(payablesDue),     trend: 0, color: "blue"   }} />
+          <KpiCard kpi={{ label: "CUSTOMERS",    value: String(customers.filter((c) => !c.isDeleted).length), trend: 0, color: "purple" }} />
+          <KpiCard kpi={{ label: "HEADCOUNT",    value: String(headcount), trend: 0, color: "purple" }} />
+          <KpiCard kpi={{ label: "OPEN INVOICES", value: String(openInvoicesCount), trend: 0, color: "orange" }} />
         </Grid>
 
         {/* Cash flow + Revenue donut */}
@@ -206,7 +205,7 @@ export default function CompanyOverview() {
               </thead>
               <tbody>
                 {invoices
-                  .filter((inv) => inv.status !== "Paid" && !inv.isDeleted)
+                  .filter((inv) => inv.status !== "Paid")
                   .slice(0, 8)
                   .map((inv) => {
                     const customer = customers.find((c) => c.id === inv.customerId);
@@ -214,9 +213,9 @@ export default function CompanyOverview() {
                       invoice: inv.id,
                       customer: customer?.name ?? inv.customerId,
                       issue: inv.date ?? "",
-                      due: inv.dueDate ?? inv.date ?? "",
+                      due: inv.date ?? "",
                       amount: Number(inv.remainingAmount ?? inv.total ?? inv.amount ?? 0),
-                      status: inv.status === "Overdue" ? "overdue" : "due-soon",
+                      status: inv.status === "Partial" ? "due-soon" : "due-soon",
                     };
                     return <InvoiceRow key={inv.id} inv={liveInv} />;
                   })}

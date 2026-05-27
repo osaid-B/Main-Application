@@ -184,7 +184,7 @@ function NewImportModal({ onSave, onClose }: { onSave: (order: ImportOrder) => v
 
   const [supplier, setSupplier]   = useState("");
   const [origin, setOrigin]       = useState("");
-  const [currency, setCurrency]   = useState("USD");
+  const [currency]                = useState("USD");
   const [orderDate, setOrderDate] = useState(today);
   const [eta, setEta]             = useState("");
   const [notes, setNotes]         = useState("");
@@ -226,8 +226,14 @@ function NewImportModal({ onSave, onClose }: { onSave: (order: ImportOrder) => v
         <Input label={tc.form.supplier} value={supplier} onChange={(e) => setSupplier(e.target.value)} required />
         <Input label={tc.form.origin} value={origin} onChange={(e) => setOrigin(e.target.value)} required />
         <div style={{ display: "flex", gap: "var(--space-2)" }}>
-          <Input label={tc.form.orderDate} type="date" value={orderDate} onChange={(e) => setOrderDate(e.target.value)} />
-          <Input label={tc.form.eta} type="date" value={eta} onChange={(e) => setEta(e.target.value)} required />
+          <div style={{ flex: 1 }}>
+            <label style={{ display: "block", fontSize: 12, marginBottom: 4, color: "var(--app-text-muted)" }}>{tc.form.orderDate}</label>
+            <input type="date" value={orderDate} onChange={(e) => setOrderDate(e.target.value)} style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--app-border)", borderRadius: "var(--radius-sm)", background: "var(--app-surface)", color: "var(--app-text)", fontSize: 13 }} />
+          </div>
+          <div style={{ flex: 1 }}>
+            <label style={{ display: "block", fontSize: 12, marginBottom: 4, color: "var(--app-text-muted)" }}>{tc.form.eta}</label>
+            <input type="date" value={eta} onChange={(e) => setEta(e.target.value)} required style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--app-border)", borderRadius: "var(--radius-sm)", background: "var(--app-surface)", color: "var(--app-text)", fontSize: 13 }} />
+          </div>
         </div>
         <Input label={tc.form.notes} value={notes} onChange={(e) => setNotes(e.target.value)} />
       </div>

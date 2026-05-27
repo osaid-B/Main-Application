@@ -32,7 +32,7 @@ const DEPT_MEMBERS: Record<string, string[]> = {
 export default function Departments() {
   const { t, formatCurrency } = useSettings();
   const tc = t.departments;
-  const { departments, addDepartment, updateDepartment, employees } = useData();
+  const { departments, addDepartment, updateDepartment } = useData();
   const [view, setView] = useState<ViewMode>("table");
   const [query, setQuery] = useState("");
   const [isAdding, setIsAdding] = useState(false);

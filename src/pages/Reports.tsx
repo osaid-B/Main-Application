@@ -32,9 +32,8 @@ import styles from "./Reports.module.css";
 
 type TabId = "overview" | "sales" | "expenses" | "pl" | "custom";
 
-// Current month (June = last entry)
-const CURRENT = MONTHLY_FINANCIALS[MONTHLY_FINANCIALS.length - 1];
-const PREV    = MONTHLY_FINANCIALS[MONTHLY_FINANCIALS.length - 2];
+// Previous month baseline for delta calculations
+const PREV = MONTHLY_FINANCIALS[MONTHLY_FINANCIALS.length - 2];
 
 export default function Reports() {
   const { t, formatCurrency } = useSettings();

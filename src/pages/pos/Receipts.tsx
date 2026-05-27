@@ -94,7 +94,7 @@ export default function Receipts() {
             onClick={() => {
               const csv = [
                 ["ID", "Date", "Cashier", "Items", "Total", "Method", "Status"],
-                ...filtered.map((r) => [r.id, r.date, r.cashierName, String(r.itemsCount), String(r.total), r.paymentMethod, r.status]),
+                ...filtered.map((r) => [r.id, r.date, r.cashierName, String(r.lines.length), String(r.total), r.paymentMethod, r.status]),
               ].map((row) => row.join(",")).join("\n");
               const a = Object.assign(document.createElement("a"), {
                 href: URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8;" })),
