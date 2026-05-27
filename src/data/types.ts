@@ -593,3 +593,111 @@ export interface Role {
   isSystem: boolean;
   permissions: PermissionModule[];
 }
+
+// ── Factory ───────────────────────────────────────────────────────────────────
+
+export type QcStatus = "pass" | "fail" | "pending" | "conditional";
+
+export type QualityCheck = {
+  id: string;
+  productionOrderId: string;
+  productId: string;
+  productName: string;
+  batchId: string;
+  inspectionDate: string;
+  inspector: string;
+  status: QcStatus;
+  defectRate: number; // percentage 0–100
+  sampleSize: number;
+  failedUnits: number;
+  notes?: string;
+};
+
+export type RawMaterialCategory = "oil" | "packaging" | "additives" | "labeling" | "cleaning";
+
+export type RawMaterial = {
+  id: string;
+  name: string;
+  nameAr: string;
+  category: RawMaterialCategory;
+  unit: string;
+  onHand: number;
+  reorderPoint: number;
+  unitCost: number;
+  supplier: string;
+  origin: "local" | "imported";
+  lastPurchaseDate?: string;
+};
+
+export type FinishedGood = {
+  id: string;
+  name: string;
+  nameAr: string;
+  sku: string;
+  category: string;
+  onHand: number;
+  reserved: number;
+  unitCost: number;
+  sellingPrice: number;
+  productionOrderId?: string;
+  lastProducedDate?: string;
+};
+
+export type WarehouseZone = "raw" | "finished" | "packaging" | "quarantine";
+
+export type WarehouseLocation = {
+  id: string;
+  name: string;
+  zone: WarehouseZone;
+  capacity: number;
+  used: number;
+  temperature?: string;
+  notes?: string;
+};
+
+export type ImportOrderStatus = "ordered" | "in-transit" | "customs" | "received" | "cancelled";
+
+export type ImportOrder = {
+  id: string;
+  supplierName: string;
+  origin: string;
+  items: Array<{ name: string; quantity: number; unit: string; unitCost: number }>;
+  totalValue: number;
+  currency: string;
+  orderDate: string;
+  estimatedArrival: string;
+  actualArrival?: string;
+  status: ImportOrderStatus;
+  customsRef?: string;
+  notes?: string;
+};
+
+export type BatchStatus = "open" | "closed" | "quarantine" | "recalled";
+
+export type ProductionBatch = {
+  id: string;
+  productionOrderId: string;
+  productName: string;
+  quantity: number;
+  producedDate: string;
+  expiryDate: string;
+  status: BatchStatus;
+  qcStatus: QcStatus;
+  unitCost: number;
+  totalCost: number;
+  notes?: string;
+};
+
+export type CostingEntry = {
+  id: string;
+  productionOrderId: string;
+  productName: string;
+  period: string; // YYYY-MM
+  rawMaterialCost: number;
+  laborCost: number;
+  overheadCost: number;
+  totalCost: number;
+  unitsProduced: number;
+  costPerUnit: number;
+  variance: number; // actual - standard
+};

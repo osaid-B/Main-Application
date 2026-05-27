@@ -38,6 +38,17 @@ import Departments from "./pages/Departments";
 import Permissions from "./pages/Permissions";
 import Reports from "./pages/Reports";
 import Expenses from "./pages/Expenses";
+import FactoryDashboard from "./pages/factory/FactoryDashboard";
+import FactoryOrders from "./pages/factory/FactoryOrders";
+import FactoryBoms from "./pages/factory/FactoryBoms";
+import FactoryQc from "./pages/factory/FactoryQc";
+import FactoryRawMaterials from "./pages/factory/FactoryRawMaterials";
+import FactoryFinishedGoods from "./pages/factory/FactoryFinishedGoods";
+import FactoryWarehouse from "./pages/factory/FactoryWarehouse";
+import FactorySources from "./pages/factory/FactorySources";
+import FactoryImports from "./pages/factory/FactoryImports";
+import FactoryBatches from "./pages/factory/FactoryBatches";
+import FactoryCosting from "./pages/factory/FactoryCosting";
 import ComingSoon from "./pages/ComingSoon";
 
 function AppRoutes() {
@@ -96,6 +107,20 @@ function AppRoutes() {
 
           {/* System */}
           <Route path="/audit-log" element={<ComingSoon title="Audit Log" />} />
+
+          {/* Factory workspace */}
+          <Route path="/factory" element={<Navigate to="/factory/dashboard" replace />} />
+          <Route path="/factory/dashboard" element={<FactoryDashboard />} />
+          <Route path="/factory/orders" element={<FactoryOrders />} />
+          <Route path="/factory/boms" element={<FactoryBoms />} />
+          <Route path="/factory/qc" element={<FactoryQc />} />
+          <Route path="/factory/inventory/raw" element={<FactoryRawMaterials />} />
+          <Route path="/factory/inventory/finished" element={<FactoryFinishedGoods />} />
+          <Route path="/factory/inventory/warehouse" element={<FactoryWarehouse />} />
+          <Route path="/factory/inventory/sources" element={<FactorySources />} />
+          <Route path="/factory/imports" element={<FactoryImports />} />
+          <Route path="/factory/batches" element={<FactoryBatches />} />
+          <Route path="/factory/costing" element={<FactoryCosting />} />
 
           {/* POS workspace */}
           <Route path="/pos" element={<Navigate to="/pos/checkout" replace />} />
