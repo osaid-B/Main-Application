@@ -58,8 +58,9 @@ export default function Expenses() {
   /* KPIs */
   const allActive    = expenses.filter((e) => !e.isDeleted);
   const totalAll     = allActive.reduce((s, e) => s + e.amount, 0);
-  const juneCurrent  = allActive.filter((e) => e.date.startsWith("2026-06"));
-  const totalMonth   = juneCurrent.reduce((s, e) => s + e.amount, 0);
+  const currentYM    = new Date().toISOString().slice(0, 7);
+  const monthCurrent = allActive.filter((e) => e.date.startsWith(currentYM));
+  const totalMonth   = monthCurrent.reduce((s, e) => s + e.amount, 0);
   const totalPending = allActive.filter((e) => e.status === "pending").length;
   const avgTicket    = allActive.length > 0 ? totalAll / allActive.length : 0;
 

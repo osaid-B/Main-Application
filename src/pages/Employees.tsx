@@ -1049,7 +1049,19 @@ function TodayAttendanceSection({
               <Upload size={18} />
               <span>Import Attendance</span>
             </Button>
-            <Button variant="secondary" size="sm" onClick={() => {}}>
+            <Button variant="secondary" size="sm" onClick={() => {
+              const rows = employees.map((e) => {
+                const entry = getDailyAttendanceEntryByDate(e, selectedDate);
+                return [e.id, e.name, e.departmentId ?? "", entry?.status ?? "absent", String(entry?.workedHours ?? 0)].join(",");
+              });
+              const csv = ["ID,Name,Department,Status,Hours", ...rows].join("\n");
+              const a = Object.assign(document.createElement("a"), {
+                href: URL.createObjectURL(new Blob([csv], { type: "text/csv" })),
+                download: `attendance-${selectedDate}.csv`,
+              });
+              a.click();
+              URL.revokeObjectURL(a.href);
+            }}>
               <Download size={18} />
               <span>Export Report</span>
             </Button>
@@ -1200,8 +1212,8 @@ function MonthlyAttendanceSection({
           <Button variant="secondary" size="sm">
             <Filter size={14} /> Filters
           </Button>
-          <span className="emp-filter-chip">All Departments <span onClick={() => {}}>×</span></span>
-          <span className="emp-filter-chip">All Shifts <span onClick={() => {}}>×</span></span>
+          <span className="emp-filter-chip">All Departments</span>
+          <span className="emp-filter-chip">All Shifts</span>
           <Button variant="ghost" size="sm">Clear</Button>
         </div>
       </div>
