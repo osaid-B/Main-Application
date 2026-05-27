@@ -38,9 +38,7 @@ export default function Login() {
     }
 
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 420));
-
-    const success = login(trimmedUsername, trimmedPassword);
+    const success = await login(trimmedUsername, trimmedPassword);
     setLoading(false);
 
     if (success) {
