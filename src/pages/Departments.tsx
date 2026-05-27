@@ -17,22 +17,11 @@ import styles from "./Departments.module.css";
 
 type ViewMode = "table" | "orgChart";
 
-// Sample member names for the detail drawer
-const DEPT_MEMBERS: Record<string, string[]> = {
-  "dept-01": ["Walid Karimi", "Faisal Al-Omari", "Nada Khalil"],
-  "dept-02": ["Ahmad Qasim", "Sara Haddad", "Tariq Mansour", "Lina Barakat"],
-  "dept-03": ["Mona Ibrahim", "Hassan Khalil", "Yusuf Barakat"],
-  "dept-04": ["Karim Nasser", "Dina Qasim", "Faris Nasser"],
-  "dept-05": ["Laila Mansour", "Reem Hussein", "Omar Haddad"],
-  "dept-06": ["Hana Saeed", "Ahmed Barakat", "Nour Al-Din Rida"],
-  "dept-07": ["Omar Haddad", "Ahmad Qasim", "Mona Ibrahim"],
-  "dept-08": ["Dina Saleh", "Yusuf Barakat", "Hassan Khalil"],
-};
 
 export default function Departments() {
   const { t, formatCurrency } = useSettings();
   const tc = t.departments;
-  const { departments, addDepartment, updateDepartment } = useData();
+  const { departments, addDepartment, updateDepartment, employees } = useData();
   const [view, setView] = useState<ViewMode>("table");
   const [query, setQuery] = useState("");
   const [isAdding, setIsAdding] = useState(false);
@@ -46,10 +35,11 @@ export default function Departments() {
   });
 
   const isLoading = useLoadingDelay();
+  const activeEmployees = employees.filter((e) => !e.isDeleted);
   const totalDepts    = departments.length;
-  const totalHead     = departments.reduce((s, d) => s + d.headcount, 0);
+  const totalHead     = activeEmployees.filter((e) => departments.some((d) => d.id === e.departmentId)).length;
   const totalOpen     = departments.reduce((s, d) => s + d.openPositions, 0);
-  const avgSize       = totalDepts > 0 ? (totalHead / totalDepts).toFixed(1) : "0";
+  const avgSize       = totalDepts > 0 ? (activeEmployees.length / totalDepts).toFixed(1) : "0";
 
   function parentName(parentId?: string) {
     if (!parentId) return null;
@@ -201,7 +191,7 @@ export default function Departments() {
       {detailDept && (
         <DeptDetailDrawer
           dept={detailDept}
-          members={DEPT_MEMBERS[detailDept.id] ?? []}
+          members={employees.filter((e) => !e.isDeleted && e.departmentId === detailDept.id).map((e) => e.name)}
           onClose={() => setDetailDept(null)}
         />
       )}

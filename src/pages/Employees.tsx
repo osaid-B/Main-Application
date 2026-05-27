@@ -44,6 +44,7 @@ type EmployeeForm = {
   hourlyRate: string;
   fixedSalary: string;
   notes: string;
+  departmentId: string;
 };
 
 type EmployeeFormErrors = {
@@ -107,6 +108,7 @@ const EMPTY_FORM: EmployeeForm = {
   hourlyRate: "10",
   fixedSalary: "0",
   notes: "",
+  departmentId: "",
 };
 
 const DELETE_CONFIRMATION_CODE = "123";
@@ -386,6 +388,7 @@ function EmployeeFormModal({
   submitLabel: string;
 }) {
   const { t } = useSettings();
+  const { departments } = useData();
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-card employees-modal-card" onClick={(e) => e.stopPropagation()}>
@@ -438,6 +441,15 @@ function EmployeeFormModal({
                 {errors.fixedSalary && <p className="form-error">{errors.fixedSalary}</p>}
               </div>
             )}
+            <div>
+              <label className="modal-label">{t.employees.form.department ?? "Department"}</label>
+              <select className="modal-input" value={values.departmentId} onChange={(e) => onChange("departmentId", e.target.value)}>
+                <option value="">{t.departments?.form?.none ?? "—"}</option>
+                {departments.filter((d) => d.status === "active").map((d) => (
+                  <option key={d.id} value={d.id}>{d.name}</option>
+                ))}
+              </select>
+            </div>
             <div className="employees-form-grid-full">
               <label className="modal-label">{t.employees.form.notes}</label>
               <textarea className="modal-input" rows={4} value={values.notes} onChange={(e) => onChange("notes", e.target.value)} />
@@ -1775,7 +1787,7 @@ export default function Employees() {
   const openAddModal = () => { setEditingEmployee(null); setForm(EMPTY_FORM); setFormErrors({}); setShowEmployeeModal(true); };
   const openEditModal = (emp: Employee) => {
     setEditingEmployee(emp);
-    setForm({ name: emp.name, phone: emp.phone, workStart: emp.workStart, workEnd: emp.workEnd, salaryType: emp.salaryType, hourlyRate: String(emp.hourlyRate ?? 0), fixedSalary: String(emp.fixedSalary ?? 0), notes: emp.notes ?? "" });
+    setForm({ name: emp.name, phone: emp.phone, workStart: emp.workStart, workEnd: emp.workEnd, salaryType: emp.salaryType, hourlyRate: String(emp.hourlyRate ?? 0), fixedSalary: String(emp.fixedSalary ?? 0), notes: emp.notes ?? "", departmentId: emp.departmentId ?? "" });
     setFormErrors({});
     setShowEmployeeModal(true);
   };
@@ -1786,7 +1798,7 @@ export default function Employees() {
     if (Object.keys(errors).length > 0) return;
 
     if (editingEmployee) {
-      updateEmployee({ ...editingEmployee, name: form.name.trim(), phone: form.phone.trim(), workStart: form.workStart, workEnd: form.workEnd, salaryType: form.salaryType, hourlyRate: form.salaryType === "hourly" ? Number(form.hourlyRate) : undefined, fixedSalary: form.salaryType === "fixed" ? Number(form.fixedSalary) : undefined, notes: form.notes.trim() });
+      updateEmployee({ ...editingEmployee, name: form.name.trim(), phone: form.phone.trim(), workStart: form.workStart, workEnd: form.workEnd, salaryType: form.salaryType, hourlyRate: form.salaryType === "hourly" ? Number(form.hourlyRate) : undefined, fixedSalary: form.salaryType === "fixed" ? Number(form.fixedSalary) : undefined, notes: form.notes.trim(), departmentId: form.departmentId || undefined });
       resetFormState();
       setToast({ type: "success", message: t.employees.toast.updated });
       return;
@@ -1804,6 +1816,7 @@ export default function Employees() {
       advance: 0,
       advances: [],
       notes: form.notes.trim(),
+      departmentId: form.departmentId || undefined,
       attendanceRecords: [],
       dailyAttendance: [],
       isDeleted: false,
