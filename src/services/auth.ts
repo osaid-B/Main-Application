@@ -48,7 +48,7 @@ export function onAuthStateChange(
 ): () => void {
   if (!USE_SUPABASE) return () => {};
   const { data: { subscription } } = supabase.auth.onAuthStateChange(
-    async (_event, session) => {
+    async (_event: string, session: { user: { id: string; email?: string } } | null) => {
       if (!session) { callback(null); return; }
       const roleRow = await fetchUserRoleForUser(session.user.id);
       callback({

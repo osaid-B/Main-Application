@@ -1,4 +1,13 @@
-import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { USE_SUPABASE } from "../lib/supabase";
+import { fetchCustomers, createCustomer as sbCreateCustomer, updateCustomer as sbUpdateCustomer, deleteCustomer as sbDeleteCustomer } from "../services/customers";
+import { fetchSuppliers, createSupplier as sbCreateSupplier, updateSupplier as sbUpdateSupplier, deleteSupplier as sbDeleteSupplier } from "../services/suppliers";
+import { fetchEmployees, createEmployee as sbCreateEmployee, updateEmployee as sbUpdateEmployee, softDeleteEmployee as sbDeleteEmployee } from "../services/employees";
+import { fetchInvoices, createInvoice as sbCreateInvoice, updateInvoice as sbUpdateInvoice } from "../services/invoices";
+import { fetchExpenses, createExpense as sbCreateExpense, updateExpense as sbUpdateExpense, deleteExpense as sbDeleteExpense } from "../services/expenses";
+import { fetchDepartments, createDepartment as sbCreateDepartment, updateDepartment as sbUpdateDepartment } from "../services/departments";
+import { customerFromRow, supplierFromRow, employeeFromRow, invoiceFromRow, expenseFromRow, departmentFromRow } from "../services/adapters";
+import type { CustomerRow } from "../types/database";
 import type {
   Customer,
   Department,
@@ -118,24 +127,47 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [departments, setDepartments] = useState<Department[]>(() => getDepartments());
   const [cashiers, setCashiers] = useState<PosCashier[]>(() => POS_CASHIERS);
 
+  // ── Supabase bootstrap — replace initial state from DB when connected ─────────
+  useEffect(() => {
+    if (!USE_SUPABASE) return;
+    Promise.all([
+      fetchCustomers(),
+      fetchSuppliers(),
+      fetchEmployees(),
+      fetchInvoices(),
+      fetchExpenses(),
+      fetchDepartments(),
+    ]).then(([dbCustomers, dbSuppliers, dbEmployees, dbInvoices, dbExpenses, dbDepts]) => {
+      if (dbCustomers.length)   setCustomers(dbCustomers.map(customerFromRow));
+      if (dbSuppliers.length)   setSuppliers(dbSuppliers.map(supplierFromRow));
+      if (dbEmployees.length)   setEmployees(dbEmployees.map(employeeFromRow));
+      if (dbInvoices.length)    setInvoices(dbInvoices.map(invoiceFromRow));
+      if (dbExpenses.length)    setExpenses(dbExpenses.map(expenseFromRow));
+      if (dbDepts.length)       setDepartments(dbDepts.map(departmentFromRow));
+    }).catch((e) => console.error("[DataContext] Supabase bootstrap failed:", e));
+  }, []);
+
   // ── Customer CRUD ────────────────────────────────────────────────────────────
 
   function addCustomer(c: Customer) {
     const next = [...customers, c];
     setCustomers(next);
     saveCustomers(next);
+    if (USE_SUPABASE) sbCreateCustomer({ id: c.id, name: c.name, phone: c.phone ?? "", code: c.code ?? null, tax_id: c.taxId ?? null, email: c.email ?? null, city: c.city ?? null, governorate: c.governorate ?? null, type: c.type ?? null, classification: c.classification ?? null, payment_terms: c.paymentTerms ?? null, currency: c.currency ?? "ILS", credit_limit: c.creditLimit ?? 0, outstanding_balance: c.outstandingBalance ?? 0, status: (c.status as CustomerRow["status"]) ?? "active", sales_rep: c.salesRep ?? null, notes: c.notes ?? null, joined_at: c.joinedAt ?? null, last_order_date: c.lastOrderDate ?? null, is_deleted: false }).catch(console.error);
   }
 
   function updateCustomer(c: Customer) {
     const next = customers.map((x) => (x.id === c.id ? c : x));
     setCustomers(next);
     saveCustomers(next);
+    if (USE_SUPABASE) sbUpdateCustomer(c.id, { name: c.name, phone: c.phone ?? "", code: c.code ?? null, tax_id: c.taxId ?? null, email: c.email ?? null, city: c.city ?? null, governorate: c.governorate ?? null, type: c.type ?? null, classification: c.classification ?? null, payment_terms: c.paymentTerms ?? null, currency: c.currency ?? "ILS", credit_limit: c.creditLimit ?? 0, outstanding_balance: c.outstandingBalance ?? 0, status: (c.status as CustomerRow["status"]) ?? "active", sales_rep: c.salesRep ?? null, notes: c.notes ?? null }).catch(console.error);
   }
 
   function deleteCustomer(id: string) {
     const next = customers.map((x) => (x.id === id ? { ...x, isDeleted: true } : x));
     setCustomers(next);
     saveCustomers(next);
+    if (USE_SUPABASE) sbDeleteCustomer(id).catch(console.error);
   }
 
   // ── Product CRUD ─────────────────────────────────────────────────────────────
@@ -169,18 +201,21 @@ export function DataProvider({ children }: { children: ReactNode }) {
     const next = [...suppliers, s];
     setSuppliers(next);
     saveSuppliers(next);
+    if (USE_SUPABASE) sbCreateSupplier({ id: s.id, name: s.name, phone: s.phone ?? null, email: s.email ?? null, address: s.address ?? null, notes: s.notes ?? null, is_deleted: false }).catch(console.error);
   }
 
   function updateSupplier(s: Supplier) {
     const next = suppliers.map((x) => (x.id === s.id ? s : x));
     setSuppliers(next);
     saveSuppliers(next);
+    if (USE_SUPABASE) sbUpdateSupplier(s.id, { name: s.name, phone: s.phone ?? null, email: s.email ?? null, address: s.address ?? null, notes: s.notes ?? null }).catch(console.error);
   }
 
   function deleteSupplier(id: string) {
     const next = suppliers.map((x) => (x.id === id ? { ...x, isDeleted: true } : x));
     setSuppliers(next);
     saveSuppliers(next);
+    if (USE_SUPABASE) sbDeleteSupplier(id).catch(console.error);
   }
 
   // ── Payment CRUD ─────────────────────────────────────────────────────────────
@@ -211,18 +246,21 @@ export function DataProvider({ children }: { children: ReactNode }) {
     const next = [...employees, e];
     setEmployees(next);
     saveEmployees(next);
+    if (USE_SUPABASE) sbCreateEmployee({ id: e.id, name: e.name, phone: e.phone, department_id: e.departmentId ?? null, work_start: e.workStart, work_end: e.workEnd, salary_type: e.salaryType, hourly_rate: e.hourlyRate ?? null, fixed_salary: e.fixedSalary ?? null, advance: e.advance, notes: e.notes ?? null, is_deleted: false }).catch(console.error);
   }
 
   function updateEmployee(e: Employee) {
     const next = employees.map((x) => (x.id === e.id ? e : x));
     setEmployees(next);
     saveEmployees(next);
+    if (USE_SUPABASE) sbUpdateEmployee(e.id, { name: e.name, phone: e.phone, department_id: e.departmentId ?? null, work_start: e.workStart, work_end: e.workEnd, salary_type: e.salaryType, hourly_rate: e.hourlyRate ?? null, fixed_salary: e.fixedSalary ?? null, advance: e.advance, notes: e.notes ?? null }).catch(console.error);
   }
 
   function deleteEmployee(id: string) {
     const next = employees.map((x) => (x.id === id ? { ...x, isDeleted: true } : x));
     setEmployees(next);
     saveEmployees(next);
+    if (USE_SUPABASE) sbDeleteEmployee(id).catch(console.error);
     // cascade: deactivate any cashier linked to this employee
     setCashiers((prev) =>
       prev.map((c) => (c.employeeId === id && c.status === "active" ? { ...c, status: "inactive" as const } : c))
@@ -245,12 +283,14 @@ export function DataProvider({ children }: { children: ReactNode }) {
     const next = [...departments, d];
     setDepartments(next);
     saveDepartments(next);
+    if (USE_SUPABASE) sbCreateDepartment({ id: d.id, name: d.name, name_ar: d.nameAr, head_id: d.headId ?? null, head_name: d.headName ?? null, parent_id: d.parentId ?? null, headcount: d.headcount, open_positions: d.openPositions, monthly_revenue: d.monthlyRevenue, status: d.status }).catch(console.error);
   }
 
   function updateDepartment(d: Department) {
     const next = departments.map((x) => (x.id === d.id ? d : x));
     setDepartments(next);
     saveDepartments(next);
+    if (USE_SUPABASE) sbUpdateDepartment(d.id, { name: d.name, name_ar: d.nameAr, head_id: d.headId ?? null, head_name: d.headName ?? null, parent_id: d.parentId ?? null, headcount: d.headcount, open_positions: d.openPositions, monthly_revenue: d.monthlyRevenue, status: d.status }).catch(console.error);
   }
 
   // ── Expense CRUD ─────────────────────────────────────────────────────────────
@@ -259,18 +299,21 @@ export function DataProvider({ children }: { children: ReactNode }) {
     const next = [...expenses, e];
     setExpenses(next);
     saveExpenses(next);
+    if (USE_SUPABASE) sbCreateExpense({ id: e.id, date: e.date, description: e.description ?? null, category: e.category, amount: e.amount, currency: e.currency, vendor: e.vendor ?? null, payee: e.payee ?? null, payment_method: e.paymentMethod, receipt_url: e.receiptUrl ?? null, notes: e.notes ?? null, status: e.status ?? "pending", is_deleted: false }).catch(console.error);
   }
 
   function updateExpense(e: Expense) {
     const next = expenses.map((x) => (x.id === e.id ? e : x));
     setExpenses(next);
     saveExpenses(next);
+    if (USE_SUPABASE) sbUpdateExpense(e.id, { date: e.date, description: e.description ?? null, category: e.category, amount: e.amount, currency: e.currency, vendor: e.vendor ?? null, payee: e.payee ?? null, payment_method: e.paymentMethod, receipt_url: e.receiptUrl ?? null, notes: e.notes ?? null, status: e.status ?? "pending" }).catch(console.error);
   }
 
   function deleteExpense(id: string) {
     const next = expenses.map((x) => (x.id === id ? { ...x, isDeleted: true } : x));
     setExpenses(next);
     saveExpenses(next);
+    if (USE_SUPABASE) sbDeleteExpense(id).catch(console.error);
   }
 
   // ── Invoice CRUD ─────────────────────────────────────────────────────────────
@@ -279,12 +322,14 @@ export function DataProvider({ children }: { children: ReactNode }) {
     const next = [...invoices, inv];
     setInvoices(next);
     saveInvoices(next);
+    if (USE_SUPABASE) sbCreateInvoice({ id: inv.id, customer_id: inv.customerId, amount: inv.amount ?? inv.total ?? 0, remaining_amount: inv.remainingAmount ?? inv.amount ?? 0, status: inv.status ?? "Pending", date: inv.date, notes: inv.notes ?? null, is_deleted: false }, []).catch(console.error);
   }
 
   function updateInvoice(inv: Invoice) {
     const next = invoices.map((x) => (x.id === inv.id ? inv : x));
     setInvoices(next);
     saveInvoices(next);
+    if (USE_SUPABASE) sbUpdateInvoice(inv.id, { amount: inv.amount ?? inv.total ?? 0, remaining_amount: inv.remainingAmount ?? 0, status: inv.status ?? "Pending", date: inv.date, notes: inv.notes ?? null }).catch(console.error);
   }
 
   // ── Purchase CRUD (internal) ─────────────────────────────────────────────────
