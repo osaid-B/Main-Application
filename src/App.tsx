@@ -7,6 +7,7 @@ import { SettingsProvider } from "./context/SettingsContext";
 import { DataProvider } from "./context/DataContext";
 import { FactoryProvider } from "./context/FactoryContext";
 import { NotificationsProvider } from "./context/NotificationsContext";
+import { SidebarPreferencesProvider } from "./context/SidebarPreferencesContext";
 
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
@@ -164,7 +165,9 @@ export default function App() {
       <DataProvider>
         <FactoryProvider>
           <NotificationsProvider>
-            <AppRoutes />
+            <SidebarPreferencesProvider>
+              <AppRoutes />
+            </SidebarPreferencesProvider>
           </NotificationsProvider>
         </FactoryProvider>
       </DataProvider>

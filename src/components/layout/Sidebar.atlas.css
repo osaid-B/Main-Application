@@ -322,3 +322,93 @@
 }
 
 .is-collapsed .atlas-sidebar-user { justify-content: center; }
+
+/* ── Section collapse ───────────────────────────────────────────────────── */
+.atlas-nav-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-inline-end: var(--app-space-1);
+}
+.atlas-nav-section-collapse {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--app-text-light);
+  display: flex;
+  align-items: center;
+  padding: 2px;
+  border-radius: var(--app-radius-sm);
+}
+.atlas-nav-section-collapse:hover { color: var(--app-text-muted); background: var(--app-surface-hover); }
+
+/* ── Edit mode row ──────────────────────────────────────────────────────── */
+.atlas-nav-edit-row {
+  display: flex;
+  align-items: center;
+  gap: var(--app-space-2);
+  padding: 6px var(--app-space-3);
+  border-radius: var(--app-radius-sm);
+}
+.atlas-nav-edit-icon { color: var(--app-text-muted); flex-shrink: 0; }
+.atlas-nav-label--dim { opacity: .4; }
+.atlas-nav-visibility-btn {
+  margin-inline-start: auto;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--app-text-muted);
+  display: flex;
+  align-items: center;
+  padding: 3px;
+  border-radius: var(--app-radius-sm);
+}
+.atlas-nav-visibility-btn:hover { color: var(--app-text); background: var(--app-surface-hover); }
+
+/* ── Customize button ───────────────────────────────────────────────────── */
+.atlas-sidebar-customize {
+  padding: var(--app-space-2) var(--app-space-3);
+  border-top: 1px solid var(--app-border);
+}
+.atlas-customize-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--app-space-2);
+  width: 100%;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--app-text-muted);
+  font-size: 12px;
+  padding: 6px var(--app-space-2);
+  border-radius: var(--app-radius-sm);
+  transition: var(--app-transition);
+}
+.atlas-customize-btn:hover { color: var(--app-text); background: var(--app-surface-hover); }
+.atlas-customize-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--app-space-2);
+  flex-wrap: wrap;
+}
+.atlas-customize-done {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: var(--app-radius-sm);
+  background: var(--app-accent);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+}
+.atlas-customize-done:hover { opacity: .88; }
+.atlas-customize-reset {
+  font-size: 11px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--app-text-muted);
+  padding: 0;
+  text-decoration: underline;
+}
+.atlas-customize-reset:hover { color: var(--atlas-danger, #ef4444); }

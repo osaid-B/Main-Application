@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { NavLink } from "react-router-dom";
 import {
   ArrowLeftRight,
@@ -7,10 +8,14 @@ import {
   Boxes,
   Briefcase,
   Building2,
+  ChevronDown,
+  ChevronRight,
   ClipboardList,
   Clock,
   CreditCard,
   DollarSign,
+  Eye,
+  EyeOff,
   Factory,
   FileCheck2,
   FileText,
@@ -32,6 +37,7 @@ import {
   ShieldCheck,
   Ship,
   ShoppingCart,
+  Sliders,
   Star,
   Tag,
   TrendingUp,
@@ -44,6 +50,7 @@ import {
 } from "lucide-react";
 import type { ComponentType } from "react";
 import { useAuth } from "../../context/AuthContext";
+import { useSidebarPreferences } from "../../context/SidebarPreferencesContext";
 import { Avatar } from "../ui/Avatar";
 import { useWorkspace, type Workspace } from "../../contexts/WorkspaceContext";
 import "./Sidebar.atlas.css";
@@ -206,11 +213,17 @@ export default function Sidebar({
 }: SidebarProps) {
   const { user, logout } = useAuth();
   const { workspace } = useWorkspace();
+  const prefs = useSidebarPreferences();
+  const [editMode, setEditMode] = useState(false);
 
   const userName = user?.username ?? "Sara Halim";
   const userRole = "Owner";
 
   const sections = SECTIONS_BY_WORKSPACE[workspace];
+
+  function sectionKey(title: string) {
+    return `${workspace}:${title}`;
+  }
 
   return (
     <aside
@@ -262,51 +275,132 @@ export default function Sidebar({
       )}
 
       <nav className="atlas-sidebar-nav" aria-label="Main navigation">
-        {sections.map((section) => (
-          <div key={section.title} className="atlas-nav-section">
-            {(!collapsed || mobile) && (
-              <h4 className="atlas-nav-section-title">{section.title}</h4>
-            )}
-            <ul className="atlas-nav-list">
-              {section.items.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <li key={item.label}>
-                    <NavLink
-                      to={item.path}
-                      className={({ isActive }) =>
-                        [
-                          "atlas-nav-link",
-                          isActive && !item.comingSoon ? "is-active" : "",
-                          item.comingSoon ? "is-disabled" : "",
-                        ]
-                          .filter(Boolean)
-                          .join(" ")
-                      }
-                      onClick={(e) => {
-                        if (item.comingSoon) e.preventDefault();
-                        if (mobile && onClose) onClose();
-                      }}
-                      aria-disabled={item.comingSoon || undefined}
-                      title={item.comingSoon ? "Coming soon" : undefined}
+        {sections.map((section) => {
+          const key = sectionKey(section.title);
+          const isSectionCollapsed = !editMode && prefs.isSectionCollapsed(key);
+          const visibleItems = editMode
+            ? section.items
+            : section.items.filter((item) => !prefs.isHidden(item.path));
+
+          if (!editMode && visibleItems.length === 0) return null;
+
+          return (
+            <div key={section.title} className="atlas-nav-section">
+              {(!collapsed || mobile) && (
+                <div className="atlas-nav-section-header">
+                  <h4 className="atlas-nav-section-title">{section.title}</h4>
+                  {!editMode && (
+                    <button
+                      type="button"
+                      className="atlas-nav-section-collapse"
+                      onClick={() => prefs.toggleSection(key)}
+                      aria-label={isSectionCollapsed ? `Expand ${section.title}` : `Collapse ${section.title}`}
                     >
-                      <Icon size={16} />
-                      {(!collapsed || mobile) && (
-                        <>
-                          <span className="atlas-nav-label">{item.label}</span>
-                          {item.badge && <span className="atlas-nav-badge">{item.badge}</span>}
-                          {item.dot && <span className="atlas-nav-dot" aria-hidden />}
-                          {item.comingSoon && <span className="atlas-nav-soon">soon</span>}
-                        </>
-                      )}
-                    </NavLink>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        ))}
+                      {isSectionCollapsed ? <ChevronRight size={11} /> : <ChevronDown size={11} />}
+                    </button>
+                  )}
+                </div>
+              )}
+              {!isSectionCollapsed && (
+                <ul className="atlas-nav-list">
+                  {visibleItems.map((item) => {
+                    const Icon = item.icon;
+                    const hidden = prefs.isHidden(item.path);
+
+                    if (editMode) {
+                      return (
+                        <li key={item.label} className="atlas-nav-edit-row">
+                          <span className="atlas-nav-edit-icon"><Icon size={15} /></span>
+                          {(!collapsed || mobile) && (
+                            <>
+                              <span className={`atlas-nav-label ${hidden ? "atlas-nav-label--dim" : ""}`}>{item.label}</span>
+                              <button
+                                type="button"
+                                className="atlas-nav-visibility-btn"
+                                onClick={() => prefs.toggleItem(item.path)}
+                                aria-label={hidden ? `Show ${item.label}` : `Hide ${item.label}`}
+                                title={hidden ? "Show" : "Hide"}
+                              >
+                                {hidden ? <EyeOff size={13} /> : <Eye size={13} />}
+                              </button>
+                            </>
+                          )}
+                        </li>
+                      );
+                    }
+
+                    return (
+                      <li key={item.label}>
+                        <NavLink
+                          to={item.path}
+                          className={({ isActive }) =>
+                            [
+                              "atlas-nav-link",
+                              isActive && !item.comingSoon ? "is-active" : "",
+                              item.comingSoon ? "is-disabled" : "",
+                            ]
+                              .filter(Boolean)
+                              .join(" ")
+                          }
+                          onClick={(e) => {
+                            if (item.comingSoon) e.preventDefault();
+                            if (mobile && onClose) onClose();
+                          }}
+                          aria-disabled={item.comingSoon || undefined}
+                          title={item.comingSoon ? "Coming soon" : undefined}
+                        >
+                          <Icon size={16} />
+                          {(!collapsed || mobile) && (
+                            <>
+                              <span className="atlas-nav-label">{item.label}</span>
+                              {item.badge && <span className="atlas-nav-badge">{item.badge}</span>}
+                              {item.dot && <span className="atlas-nav-dot" aria-hidden />}
+                              {item.comingSoon && <span className="atlas-nav-soon">soon</span>}
+                            </>
+                          )}
+                        </NavLink>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+          );
+        })}
       </nav>
+
+      {(!collapsed || mobile) && (
+        <div className="atlas-sidebar-customize">
+          {editMode ? (
+            <div className="atlas-customize-actions">
+              <button
+                type="button"
+                className="atlas-customize-done"
+                onClick={() => setEditMode(false)}
+              >
+                Done
+              </button>
+              <button
+                type="button"
+                className="atlas-customize-reset"
+                onClick={() => { prefs.resetToDefaults(); setEditMode(false); }}
+              >
+                Reset to defaults
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              className="atlas-customize-btn"
+              onClick={() => setEditMode(true)}
+              aria-label="Customize sidebar"
+            >
+              <Sliders size={13} />
+              <span>Customize</span>
+            </button>
+          )}
+        </div>
+      )}
 
       <footer className="atlas-sidebar-user">
         <Avatar name={userName} size="sm" tone="accent" />
