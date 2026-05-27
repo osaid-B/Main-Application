@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Search, LayoutGrid, List } from "lucide-react";
+import { Search, LayoutGrid, List, Plus } from "lucide-react";
 import { Container } from "../../components/layout/Container";
 import { Stack } from "../../components/layout/Stack";
 import { Grid } from "../../components/layout/Grid";
@@ -32,7 +32,7 @@ export default function PosProducts() {
   const { t, formatCurrency } = useSettings();
   const tc = t.posProducts;
   const { toast } = useToast();
-  const { products, updateProduct, lowStockCount, outOfStockCount } = useData();
+  const { products, addProduct, updateProduct, lowStockCount, outOfStockCount } = useData();
 
   const [query, setQuery]           = useState("");
   const [catFilter, setCatFilter]   = useState("");
@@ -40,8 +40,13 @@ export default function PosProducts() {
   const [editTarget, setEditTarget] = useState<Product | null>(null);
   const [newPrice, setNewPrice]     = useState("");
 
+  // Add product form state
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [form, setForm] = useState({ name: "", category: "", price: "", stock: "", unit: "" });
+
+  // Treat isActive=undefined as active (undefined means not explicitly disabled)
   const activeProducts = useMemo(
-    () => products.filter((p) => !p.isDeleted && !p.archived && p.isActive),
+    () => products.filter((p) => !p.isDeleted && !p.archived && p.isActive !== false),
     [products],
   );
 
@@ -70,6 +75,30 @@ export default function PosProducts() {
     toast(tc.actions.edit + " ✓", { type: "success" });
   }
 
+  function submitAddProduct() {
+    const name = form.name.trim();
+    const category = form.category.trim();
+    const price = parseFloat(form.price);
+    const stock = parseInt(form.stock, 10);
+    if (!name || !category) {
+      toast("Name and category are required", { type: "error" });
+      return;
+    }
+    if (isNaN(price) || price < 0) {
+      toast(tc.editPrice.invalidPrice ?? "Invalid price", { type: "error" });
+      return;
+    }
+    if (isNaN(stock) || stock < 0) {
+      toast("Invalid stock quantity", { type: "error" });
+      return;
+    }
+    const id = `PRD-${Date.now()}`;
+    addProduct({ id, name, category, price, stock, unit: form.unit.trim() || undefined, isActive: true });
+    setShowAddModal(false);
+    setForm({ name: "", category: "", price: "", stock: "", unit: "" });
+    toast(`${name} added`, { type: "success" });
+  }
+
   return (
     <Container maxWidth="full" padding="md">
       <Stack gap="lg">
@@ -79,6 +108,9 @@ export default function PosProducts() {
             <h1 className={styles.title}>{tc.pageTitle}</h1>
             <p className={styles.subtitle}>{tc.pageSubtitle}</p>
           </div>
+          <Button variant="primary" onClick={() => setShowAddModal(true)} leftIcon={<Plus size={14} />}>
+            {tc.addProduct}
+          </Button>
         </header>
 
         <Grid cols={4} gap="md" responsive>
@@ -203,6 +235,81 @@ export default function PosProducts() {
           </div>
         </Modal>
       )}
+
+      <Modal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        title={tc.addProduct}
+        size="md"
+        footer={
+          <div className={styles.modalFooter}>
+            <Button variant="ghost" onClick={() => setShowAddModal(false)}>{t.common.cancel}</Button>
+            <Button variant="primary" onClick={submitAddProduct}>{t.common.save ?? "Save"}</Button>
+          </div>
+        }
+      >
+        <div className={styles.addForm}>
+          <div className={styles.formRow}>
+            <div className={styles.formField}>
+              <label className={styles.editLabel}>{"Product Name"} *</label>
+              <input
+                className={styles.editInput}
+                value={form.name}
+                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                placeholder="e.g. Coffee Arabica 250g"
+                autoFocus
+              />
+            </div>
+            <div className={styles.formField}>
+              <label className={styles.editLabel}>{"Category"} *</label>
+              <input
+                list="category-list"
+                className={styles.editInput}
+                value={form.category}
+                onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
+                placeholder="e.g. Beverages"
+              />
+              <datalist id="category-list">
+                {categories.map((c) => <option key={c} value={c} />)}
+              </datalist>
+            </div>
+          </div>
+          <div className={styles.formRow}>
+            <div className={styles.formField}>
+              <label className={styles.editLabel}>{tc.editPrice.label} *</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                className={styles.editInput}
+                value={form.price}
+                onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))}
+                placeholder="0.00"
+              />
+            </div>
+            <div className={styles.formField}>
+              <label className={styles.editLabel}>{tc.cols.stock} *</label>
+              <input
+                type="number"
+                min="0"
+                className={styles.editInput}
+                value={form.stock}
+                onChange={(e) => setForm((f) => ({ ...f, stock: e.target.value }))}
+                placeholder="0"
+              />
+            </div>
+          </div>
+          <div className={styles.formField}>
+            <label className={styles.editLabel}>{"Unit"}</label>
+            <input
+              className={styles.editInput}
+              value={form.unit}
+              onChange={(e) => setForm((f) => ({ ...f, unit: e.target.value }))}
+              placeholder="e.g. kg, pcs, box"
+            />
+          </div>
+        </div>
+      </Modal>
     </Container>
   );
 }
