@@ -23,7 +23,7 @@ const STATUS_VARIANT: Record<ProductionOrderStatus, "success" | "warning" | "inf
 };
 
 export default function FactoryOrders() {
-  const { t } = useSettings();
+  const { t, isArabic } = useSettings();
   const tc = t.factory.orders;
   const { toast } = useToast();
   const { factoryOrders, boms, factoryProducts, updateOrderStatus } = useFactory();
@@ -156,7 +156,7 @@ export default function FactoryOrders() {
                 <tbody>
                   {bom.lines.map((line) => (
                     <tr key={line.materialId}>
-                      <td>{line.materialName}</td>
+                      <td>{isArabic ? line.materialNameAr : line.materialName}</td>
                       <td className={`${styles.numEnd} ${styles.mono}`}>{line.quantity} {line.unit}</td>
                     </tr>
                   ))}

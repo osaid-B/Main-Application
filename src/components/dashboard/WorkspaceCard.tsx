@@ -20,7 +20,7 @@ const ICON_BY_COLOR = {
  */
 export function WorkspaceCard({ data }: Props) {
   const Icon = ICON_BY_COLOR[data.color];
-  const { t } = useSettings();
+  const { t, isArabic } = useSettings();
   return (
     <article className={`${styles.card} ${styles[`tone_${data.color}`]}`}>
       <span className={styles.accentBar} aria-hidden />
@@ -29,21 +29,21 @@ export function WorkspaceCard({ data }: Props) {
           <Icon size={16} />
         </span>
         <div className={styles.titleBlock}>
-          <h3 className={styles.name}>{data.name}</h3>
+          <h3 className={styles.name}>{isArabic ? data.nameAr : data.name}</h3>
           <span className={styles.trend}>
             <TrendingUp size={11} aria-hidden /> +{data.trend}% {t.dashboard.vsLastWeek}
           </span>
         </div>
       </header>
 
-      <div className={styles.revenue}>{data.revenueFmt}</div>
+      <div className={styles.revenue}>{isArabic ? data.revenueFmtAr : data.revenueFmt}</div>
 
       <MiniSparkline data={data.sparkline} tone={data.color} height={40} />
 
       <ul className={styles.stats}>
         {data.stats.map((s) => (
           <li key={s.label} data-tone={s.tone}>
-            <span>{s.label}</span>
+            <span>{isArabic ? s.labelAr : s.label}</span>
             <strong>{s.value}</strong>
           </li>
         ))}

@@ -1,6 +1,7 @@
 import { FileText, Hammer, ShoppingCart, UserPlus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import type { PinnedAction } from "../../data/dashboardMock";
+import { useSettings } from "../../context/SettingsContext";
 import styles from "./PinnedActionButton.module.css";
 
 interface Props {
@@ -17,6 +18,7 @@ const ICONS = {
 /** Tile-style quick-action button. Icon in a colored circle + label. */
 export function PinnedActionButton({ action }: Props) {
   const navigate = useNavigate();
+  const { isArabic } = useSettings();
   const Icon = ICONS[action.icon];
 
   return (
@@ -28,7 +30,7 @@ export function PinnedActionButton({ action }: Props) {
       <span className={styles.iconCircle} aria-hidden>
         <Icon size={16} />
       </span>
-      <span className={styles.label}>{action.label}</span>
+      <span className={styles.label}>{isArabic ? action.labelAr : action.label}</span>
     </button>
   );
 }

@@ -13,7 +13,7 @@ import { useLoadingDelay } from "../../hooks/useLoadingDelay";
 import styles from "./factory.module.css";
 
 export default function FactorySources() {
-  const { t, formatCurrency } = useSettings();
+  const { t, formatCurrency, isArabic } = useSettings();
   const tc = t.factory.sources;
   const { sourceRecords: SOURCE_RECORDS } = useFactory();
 
@@ -94,14 +94,14 @@ export default function FactorySources() {
               <tbody>
                 {filtered.map((r) => (
                   <tr key={r.id}>
-                    <td>{r.materialName}</td>
+                    <td>{isArabic ? r.materialNameAr : r.materialName}</td>
                     <td>
                       <Badge variant={r.origin === "local" ? "success" : "info"} size="sm">
                         {tc.originLabel[r.origin]}
                       </Badge>
                     </td>
-                    <td>{r.supplier}</td>
-                    <td>{r.country}</td>
+                    <td>{isArabic ? r.supplierAr : r.supplier}</td>
+                    <td>{isArabic ? r.countryAr : r.country}</td>
                     <td className={`${styles.numEnd} ${styles.mono}`}>{r.quantity.toLocaleString()} {r.unit}</td>
                     <td className={`${styles.numEnd} ${styles.mono}`}>{formatCurrency(r.unitCost)}</td>
                     <td className={`${styles.numEnd} ${styles.mono}`}>{formatCurrency(r.totalValue)}</td>

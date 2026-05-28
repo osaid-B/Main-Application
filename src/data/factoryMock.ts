@@ -120,7 +120,7 @@ export interface BomTemplate {
   productNameAr: string;
   version: string;
   effectiveDate: string;
-  lines: Array<{ materialId: string; materialName: string; quantity: number; unit: string; unitCost: number }>;
+  lines: Array<{ materialId: string; materialName: string; materialNameAr: string; quantity: number; unit: string; unitCost: number }>;
 }
 
 export const FACTORY_BOMS: BomTemplate[] = [
@@ -132,9 +132,9 @@ export const FACTORY_BOMS: BomTemplate[] = [
     version: "v2.1",
     effectiveDate: "2026-01-01",
     lines: [
-      { materialId: "RM-001", materialName: "Fresh Olive Fruit", quantity: 0.5, unit: "kg", unitCost: 12.0 },
-      { materialId: "RM-002", materialName: "500ml Glass Bottle", quantity: 1, unit: "pcs", unitCost: 3.5 },
-      { materialId: "RM-005", materialName: "Product Label", quantity: 1, unit: "pcs", unitCost: 0.4 },
+      { materialId: "RM-001", materialName: "Fresh Olive Fruit", materialNameAr: "ثمار الزيتون الطازجة", quantity: 0.5, unit: "kg", unitCost: 12.0 },
+      { materialId: "RM-002", materialName: "500ml Glass Bottle", materialNameAr: "زجاجة زجاجية 500مل",   quantity: 1,   unit: "pcs", unitCost: 3.5 },
+      { materialId: "RM-005", materialName: "Product Label",      materialNameAr: "ملصق المنتج",            quantity: 1,   unit: "pcs", unitCost: 0.4 },
     ],
   },
   {
@@ -145,9 +145,9 @@ export const FACTORY_BOMS: BomTemplate[] = [
     version: "v2.0",
     effectiveDate: "2026-01-01",
     lines: [
-      { materialId: "RM-001", materialName: "Fresh Olive Fruit", quantity: 1.0, unit: "kg", unitCost: 12.0 },
-      { materialId: "RM-003", materialName: "1L Glass Bottle", quantity: 1, unit: "pcs", unitCost: 5.2 },
-      { materialId: "RM-005", materialName: "Product Label", quantity: 1, unit: "pcs", unitCost: 0.4 },
+      { materialId: "RM-001", materialName: "Fresh Olive Fruit", materialNameAr: "ثمار الزيتون الطازجة", quantity: 1.0, unit: "kg", unitCost: 12.0 },
+      { materialId: "RM-003", materialName: "1L Glass Bottle",   materialNameAr: "زجاجة زجاجية 1 لتر",   quantity: 1,   unit: "pcs", unitCost: 5.2 },
+      { materialId: "RM-005", materialName: "Product Label",     materialNameAr: "ملصق المنتج",            quantity: 1,   unit: "pcs", unitCost: 0.4 },
     ],
   },
   {
@@ -158,9 +158,9 @@ export const FACTORY_BOMS: BomTemplate[] = [
     version: "v1.5",
     effectiveDate: "2026-02-01",
     lines: [
-      { materialId: "RM-006", materialName: "Fresh Tomatoes", quantity: 2.0, unit: "kg", unitCost: 2.8 },
-      { materialId: "RM-004", materialName: "400g Tin Can", quantity: 1, unit: "pcs", unitCost: 1.8 },
-      { materialId: "RM-007", materialName: "Can Lid", quantity: 1, unit: "pcs", unitCost: 0.6 },
+      { materialId: "RM-006", materialName: "Fresh Tomatoes", materialNameAr: "طماطم طازجة",    quantity: 2.0, unit: "kg", unitCost: 2.8 },
+      { materialId: "RM-004", materialName: "400g Tin Can",   materialNameAr: "علبة معدنية 400 جرام", quantity: 1, unit: "pcs", unitCost: 1.8 },
+      { materialId: "RM-007", materialName: "Can Lid",        materialNameAr: "غطاء العلبة",   quantity: 1,   unit: "pcs", unitCost: 0.6 },
     ],
   },
   {
@@ -171,9 +171,9 @@ export const FACTORY_BOMS: BomTemplate[] = [
     version: "v1.3",
     effectiveDate: "2026-02-01",
     lines: [
-      { materialId: "RM-008", materialName: "Dried Chickpeas", quantity: 0.5, unit: "kg", unitCost: 6.0 },
-      { materialId: "RM-004", materialName: "800g Tin Can", quantity: 1, unit: "pcs", unitCost: 2.2 },
-      { materialId: "RM-007", materialName: "Can Lid", quantity: 1, unit: "pcs", unitCost: 0.6 },
+      { materialId: "RM-008", materialName: "Dried Chickpeas", materialNameAr: "حمص مجفف",           quantity: 0.5, unit: "kg", unitCost: 6.0 },
+      { materialId: "RM-004", materialName: "800g Tin Can",   materialNameAr: "علبة معدنية 800 جرام", quantity: 1,   unit: "pcs", unitCost: 2.2 },
+      { materialId: "RM-007", materialName: "Can Lid",        materialNameAr: "غطاء العلبة",          quantity: 1,   unit: "pcs", unitCost: 0.6 },
     ],
   },
   {
@@ -184,9 +184,9 @@ export const FACTORY_BOMS: BomTemplate[] = [
     version: "v1.0",
     effectiveDate: "2026-03-01",
     lines: [
-      { materialId: "RM-011", materialName: "Sesame Seeds", quantity: 0.5, unit: "kg", unitCost: 18.0 },
-      { materialId: "RM-004", materialName: "300g Jar", quantity: 1, unit: "pcs", unitCost: 2.0 },
-      { materialId: "RM-005", materialName: "Product Label", quantity: 1, unit: "pcs", unitCost: 0.4 },
+      { materialId: "RM-011", materialName: "Sesame Seeds",  materialNameAr: "بذور السمسم", quantity: 0.5, unit: "kg", unitCost: 18.0 },
+      { materialId: "RM-004", materialName: "300g Jar",      materialNameAr: "برطمان 300 جرام", quantity: 1, unit: "pcs", unitCost: 2.0 },
+      { materialId: "RM-005", materialName: "Product Label", materialNameAr: "ملصق المنتج",    quantity: 1, unit: "pcs", unitCost: 0.4 },
     ],
   },
 ];
@@ -205,18 +205,18 @@ export const FACTORY_QC: QualityCheck[] = [
 // ── Raw Materials ─────────────────────────────────────────────────────────────
 
 export const RAW_MATERIALS: RawMaterial[] = [
-  { id: "RM-001", name: "Fresh Olive Fruit", nameAr: "ثمار الزيتون الطازجة", category: "oil", unit: "kg", onHand: 8500, reorderPoint: 2000, unitCost: 12.0, supplier: "Al-Zaytoun Farm", origin: "local", lastPurchaseDate: "2026-05-05" },
-  { id: "RM-002", name: "500ml Glass Bottle", nameAr: "زجاجة زجاجية 500مل", category: "packaging", unit: "pcs", onHand: 15000, reorderPoint: 5000, unitCost: 3.5, supplier: "Glass World Ltd", origin: "imported", lastPurchaseDate: "2026-04-28" },
-  { id: "RM-003", name: "1L Glass Bottle", nameAr: "زجاجة زجاجية 1 لتر", category: "packaging", unit: "pcs", onHand: 6800, reorderPoint: 2000, unitCost: 5.2, supplier: "Glass World Ltd", origin: "imported", lastPurchaseDate: "2026-04-28" },
-  { id: "RM-004", name: "Tin Can (assorted)", nameAr: "علبة معدنية (متنوعة)", category: "packaging", unit: "pcs", onHand: 9200, reorderPoint: 3000, unitCost: 2.0, supplier: "Metal Pack Co", origin: "local", lastPurchaseDate: "2026-05-10" },
-  { id: "RM-005", name: "Product Label (roll)", nameAr: "ملصق المنتج (لفة)", category: "labeling", unit: "pcs", onHand: 42000, reorderPoint: 10000, unitCost: 0.4, supplier: "Print Pro", origin: "local", lastPurchaseDate: "2026-05-01" },
-  { id: "RM-006", name: "Fresh Tomatoes", nameAr: "طماطم طازجة", category: "oil", unit: "kg", onHand: 3200, reorderPoint: 1000, unitCost: 2.8, supplier: "Green Valley Farms", origin: "local", lastPurchaseDate: "2026-05-12" },
-  { id: "RM-007", name: "Can Lid", nameAr: "غطاء العلبة", category: "packaging", unit: "pcs", onHand: 11000, reorderPoint: 4000, unitCost: 0.6, supplier: "Metal Pack Co", origin: "local", lastPurchaseDate: "2026-05-10" },
-  { id: "RM-008", name: "Dried Chickpeas", nameAr: "حمص مجفف", category: "oil", unit: "kg", onHand: 1800, reorderPoint: 500, unitCost: 6.0, supplier: "Levant Grains", origin: "local", lastPurchaseDate: "2026-05-08" },
-  { id: "RM-009", name: "Dried Figs (raw)", nameAr: "تين مجفف (خام)", category: "oil", unit: "kg", onHand: 620, reorderPoint: 200, unitCost: 22.0, supplier: "Mountain Harvest", origin: "local", lastPurchaseDate: "2026-05-15" },
-  { id: "RM-010", name: "Food-grade Bag 500g", nameAr: "كيس غذائي 500 جرام", category: "packaging", unit: "pcs", onHand: 5400, reorderPoint: 2000, unitCost: 1.2, supplier: "Poly Pack Ltd", origin: "imported", lastPurchaseDate: "2026-05-03" },
-  { id: "RM-011", name: "Sesame Seeds", nameAr: "بذور السمسم", category: "oil", unit: "kg", onHand: 420, reorderPoint: 150, unitCost: 18.0, supplier: "Sudan Seeds Co", origin: "imported", lastPurchaseDate: "2026-04-20" },
-  { id: "RM-012", name: "Citric Acid", nameAr: "حمض الستريك", category: "additives", unit: "kg", onHand: 85, reorderPoint: 30, unitCost: 14.0, supplier: "Chem Direct", origin: "imported", lastPurchaseDate: "2026-03-15" },
+  { id: "RM-001", name: "Fresh Olive Fruit",    nameAr: "ثمار الزيتون الطازجة",  category: "oil",       unit: "kg",  onHand: 8500,  reorderPoint: 2000,  unitCost: 12.0, supplier: "Al-Zaytoun Farm",    supplierAr: "مزرعة الزيتون",              origin: "local",    lastPurchaseDate: "2026-05-05" },
+  { id: "RM-002", name: "500ml Glass Bottle",   nameAr: "زجاجة زجاجية 500مل",   category: "packaging", unit: "pcs", onHand: 15000, reorderPoint: 5000,  unitCost: 3.5,  supplier: "Glass World Ltd",    supplierAr: "جلاس وورلد المحدودة",        origin: "imported", lastPurchaseDate: "2026-04-28" },
+  { id: "RM-003", name: "1L Glass Bottle",      nameAr: "زجاجة زجاجية 1 لتر",   category: "packaging", unit: "pcs", onHand: 6800,  reorderPoint: 2000,  unitCost: 5.2,  supplier: "Glass World Ltd",    supplierAr: "جلاس وورلد المحدودة",        origin: "imported", lastPurchaseDate: "2026-04-28" },
+  { id: "RM-004", name: "Tin Can (assorted)",   nameAr: "علبة معدنية (متنوعة)", category: "packaging", unit: "pcs", onHand: 9200,  reorderPoint: 3000,  unitCost: 2.0,  supplier: "Metal Pack Co",      supplierAr: "شركة العبوات المعدنية",       origin: "local",    lastPurchaseDate: "2026-05-10" },
+  { id: "RM-005", name: "Product Label (roll)", nameAr: "ملصق المنتج (لفة)",    category: "labeling",  unit: "pcs", onHand: 42000, reorderPoint: 10000, unitCost: 0.4,  supplier: "Print Pro",          supplierAr: "برينت برو للطباعة",           origin: "local",    lastPurchaseDate: "2026-05-01" },
+  { id: "RM-006", name: "Fresh Tomatoes",       nameAr: "طماطم طازجة",           category: "oil",       unit: "kg",  onHand: 3200,  reorderPoint: 1000,  unitCost: 2.8,  supplier: "Green Valley Farms", supplierAr: "مزارع الوادي الأخضر",         origin: "local",    lastPurchaseDate: "2026-05-12" },
+  { id: "RM-007", name: "Can Lid",              nameAr: "غطاء العلبة",           category: "packaging", unit: "pcs", onHand: 11000, reorderPoint: 4000,  unitCost: 0.6,  supplier: "Metal Pack Co",      supplierAr: "شركة العبوات المعدنية",       origin: "local",    lastPurchaseDate: "2026-05-10" },
+  { id: "RM-008", name: "Dried Chickpeas",      nameAr: "حمص مجفف",              category: "oil",       unit: "kg",  onHand: 1800,  reorderPoint: 500,   unitCost: 6.0,  supplier: "Levant Grains",      supplierAr: "بلاد الشام للحبوب",           origin: "local",    lastPurchaseDate: "2026-05-08" },
+  { id: "RM-009", name: "Dried Figs (raw)",     nameAr: "تين مجفف (خام)",        category: "oil",       unit: "kg",  onHand: 620,   reorderPoint: 200,   unitCost: 22.0, supplier: "Mountain Harvest",   supplierAr: "محاصيل الجبل",                origin: "local",    lastPurchaseDate: "2026-05-15" },
+  { id: "RM-010", name: "Food-grade Bag 500g",  nameAr: "كيس غذائي 500 جرام",   category: "packaging", unit: "pcs", onHand: 5400,  reorderPoint: 2000,  unitCost: 1.2,  supplier: "Poly Pack Ltd",      supplierAr: "بولي باك المحدودة",           origin: "imported", lastPurchaseDate: "2026-05-03" },
+  { id: "RM-011", name: "Sesame Seeds",         nameAr: "بذور السمسم",           category: "oil",       unit: "kg",  onHand: 420,   reorderPoint: 150,   unitCost: 18.0, supplier: "Sudan Seeds Co",     supplierAr: "سودان سيدز للبذور",           origin: "imported", lastPurchaseDate: "2026-04-20" },
+  { id: "RM-012", name: "Citric Acid",          nameAr: "حمض الستريك",           category: "additives", unit: "kg",  onHand: 85,    reorderPoint: 30,    unitCost: 14.0, supplier: "Chem Direct",        supplierAr: "كيم دايركت للكيماويات",       origin: "imported", lastPurchaseDate: "2026-03-15" },
 ];
 
 // ── Finished Goods ────────────────────────────────────────────────────────────
@@ -249,7 +249,9 @@ export interface SourceRecord {
   materialNameAr: string;
   origin: "local" | "imported";
   supplier: string;
+  supplierAr: string;
   country: string;
+  countryAr: string;
   quantity: number;
   unit: string;
   unitCost: number;
@@ -259,18 +261,18 @@ export interface SourceRecord {
 }
 
 export const SOURCE_RECORDS: SourceRecord[] = [
-  { id: "SRC-001", materialName: "Fresh Olive Fruit", materialNameAr: "ثمار الزيتون", origin: "local", supplier: "Al-Zaytoun Farm", country: "Palestine", quantity: 8500, unit: "kg", unitCost: 12.0, totalValue: 102000, purchaseDate: "2026-05-05", category: "oil" },
-  { id: "SRC-002", materialName: "Fresh Tomatoes", materialNameAr: "طماطم طازجة", origin: "local", supplier: "Green Valley Farms", country: "Palestine", quantity: 3200, unit: "kg", unitCost: 2.8, totalValue: 8960, purchaseDate: "2026-05-12", category: "oil" },
-  { id: "SRC-003", materialName: "Dried Chickpeas", materialNameAr: "حمص مجفف", origin: "local", supplier: "Levant Grains", country: "Palestine", quantity: 1800, unit: "kg", unitCost: 6.0, totalValue: 10800, purchaseDate: "2026-05-08", category: "oil" },
-  { id: "SRC-004", materialName: "Dried Figs", materialNameAr: "تين مجفف", origin: "local", supplier: "Mountain Harvest", country: "Palestine", quantity: 620, unit: "kg", unitCost: 22.0, totalValue: 13640, purchaseDate: "2026-05-15", category: "oil" },
-  { id: "SRC-005", materialName: "Tin Cans (assorted)", materialNameAr: "علب معدنية متنوعة", origin: "local", supplier: "Metal Pack Co", country: "Palestine", quantity: 9200, unit: "pcs", unitCost: 2.0, totalValue: 18400, purchaseDate: "2026-05-10", category: "packaging" },
-  { id: "SRC-006", materialName: "Can Lids", materialNameAr: "أغطية علب", origin: "local", supplier: "Metal Pack Co", country: "Palestine", quantity: 11000, unit: "pcs", unitCost: 0.6, totalValue: 6600, purchaseDate: "2026-05-10", category: "packaging" },
-  { id: "SRC-007", materialName: "Product Labels", materialNameAr: "ملصقات المنتجات", origin: "local", supplier: "Print Pro", country: "Palestine", quantity: 42000, unit: "pcs", unitCost: 0.4, totalValue: 16800, purchaseDate: "2026-05-01", category: "labeling" },
-  { id: "SRC-008", materialName: "500ml Glass Bottle", materialNameAr: "زجاجة زجاجية 500مل", origin: "imported", supplier: "Glass World Ltd", country: "Turkey", quantity: 15000, unit: "pcs", unitCost: 3.5, totalValue: 52500, purchaseDate: "2026-04-28", category: "packaging" },
-  { id: "SRC-009", materialName: "1L Glass Bottle", materialNameAr: "زجاجة زجاجية 1 لتر", origin: "imported", supplier: "Glass World Ltd", country: "Turkey", quantity: 6800, unit: "pcs", unitCost: 5.2, totalValue: 35360, purchaseDate: "2026-04-28", category: "packaging" },
-  { id: "SRC-010", materialName: "Food-grade Bag 500g", materialNameAr: "كيس غذائي 500 جرام", origin: "imported", supplier: "Poly Pack Ltd", country: "Egypt", quantity: 5400, unit: "pcs", unitCost: 1.2, totalValue: 6480, purchaseDate: "2026-05-03", category: "packaging" },
-  { id: "SRC-011", materialName: "Sesame Seeds", materialNameAr: "بذور السمسم", origin: "imported", supplier: "Sudan Seeds Co", country: "Sudan", quantity: 420, unit: "kg", unitCost: 18.0, totalValue: 7560, purchaseDate: "2026-04-20", category: "oil" },
-  { id: "SRC-012", materialName: "Citric Acid", materialNameAr: "حمض الستريك", origin: "imported", supplier: "Chem Direct", country: "Germany", quantity: 85, unit: "kg", unitCost: 14.0, totalValue: 1190, purchaseDate: "2026-03-15", category: "additives" },
+  { id: "SRC-001", materialName: "Fresh Olive Fruit",    materialNameAr: "ثمار الزيتون",         origin: "local",    supplier: "Al-Zaytoun Farm",      supplierAr: "مزرعة الزيتون",              country: "Palestine", countryAr: "فلسطين",  quantity: 8500,  unit: "kg",  unitCost: 12.0, totalValue: 102000, purchaseDate: "2026-05-05", category: "oil" },
+  { id: "SRC-002", materialName: "Fresh Tomatoes",       materialNameAr: "طماطم طازجة",           origin: "local",    supplier: "Green Valley Farms",   supplierAr: "مزارع الوادي الأخضر",       country: "Palestine", countryAr: "فلسطين",  quantity: 3200,  unit: "kg",  unitCost: 2.8,  totalValue: 8960,   purchaseDate: "2026-05-12", category: "oil" },
+  { id: "SRC-003", materialName: "Dried Chickpeas",      materialNameAr: "حمص مجفف",              origin: "local",    supplier: "Levant Grains",        supplierAr: "بلاد الشام للحبوب",         country: "Palestine", countryAr: "فلسطين",  quantity: 1800,  unit: "kg",  unitCost: 6.0,  totalValue: 10800,  purchaseDate: "2026-05-08", category: "oil" },
+  { id: "SRC-004", materialName: "Dried Figs",           materialNameAr: "تين مجفف",              origin: "local",    supplier: "Mountain Harvest",     supplierAr: "محاصيل الجبل",              country: "Palestine", countryAr: "فلسطين",  quantity: 620,   unit: "kg",  unitCost: 22.0, totalValue: 13640,  purchaseDate: "2026-05-15", category: "oil" },
+  { id: "SRC-005", materialName: "Tin Cans (assorted)",  materialNameAr: "علب معدنية متنوعة",     origin: "local",    supplier: "Metal Pack Co",        supplierAr: "شركة العبوات المعدنية",     country: "Palestine", countryAr: "فلسطين",  quantity: 9200,  unit: "pcs", unitCost: 2.0,  totalValue: 18400,  purchaseDate: "2026-05-10", category: "packaging" },
+  { id: "SRC-006", materialName: "Can Lids",             materialNameAr: "أغطية علب",             origin: "local",    supplier: "Metal Pack Co",        supplierAr: "شركة العبوات المعدنية",     country: "Palestine", countryAr: "فلسطين",  quantity: 11000, unit: "pcs", unitCost: 0.6,  totalValue: 6600,   purchaseDate: "2026-05-10", category: "packaging" },
+  { id: "SRC-007", materialName: "Product Labels",       materialNameAr: "ملصقات المنتجات",       origin: "local",    supplier: "Print Pro",            supplierAr: "برينت برو للطباعة",         country: "Palestine", countryAr: "فلسطين",  quantity: 42000, unit: "pcs", unitCost: 0.4,  totalValue: 16800,  purchaseDate: "2026-05-01", category: "labeling" },
+  { id: "SRC-008", materialName: "500ml Glass Bottle",   materialNameAr: "زجاجة زجاجية 500مل",   origin: "imported", supplier: "Glass World Ltd",      supplierAr: "جلاس وورلد المحدودة",       country: "Turkey",    countryAr: "تركيا",   quantity: 15000, unit: "pcs", unitCost: 3.5,  totalValue: 52500,  purchaseDate: "2026-04-28", category: "packaging" },
+  { id: "SRC-009", materialName: "1L Glass Bottle",     materialNameAr: "زجاجة زجاجية 1 لتر",    origin: "imported", supplier: "Glass World Ltd",  supplierAr: "جلاس وورلد المحدودة",   country: "Turkey",  countryAr: "تركيا",   quantity: 6800, unit: "pcs", unitCost: 5.2,  totalValue: 35360, purchaseDate: "2026-04-28", category: "packaging" },
+  { id: "SRC-010", materialName: "Food-grade Bag 500g", materialNameAr: "كيس غذائي 500 جرام",    origin: "imported", supplier: "Poly Pack Ltd",   supplierAr: "بولي باك المحدودة",     country: "Egypt",   countryAr: "مصر",     quantity: 5400, unit: "pcs", unitCost: 1.2,  totalValue: 6480,  purchaseDate: "2026-05-03", category: "packaging" },
+  { id: "SRC-011", materialName: "Sesame Seeds",        materialNameAr: "بذور السمسم",            origin: "imported", supplier: "Sudan Seeds Co",  supplierAr: "سودان سيدز للبذور",     country: "Sudan",   countryAr: "السودان", quantity: 420,  unit: "kg",  unitCost: 18.0, totalValue: 7560,  purchaseDate: "2026-04-20", category: "oil" },
+  { id: "SRC-012", materialName: "Citric Acid",         materialNameAr: "حمض الستريك",            origin: "imported", supplier: "Chem Direct",     supplierAr: "كيم دايركت للكيماويات", country: "Germany", countryAr: "ألمانيا", quantity: 85,   unit: "kg",  unitCost: 14.0, totalValue: 1190,  purchaseDate: "2026-03-15", category: "additives" },
 ];
 
 // ── Import Orders ─────────────────────────────────────────────────────────────

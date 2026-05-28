@@ -38,7 +38,7 @@ function downloadCsv(filename: string, headers: string[], rows: (string | number
 
 export default function Dashboard() {
   const [dateRange, setDateRange] = useState<"week" | "month">("week");
-  const { t } = useSettings();
+  const { t, isArabic } = useSettings();
 
   const {
     totalCustomers,
@@ -54,9 +54,9 @@ export default function Dashboard() {
       return {
         ...ws,
         stats: [
-          { label: "OPEN INVOICES", value: String(openInvoicesCount), tone: openInvoicesCount > 0 ? ("danger" as const) : ("success" as const) },
-          { label: "CUSTOMERS", value: String(totalCustomers), tone: "default" as const },
-          { label: "PAYMENTS", value: String(totalPaymentsCount), tone: "default" as const },
+          { label: "OPEN INVOICES", labelAr: "فواتير مفتوحة", value: String(openInvoicesCount), tone: openInvoicesCount > 0 ? ("danger" as const) : ("success" as const) },
+          { label: "CUSTOMERS",     labelAr: "العملاء",        value: String(totalCustomers),    tone: "default" as const },
+          { label: "PAYMENTS",      labelAr: "المدفوعات",      value: String(totalPaymentsCount), tone: "default" as const },
         ],
       };
     });
@@ -73,7 +73,8 @@ export default function Dashboard() {
       const count = outOfStockCount + lowStockCount;
       return {
         ...sig,
-        title: `${count} SKUs low/out of stock`,
+        title:   `${count} SKUs low/out of stock`,
+        titleAr: `${count} صنفاً منخفض المخزون أو نفد`,
         tone: count > 0 ? ("critical" as const) : ("operations" as const),
       };
     });
