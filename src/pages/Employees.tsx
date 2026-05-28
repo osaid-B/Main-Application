@@ -177,13 +177,18 @@ const calculateShiftHours = (start: string, end: string) => {
 const getTodayDate = () => new Date().toISOString().slice(0, 10);
 
 
+// Palestinian work week: Sun(0)–Thu(4). Weekend = Fri(5)+Sat(6).
+// Week starts on Sunday.
 function getStartOfWeek(date = new Date()) {
   const d = new Date(date);
-  const day = d.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  d.setDate(d.getDate() + diff);
+  const day = d.getDay(); // 0=Sun
+  d.setDate(d.getDate() - day); // roll back to Sunday
   d.setHours(0, 0, 0, 0);
   return d;
+}
+
+function isPalestinianWeekend(dow: number) {
+  return dow === 5 || dow === 6; // Fri or Sat
 }
 
 function getStartOfMonth(date = new Date()) {
@@ -235,9 +240,16 @@ function getMonthDays(baseDate: string) {
 
 function groupDaysIntoWeeks(days: Array<{ day: number; date: string; dow: number }>) {
   const weeks: Array<Array<{ day: number; date: string; dow: number }>> = [];
-  for (let index = 0; index < days.length; index += 7) {
-    weeks.push(days.slice(index, index + 7));
+  // Group by Sunday-start week
+  let week: typeof days = [];
+  for (const day of days) {
+    if (day.dow === 0 && week.length > 0) {
+      weeks.push(week);
+      week = [];
+    }
+    week.push(day);
   }
+  if (week.length > 0) weeks.push(week);
   return weeks;
 }
 
@@ -264,10 +276,14 @@ function validateEmployeeForm(values: EmployeeForm): EmployeeFormErrors {
   if (!values.name.trim()) errors.name = "Employee name is required.";
   if (!values.phone.trim()) {
     errors.phone = "Phone number is required.";
-  } else if (!(values.phone.startsWith("059") || values.phone.startsWith("056"))) {
-    errors.phone = "Phone number must start with 059 or 056.";
-  } else if (values.phone.length !== 10) {
-    errors.phone = "Phone number must be exactly 10 digits.";
+  } else {
+    const digits = values.phone.replace(/\D/g, "");
+    const VALID_PREFIXES = ["052", "053", "054", "055", "056", "057", "058", "059"];
+    if (digits.length !== 10) {
+      errors.phone = "Phone number must be exactly 10 digits.";
+    } else if (!VALID_PREFIXES.some((p) => digits.startsWith(p))) {
+      errors.phone = "Enter a valid Palestinian mobile number (05x-xxxxxxx).";
+    }
   }
   if (!values.workStart) errors.workStart = "Work start time is required.";
   if (!values.workEnd) {
@@ -613,13 +629,14 @@ function DonutChart({ present, late, absent, total }: { present: number; late: n
   );
 }
 
+// Mini calendar: week starts on Sunday (Palestinian convention).
 function getMiniCalWeeks(dateStr: string) {
   const ref = new Date(`${dateStr.slice(0, 7)}-01T00:00:00`);
   const year = ref.getFullYear();
   const month = ref.getMonth();
+  // Sunday-start: offset = firstDow (0=Sun means no offset)
   const firstDow = new Date(year, month, 1).getDay();
-  const offset = firstDow === 0 ? -6 : 1 - firstDow;
-  const start = new Date(year, month, 1 + offset);
+  const start = new Date(year, month, 1 - firstDow);
   const weeks: Array<Array<{ date: string; dayNum: number; isCurrentMonth: boolean; dow: number }>> = [];
   const cur = new Date(start);
   while (weeks.length < 6) {
@@ -651,7 +668,7 @@ function TodayAttendanceSection({
   onUpdateEmployeeDay: (employeeId: string, payload: { status: DailyAttendanceStatus; workedHours: number; advanceAmount: number; notes?: string }) => void;
   onSaveSheet: () => void;
 }) {
-  const { t } = useSettings();
+  const { t, formatCurrency } = useSettings();
   const [page, setPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [sheetSearch, setSheetSearch] = useState("");
@@ -681,7 +698,7 @@ function TodayAttendanceSection({
   const safePage = Math.min(page, totalPages);
   const paginated = filtered.slice((safePage - 1) * rowsPerPage, safePage * rowsPerPage);
 
-  const total = employees.length;
+  const total = employees.filter((e) => !e.isDeleted).length;
   const pct = (n: number) => total > 0 ? `${Math.round((n / total) * 100)}%` : "0%";
 
   const dateLabel = new Date(`${selectedDate}T00:00:00`).toLocaleDateString("en-US", {
@@ -711,7 +728,7 @@ function TodayAttendanceSection({
             <div>
               <span>{t.employees.attendance.present}</span>
               <strong>{todaySummary.present}</strong>
-              <small className="emp-kpi-pct">{pct(todaySummary.present)} of total <TrendingUp size={11} /></small>
+              <small className="emp-kpi-pct">{pct(todaySummary.present)} {t.employees.today.ofTotal} <TrendingUp size={11} /></small>
             </div>
           </div>
           <div className="emp-kpi-card emp-kpi-late">
@@ -721,7 +738,7 @@ function TodayAttendanceSection({
             <div>
               <span>{t.employees.attendance.late}</span>
               <strong>{todaySummary.late}</strong>
-              <small className="emp-kpi-pct">{pct(todaySummary.late)} of total <TrendingUp size={11} /></small>
+              <small className="emp-kpi-pct">{pct(todaySummary.late)} {t.employees.today.ofTotal} <TrendingUp size={11} /></small>
             </div>
           </div>
           <div className="emp-kpi-card emp-kpi-absent">
@@ -731,7 +748,7 @@ function TodayAttendanceSection({
             <div>
               <span>{t.employees.attendance.absent}</span>
               <strong>{todaySummary.absent}</strong>
-              <small className="emp-kpi-pct">{pct(todaySummary.absent)} of total <TrendingUp size={11} /></small>
+              <small className="emp-kpi-pct">{pct(todaySummary.absent)} {t.employees.today.ofTotal} <TrendingUp size={11} /></small>
             </div>
           </div>
           <div className="emp-kpi-card emp-kpi-advance">
@@ -740,7 +757,7 @@ function TodayAttendanceSection({
             </div>
             <div>
               <span>{t.employees.today.advancesToday}</span>
-              <strong>${todaySummary.advance.toFixed(2)}</strong>
+              <strong>{formatCurrency(todaySummary.advance, "ILS")}</strong>
               <small>{t.employees.today.totalAdvances}</small>
             </div>
           </div>
@@ -1000,8 +1017,9 @@ function TodayAttendanceSection({
           </div>
           <div className="emp-mini-cal">
             <div className="emp-mini-cal-header">
-              {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => (
-                <span key={d}>{d}</span>
+              {/* Sunday-start, Fri+Sat marked as weekend */}
+              {([t.employees.today.sun, t.employees.today.mon, t.employees.today.tue, t.employees.today.wed, t.employees.today.thu, t.employees.today.fri, t.employees.today.sat] as string[]).map((d, i) => (
+                <span key={d} className={isPalestinianWeekend(i) ? "emp-cal-hdr-weekend" : ""}>{d}</span>
               ))}
             </div>
             {miniCalWeeks.map((week, wi) => (
@@ -1009,10 +1027,10 @@ function TodayAttendanceSection({
                 {week.map((day) => {
                   const isToday = day.date === getTodayDate();
                   const presentCount = employees.filter(
-                    (e) => getDailyAttendanceEntryByDate(e, day.date)?.status === "present"
+                    (e) => !e.isDeleted && getDailyAttendanceEntryByDate(e, day.date)?.status === "present"
                   ).length;
                   const hasSomePresent = presentCount > 0 && day.isCurrentMonth;
-                  const isWeekend = day.dow === 5 || day.dow === 6;
+                  const isWeekend = isPalestinianWeekend(day.dow);
                   return (
                     <span
                       key={day.date}
@@ -1132,7 +1150,7 @@ function MonthlyAttendanceSection({
   onChangeWeekIndex: (index: number) => void;
   onOpenEditor: (employee: Employee, date: string) => void;
 }) {
-  const { t } = useSettings();
+  const { t, locale } = useSettings();
   const { days } = useMemo(() => getMonthDays(monthDate), [monthDate]);
   const weeks = useMemo(() => groupDaysIntoWeeks(days), [days]);
   const safeWeekIndex = Math.min(Math.max(weekIndex, 0), Math.max(weeks.length - 1, 0));
@@ -1258,11 +1276,11 @@ function MonthlyAttendanceSection({
               <tr>
                 <th className="emp-monthly-name-th">{t.employees.monthly.employee}</th>
                 {visibleDays.map((day) => (
-                  <th key={day.date} className={`emp-monthly-day-th ${day.dow === 0 ? "emp-day-sunday" : ""}`}>
+                  <th key={day.date} className={`emp-monthly-day-th ${isPalestinianWeekend(day.dow) ? "emp-day-weekend" : ""}`}>
                     <span className="emp-day-dow">
-                      {new Date(`${day.date}T00:00:00`).toLocaleDateString("en-US", { weekday: "short" })}
+                      {new Date(`${day.date}T00:00:00`).toLocaleDateString(locale, { weekday: "short" })}
                     </span>
-                    <span className="emp-day-num">{new Date(`${day.date}T00:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
+                    <span className="emp-day-num">{new Date(`${day.date}T00:00:00`).toLocaleDateString(locale, { month: "short", day: "numeric" })}</span>
                   </th>
                 ))}
                 <th className="emp-monthly-pct-th">%</th>
@@ -1295,7 +1313,7 @@ function MonthlyAttendanceSection({
                         : undefined;
                       const hoursStr = entry ? `${Math.floor(Number(entry.workedHours))}h ${String(Math.round((Number(entry.workedHours) % 1) * 60)).padStart(2, "0")}m` : "";
                       return (
-                        <td key={day.date} className={day.dow === 0 ? "emp-day-sunday" : ""}>
+                        <td key={day.date} className={isPalestinianWeekend(day.dow) ? "emp-day-weekend" : ""}>
                           <button
                             type="button"
                             className={`emp-monthly-day-btn ${entry ? DAILY_STATUS_CLASS_MAP[entry.status] : "is-empty"}`}
