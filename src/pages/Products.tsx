@@ -758,7 +758,7 @@ export default function Products() {
         <div>
           <h1 className="products-page-title">{productTitle}</h1>
           <p className="products-page-desc">
-            {"Manage your product catalog, inventory, and pricing."}
+            {t.layout.sectionSubtitles.products}
           </p>
         </div>
       </div>
@@ -770,7 +770,7 @@ export default function Products() {
           <div>
             <span>{t.common?.total || "Total"}</span>
             <strong>{stats.total}</strong>
-            <small>{"Products"}</small>
+            <small>{t.products.pageTitle}</small>
           </div>
         </article>
         <article className="products-stat-card">
@@ -778,7 +778,7 @@ export default function Products() {
           <div>
             <span>{t.products?.inStock || "In Stock"}</span>
             <strong>{stats.inStock}</strong>
-            <small>{"Products"}</small>
+            <small>{t.products.pageTitle}</small>
           </div>
         </article>
         <article className="products-stat-card">
@@ -786,7 +786,7 @@ export default function Products() {
           <div>
             <span>{t.products?.low || "Low Stock"}</span>
             <strong>{stats.lowStock}</strong>
-            <small>{"Products"}</small>
+            <small>{t.products.pageTitle}</small>
           </div>
         </article>
         <article className="products-stat-card">
@@ -794,7 +794,7 @@ export default function Products() {
           <div>
             <span>{t.products?.out || "Out of Stock"}</span>
             <strong>{stats.outOfStock}</strong>
-            <small>{"Products"}</small>
+            <small>{t.products.pageTitle}</small>
           </div>
         </article>
       </section>

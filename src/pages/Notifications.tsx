@@ -63,7 +63,7 @@ function dateGroup(ts: Date, t: T): string {
 
 export default function Notifications() {
   const navigate = useNavigate();
-  const { t } = useSettings();
+  const { t, isArabic } = useSettings();
   const tn = t.notifications;
   const { notifications, unreadCount, markAsRead, markAllAsRead, dismiss, clearAll } = useNotifications();
 
@@ -159,6 +159,9 @@ export default function Notifications() {
                 <div className={styles.cardList}>
                   {items.map((n) => {
                     const Icon = CAT_ICON[n.category];
+                    const title = isArabic ? (n.titleAr ?? n.title) : n.title;
+                    const body = isArabic ? (n.bodyAr ?? n.body) : n.body;
+                    const actionLabel = isArabic ? (n.actionLabelAr ?? n.actionLabel) : n.actionLabel;
                     return (
                       <div
                         key={n.id}
@@ -175,7 +178,7 @@ export default function Notifications() {
                         <div className={styles.cardBody}>
                           <div className={styles.cardTop}>
                             <div className={styles.cardMeta}>
-                              <span className={styles.cardTitle}>{n.title}</span>
+                              <span className={styles.cardTitle}>{title}</span>
                               <Badge variant={SEV_VARIANT[n.severity]} size="sm">{n.severity}</Badge>
                             </div>
                             <div className={styles.cardRight}>
@@ -191,15 +194,15 @@ export default function Notifications() {
                             </div>
                           </div>
 
-                          <p className={styles.cardText}>{n.body}</p>
+                          <p className={styles.cardText}>{body}</p>
 
-                          {n.actionLabel && (
+                          {actionLabel && (
                             <button
                               type="button"
                               className={styles.cardAction}
                               onClick={(e) => { e.stopPropagation(); handleAction(n); }}
                             >
-                              {n.actionLabel} →
+                              {actionLabel} →
                             </button>
                           )}
                         </div>

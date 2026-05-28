@@ -10,12 +10,15 @@ export type NotificationCategory = "invoice" | "inventory" | "factory" | "pos" |
 export interface Notification {
   id: string;
   title: string;
+  titleAr: string;
   body: string;
+  bodyAr: string;
   category: NotificationCategory;
   severity: NotificationSeverity;
   timestamp: Date;
   read: boolean;
   actionLabel?: string;
+  actionLabelAr?: string;
   actionRoute?: string;
   entityId?: string;
 }
@@ -73,9 +76,12 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
           category: "invoice",
           severity: "error",
           title: "Overdue Invoice",
+          titleAr: "فاتورة متأخرة",
           body: `${customerName} — ₪${amount} overdue since ${inv.date}`,
+          bodyAr: `${customerName} — ₪${amount} متأخرة منذ ${inv.date}`,
           timestamp: new Date(inv.date),
           actionLabel: "View Invoice",
+          actionLabelAr: "عرض الفاتورة",
           actionRoute: `/invoices?highlight=${inv.id}`,
         });
       } else if (inv.date <= in3Str) {
@@ -85,9 +91,12 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
           category: "invoice",
           severity: "warning",
           title: "Invoice Due Soon",
+          titleAr: "فاتورة تستحق قريباً",
           body: `${customerName} — ₪${amount} due on ${inv.date}`,
+          bodyAr: `${customerName} — ₪${amount} تستحق بتاريخ ${inv.date}`,
           timestamp: new Date(inv.date),
           actionLabel: "View Invoice",
+          actionLabelAr: "عرض الفاتورة",
           actionRoute: `/invoices?highlight=${inv.id}`,
         });
       }
@@ -103,9 +112,12 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
         category: "inventory",
         severity: isOut ? "error" : "warning",
         title: isOut ? "Out of Stock" : "Low Stock Alert",
+        titleAr: isOut ? "نفاد المخزون" : "تحذير: مخزون منخفض",
         body: `${mat.name} — ${mat.onHand} ${mat.unit} remaining (reorder at ${mat.reorderPoint})`,
+        bodyAr: `${mat.nameAr ?? mat.name} — ${mat.onHand} ${mat.unit} متبقٍ (إعادة الطلب عند ${mat.reorderPoint})`,
         timestamp: new Date(),
         actionLabel: "View Material",
+        actionLabelAr: "عرض المادة",
         actionRoute: "/factory/inventory/raw",
       });
     }
@@ -119,9 +131,12 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
         category: "factory",
         severity: "error",
         title: "Batch On Hold",
+        titleAr: "دفعة معلّقة",
         body: `Batch ${batch.id} — ${batch.productName}: QC failed, requires review`,
+        bodyAr: `الدفعة ${batch.id} — ${batch.productName}: فشل فحص الجودة، يتطلب مراجعة`,
         timestamp: new Date(),
         actionLabel: "View QC",
+        actionLabelAr: "عرض الجودة",
         actionRoute: "/factory/qc",
       });
     }
@@ -136,9 +151,12 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
         category: "factory",
         severity: "error",
         title: "Production Order Delayed",
+        titleAr: "أمر إنتاج متأخر",
         body: `Order ${order.id} — ${order.productId} overdue by ${daysLate} day${daysLate !== 1 ? "s" : ""}`,
+        bodyAr: `أمر الإنتاج ${order.id} — ${order.productId} متأخر بـ ${daysLate} يوم`,
         timestamp: new Date(order.dueDate),
         actionLabel: "View Order",
+        actionLabelAr: "عرض الأمر",
         actionRoute: "/factory/orders",
       });
     }
@@ -152,9 +170,12 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
         category: "pos",
         severity: "warning",
         title: "Refund Pending Approval",
+        titleAr: "استرداد بانتظار الموافقة",
         body: `Refund ${refund.id} — ₪${refund.refundAmount.toFixed(2)} awaiting approval`,
+        bodyAr: `الاسترداد ${refund.id} — ₪${refund.refundAmount.toFixed(2)} بانتظار الموافقة`,
         timestamp: new Date(refund.date),
         actionLabel: "Review",
+        actionLabelAr: "مراجعة",
         actionRoute: "/pos/refunds",
       });
     }
@@ -175,9 +196,12 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
             category: "loyalty",
             severity: "info",
             title: "Coins Expiring Soon",
+            titleAr: "نقاط الولاء على وشك الانتهاء",
             body: `${profile.customerName} — ${profile.coinsBalance.toLocaleString()} coins expire in ${daysLeft} day${daysLeft !== 1 ? "s" : ""}`,
+            bodyAr: `${profile.customerName} — ${profile.coinsBalance.toLocaleString()} نقطة تنتهي خلال ${daysLeft} يوم`,
             timestamp: expiryDate,
             actionLabel: "View Profile",
+            actionLabelAr: "عرض الملف",
             actionRoute: `/pos/loyalty/profile?id=${profile.customerId}`,
           });
         }

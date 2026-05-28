@@ -634,6 +634,7 @@ export type RawMaterial = {
   reorderPoint: number;
   unitCost: number;
   supplier: string;
+  supplierAr?: string;
   origin: "local" | "imported";
   lastPurchaseDate?: string;
 };

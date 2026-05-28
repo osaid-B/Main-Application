@@ -13,7 +13,7 @@ import { useLoadingDelay } from "../../hooks/useLoadingDelay";
 import styles from "./factory.module.css";
 
 export default function FactoryBoms() {
-  const { t, formatCurrency } = useSettings();
+  const { t, formatCurrency, isArabic } = useSettings();
   const tc = t.factory.boms;
   const { boms: FACTORY_BOMS } = useFactory();
 
@@ -111,7 +111,7 @@ export default function FactoryBoms() {
             <tbody>
               {detailTarget.lines.map((line) => (
                 <tr key={line.materialId}>
-                  <td>{line.materialName}</td>
+                  <td>{isArabic ? line.materialNameAr : line.materialName}</td>
                   <td className={`${styles.numEnd} ${styles.mono}`}>{line.quantity}</td>
                   <td>{line.unit}</td>
                   <td className={`${styles.numEnd} ${styles.mono}`}>{formatCurrency(line.unitCost)}</td>

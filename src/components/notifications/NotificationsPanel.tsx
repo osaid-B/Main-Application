@@ -6,6 +6,8 @@ import type { Notification, NotificationCategory, NotificationSeverity } from ".
 import { useSettings } from "../../context/SettingsContext";
 import styles from "./NotificationsPanel.module.css";
 
+type T = ReturnType<typeof useSettings>["t"];
+
 const CAT_ICON: Record<NotificationCategory, typeof FileText> = {
   invoice:   FileText,
   inventory: Package,
@@ -23,7 +25,6 @@ const SEV_CLASS: Record<NotificationSeverity, string> = {
 };
 
 type TabId = "all" | "unread" | NotificationCategory;
-type T = ReturnType<typeof useSettings>["t"];
 
 function relTime(ts: Date, t: T): string {
   const rl = t.notifications.relTime;
@@ -40,7 +41,7 @@ function relTime(ts: Date, t: T): string {
 }
 
 export default function NotificationsPanel() {
-  const { t } = useSettings();
+  const { t, isArabic } = useSettings();
   const navigate = useNavigate();
   const { notifications, unreadCount, markAsRead, markAllAsRead, dismiss, clearAll } = useNotifications();
 
@@ -166,7 +167,7 @@ export default function NotificationsPanel() {
                 <p>{tn.empty}</p>
               </div>
             ) : (
-              displayed.map((n) => <NotifCard key={n.id} n={n} onAction={handleAction} onDismiss={dismiss} onClick={handleCardClick} t={t} />)
+              displayed.map((n) => <NotifCard key={n.id} n={n} onAction={handleAction} onDismiss={dismiss} onClick={handleCardClick} t={t} isArabic={isArabic} />)
             )}
           </div>
         </div>
@@ -176,15 +177,19 @@ export default function NotificationsPanel() {
 }
 
 function NotifCard({
-  n, onAction, onDismiss, onClick, t,
+  n, onAction, onDismiss, onClick, t, isArabic,
 }: {
   n: Notification;
   onAction: (n: Notification) => void;
   onDismiss: (id: string) => void;
   onClick: (n: Notification) => void;
   t: T;
+  isArabic: boolean;
 }) {
   const Icon = CAT_ICON[n.category];
+  const title = isArabic ? (n.titleAr ?? n.title) : n.title;
+  const body = isArabic ? (n.bodyAr ?? n.body) : n.body;
+  const actionLabel = isArabic ? (n.actionLabelAr ?? n.actionLabel) : n.actionLabel;
   return (
     <div
       className={`${styles.card} ${SEV_CLASS[n.severity]} ${n.read ? styles.cardRead : styles.cardUnread}`}
@@ -192,24 +197,24 @@ function NotifCard({
       role="button"
       tabIndex={0}
       onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onClick(n); }}
-      aria-label={n.title}
+      aria-label={title}
     >
       <div className={styles.cardIcon}>
         <Icon size={14} />
       </div>
       <div className={styles.cardBody}>
         <div className={styles.cardTop}>
-          <span className={styles.cardTitle}>{n.title}</span>
+          <span className={styles.cardTitle}>{title}</span>
           <span className={styles.cardTime}>{relTime(n.timestamp, t)}</span>
         </div>
-        <p className={styles.cardText}>{n.body}</p>
-        {n.actionLabel && (
+        <p className={styles.cardText}>{body}</p>
+        {actionLabel && (
           <button
             type="button"
             className={styles.cardAction}
             onClick={(e) => { e.stopPropagation(); onAction(n); }}
           >
-            {n.actionLabel} →
+            {actionLabel} →
           </button>
         )}
       </div>

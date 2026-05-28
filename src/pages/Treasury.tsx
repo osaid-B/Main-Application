@@ -418,14 +418,15 @@ export default function Treasury() {
     const invoice   = "invoiceId"  in record && record.invoiceId   ? invoices.find((i)  => i.id === record.invoiceId)   : undefined;
     const payment   = "paymentId"  in record && record.paymentId   ? payments.find((p)  => p.id === record.paymentId)   : undefined;
     const journalEntry = "transferReference" in record ? record.linkedJournal : record.journalLink;
+    const td = t.treasury.drawer;
     return (
       <div className="treasury-detail-links">
-        <div><span>Customer</span><strong>{customer?.name ?? "Not linked"}</strong></div>
-        <div><span>Supplier</span><strong>{supplier?.name ?? "Not linked"}</strong></div>
-        <div><span>Invoice</span><strong>{invoice?.id ?? "Not linked"}</strong></div>
-        <div><span>Payment</span><strong>{payment?.paymentId ?? payment?.id ?? "Not linked"}</strong></div>
-        <div><span>Journal</span><strong>{journalEntry?.journalEntryId ?? "Ready to map"}</strong></div>
-        <div><span>Posting</span><strong>{journalEntry?.postingState ?? "Not mapped"}</strong></div>
+        <div><span>{td.labelCustomer}</span><strong>{customer?.name ?? td.notLinked}</strong></div>
+        <div><span>{td.labelSupplier}</span><strong>{supplier?.name ?? td.notLinked}</strong></div>
+        <div><span>{td.labelInvoice}</span><strong>{invoice?.id ?? td.notLinked}</strong></div>
+        <div><span>{td.labelPayment}</span><strong>{payment?.paymentId ?? payment?.id ?? td.notLinked}</strong></div>
+        <div><span>{td.labelJournal}</span><strong>{journalEntry?.journalEntryId ?? td.readyToMap}</strong></div>
+        <div><span>{td.labelPosting}</span><strong>{journalEntry?.postingState ?? td.notMapped}</strong></div>
       </div>
     );
   };
@@ -921,35 +922,35 @@ export default function Treasury() {
               <aside className="treasury-drawer" onClick={(e) => e.stopPropagation()}>
                 <div className="treasury-drawer-head">
                   <div>
-                    <span>{detailRecord.type === "transfer" ? "Transfer details" : "Cheque details"}</span>
+                    <span>{detailRecord.type === "transfer" ? t.treasury.drawer.transferDetails : t.treasury.drawer.chequeDetails}</span>
                     <h2>{"transferReference" in detailRecord.record ? detailRecord.record.transferReference : detailRecord.record.chequeNumber}</h2>
-                    <p>Linked treasury data, OCR evidence, approvals, journal readiness, and reconciliation context.</p>
+                    <p>{t.treasury.drawer.drawerSubtitle}</p>
                   </div>
                   <button type="button" className="icon-dismiss-btn" onClick={() => setDetailRecord(null)}><X size={18} /></button>
                 </div>
                 <div className="treasury-drawer-body">
                   <section className="workspace-surface treasury-drawer-card">
-                    <h3>Core instrument data</h3>
+                    <h3>{t.treasury.drawer.coreData}</h3>
                     <div className="treasury-detail-grid">
-                      <div><span>Status</span><strong>{detailRecord.record.status}</strong></div>
-                      <div><span>Amount</span><strong>{money(detailRecord.record.amount, detailRecord.record.currency)}</strong></div>
-                      <div><span>Issue/Transfer Date</span><strong>{formatDate("transferDate" in detailRecord.record ? detailRecord.record.transferDate : detailRecord.record.issueDate)}</strong></div>
-                      <div><span>Due / Settlement</span><strong>{formatDate("transferReference" in detailRecord.record ? detailRecord.record.settlementDate : detailRecord.record.dueDate)}</strong></div>
-                      <div><span>Approved By</span><strong>{detailRecord.record.approvedBy || "Pending approval"}</strong></div>
-                      <div><span>Reconciled</span><strong>{detailRecord.record.reconciled ? "Yes" : "No"}</strong></div>
+                      <div><span>{t.treasury.drawer.labelStatus}</span><strong>{detailRecord.record.status}</strong></div>
+                      <div><span>{t.treasury.drawer.labelAmount}</span><strong>{money(detailRecord.record.amount, detailRecord.record.currency)}</strong></div>
+                      <div><span>{t.treasury.drawer.labelIssuedDate}</span><strong>{formatDate("transferDate" in detailRecord.record ? detailRecord.record.transferDate : detailRecord.record.issueDate)}</strong></div>
+                      <div><span>{t.treasury.drawer.labelDueDate}</span><strong>{formatDate("transferReference" in detailRecord.record ? detailRecord.record.settlementDate : detailRecord.record.dueDate)}</strong></div>
+                      <div><span>{t.treasury.drawer.labelApprovedBy}</span><strong>{detailRecord.record.approvedBy || t.treasury.drawer.pendingApproval}</strong></div>
+                      <div><span>{t.treasury.drawer.labelReconciled}</span><strong>{detailRecord.record.reconciled ? t.treasury.drawer.yes : t.treasury.drawer.no}</strong></div>
                     </div>
                   </section>
                   <section className="workspace-surface treasury-drawer-card">
-                    <h3>Linked business records</h3>
+                    <h3>{t.treasury.drawer.linkedRecords}</h3>
                     {renderLinkage(detailRecord.record)}
                   </section>
                   <section className="workspace-surface treasury-drawer-card">
-                    <h3>Document and OCR context</h3>
+                    <h3>{t.treasury.drawer.ocrContext}</h3>
                     <div className="treasury-detail-grid">
-                      <div><span>Attachments</span><strong>{detailRecord.record.attachmentIds.length}</strong></div>
-                      <div><span>OCR extraction</span><strong>{detailRecord.record.ocrExtractionId ?? "Not captured"}</strong></div>
-                      <div><span>Created By</span><strong>{detailRecord.record.createdBy}</strong></div>
-                      <div><span>Last Updated</span><strong>{formatDate(detailRecord.record.updatedAt)}</strong></div>
+                      <div><span>{t.treasury.drawer.labelAttachments}</span><strong>{detailRecord.record.attachmentIds.length}</strong></div>
+                      <div><span>{t.treasury.drawer.labelOcrExtraction}</span><strong>{detailRecord.record.ocrExtractionId ?? t.treasury.drawer.notCaptured}</strong></div>
+                      <div><span>{t.treasury.drawer.labelCreatedBy}</span><strong>{detailRecord.record.createdBy}</strong></div>
+                      <div><span>{t.treasury.drawer.labelLastUpdated}</span><strong>{formatDate(detailRecord.record.updatedAt)}</strong></div>
                     </div>
                   </section>
                 </div>

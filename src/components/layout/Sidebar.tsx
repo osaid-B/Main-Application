@@ -123,7 +123,7 @@ export default function Sidebar({
   const { user, logout } = useAuth();
   const { workspace } = useWorkspace();
   const prefs = useSidebarPreferences();
-  const { t } = useSettings();
+  const { t, isArabic } = useSettings();
   const ts = t.sidebar;
   const [editMode, setEditMode] = useState(false);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
@@ -236,7 +236,7 @@ export default function Sidebar({
                       onContextMenu={(e) => openContextMenu(e, item)}
                     >
                       <Icon size={16} />
-                      {(!collapsed || mobile) && <span className="atlas-nav-label">{item.label}</span>}
+                      {(!collapsed || mobile) && <span className="atlas-nav-label">{isArabic ? (item.labelAr ?? item.label) : item.label}</span>}
                     </NavLink>
                   </li>
                 );
@@ -258,7 +258,7 @@ export default function Sidebar({
             <div key={section.title} className="atlas-nav-section">
               {(!collapsed || mobile) && (
                 <div className="atlas-nav-section-header">
-                  <h4 className="atlas-nav-section-title">{section.title}</h4>
+                  <h4 className="atlas-nav-section-title">{isArabic ? (section.titleAr ?? section.title) : section.title}</h4>
                   {!editMode && (
                     <button
                       type="button"
@@ -283,7 +283,7 @@ export default function Sidebar({
                           <span className="atlas-nav-edit-icon"><Icon size={15} /></span>
                           {(!collapsed || mobile) && (
                             <>
-                              <span className={`atlas-nav-label ${hidden ? "atlas-nav-label--dim" : ""}`}>{item.label}</span>
+                              <span className={`atlas-nav-label ${hidden ? "atlas-nav-label--dim" : ""}`}>{isArabic ? (item.labelAr ?? item.label) : item.label}</span>
                               <button
                                 type="button"
                                 className="atlas-nav-visibility-btn"
@@ -323,7 +323,7 @@ export default function Sidebar({
                           <Icon size={16} />
                           {(!collapsed || mobile) && (
                             <>
-                              <span className="atlas-nav-label">{item.label}</span>
+                              <span className="atlas-nav-label">{isArabic ? (item.labelAr ?? item.label) : item.label}</span>
                               {item.badge && <span className="atlas-nav-badge">{item.badge}</span>}
                               {item.dot && <span className="atlas-nav-dot" aria-hidden />}
                               {item.comingSoon && <span className="atlas-nav-soon">soon</span>}

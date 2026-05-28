@@ -61,8 +61,8 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       toggleTheme: () =>
         setTheme((prev) => (prev === "light" ? "dark" : "light")),
       isArabic: language === "ar",
-      formatCurrency: (value, currency = "USD") =>
-        new Intl.NumberFormat(language === "ar" ? "ar" : "en-US", {
+      formatCurrency: (value, currency = "ILS") =>
+        new Intl.NumberFormat(language === "ar" ? "ar-PS" : "en-US", {
           style: "currency",
           currency,
           minimumFractionDigits: 2,

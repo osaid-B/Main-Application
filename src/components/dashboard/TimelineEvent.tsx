@@ -1,4 +1,5 @@
 import type { TimelineEventData } from "../../data/dashboardMock";
+import { useSettings } from "../../context/SettingsContext";
 import styles from "./TimelineEvent.module.css";
 
 interface Props {
@@ -7,6 +8,7 @@ interface Props {
 
 /** Single timeline row — monospace time + colored pulsing dot + title/description. */
 export function TimelineEvent({ event }: Props) {
+  const { isArabic } = useSettings();
   return (
     <li className={styles.row}>
       <span className={styles.time}>{event.time}</span>
@@ -15,8 +17,8 @@ export function TimelineEvent({ event }: Props) {
         aria-hidden
       />
       <div className={styles.body}>
-        <strong>{event.title}</strong>
-        <p>{event.description}</p>
+        <strong>{isArabic ? event.titleAr : event.title}</strong>
+        <p>{isArabic ? event.descriptionAr : event.description}</p>
       </div>
     </li>
   );
