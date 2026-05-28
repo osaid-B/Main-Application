@@ -18,8 +18,10 @@ import type {
   Payment,
   Product,
   Purchase,
+  StockMovement,
   Supplier,
 } from "../data/types";
+import { STOCK_MOVEMENTS_MOCK } from "../data/stockMovementsMock";
 import {
   getCustomers, saveCustomers,
   getDepartments, saveDepartments,
@@ -28,6 +30,7 @@ import {
   getInvoiceItems,
   getInvoices, saveInvoices,
   getPayments, savePayments,
+  getStockMovements, saveStockMovements,
   getProductCategories, saveProductCategories,
   getProducts, saveProducts,
   getPurchases, savePurchases,
@@ -94,6 +97,10 @@ interface DataContextValue {
   addInvoice: (inv: Invoice) => void;
   updateInvoice: (inv: Invoice) => void;
 
+  // Stock Movements
+  stockMovements: StockMovement[];
+  addStockMovement: (m: StockMovement) => void;
+
   // Derived selectors (replace hard-coded dashboard numbers)
   totalRevenue: number;
   receivablesTotal: number;
@@ -126,6 +133,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [expenses, setExpenses] = useState<Expense[]>(() => getExpenses());
   const [departments, setDepartments] = useState<Department[]>(() => getDepartments());
   const [cashiers, setCashiers] = useState<PosCashier[]>(() => POS_CASHIERS);
+  const [stockMovements, setStockMovements] = useState<StockMovement[]>(() => {
+    const stored = getStockMovements();
+    return stored.length > 0 ? stored : STOCK_MOVEMENTS_MOCK;
+  });
 
   // ── Supabase bootstrap — replace initial state from DB when connected ─────────
   useEffect(() => {
@@ -316,6 +327,23 @@ export function DataProvider({ children }: { children: ReactNode }) {
     if (USE_SUPABASE) sbDeleteExpense(id).catch(console.error);
   }
 
+  // ── Stock Movements ──────────────────────────────────────────────────────────
+
+  function addStockMovement(m: StockMovement) {
+    const next = [m, ...stockMovements];
+    setStockMovements(next);
+    saveStockMovements(next);
+    // update product stock
+    const delta = m.quantityIn - m.quantityOut;
+    if (delta !== 0) {
+      const updatedProducts = products.map((p) =>
+        p.id === m.productId ? { ...p, stock: Math.max(0, p.stock + delta) } : p
+      );
+      setProducts(updatedProducts);
+      saveProducts(updatedProducts);
+    }
+  }
+
   // ── Invoice CRUD ─────────────────────────────────────────────────────────────
 
   function addInvoice(inv: Invoice) {
@@ -454,6 +482,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     cashiers, addCashier, updateCashier,
     addExpense, updateExpense, deleteExpense,
     addInvoice, updateInvoice,
+    stockMovements, addStockMovement,
     totalRevenue,
     receivablesTotal,
     openInvoicesCount,
