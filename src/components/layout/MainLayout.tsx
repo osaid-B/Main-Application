@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Keyboard, LogOut, Menu, PanelRightOpen, Plus } from "lucide-react";
+import { LogOut, Menu, PanelRightOpen, Plus } from "lucide-react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import AtlasHeader from "./AtlasHeader";
@@ -193,6 +193,7 @@ export default function MainLayout() {
       <Sidebar
         collapsed={sidebarCollapsed}
         onToggleCollapsed={() => setSidebarCollapsed((current) => !current)}
+        onShowShortcuts={() => setShortcutsOpen(true)}
       />
 
       {mobileNavOpen ? (
@@ -208,6 +209,7 @@ export default function MainLayout() {
         mobile
         isOpen={mobileNavOpen}
         onClose={() => setMobileNavOpen(false)}
+        onShowShortcuts={() => setShortcutsOpen(true)}
       />
 
       <main className="app-main">
@@ -263,17 +265,6 @@ export default function MainLayout() {
         >
           <span>AI</span>
           <small>{t.layout.aiCopilot}</small>
-        </button>
-
-        <button
-          type="button"
-          className="app-shortcuts-btn"
-          onClick={() => setShortcutsOpen(true)}
-          aria-label="Keyboard shortcuts"
-          title="Keyboard shortcuts (?)"
-        >
-          <Keyboard size={14} />
-          <kbd>?</kbd>
         </button>
 
         {logoutPending && (

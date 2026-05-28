@@ -31,6 +31,13 @@ export default function AtlasHeader() {
   const [createOpen, setCreateOpen] = useState(false);
   const [activeIdx, setActiveIdx] = useState(0);
   const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    function onScroll() { setScrolled(window.scrollY > 8); }
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   const searchWrapRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -86,7 +93,7 @@ export default function AtlasHeader() {
   // ── Search results ─────────────────────────────────────────────────────────
   const groups = useMemo((): SearchGroup[] => {
     const q = query.trim().toLowerCase();
-    if (!q) return [];
+    if (q.length < 2) return [];
 
     const out: SearchGroup[] = [];
 
@@ -186,7 +193,7 @@ export default function AtlasHeader() {
   }, [createOpen]);
 
   return (
-    <header className="atlas-header" dir={isArabic ? "rtl" : "ltr"}>
+    <header className={`atlas-header${scrolled ? " is-scrolled" : ""}`} dir={isArabic ? "rtl" : "ltr"}>
       {/* Left: breadcrumb */}
       <div className="atlas-header-left">
         <nav aria-label="Breadcrumb" className="atlas-breadcrumb">
@@ -218,7 +225,6 @@ export default function AtlasHeader() {
               onFocus={() => setSearchOpen(true)}
               onKeyDown={handleKeyDown}
             />
-            <kbd>⌘K</kbd>
           </div>
 
           {searchOpen && totalResults > 0 && createPortal(
@@ -263,7 +269,7 @@ export default function AtlasHeader() {
             document.body
           )}
 
-          {searchOpen && query.trim().length > 0 && totalResults === 0 && createPortal(
+          {searchOpen && query.trim().length >= 2 && totalResults === 0 && createPortal(
             <div className="atlas-search-dropdown atlas-search-empty" style={dropdownStyle}>
               <span>{t.header.searchNoResults} "{query}"</span>
             </div>,

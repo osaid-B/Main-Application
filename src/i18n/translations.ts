@@ -3467,8 +3467,8 @@ export const translations = {
       notifications: "التنبيهات",
       searchPlaceholder: "ابحث عن زبون، فاتورة، منتج، مورد…",
       globalSearch: "بحث عام",
-      searchNoResults: "لا نتائج لـ",
-      searchTypeMin: "اكتب حرفاً واحداً على الأقل",
+      searchNoResults: "لا توجد نتائج لـ",
+      searchTypeMin: "اكتب حرفين على الأقل",
       quickCreate: "إنشاء سريع",
       workspace: "مساحة العمل",
       pageTitles: {

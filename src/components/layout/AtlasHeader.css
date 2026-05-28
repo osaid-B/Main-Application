@@ -4,12 +4,22 @@
   gap: var(--app-space-3);
   padding: 0 var(--app-space-5);
   height: 56px;
-  background: var(--app-surface);
-  border-bottom: 1px solid var(--app-border);
+  background: color-mix(in srgb, var(--app-surface) 92%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid color-mix(in srgb, var(--app-border) 80%, transparent);
+  box-shadow: none;
   position: sticky;
   inset-block-start: 0;
   z-index: 50;
   font-family: var(--font-arabic);
+  transition: background 200ms ease, box-shadow 200ms ease, border-color 200ms ease;
+}
+
+.atlas-header.is-scrolled {
+  background: color-mix(in srgb, var(--app-surface) 98%, transparent);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 8px rgba(0, 0, 0, 0.04);
+  border-bottom-color: var(--app-border);
 }
 
 .atlas-header-left {
@@ -89,16 +99,6 @@
 
 .atlas-global-search input::placeholder { color: var(--app-text-light); }
 
-.atlas-global-search kbd {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  padding: 1px 5px;
-  background: var(--app-surface);
-  border: 1px solid var(--app-border);
-  border-radius: var(--app-radius-xs);
-  color: var(--app-text-muted);
-  flex-shrink: 0;
-}
 
 /* Workspace tabs */
 .atlas-workspace-tabs {
