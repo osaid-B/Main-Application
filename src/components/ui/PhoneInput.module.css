@@ -1,0 +1,106 @@
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-1);
+  min-width: 0;
+  width: 100%;
+}
+
+.label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--app-text-soft);
+  line-height: 1.2;
+}
+
+.required {
+  color: var(--app-danger);
+  margin-inline-start: 2px;
+}
+
+.field {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  width: 100%;
+  height: 36px;
+  background: var(--app-surface);
+  border: 1px solid var(--app-border-strong);
+  border-radius: var(--app-radius-sm);
+  color: var(--app-text);
+  font-size: 13px;
+  transition:
+    border-color var(--app-transition),
+    box-shadow var(--app-transition);
+}
+
+.field:hover:not(.fieldDisabled) {
+  border-color: var(--app-text-subtle);
+}
+
+.field:focus-within {
+  border-color: var(--app-accent);
+  box-shadow: 0 0 0 3px var(--app-accent-subtle);
+}
+
+.fieldValid {
+  border-color: var(--app-success, #16a34a);
+}
+
+.fieldValid:focus-within {
+  border-color: var(--app-success, #16a34a);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--app-success, #16a34a) 15%, transparent);
+}
+
+.fieldError {
+  border-color: var(--app-danger);
+}
+
+.fieldError:focus-within {
+  border-color: var(--app-danger);
+  box-shadow: 0 0 0 3px var(--app-danger-subtle);
+}
+
+.fieldDisabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: var(--app-surface-muted);
+}
+
+.input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  padding-inline: var(--app-space-3);
+  /* Phone numbers always LTR, even in RTL page layouts */
+  direction: ltr;
+  text-align: left;
+}
+
+.input::placeholder {
+  color: var(--app-text-subtle);
+}
+
+.input:disabled {
+  cursor: not-allowed;
+}
+
+.validIcon {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  padding-inline-end: var(--app-space-3);
+  color: var(--app-success, #16a34a);
+  pointer-events: none;
+}
+
+.errorText {
+  font-size: 12px;
+  color: var(--app-danger);
+  line-height: 1.35;
+}

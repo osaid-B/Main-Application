@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { KeyboardEvent as ReactKeyboardEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useData } from "../context/DataContext";
 import { useSettings } from "../context/SettingsContext";
@@ -15,6 +16,7 @@ import {
 } from "lucide-react";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
+import { PhoneInput } from "../components/ui/PhoneInput";
 import { Badge } from "../components/ui/Badge";
 import { Container } from "../components/layout/Container";
 import { FormSection } from "../components/forms/FormSection";
@@ -31,6 +33,7 @@ import {
   type Currency,
   type PaymentTerms,
 } from "../data/customersMock";
+import { validatePhone } from "../utils/phoneValidation";
 import { translations } from "../i18n/translations";
 import styles from "./AddCustomer.module.css";
 
@@ -82,13 +85,25 @@ const REQUIRED_KEYS: Array<keyof FormState> = [
 
 function generateCustomerId(customers: Customer[]): string {
   const max = customers.reduce((m, c) => {
-    const nums = [c.id, c.code ?? ""].map((s) => {
-      const match = s.match(/(\d+)$/);
+    const nums = [c.id ?? "", c.code ?? ""].map((s) => {
+      const match = String(s).match(/(\d+)$/);
       return match ? Number(match[1]) : 0;
     });
     return Math.max(m, ...nums);
   }, 1000);
   return `CUST-${max + 1}`;
+}
+
+function blockNonDigits(e: ReactKeyboardEvent<HTMLInputElement>) {
+  if (e.ctrlKey || e.metaKey) return;
+  const allowed = ["0","1","2","3","4","5","6","7","8","9","Backspace","Delete","Tab","ArrowLeft","ArrowRight","Home","End"];
+  if (!allowed.includes(e.key)) e.preventDefault();
+}
+
+function blockNonDecimal(e: ReactKeyboardEvent<HTMLInputElement>) {
+  if (e.ctrlKey || e.metaKey) return;
+  const allowed = ["0","1","2","3","4","5","6","7","8","9",".","Backspace","Delete","Tab","ArrowLeft","ArrowRight","Home","End"];
+  if (!allowed.includes(e.key)) e.preventDefault();
 }
 
 export default function AddCustomer() {
@@ -101,6 +116,7 @@ export default function AddCustomer() {
   }));
   const [savedAt, setSavedAt] = useState<Date | null>(null);
   const autosaveRef = useRef<number | null>(null);
+  const [phoneErrors, setPhoneErrors] = useState<{ primary?: string; secondary?: string }>({});
 
   function update<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => {
@@ -164,6 +180,19 @@ export default function AddCustomer() {
 
   function handleSave() {
     if (!canSave) return;
+
+    // Validate phone fields before submitting
+    const primaryResult = validatePhone(form.phonePrimary);
+    const secondaryResult = form.phoneSecondary ? validatePhone(form.phoneSecondary) : null;
+    const errors: typeof phoneErrors = {};
+    if (!primaryResult.valid) errors.primary = primaryResult.error;
+    if (secondaryResult && !secondaryResult.valid) errors.secondary = secondaryResult.error;
+    if (errors.primary || errors.secondary) {
+      setPhoneErrors(errors);
+      return;
+    }
+    setPhoneErrors({});
+
     const today = new Date().toISOString().split("T")[0];
     const id = form.code;
     const newCustomer: Customer = {
@@ -265,6 +294,7 @@ export default function AddCustomer() {
               <Input
                 label={t.addCustomer.fields.taxId}
                 value={form.taxId}
+                onKeyDown={blockNonDigits}
                 onChange={(e) => update("taxId", e.target.value.replace(/[^\d]/g, "").slice(0, 9))}
                 placeholder={t.addCustomer.fields.taxIdPlaceholder}
                 hint={t.addCustomer.fields.taxIdHint}
@@ -280,21 +310,18 @@ export default function AddCustomer() {
             progress={sec2Complete ? t.addCustomer.sections.address.done : t.addCustomer.sections.contact.progress}
             isComplete={sec2Complete}
           >
-            <Input
+            <PhoneInput
               label={t.addCustomer.fields.phonePrimary}
               required
-              variant="tel"
               value={form.phonePrimary}
-              onChange={(e) => update("phonePrimary", e.target.value)}
-              placeholder={t.addCustomer.fields.phonePrimaryPlaceholder}
-              leftIcon={<span className={styles.dialPrefix}>+970</span>}
+              onChange={(digits) => { update("phonePrimary", digits); setPhoneErrors((p) => ({ ...p, primary: undefined })); }}
+              error={phoneErrors.primary}
             />
-            <Input
+            <PhoneInput
               label={t.addCustomer.fields.phoneSecondary}
-              variant="tel"
               value={form.phoneSecondary}
-              onChange={(e) => update("phoneSecondary", e.target.value)}
-              placeholder={t.addCustomer.fields.phonePlaceholderOptional}
+              onChange={(digits) => { update("phoneSecondary", digits); setPhoneErrors((p) => ({ ...p, secondary: undefined })); }}
+              error={phoneErrors.secondary}
             />
             <Input
               label={t.addCustomer.fields.email}
@@ -382,7 +409,8 @@ export default function AddCustomer() {
               label={t.addCustomer.fields.creditLimit}
               variant="number"
               value={form.creditLimit}
-              onChange={(e) => update("creditLimit", e.target.value.replace(/[^\d]/g, ""))}
+              onKeyDown={blockNonDecimal}
+              onChange={(e) => update("creditLimit", e.target.value.replace(/[^\d.]/g, "").replace(/(\.\d{2})\d+/, "$1"))}
               placeholder="0"
               hint={`${t.addCustomer.fields.creditLimitHint} (${form.currency})`}
             />
@@ -415,7 +443,11 @@ export default function AddCustomer() {
               label={t.addCustomer.fields.defaultDiscount}
               variant="number"
               value={form.defaultDiscount}
-              onChange={(e) => update("defaultDiscount", e.target.value.replace(/[^\d]/g, "").slice(0, 2))}
+              onKeyDown={blockNonDigits}
+              onChange={(e) => {
+                const v = e.target.value.replace(/[^\d]/g, "").slice(0, 3);
+                update("defaultDiscount", Number(v) > 100 ? "100" : v);
+              }}
               placeholder="0"
               hint={t.addCustomer.fields.defaultDiscountHint}
             />

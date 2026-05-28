@@ -3,12 +3,14 @@ import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Briefcase, Calendar, Clock, GraduationCap, Save } from "lucide-react";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
+import { PhoneInput } from "../components/ui/PhoneInput";
 import { Container } from "../components/layout/Container";
 import { FormSection } from "../components/forms/FormSection";
 import { RadioCardGroup } from "../components/forms/RadioCardGroup";
 import { ButtonGroup } from "../components/forms/ButtonGroup";
 import { useSettings } from "../context/SettingsContext";
 import { PALESTINIAN_GOVERNORATES, PALESTINIAN_BANKS } from "../config/palestineConfig";
+import { validatePhone } from "../utils/phoneValidation";
 
 type EmpKind = "permanent" | "daily" | "temporary" | "intern";
 type PayCycle = "daily" | "weekly" | "monthly";
@@ -30,8 +32,19 @@ export default function AddEmployee() {
   const [iban, setIban] = useState("");
   const [bank, setBank] = useState("");
   const [cycle, setCycle] = useState<PayCycle>("monthly");
+  const [phoneError, setPhoneError] = useState<string | undefined>();
 
   const canSave = !!name.trim();
+
+  function handleSave() {
+    if (!canSave) return;
+    if (phone) {
+      const result = validatePhone(phone);
+      if (!result.valid) { setPhoneError(result.error); return; }
+    }
+    setPhoneError(undefined);
+    navigate("/employees");
+  }
 
   const selectStyle: React.CSSProperties = {
     width: "100%",
@@ -57,7 +70,7 @@ export default function AddEmployee() {
           <h1 style={{ margin: 0, fontSize: "1.75rem", fontWeight: 700, color: "var(--app-text)" }}>{te.pageTitle}</h1>
           <p style={{ margin: "4px 0 0", fontSize: 13, color: "var(--app-text-muted)", maxWidth: 640 }}>{te.pageSubtitle}</p>
         </div>
-        <Button variant="primary" size="sm" leftIcon={<Save size={14} />} disabled={!canSave} onClick={() => navigate("/employees")}>
+        <Button variant="primary" size="sm" leftIcon={<Save size={14} />} disabled={!canSave} onClick={handleSave}>
           {te.saveEmployee}
         </Button>
       </header>
@@ -84,16 +97,20 @@ export default function AddEmployee() {
             onChange={(e) => setName(e.target.value)}
             placeholder={te.namePlaceholder}
           />
-          <Input
+          <PhoneInput
             label={te.phoneLabel}
-            variant="tel"
             value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            placeholder={te.phonePlaceholder}
+            onChange={(digits) => { setPhone(digits); setPhoneError(undefined); }}
+            error={phoneError}
           />
           <Input
             label={te.idLabel}
             value={nationalId}
+            onKeyDown={(e) => {
+              if (e.ctrlKey || e.metaKey) return;
+              const allowed = ["0","1","2","3","4","5","6","7","8","9","Backspace","Delete","Tab","ArrowLeft","ArrowRight","Home","End"];
+              if (!allowed.includes(e.key)) e.preventDefault();
+            }}
             onChange={(e) => setNationalId(e.target.value.replace(/\D/g, "").slice(0, 9))}
             placeholder={te.idPlaceholder}
           />
@@ -116,11 +133,15 @@ export default function AddEmployee() {
 
         <FormSection number={3} title={te.sec3Title} subtitle={te.sec3Subtitle}>
           {kind === "permanent" && (
-            <Input label={te.monthlySalaryLabel} variant="number" value={salary} onChange={(e) => setSalary(e.target.value)} placeholder="0" />
+            <Input label={te.monthlySalaryLabel} variant="number" value={salary}
+              onKeyDown={(e) => { if (e.ctrlKey || e.metaKey) return; if (!["0","1","2","3","4","5","6","7","8","9",".","Backspace","Delete","Tab","ArrowLeft","ArrowRight","Home","End"].includes(e.key)) e.preventDefault(); }}
+              onChange={(e) => setSalary(e.target.value.replace(/[^\d.]/g, "").replace(/(\.\d{2})\d+/,"$1"))} placeholder="0" />
           )}
           {kind === "daily" && (
             <>
-              <Input label={te.dailyRateLabel} variant="number" value={dailyRate} onChange={(e) => setDailyRate(e.target.value)} placeholder="0" />
+              <Input label={te.dailyRateLabel} variant="number" value={dailyRate}
+                onKeyDown={(e) => { if (e.ctrlKey || e.metaKey) return; if (!["0","1","2","3","4","5","6","7","8","9",".","Backspace","Delete","Tab","ArrowLeft","ArrowRight","Home","End"].includes(e.key)) e.preventDefault(); }}
+                onChange={(e) => setDailyRate(e.target.value.replace(/[^\d.]/g, "").replace(/(\.\d{2})\d+/,"$1"))} placeholder="0" />
               <ButtonGroup<PayCycle>
                 label={te.payCycleLabel}
                 value={cycle}
@@ -134,10 +155,14 @@ export default function AddEmployee() {
             </>
           )}
           {kind === "temporary" && (
-            <Input label={te.monthlySalaryLabel} variant="number" value={salary} onChange={(e) => setSalary(e.target.value)} placeholder="0" />
+            <Input label={te.monthlySalaryLabel} variant="number" value={salary}
+              onKeyDown={(e) => { if (e.ctrlKey || e.metaKey) return; if (!["0","1","2","3","4","5","6","7","8","9",".","Backspace","Delete","Tab","ArrowLeft","ArrowRight","Home","End"].includes(e.key)) e.preventDefault(); }}
+              onChange={(e) => setSalary(e.target.value.replace(/[^\d.]/g, "").replace(/(\.\d{2})\d+/,"$1"))} placeholder="0" />
           )}
           {kind === "intern" && (
-            <Input label={te.stipendLabel} variant="number" value={stipend} onChange={(e) => setStipend(e.target.value)} placeholder="0" />
+            <Input label={te.stipendLabel} variant="number" value={stipend}
+              onKeyDown={(e) => { if (e.ctrlKey || e.metaKey) return; if (!["0","1","2","3","4","5","6","7","8","9",".","Backspace","Delete","Tab","ArrowLeft","ArrowRight","Home","End"].includes(e.key)) e.preventDefault(); }}
+              onChange={(e) => setStipend(e.target.value.replace(/[^\d.]/g, "").replace(/(\.\d{2})\d+/,"$1"))} placeholder="0" />
           )}
           <div>
             <label style={{ fontSize: 13, fontWeight: 500, display: "block", marginBottom: 4 }}>{te.bankLabel}</label>

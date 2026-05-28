@@ -1,7 +1,9 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import ProtectedRoute from "./components/ProtectedRoute";
 import RoleGuard from "./components/RoleGuard";
+import { ErrorBoundary } from "./components/ui/ErrorBoundary";
 import MainLayout from "./components/layout/MainLayout";
+import { PageCrashFallback } from "./components/ui/PageCrashFallback";
 import { useAuth } from "./context/AuthContext";
 import { SettingsProvider } from "./context/SettingsContext";
 import { DataProvider } from "./context/DataContext";
@@ -76,16 +78,16 @@ function AppRoutes() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/company" element={<CompanyOverview />} />
           <Route path="/customers" element={<Customers />} />
-          <Route path="/customers/new" element={<AddCustomer />} />
+          <Route path="/customers/new" element={<ErrorBoundary fallback={(_, reset) => <PageCrashFallback onReset={reset} />}><AddCustomer /></ErrorBoundary>} />
           <Route path="/products" element={<Products />} />
           <Route path="/purchases" element={<Purchases />} />
           <Route path="/suppliers" element={<Suppliers />} />
-          <Route path="/suppliers/new" element={<AddSupplier />} />
+          <Route path="/suppliers/new" element={<ErrorBoundary fallback={(_, reset) => <PageCrashFallback onReset={reset} />}><AddSupplier /></ErrorBoundary>} />
           <Route path="/invoices" element={<Invoices />} />
           <Route path="/payments" element={<Payments />} />
           <Route path="/treasury" element={<Treasury />} />
           <Route path="/employees" element={<Employees />} />
-          <Route path="/employees/new" element={<AddEmployee />} />
+          <Route path="/employees/new" element={<ErrorBoundary fallback={(_, reset) => <PageCrashFallback onReset={reset} />}><AddEmployee /></ErrorBoundary>} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/data-import" element={<DataImport />} />
           <Route path="/preview" element={<Preview />} />
@@ -166,7 +168,9 @@ export default function App() {
         <FactoryProvider>
           <NotificationsProvider>
             <SidebarPreferencesProvider>
-              <AppRoutes />
+              <ErrorBoundary>
+                <AppRoutes />
+              </ErrorBoundary>
             </SidebarPreferencesProvider>
           </NotificationsProvider>
         </FactoryProvider>
