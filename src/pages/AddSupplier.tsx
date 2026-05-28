@@ -75,24 +75,19 @@ export default function AddSupplier() {
 
   return (
     <Container maxWidth="lg" padding="md">
-      <header style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 12, marginBottom: 24 }}>
-        <div>
-          <button
-            type="button"
-            onClick={() => navigate("/suppliers")}
-            style={{ background: "transparent", border: 0, color: "var(--app-text-muted)", fontSize: 12, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 4, padding: 0, marginBottom: 8 }}
-          >
-            <ArrowLeft size={14} /> {ts.backLink}
-          </button>
-          <h1 style={{ margin: 0, fontSize: "1.75rem", fontWeight: 700, color: "var(--app-text)" }}>{ts.pageTitle}</h1>
-          <p style={{ margin: "4px 0 0", fontSize: 13, color: "var(--app-text-muted)", maxWidth: 640 }}>{ts.pageSubtitle}</p>
-        </div>
-        <Button variant="primary" size="sm" leftIcon={<Save size={14} />} disabled={!canSave} onClick={handleSave}>
-          {ts.saveSupplier}
-        </Button>
+      <header style={{ marginBottom: 24 }}>
+        <button
+          type="button"
+          onClick={() => navigate("/suppliers")}
+          style={{ background: "transparent", border: 0, color: "var(--app-text-muted)", fontSize: 12, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 4, padding: 0, marginBottom: 8 }}
+        >
+          <ArrowLeft size={14} /> {ts.backLink}
+        </button>
+        <h1 style={{ margin: 0, fontSize: "1.75rem", fontWeight: 700, color: "var(--app-text)" }}>{ts.pageTitle}</h1>
+        <p style={{ margin: "4px 0 0", fontSize: 13, color: "var(--app-text-muted)", maxWidth: 640 }}>{ts.pageSubtitle}</p>
       </header>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 16, paddingBottom: 80 }}>
         <FormSection number={1} title={ts.sec1Title} subtitle={ts.sec1Subtitle}>
           <RadioCardGroup<SupplierKind>
             value={kind}
@@ -183,6 +178,13 @@ export default function AddSupplier() {
             />
           </FormSection>
         )}
+      </div>
+      {/* Sticky save bar */}
+      <div style={{ position: "fixed", bottom: 16, left: "50%", transform: "translateX(-50%)", display: "flex", alignItems: "center", gap: 8, padding: "8px 16px", background: "var(--app-surface)", border: "1px solid var(--app-border-strong)", borderRadius: "var(--app-radius-xl)", boxShadow: "var(--app-shadow-overlay)", zIndex: 40 }}>
+        <Button variant="secondary" size="sm" onClick={() => navigate("/suppliers")}>{ts.cancel}</Button>
+        <Button variant="primary" size="sm" leftIcon={<Save size={14} />} disabled={!canSave} onClick={handleSave}>
+          {ts.saveSupplier}
+        </Button>
       </div>
     </Container>
   );

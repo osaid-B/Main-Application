@@ -251,23 +251,23 @@ export default function PosProducts() {
         <div className={styles.addForm}>
           <div className={styles.formRow}>
             <div className={styles.formField}>
-              <label className={styles.editLabel}>{"Product Name"} *</label>
+              <label className={styles.editLabel}>{tc.cols.name} *</label>
               <input
                 className={styles.editInput}
                 value={form.name}
                 onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                placeholder="e.g. Coffee Arabica 250g"
+                placeholder="مثال: قهوة عربية 250g"
                 autoFocus
               />
             </div>
             <div className={styles.formField}>
-              <label className={styles.editLabel}>{"Category"} *</label>
+              <label className={styles.editLabel}>{tc.cols.category} *</label>
               <input
                 list="category-list"
                 className={styles.editInput}
                 value={form.category}
                 onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
-                placeholder="e.g. Beverages"
+                placeholder="مثال: مشروبات"
               />
               <datalist id="category-list">
                 {categories.map((c) => <option key={c} value={c} />)}
@@ -300,12 +300,12 @@ export default function PosProducts() {
             </div>
           </div>
           <div className={styles.formField}>
-            <label className={styles.editLabel}>{"Unit"}</label>
+            <label className={styles.editLabel}>الوحدة</label>
             <input
               className={styles.editInput}
               value={form.unit}
               onChange={(e) => setForm((f) => ({ ...f, unit: e.target.value }))}
-              placeholder="e.g. kg, pcs, box"
+              placeholder="مثال: كغ، قطعة، صندوق"
             />
           </div>
         </div>
