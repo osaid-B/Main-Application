@@ -455,31 +455,31 @@ export default function Treasury() {
             <strong className="trs-kpi-value">
               {money(bankAccounts.reduce((sum, a) => sum + a.currentBalance, 0))}
             </strong>
-            <span className="trs-kpi-link">Across {bankAccounts.length} active treasury accounts</span>
+            <span className="trs-kpi-link">{t.treasury.kpi.acrossAccounts.replace("{{count}}", String(bankAccounts.length))}</span>
           </div>
         </div>
         <div className="trs-kpi-card">
           <div className="trs-kpi-icon trs-kpi-icon--amber"><Banknote size={20} /></div>
           <div>
-            <span className="trs-kpi-label">Incoming Cheques Due Soon</span>
+            <span className="trs-kpi-label">{t.treasury.kpi.incomingChequesDueSoon}</span>
             <strong className="trs-kpi-value">{combinedSignals.dueSoon}</strong>
-            <span className="trs-kpi-note">Post-dated or maturing within 3 days</span>
+            <span className="trs-kpi-note">{t.treasury.kpi.postDatedNote}</span>
           </div>
         </div>
         <div className="trs-kpi-card">
           <div className="trs-kpi-icon trs-kpi-icon--red"><AlertTriangle size={20} /></div>
           <div>
-            <span className="trs-kpi-label">Bounced Instruments</span>
+            <span className="trs-kpi-label">{t.treasury.kpi.bouncedInstruments}</span>
             <strong className="trs-kpi-value">{combinedSignals.bounced}</strong>
-            <span className="trs-kpi-note">Need follow-up, reversal, or customer/supplier action</span>
+            <span className="trs-kpi-note">{t.treasury.kpi.bouncedNote}</span>
           </div>
         </div>
         <div className="trs-kpi-card">
           <div className="trs-kpi-icon trs-kpi-icon--purple"><FileScan size={20} /></div>
           <div>
-            <span className="trs-kpi-label">OCR Queue</span>
+            <span className="trs-kpi-label">{t.treasury.kpi.ocrQueue}</span>
             <strong className="trs-kpi-value">{ocrQueue.length}</strong>
-            <span className="trs-kpi-note">{combinedSignals.lowConfidence} items need manual validation</span>
+            <span className="trs-kpi-note">{t.treasury.kpi.itemsNeedValidation.replace("{{count}}", String(combinedSignals.lowConfidence))}</span>
           </div>
         </div>
       </div>
@@ -823,7 +823,7 @@ export default function Treasury() {
 
           {/* Role card */}
           <div className="trs-sidebar-card trs-role-card">
-            <span className="trs-role-eyebrow">Active treasury role</span>
+            <span className="trs-role-eyebrow">{t.treasury.sidebar.activeRole}</span>
             <div className="trs-role-icon-wrap"><ShieldCheck size={22} /></div>
             <strong className="trs-role-name">{rolePreset}</strong>
             <p className="trs-role-desc">
@@ -839,10 +839,10 @@ export default function Treasury() {
           {/* Instrument Controls */}
           <div className="trs-sidebar-card">
             <div className="trs-sidebar-head">
-              <span className="trs-sidebar-title">Instrument Controls</span>
+              <span className="trs-sidebar-title">{t.treasury.sidebar.instrumentControls}</span>
               <ShieldCheck size={15} className="trs-sidebar-icon" />
             </div>
-            <p className="trs-sidebar-sub">Sensitive treasury actions are role-gated and audited.</p>
+            <p className="trs-sidebar-sub">{t.treasury.sidebar.sensitiveNote}</p>
             <div className="trs-controls-list">
               {([
                 ["Approve cheques",        access.approve],
@@ -864,10 +864,10 @@ export default function Treasury() {
           {/* Operational Signals */}
           <div className="trs-sidebar-card">
             <div className="trs-sidebar-head">
-              <span className="trs-sidebar-title">Operational Signals</span>
+              <span className="trs-sidebar-title">{t.treasury.sidebar.operationalSignals}</span>
               <BrainCircuit size={15} className="trs-sidebar-icon" />
             </div>
-            <p className="trs-sidebar-sub">High-priority treasury items.</p>
+            <p className="trs-sidebar-sub">{t.treasury.sidebar.highPriorityItems}</p>
             <div className="trs-signals-list">
               <Button type="button" variant="ghost" className="trs-signal-row" onClick={() => switchTab("incoming")}>
                 <span className="trs-signal-count trs-signal--red">{combinedSignals.bounced}</span>
