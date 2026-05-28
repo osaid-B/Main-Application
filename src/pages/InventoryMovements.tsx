@@ -264,7 +264,7 @@ export default function InventoryMovements() {
           <label className={styles.formLabel}>{tc.form.product}</label>
           <select className={styles.formSelect} value={newForm.productId}
             onChange={(e) => setNewForm(f => ({ ...f, productId: e.target.value }))}>
-            <option value="">{isArabic ? "اختر المنتج..." : "Select product..."}</option>
+            <option value="">{tc.form.selectProduct}</option>
             {products.filter(p => !p.isDeleted && p.isActive !== false).map(p => (
               <option key={p.id} value={p.id}>{p.name} ({t.products.stock}: {p.stock})</option>
             ))}

@@ -38,8 +38,8 @@ export default function Settings() {
   ] as const;
 
   const themeOptions = [
-    { value: "light", label: t.common.light, helper: isArabic ? "كثافة متوازنة مناسبة للعمل اليومي" : "Default balanced surface density" },
-    { value: "dark", label: t.common.dark, helper: isArabic ? "تباين أعلى للتركيز والعمل المطول" : "Higher contrast for focused work" },
+    { value: "light", label: t.common.light, helper: t.settings.lightHelper },
+    { value: "dark", label: t.common.dark, helper: t.settings.darkHelper },
   ] as const;
 
   return (
