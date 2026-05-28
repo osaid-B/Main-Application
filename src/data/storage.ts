@@ -95,6 +95,9 @@ function normalizeEmployees(employees: Employee[]): Employee[] {
   return employees.map((employee) => ({
     ...employee,
     advance: Number(employee.advance || 0),
+    hourlyRate: employee.hourlyRate !== undefined ? Number(employee.hourlyRate) : undefined,
+    fixedSalary: employee.fixedSalary !== undefined ? Number(employee.fixedSalary) : undefined,
+    dailyRate: employee.dailyRate !== undefined ? Number(employee.dailyRate) : undefined,
     advances: Array.isArray(employee.advances)
       ? employee.advances.map((item) => ({
           ...item,
