@@ -316,6 +316,28 @@
 .atlas-create-item:hover { background: var(--app-surface-hover, var(--app-surface-muted)); }
 .atlas-create-item svg { color: var(--app-text-muted); }
 
+/* ── Theme toggle ────────────────────────────────────────────────────────── */
+.atlas-theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--app-radius-sm);
+  border: 1px solid var(--app-border);
+  background: transparent;
+  color: var(--app-text-muted);
+  cursor: pointer;
+  transition: background var(--app-transition), border-color var(--app-transition), color var(--app-transition);
+  flex-shrink: 0;
+}
+
+.atlas-theme-toggle:hover {
+  background: var(--app-surface-hover);
+  border-color: var(--app-border-strong);
+  color: var(--app-text);
+}
+
 /* Responsive */
 @media (max-width: 1024px) {
   .atlas-header-center { display: none; }

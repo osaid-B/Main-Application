@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useLocation, useNavigate } from "react-router-dom";
-import { ChevronRight, FileText, Package, Plus, Search, Truck, Users } from "lucide-react";
+import { ChevronRight, FileText, Moon, Package, Plus, Search, Sun, Truck, Users } from "lucide-react";
 import { Button } from "../ui/Button";
 import { useWorkspace, WORKSPACES, type Workspace } from "../../contexts/WorkspaceContext";
 import { useSettings } from "../../context/SettingsContext";
@@ -21,7 +21,7 @@ export default function AtlasHeader() {
   const location = useLocation();
   const navigate = useNavigate();
   const { workspace, setWorkspace } = useWorkspace();
-  const { t, isArabic } = useSettings();
+  const { t, isArabic, theme, toggleTheme } = useSettings();
   const { customers, invoices, products, suppliers } = useData();
 
   const [query, setQuery] = useState("");
@@ -317,6 +317,16 @@ export default function AtlasHeader() {
         </div>
 
         <NotificationsPanel />
+
+        <button
+          type="button"
+          className="atlas-theme-toggle"
+          onClick={toggleTheme}
+          aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+          title={theme === "dark" ? "Light mode" : "Dark mode"}
+        >
+          {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
+        </button>
 
         <div style={{ position: "relative" }}>
           <Button

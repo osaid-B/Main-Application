@@ -143,7 +143,7 @@ export default function AIAssistantPanel({
   return (
     <div className={`ai-panel-root${isOpen ? " is-open" : ""}`}>
       {/* Side tab — no dir attr so flex order stays LTR: [panel][tab], tab at right edge of panel */}
-      <button type="button" className="ai-panel-tab" onClick={isOpen ? onClose : openAI} aria-label={isOpen ? "أغلق لوحة الذكاء الاصطناعي" : "افتح لوحة الذكاء الاصطناعي"}>
+      <button type="button" className="ai-panel-tab" onClick={isOpen ? onClose : () => openAI()} aria-label={isOpen ? "أغلق لوحة الذكاء الاصطناعي" : "افتح لوحة الذكاء الاصطناعي"}>
         <Bot size={16} />
         <span className="ai-panel-tab-label">AI</span>
       </button>

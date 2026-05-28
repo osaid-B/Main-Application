@@ -45,6 +45,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     localStorage.setItem("app-theme", theme);
+    document.documentElement.setAttribute("data-theme", theme);
     document.body.classList.toggle("dark-mode", theme === "dark");
   }, [theme]);
 
