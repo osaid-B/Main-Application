@@ -68,7 +68,7 @@ export default function InventoryOverview() {
       stockAfter: newQty,
       reason: adjForm.notes || undefined,
       date: new Date().toISOString().slice(0, 10),
-      createdBy: isArabic ? "المستخدم الحالي" : "Current User",
+      createdBy: t.inventoryMovements.currentUser,
     };
     addStockMovement(movement);
     updateProduct({ ...adjustTarget, stock: newQty });
@@ -122,11 +122,11 @@ export default function InventoryOverview() {
             <strong className={styles.kpiNum}>{formatCurrency(totalValue, "ILS")}</strong>
           </div>
           <div className={`${styles.kpi} ${styles.kpiLow}`}>
-            <span className={styles.kpiLabel}>{isArabic ? "تحت الحد الأدنى" : "Below Reorder"}</span>
+            <span className={styles.kpiLabel}>{tc.statusLow}</span>
             <strong className={styles.kpiNum}>{lowCount}</strong>
           </div>
           <div className={`${styles.kpi} ${styles.kpiOut}`}>
-            <span className={styles.kpiLabel}>{isArabic ? "نفد المخزون" : "Out of Stock"}</span>
+            <span className={styles.kpiLabel}>{tc.statusOut}</span>
             <strong className={styles.kpiNum}>{outCount}</strong>
           </div>
         </div>

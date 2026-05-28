@@ -78,7 +78,7 @@ export default function InventoryMovements() {
       reference: newForm.reference || undefined,
       reason: newForm.reason || undefined,
       date: today,
-      createdBy: isArabic ? "المستخدم الحالي" : "Current User",
+      createdBy: tc.currentUser,
     };
     addStockMovement(m);
     setShowNewModal(false);
@@ -150,14 +150,14 @@ export default function InventoryMovements() {
             onChange={(e) => { setDateTo(e.target.value); setPage(1); }} />
           <select className={styles.filterSelect} value={typeFilter}
             onChange={(e) => { setTypeFilter(e.target.value as "" | MovementType); setPage(1); }}>
-            <option value="">{isArabic ? "جميع الأنواع" : "All Types"}</option>
+            <option value="">{tc.allTypes}</option>
             {(["receive","issue","adjustment","damage","transfer"] as MovementType[]).map(tp => (
               <option key={tp} value={tp}>{tc.types[tp]}</option>
             ))}
           </select>
           <select className={styles.filterSelect} value={productFilter}
             onChange={(e) => { setProductFilter(e.target.value); setPage(1); }}>
-            <option value="">{isArabic ? "جميع المنتجات" : "All Products"}</option>
+            <option value="">{tc.allProducts}</option>
             {products.filter(p => !p.isDeleted).map(p => (
               <option key={p.id} value={p.id}>{p.name}</option>
             ))}
@@ -219,20 +219,20 @@ export default function InventoryMovements() {
       {selected && (
         <div className={styles.drawer}>
           <div className={styles.drawerHeader}>
-            <h3 className={styles.drawerTitle}>{isArabic ? "تفاصيل الحركة" : "Movement Details"}</h3>
+            <h3 className={styles.drawerTitle}>{tc.detailsTitle}</h3>
             <button className={styles.drawerClose} onClick={() => setSelected(null)}>✕</button>
           </div>
           <div className={styles.drawerBody}>
             {[
-              [isArabic ? "التاريخ" : "Date", selected.date],
-              [isArabic ? "المنتج" : "Product", selected.productName],
-              [isArabic ? "النوع" : "Type", tc.types[selected.type]],
-              [isArabic ? "الوارد" : "Qty In",  selected.quantityIn > 0 ? `+${selected.quantityIn}` : "—"],
-              [isArabic ? "الصادر" : "Qty Out", selected.quantityOut > 0 ? `-${selected.quantityOut}` : "—"],
-              [isArabic ? "الكمية بعد" : "Stock After", selected.stockAfter],
-              [isArabic ? "المرجع" : "Reference", selected.reference ?? "—"],
-              [isArabic ? "السبب" : "Reason", selected.reason ?? "—"],
-              [isArabic ? "بواسطة" : "Created By", selected.createdBy ?? "—"],
+              [tc.cols.date, selected.date],
+              [tc.cols.product, selected.productName],
+              [tc.cols.type, tc.types[selected.type]],
+              [tc.cols.quantityIn,  selected.quantityIn > 0 ? `+${selected.quantityIn}` : "—"],
+              [tc.cols.quantityOut, selected.quantityOut > 0 ? `-${selected.quantityOut}` : "—"],
+              [tc.cols.stockAfter, selected.stockAfter],
+              [tc.cols.reference, selected.reference ?? "—"],
+              [tc.cols.reason, selected.reason ?? "—"],
+              [tc.cols.createdBy, selected.createdBy ?? "—"],
             ].map(([k, v]) => (
               <div key={String(k)} className={styles.drawerRow}>
                 <span className={styles.drawerKey}>{k}</span>
@@ -266,7 +266,7 @@ export default function InventoryMovements() {
             onChange={(e) => setNewForm(f => ({ ...f, productId: e.target.value }))}>
             <option value="">{isArabic ? "اختر المنتج..." : "Select product..."}</option>
             {products.filter(p => !p.isDeleted && p.isActive !== false).map(p => (
-              <option key={p.id} value={p.id}>{p.name} ({isArabic ? "المخزون" : "Stock"}: {p.stock})</option>
+              <option key={p.id} value={p.id}>{p.name} ({t.products.stock}: {p.stock})</option>
             ))}
           </select>
         </div>
