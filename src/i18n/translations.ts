@@ -408,11 +408,14 @@ export const translations = {
 
     header: {
       brand: "Atlas ERP",
-      newAction: "New action",
+      newAction: "New",
       openAI: "Open AI assistant",
       notifications: "Notifications",
-      searchPlaceholder: "Search customers, invoices, products, orders…",
+      searchPlaceholder: "Search customers, invoices, products, suppliers…",
       globalSearch: "Global search",
+      searchNoResults: "No results for",
+      searchTypeMin: "Type at least 1 character",
+      quickCreate: "Quick create",
       workspace: "Workspace",
       pageTitles: {
         "/": "Operations Command",
@@ -3459,11 +3462,14 @@ export const translations = {
 
     header: {
       brand: "Atlas ERP",
-      newAction: "إجراء جديد",
+      newAction: "جديد",
       openAI: "فتح المساعد الذكي",
       notifications: "التنبيهات",
-      searchPlaceholder: "ابحث عن زبون، فاتورة، منتج، طلبية…",
+      searchPlaceholder: "ابحث عن زبون، فاتورة، منتج، مورد…",
       globalSearch: "بحث عام",
+      searchNoResults: "لا توجد نتائج لـ",
+      searchTypeMin: "اكتب حرفين على الأقل",
+      quickCreate: "إنشاء سريع",
       workspace: "مساحة العمل",
       pageTitles: {
         "/": "مركز العمليات",

@@ -269,6 +269,36 @@
 .is-collapsed .atlas-nav-section-title { display: none; }
 .is-collapsed .atlas-brand { justify-content: center; }
 
+/* ─── Keyboard shortcuts hint ─────────────────────────────────────── */
+.atlas-shortcuts-hint {
+  display: flex;
+  align-items: center;
+  gap: var(--app-space-2);
+  width: 100%;
+  padding: var(--app-space-2) var(--app-space-3);
+  background: transparent;
+  border: 0;
+  font: inherit;
+  font-size: 11px;
+  color: var(--app-text-light);
+  cursor: pointer;
+  transition: var(--app-transition);
+  text-align: start;
+}
+
+.atlas-shortcuts-hint:hover { color: var(--app-text-muted); }
+.atlas-shortcuts-hint span { flex: 1; }
+
+.atlas-shortcuts-hint kbd {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  padding: 1px 5px;
+  background: var(--app-surface-muted);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-xs);
+  color: var(--app-text-light);
+}
+
 /* ─── User profile ────────────────────────────────────────────────── */
 .atlas-sidebar-user {
   display: flex;

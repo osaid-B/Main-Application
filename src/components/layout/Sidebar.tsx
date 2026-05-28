@@ -5,6 +5,7 @@ import {
   ChevronRight,
   Eye,
   EyeOff,
+  Keyboard,
   LogOut,
   PanelLeftClose,
   PanelLeftOpen,
@@ -34,6 +35,7 @@ type SidebarProps = {
   onClose?: () => void;
   collapsed?: boolean;
   onToggleCollapsed?: () => void;
+  onShowShortcuts?: () => void;
 };
 
 const SECTIONS_BY_WORKSPACE: Record<Workspace, NavSection[]> = {
@@ -119,6 +121,7 @@ export default function Sidebar({
   onClose,
   collapsed = false,
   onToggleCollapsed,
+  onShowShortcuts,
 }: SidebarProps) {
   const { user, logout } = useAuth();
   const { workspace } = useWorkspace();
@@ -209,7 +212,6 @@ export default function Sidebar({
         <div className="atlas-sidebar-search">
           <Search size={13} aria-hidden />
           <input type="search" placeholder="Search…" aria-label="Search" />
-          <kbd>⌘K</kbd>
         </div>
       )}
 
@@ -391,6 +393,19 @@ export default function Sidebar({
           onHideWithUndo={hideWithUndo}
           ts={ts}
         />
+      )}
+
+      {onShowShortcuts && (!collapsed || mobile) && (
+        <button
+          type="button"
+          className="atlas-shortcuts-hint"
+          onClick={onShowShortcuts}
+          aria-label="Keyboard shortcuts"
+        >
+          <Keyboard size={13} aria-hidden />
+          <span>Keyboard shortcuts</span>
+          <kbd>?</kbd>
+        </button>
       )}
 
       <footer className="atlas-sidebar-user">
