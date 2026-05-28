@@ -351,10 +351,9 @@ export default function AddCustomer() {
               onChange={(v) => update("paymentTerms", v)}
               options={[
                 { value: "cash",  label: t.addCustomer.fields.termCash },
-                { value: "net15", label: "Net 15" },
-                { value: "net30", label: "Net 30" },
-                { value: "net60", label: "Net 60" },
-                { value: "net90", label: "Net 90" },
+                { value: "net30", label: t.addCustomer.fields.termNet30 },
+                { value: "net60", label: t.addCustomer.fields.termNet60 },
+                { value: "net90", label: t.addCustomer.fields.termNet90 },
               ]}
             />
             <ButtonGroup<Currency>
@@ -365,7 +364,6 @@ export default function AddCustomer() {
                 { value: "ILS", label: "₪ ILS" },
                 { value: "USD", label: "$ USD" },
                 { value: "JOD", label: "د.أ JOD" },
-                { value: "EUR", label: "€ EUR" },
               ]}
             />
             <Input
@@ -543,5 +541,7 @@ function typeLabel(type: CustomerType, t: T): string {
 
 function paymentLabel(p: PaymentTerms, t: T): string {
   if (p === "cash") return t.addCustomer.fields.termCash;
-  return p === "net15" ? "Net 15" : p === "net30" ? "Net 30" : p === "net60" ? "Net 60" : "Net 90";
+  if (p === "net30") return t.addCustomer.fields.termNet30;
+  if (p === "net60") return t.addCustomer.fields.termNet60;
+  return t.addCustomer.fields.termNet90;
 }
