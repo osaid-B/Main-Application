@@ -481,7 +481,7 @@ function DeleteConfirmModal({
         <div className="modal-header">
           <div>
             <h2>{t.employees.delete.title}</h2>
-            <p>Danger zone</p>
+            <p>{t.employees.delete.hint}</p>
           </div>
           <Button variant="icon" size="md" aria-label="Close" onClick={onClose}>×</Button>
         </div>
@@ -736,9 +736,9 @@ function TodayAttendanceSection({
               <Wallet size={20} color="#7c3aed" />
             </div>
             <div>
-              <span>Advances Today</span>
+              <span>{t.employees.today.advancesToday}</span>
               <strong>${todaySummary.advance.toFixed(2)}</strong>
-              <small>Total advances</small>
+              <small>{t.employees.today.totalAdvances}</small>
             </div>
           </div>
         </div>
@@ -747,8 +747,8 @@ function TodayAttendanceSection({
         <div className="emp-sheet-card">
           <div className="emp-sheet-head">
             <div>
-              <h3 className="emp-section-title">Daily Sheet</h3>
-              <p className="emp-section-sub">Edit only employees who differ from the default attendance.</p>
+              <h3 className="emp-section-title">{t.employees.today.dailySheet}</h3>
+              <p className="emp-section-sub">{t.employees.today.dailySheetSub}</p>
             </div>
           </div>
 
@@ -758,13 +758,13 @@ function TodayAttendanceSection({
               <Search size={14} />
               <input
                 type="text"
-                placeholder="Search employee..."
+                placeholder={t.employees.searchPlaceholder}
                 value={sheetSearch}
                 onChange={(e) => { setSheetSearch(e.target.value); setPage(1); }}
               />
             </div>
             <select className="emp-dept-select">
-              <option>All Departments</option>
+              <option>{t.employees.today.allDepartments}</option>
             </select>
           </div>
 
@@ -775,7 +775,7 @@ function TodayAttendanceSection({
                   <thead>
                     <tr>
                       <th>{t.employees.cols.employee}</th>
-                      <th>Shift</th>
+                      <th>{t.employees.cols.shift}</th>
                       <th>{t.employees.cols.status}</th>
                       <th>{t.employees.cols.workHours}</th>
                       <th>{t.employees.cols.advance}</th>
@@ -973,10 +973,10 @@ function TodayAttendanceSection({
           </div>
           <div className="emp-sidebar-date-actions">
             <Button variant="secondary" size="sm" style={{ flex: 1 }} onClick={onApplyPresentToAll}>
-              Prepare Day
+              {t.employees.today.prepareDay}
             </Button>
             <Button variant="primary" size="sm" style={{ flex: 1 }} onClick={onSaveSheet}>
-              Save Day
+              {t.employees.today.saveDay}
             </Button>
           </div>
         </div>
@@ -986,10 +986,10 @@ function TodayAttendanceSection({
           <div className="emp-sidebar-card-head">
             <div className="emp-sidebar-card-title">
               <Calendar size={15} color="#2563eb" />
-              <span>Monthly Overview</span>
+              <span>{t.employees.today.monthlyOverview}</span>
             </div>
             <select className="emp-sidebar-period-select">
-              <option>This Month</option>
+              <option>{t.employees.attendanceRange.month}</option>
             </select>
           </div>
           <div className="emp-mini-cal-month">
@@ -1029,10 +1029,10 @@ function TodayAttendanceSection({
             ))}
           </div>
           <div className="emp-cal-legend">
-            <span><span className="emp-cal-dot" style={{ background: "#16a34a" }} />Present</span>
-            <span><span className="emp-cal-dot" style={{ background: "#f59e0b" }} />Late</span>
-            <span><span className="emp-cal-dot" style={{ background: "#ef4444" }} />Absent</span>
-            <span><span className="emp-cal-dot" style={{ background: "#cbd5e1" }} />Weekend</span>
+            <span><span className="emp-cal-dot" style={{ background: "#16a34a" }} />{t.employees.attendance.present}</span>
+            <span><span className="emp-cal-dot" style={{ background: "#f59e0b" }} />{t.employees.attendance.late}</span>
+            <span><span className="emp-cal-dot" style={{ background: "#ef4444" }} />{t.employees.attendance.absent}</span>
+            <span><span className="emp-cal-dot" style={{ background: "#cbd5e1" }} />{t.employees.today.weekend}</span>
           </div>
         </div>
 
@@ -1041,13 +1041,13 @@ function TodayAttendanceSection({
           <div className="emp-sidebar-card-head">
             <div className="emp-sidebar-card-title">
               <Calendar size={15} color="#2563eb" />
-              <span>Quick Actions</span>
+              <span>{t.employees.today.quickActions}</span>
             </div>
           </div>
           <div className="emp-quick-actions-grid">
             <Button variant="secondary" size="sm">
               <Upload size={18} />
-              <span>Import Attendance</span>
+              <span>{t.employees.today.importAttendance}</span>
             </Button>
             <Button variant="secondary" size="sm" onClick={() => {
               const rows = employees.map((e) => {
@@ -1063,15 +1063,15 @@ function TodayAttendanceSection({
               URL.revokeObjectURL(a.href);
             }}>
               <Download size={18} />
-              <span>Export Report</span>
+              <span>{t.employees.today.exportReport}</span>
             </Button>
             <Button variant="secondary" size="sm">
               <DollarSign size={18} />
-              <span>Bulk Advance</span>
+              <span>{t.employees.today.bulkAdvance}</span>
             </Button>
             <Button variant="secondary" size="sm">
               <Send size={18} />
-              <span>Send Notice</span>
+              <span>{t.employees.today.sendNotice}</span>
             </Button>
           </div>
         </div>
@@ -1080,7 +1080,7 @@ function TodayAttendanceSection({
         <div className="emp-sidebar-card">
           <div className="emp-sidebar-card-head">
             <div className="emp-sidebar-card-title">
-              <span>Today's Summary</span>
+              <span>{t.employees.today.todaySummary}</span>
             </div>
           </div>
           <div className="emp-summary-donut-wrap">
@@ -1094,17 +1094,17 @@ function TodayAttendanceSection({
           <div className="emp-summary-legend">
             <div>
               <span className="emp-cal-dot" style={{ background: "#16a34a" }} />
-              <span>Present</span>
+              <span>{t.employees.attendance.present}</span>
               <strong>{todaySummary.present} ({pct(todaySummary.present)})</strong>
             </div>
             <div>
               <span className="emp-cal-dot" style={{ background: "#f59e0b" }} />
-              <span>Late</span>
+              <span>{t.employees.attendance.late}</span>
               <strong>{todaySummary.late} ({pct(todaySummary.late)})</strong>
             </div>
             <div>
               <span className="emp-cal-dot" style={{ background: "#ef4444" }} />
-              <span>Absent</span>
+              <span>{t.employees.attendance.absent}</span>
               <strong>{todaySummary.absent} ({pct(todaySummary.absent)})</strong>
             </div>
           </div>
@@ -1129,6 +1129,7 @@ function MonthlyAttendanceSection({
   onChangeWeekIndex: (index: number) => void;
   onOpenEditor: (employee: Employee, date: string) => void;
 }) {
+  const { t } = useSettings();
   const { days } = useMemo(() => getMonthDays(monthDate), [monthDate]);
   const weeks = useMemo(() => groupDaysIntoWeeks(days), [days]);
   const safeWeekIndex = Math.min(Math.max(weekIndex, 0), Math.max(weeks.length - 1, 0));
@@ -1198,11 +1199,11 @@ function MonthlyAttendanceSection({
           {viewMode === "week" && (
             <>
               <Button variant="secondary" size="sm" onClick={() => { onChangeWeekIndex(Math.max(safeWeekIndex - 1, 0)); }} disabled={safeWeekIndex === 0}>
-                <ChevronLeft size={14} /> Previous
+                <ChevronLeft size={14} /> {t.employees.monthly.previous}
               </Button>
               <span className="emp-week-label">{weekLabel}</span>
               <Button variant="secondary" size="sm" onClick={() => { onChangeWeekIndex(Math.min(safeWeekIndex + 1, weeks.length - 1)); }} disabled={safeWeekIndex === weeks.length - 1}>
-                Next <ChevronRight size={14} />
+                {t.employees.monthly.next} <ChevronRight size={14} />
               </Button>
             </>
           )}
@@ -1210,38 +1211,38 @@ function MonthlyAttendanceSection({
 
         <div className="emp-monthly-toolbar-right">
           <Button variant="secondary" size="sm">
-            <Filter size={14} /> Filters
+            <Filter size={14} /> {t.employees.monthly.filters}
           </Button>
-          <span className="emp-filter-chip">All Departments</span>
-          <span className="emp-filter-chip">All Shifts</span>
-          <Button variant="ghost" size="sm">Clear</Button>
+          <span className="emp-filter-chip">{t.employees.monthly.allDepartments}</span>
+          <span className="emp-filter-chip">{t.employees.monthly.allShifts}</span>
+          <Button variant="ghost" size="sm">{t.employees.monthly.clear}</Button>
         </div>
       </div>
 
       {/* Stats row */}
       <div className="emp-monthly-stats-row">
         <div className="emp-monthly-stat">
-          <span>Total Employees</span>
+          <span>{t.employees.monthly.totalEmployees}</span>
           <strong>{total}</strong>
         </div>
         <div className="emp-monthly-stat emp-stat-present">
-          <span><span className="emp-stat-dot" style={{ background: "#16a34a" }} />Present</span>
+          <span><span className="emp-stat-dot" style={{ background: "#16a34a" }} />{t.employees.attendance.present}</span>
           <strong>{todayStats.present} <small>({pct(todayStats.present)})</small></strong>
         </div>
         <div className="emp-monthly-stat emp-stat-late">
-          <span><span className="emp-stat-dot" style={{ background: "#d97706" }} />Late</span>
+          <span><span className="emp-stat-dot" style={{ background: "#d97706" }} />{t.employees.attendance.late}</span>
           <strong>{todayStats.late} <small>({pct(todayStats.late)})</small></strong>
         </div>
         <div className="emp-monthly-stat emp-stat-absent">
-          <span><span className="emp-stat-dot" style={{ background: "#dc2626" }} />Absent</span>
+          <span><span className="emp-stat-dot" style={{ background: "#dc2626" }} />{t.employees.attendance.absent}</span>
           <strong>{todayStats.absent} <small>({pct(todayStats.absent)})</small></strong>
         </div>
         <div className="emp-monthly-stat">
-          <span><span className="emp-stat-dot" style={{ background: "#7c3aed" }} />Half Day</span>
+          <span><span className="emp-stat-dot" style={{ background: "#7c3aed" }} />{t.employees.monthly.halfDay}</span>
           <strong>{todayStats.halfDay} <small>({pct(todayStats.halfDay)})</small></strong>
         </div>
         <div className="emp-monthly-stat emp-stat-pct">
-          <span>Attendance %</span>
+          <span>{t.employees.monthly.attendancePct}</span>
           <strong style={{ color: "#16a34a" }}>{attendancePct}</strong>
         </div>
       </div>
@@ -1252,7 +1253,7 @@ function MonthlyAttendanceSection({
           <table className="emp-monthly-grid app-data-table">
             <thead>
               <tr>
-                <th className="emp-monthly-name-th">Employee</th>
+                <th className="emp-monthly-name-th">{t.employees.monthly.employee}</th>
                 {visibleDays.map((day) => (
                   <th key={day.date} className={`emp-monthly-day-th ${day.dow === 0 ? "emp-day-sunday" : ""}`}>
                     <span className="emp-day-dow">
@@ -1392,7 +1393,7 @@ function ReportsSection({
           <div>
             <span>{t.employees.reports.gross}</span>
             <strong>${payrollSummary.gross.toFixed(2)}</strong>
-            <small>Total earnings</small>
+            <small>{t.employees.reports.totalEarnings}</small>
           </div>
         </div>
         <div className="emp-rep-kpi-card">
@@ -1402,7 +1403,7 @@ function ReportsSection({
           <div>
             <span>{t.employees.cols.advance}</span>
             <strong>${payrollSummary.advance.toFixed(2)}</strong>
-            <small>Total advances</small>
+            <small>{t.employees.reports.totalAdvances}</small>
           </div>
         </div>
         <div className="emp-rep-kpi-card">
@@ -1412,7 +1413,7 @@ function ReportsSection({
           <div>
             <span>{t.employees.reports.net}</span>
             <strong>${payrollSummary.net.toFixed(2)}</strong>
-            <small>Net payable</small>
+            <small>{t.employees.reports.netPayable}</small>
           </div>
         </div>
         <div className="emp-rep-kpi-card">
@@ -1420,9 +1421,9 @@ function ReportsSection({
             <Calendar size={20} color="#7c3aed" />
           </div>
           <div>
-            <span>Range</span>
+            <span>{t.employees.reports.range}</span>
             <strong>{getRangeTitle(attendanceRange)}</strong>
-            <small>Selected period</small>
+            <small>{t.employees.reports.selectedPeriod}</small>
           </div>
         </div>
       </div>
@@ -1431,9 +1432,9 @@ function ReportsSection({
       <div className="emp-sheet-card">
         <div className="emp-sheet-head">
           <div>
-            <h3 className="emp-section-title">Attendance &amp; Payroll Report</h3>
+            <h3 className="emp-section-title">{t.employees.reports.attendancePayroll}</h3>
             <p className="emp-section-sub">
-              Summary for <strong>{getRangeTitle(attendanceRange)}</strong>
+              {t.employees.reports.summaryFor} <strong>{getRangeTitle(attendanceRange)}</strong>
             </p>
           </div>
         </div>
@@ -1474,11 +1475,8 @@ function ReportsSection({
             <div className="emp-empty-illustration">
               <BarChart2 size={52} color="#cbd5e1" />
             </div>
-            <strong>No report data found</strong>
-            <span>
-              No daily attendance records are available for the selected period.
-              <br />Once attendance is recorded, your reports will appear here.
-            </span>
+            <strong>{t.employees.reports.noDataFound}</strong>
+            <span>{t.employees.reports.noDataDesc}</span>
           </div>
         )}
       </div>
@@ -1582,13 +1580,13 @@ function EmployeesSection({
                     {t.employees.cols.employee} {sortKey === "name" ? (sortDir === "asc" ? "↑" : "↓") : <span className="emp-sort-icon"><ChevronLeft size={10} style={{ transform: "rotate(-90deg)" }} /></span>}
                   </th>
                   <th className="emp-sortable" onClick={() => toggleSort("id")}>
-                    EMP CODE {sortKey === "id" ? (sortDir === "asc" ? "↑" : "↓") : ""}
+                    {t.employees.cols.empCode} {sortKey === "id" ? (sortDir === "asc" ? "↑" : "↓") : ""}
                   </th>
                   <th className="emp-sortable" onClick={() => toggleSort("phone")}>
                     {t.common.phone} {sortKey === "phone" ? (sortDir === "asc" ? "↑" : "↓") : ""}
                   </th>
-                  <th>SHIFT</th>
-                  <th>DEFAULT HOURS</th>
+                  <th>{t.employees.cols.shift}</th>
+                  <th>{t.employees.cols.defaultHours}</th>
                   <th>{t.employees.cols.status}</th>
                   <th>{t.employees.cols.actions}</th>
                 </tr>
@@ -1615,7 +1613,7 @@ function EmployeesSection({
                           </div>
                           <div>
                             <strong>{emp.name}</strong>
-                            <span>Employee</span>
+                            <span>{t.employees.cols.employee}</span>
                           </div>
                         </div>
                       </td>

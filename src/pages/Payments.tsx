@@ -305,8 +305,8 @@ function PaymentEditor({
               <div className="section-heading">
                 <span className="step-badge">1</span>
                 <div>
-                  <h3>Payment Setup</h3>
-                  <p>Capture the core payment details.</p>
+                  <h3>{t.payments.form.paymentSetup}</h3>
+                  <p>{t.payments.form.paymentSetupSub}</p>
                 </div>
               </div>
               <div className="payment-form-grid">
@@ -401,8 +401,8 @@ function PaymentEditor({
               <div className="section-heading">
                 <span className="step-badge">2</span>
                 <div>
-                  <h3>Reference &amp; Note</h3>
-                  <p>Add reference details and any relevant notes.</p>
+                  <h3>{t.payments.form.refNote}</h3>
+                  <p>{t.payments.form.refNoteSub}</p>
                 </div>
               </div>
               <div className="payment-form-grid">
@@ -428,7 +428,7 @@ function PaymentEditor({
                   <span>{t.payments.form.notes}</span>
                   <textarea rows={4} value={values.notes}
                     onChange={(e) => onChange("notes", e.target.value)}
-                    placeholder="Optional operational note..." />
+                    placeholder={t.payments.form.notesPlaceholder} />
                 </label>
               </div>
             </section>
@@ -439,44 +439,44 @@ function PaymentEditor({
             <div className="summary-panel">
               <div className="summary-panel-header">
                 <div className="summary-panel-icon blue"><BarChart2 size={18} /></div>
-                <h4>Invoice Impact</h4>
+                <h4>{t.payments.form.invoiceImpact}</h4>
               </div>
               <ul className="summary-list">
-                <li><span>Invoice total</span><b>{formatMoney(Number(selectedInvoice?.total ?? selectedInvoice?.amount ?? 0))}</b></li>
-                <li><span>Outstanding now</span><b>{formatMoney(remainingAmount)}</b></li>
-                <li><span>This payment</span><b className="blue-val">{formatMoney(amountValue)}</b></li>
-                <li><span>Balance after</span><b>{formatMoney(remainingAfter)}</b></li>
+                <li><span>{t.payments.form.invoiceTotal}</span><b>{formatMoney(Number(selectedInvoice?.total ?? selectedInvoice?.amount ?? 0))}</b></li>
+                <li><span>{t.payments.form.outstandingNow}</span><b>{formatMoney(remainingAmount)}</b></li>
+                <li><span>{t.payments.form.thisPayment}</span><b className="blue-val">{formatMoney(amountValue)}</b></li>
+                <li><span>{t.payments.form.balanceAfter}</span><b>{formatMoney(remainingAfter)}</b></li>
               </ul>
             </div>
 
             <div className="summary-panel">
               <div className="summary-panel-header">
                 <div className="summary-panel-icon green"><CheckCircle2 size={18} /></div>
-                <h4>Operational Checks</h4>
+                <h4>{t.payments.form.operationalChecks}</h4>
               </div>
               <ul className="summary-checks">
-                <li><CheckCircle2 size={15} className="check-ok" />Only successful payments reduce invoice balances.</li>
-                <li><CheckCircle2 size={15} className="check-ok" />Use refunded or failed statuses when the amount should not apply.</li>
-                <li><CheckCircle2 size={15} className="check-ok" />Reference numbers help with reconciliation and receipt tracking.</li>
+                <li><CheckCircle2 size={15} className="check-ok" />{t.payments.form.check1}</li>
+                <li><CheckCircle2 size={15} className="check-ok" />{t.payments.form.check2}</li>
+                <li><CheckCircle2 size={15} className="check-ok" />{t.payments.form.check3}</li>
               </ul>
             </div>
 
             <div className="summary-panel">
               <div className="summary-panel-header">
                 <div className="summary-panel-icon slate"><FileText size={18} /></div>
-                <h4>Payment Summary</h4>
+                <h4>{t.payments.form.paymentSummary}</h4>
               </div>
               {selectedInvoice ? (
                 <ul className="summary-list">
-                  <li><span>Invoice</span><b>{selectedInvoice.id}</b></li>
-                  <li><span>Customer</span><b>{selectedCustomer?.name ?? "—"}</b></li>
-                  <li><span>Method</span><b>{formatMethod(values.method)}</b></li>
-                  <li><span>Status</span><b>{formatStatus(values.status)}</b></li>
+                  <li><span>{t.payments.form.invoice}</span><b>{selectedInvoice.id}</b></li>
+                  <li><span>{t.payments.form.customer}</span><b>{selectedCustomer?.name ?? "—"}</b></li>
+                  <li><span>{t.payments.form.method}</span><b>{formatMethod(values.method)}</b></li>
+                  <li><span>{t.payments.form.status}</span><b>{formatStatus(values.status)}</b></li>
                 </ul>
               ) : (
                 <div className="summary-empty">
-                  <strong>No invoice selected</strong>
-                  <p>Select an invoice to see summary.</p>
+                  <strong>{t.payments.form.noInvoiceSelected}</strong>
+                  <p>{t.payments.form.noInvoiceDesc}</p>
                 </div>
               )}
             </div>
@@ -542,61 +542,61 @@ function PaymentDetailsDrawer({ payment, activeTab, onChangeTab, onClose }: {
           {activeTab === "overview" && (
             <div className="drawer-grid">
               <div className="drawer-card">
-                <h3>Payment overview</h3>
+                <h3>{t.payments.detail.paymentOverview}</h3>
                 <dl className="key-value-list">
-                  <div><dt>Status</dt><dd><span className={`status-pill ${getStatusTone(payment.status)}`}>{formatStatus(payment.status)}</span></dd></div>
-                  <div><dt>Method</dt><dd>{formatMethod(payment.method)}</dd></div>
-                  <div><dt>Payment date</dt><dd>{formatDate(payment.date)}</dd></div>
-                  <div><dt>Reference</dt><dd>{payment.referenceNumber}</dd></div>
-                  <div><dt>Receipt ID</dt><dd>{payment.receiptId}</dd></div>
-                  <div><dt>Created by</dt><dd>{payment.createdBy}</dd></div>
+                  <div><dt>{t.payments.detail.status}</dt><dd><span className={`status-pill ${getStatusTone(payment.status)}`}>{formatStatus(payment.status)}</span></dd></div>
+                  <div><dt>{t.payments.detail.method}</dt><dd>{formatMethod(payment.method)}</dd></div>
+                  <div><dt>{t.payments.detail.paymentDate}</dt><dd>{formatDate(payment.date)}</dd></div>
+                  <div><dt>{t.payments.detail.reference}</dt><dd>{payment.referenceNumber}</dd></div>
+                  <div><dt>{t.payments.detail.receiptId}</dt><dd>{payment.receiptId}</dd></div>
+                  <div><dt>{t.payments.detail.createdBy}</dt><dd>{payment.createdBy}</dd></div>
                 </dl>
               </div>
               <div className="drawer-card">
-                <h3>Financial impact</h3>
+                <h3>{t.payments.detail.financialImpact}</h3>
                 <dl className="key-value-list">
-                  <div><dt>Invoice total</dt><dd>{formatMoney(payment.invoiceTotal)}</dd></div>
-                  <div><dt>Amount paid before</dt><dd>{formatMoney(payment.amountPaidBefore)}</dd></div>
-                  <div><dt>This payment</dt><dd>{formatMoney(payment.amount)}</dd></div>
-                  <div><dt>Remaining after</dt><dd>{formatMoney(payment.remainingAfterPayment)}</dd></div>
-                  <div><dt>Link state</dt><dd>{payment.linkState}</dd></div>
-                  <div><dt>Updated</dt><dd>{formatDate(payment.updatedAt)}</dd></div>
+                  <div><dt>{t.payments.detail.invoiceTotal}</dt><dd>{formatMoney(payment.invoiceTotal)}</dd></div>
+                  <div><dt>{t.payments.detail.amountPaidBeforeLabel}</dt><dd>{formatMoney(payment.amountPaidBefore)}</dd></div>
+                  <div><dt>{t.payments.detail.thisPayment}</dt><dd>{formatMoney(payment.amount)}</dd></div>
+                  <div><dt>{t.payments.detail.remainingAfterLabel}</dt><dd>{formatMoney(payment.remainingAfterPayment)}</dd></div>
+                  <div><dt>{t.payments.detail.linkState}</dt><dd>{payment.linkState}</dd></div>
+                  <div><dt>{t.payments.detail.date}</dt><dd>{formatDate(payment.updatedAt)}</dd></div>
                 </dl>
               </div>
             </div>
           )}
           {activeTab === "invoice" && (
             <div className="drawer-card">
-              <h3>Invoice linkage</h3>
+              <h3>{t.payments.detail.invoiceLinkage}</h3>
               <dl className="key-value-list">
-                <div><dt>Linked invoice</dt><dd>{payment.invoiceNumber}</dd></div>
-                <div><dt>Customer</dt><dd>{payment.customerName}</dd></div>
-                <div><dt>Customer email</dt><dd>{payment.customerEmail}</dd></div>
-                <div><dt>Application status</dt><dd>{payment.linkState}</dd></div>
-                <div><dt>Remaining invoice balance</dt><dd>{formatMoney(payment.remainingAfterPayment)}</dd></div>
+                <div><dt>{t.payments.detail.linkedInvoice}</dt><dd>{payment.invoiceNumber}</dd></div>
+                <div><dt>{t.payments.detail.customer}</dt><dd>{payment.customerName}</dd></div>
+                <div><dt>{t.payments.detail.customerEmail}</dt><dd>{payment.customerEmail}</dd></div>
+                <div><dt>{t.payments.detail.appStatus}</dt><dd>{payment.linkState}</dd></div>
+                <div><dt>{t.payments.detail.remainingBalance}</dt><dd>{formatMoney(payment.remainingAfterPayment)}</dd></div>
               </dl>
             </div>
           )}
           {activeTab === "notes" && (
-            <div className="drawer-card"><h3>Notes</h3><p className="drawer-body-text">{payment.notes || "No notes recorded for this payment."}</p></div>
+            <div className="drawer-card"><h3>{t.payments.detail.notes}</h3><p className="drawer-body-text">{payment.notes || t.payments.detail.noNotes}</p></div>
           )}
           {activeTab === "receipt" && (
             <div className="drawer-card">
-              <h3>Receipt and audit references</h3>
+              <h3>{t.payments.detail.receiptAudit}</h3>
               <dl className="key-value-list">
-                <div><dt>Receipt ID</dt><dd>{payment.receiptId}</dd></div>
-                <div><dt>Reference number</dt><dd>{payment.referenceNumber}</dd></div>
-                <div><dt>Printable receipt</dt><dd>Available from row actions</dd></div>
+                <div><dt>{t.payments.detail.receiptId}</dt><dd>{payment.receiptId}</dd></div>
+                <div><dt>{t.payments.detail.refNumber}</dt><dd>{payment.referenceNumber}</dd></div>
+                <div><dt>{t.payments.detail.printableReceipt}</dt><dd>{t.payments.detail.availableFromRow}</dd></div>
               </dl>
             </div>
           )}
           {activeTab === "history" && (
             <div className="drawer-card">
-              <h3>History</h3>
+              <h3>{t.payments.detail.history}</h3>
               <ul className="history-list">
-                <li><span>Payment captured</span><b>{formatDate(payment.date)}</b></li>
-                <li><span>Status last updated</span><b>{formatDate(payment.updatedAt)}</b></li>
-                <li><span>Handled by</span><b>{payment.createdBy}</b></li>
+                <li><span>{t.payments.detail.paymentCaptured}</span><b>{formatDate(payment.date)}</b></li>
+                <li><span>{t.payments.detail.statusLastUpdated}</span><b>{formatDate(payment.updatedAt)}</b></li>
+                <li><span>{t.payments.detail.handledBy}</span><b>{payment.createdBy}</b></li>
               </ul>
             </div>
           )}

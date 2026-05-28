@@ -49,6 +49,13 @@ function downloadCsv(filename: string, headers: string[], rows: (string | number
 export default function CompanyOverview() {
   const [dateRange, setDateRange] = useState<"month" | "6months">("6months");
   const { t, formatCurrency } = useSettings();
+
+  const deptNameMap: Record<string, string> = {
+    "Wholesale": t.company.revenueDeptNames.wholesale,
+    "Supermarkets": t.company.revenueDeptNames.supermarkets,
+    "Manufacturing": t.company.revenueDeptNames.manufacturing,
+    "Other / royalties": t.company.revenueDeptNames.other,
+  };
   const {
     totalRevenue,
     receivablesTotal,
@@ -177,7 +184,7 @@ export default function CompanyOverview() {
                 {REVENUE_BY_DEPT.map((s) => (
                   <li key={s.name}>
                     <span className={styles.legendSwatch} style={{ background: s.color }} />
-                    <span className={styles.legendName}>{s.name}</span>
+                    <span className={styles.legendName}>{deptNameMap[s.name] ?? s.name}</span>
                     <strong>{s.percent}%</strong>
                   </li>
                 ))}
