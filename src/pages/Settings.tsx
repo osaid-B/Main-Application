@@ -4,7 +4,7 @@ import { useSettings } from "../context/SettingsContext";
 import { useSidebarPreferences } from "../context/SidebarPreferencesContext";
 import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
-import { ALL_ITEMS } from "../components/layout/Sidebar";
+import { ALL_ITEMS } from "../components/layout/sidebarItems";
 import "./Settings.css";
 
 const LOCAL_SETTINGS_KEY = "atlas-local-settings";
