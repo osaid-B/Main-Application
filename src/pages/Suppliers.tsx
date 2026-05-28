@@ -1323,9 +1323,9 @@ export default function Suppliers() {
               <Building2 size={18} />
             </div>
             <div>
-              <span>Total Suppliers</span>
+              <span>{t.suppliers.kpi.totalSuppliers}</span>
               <strong>{summary.totalSuppliers}</strong>
-              <small>This month</small>
+              <small>{t.suppliers.kpi.thisMonth}</small>
             </div>
           </article>
 
@@ -1334,9 +1334,9 @@ export default function Suppliers() {
               <BadgeCheck size={18} />
             </div>
             <div>
-              <span>Active Suppliers</span>
+              <span>{t.suppliers.kpi.activeSuppliers}</span>
               <strong>{summary.activeSuppliers}</strong>
-              <small>Updated today</small>
+              <small>{t.suppliers.kpi.updatedToday}</small>
             </div>
           </article>
 
@@ -1345,9 +1345,9 @@ export default function Suppliers() {
               <Wallet size={18} />
             </div>
             <div>
-              <span>Outstanding Payables</span>
+              <span>{t.suppliers.kpi.outstandingPayables}</span>
               <strong>{money(summary.outstandingPayables)}</strong>
-              <small>Across all vendors</small>
+              <small>{t.suppliers.kpi.acrossVendors}</small>
             </div>
           </article>
 
@@ -1356,9 +1356,9 @@ export default function Suppliers() {
               <Star size={18} />
             </div>
             <div>
-              <span>Top Rated Suppliers</span>
+              <span>{t.suppliers.kpi.topRated}</span>
               <strong>{summary.topRatedSuppliers}</strong>
-              <small>4.6 and above</small>
+              <small>{t.suppliers.kpi.aboveRating}</small>
             </div>
           </article>
         </section>
@@ -1598,7 +1598,7 @@ export default function Suppliers() {
 
                         <th>{t.common.phone}</th>
 
-                        <th>Location</th>
+                        <th>{t.suppliers.cols.location}</th>
 
                         <th>
                           <button
@@ -1645,13 +1645,13 @@ export default function Suppliers() {
 
                           <td>
                             <div className="supplier-table-cell phone-stack">
-                              <strong>{supplier.phone || "No phone"}</strong>
+                              <strong>{supplier.phone || "—"}</strong>
                             </div>
                           </td>
 
                           <td>
                             <div className="supplier-table-cell location-stack">
-                              <strong>{supplier.city || "No location"}</strong>
+                              <strong>{supplier.city || "—"}</strong>
                             </div>
                           </td>
 
@@ -1715,7 +1715,7 @@ export default function Suppliers() {
               )}
 
               <div className="simple-suppliers-footer">
-                <span>Showing all {filteredSuppliers.length} suppliers</span>
+                <span>{t.suppliers.showingAll.replace("{{count}}", String(filteredSuppliers.length))}</span>
               </div>
             </div>
           </section>
@@ -1723,25 +1723,25 @@ export default function Suppliers() {
           <aside className="suppliers-side-column">
             <section className="side-widget">
               <div className="side-widget-head">
-                <h3>Supplier Summary</h3>
-                <span>This month</span>
+                <h3>{t.suppliers.summary}</h3>
+                <span>{t.suppliers.summaryThisMonth}</span>
               </div>
 
               <div className="side-stat-list">
                 <div>
-                  <span>Total suppliers</span>
+                  <span>{t.suppliers.kpi.totalSuppliers}</span>
                   <strong>{summary.totalSuppliers}</strong>
                 </div>
                 <div>
-                  <span>Preferred</span>
+                  <span>{t.suppliers.status.preferred}</span>
                   <strong>{summary.preferred}</strong>
                 </div>
                 <div>
-                  <span>Blocked</span>
+                  <span>{t.suppliers.status.blocked}</span>
                   <strong>{summary.blocked}</strong>
                 </div>
                 <div>
-                  <span>Outstanding payables</span>
+                  <span>{t.suppliers.kpi.outstandingPayables}</span>
                   <strong>{money(summary.outstandingPayables)}</strong>
                 </div>
               </div>
@@ -1749,8 +1749,8 @@ export default function Suppliers() {
 
             <section className="side-widget">
               <div className="side-widget-head">
-                <h3>Top Suppliers</h3>
-                <span>By purchase value</span>
+                <h3>{t.suppliers.topSuppliers}</h3>
+                <span>{t.suppliers.byPurchaseValue}</span>
               </div>
 
               <div className="top-suppliers-list">
