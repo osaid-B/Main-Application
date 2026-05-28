@@ -13,7 +13,7 @@ const TOOLTIP_STYLE = {
   padding: "6px 10px",
 };
 
-const formatThousands = (v: number | string) => `$${(Number(v) / 1000).toFixed(0)}k`;
+const formatThousands = (v: number | string) => `₪${(Number(v) / 1000).toFixed(0)}k`;
 
 /**
  * Atlas revenue trend chart — 3 lines (Company / POS / Factory) over 14 days.
