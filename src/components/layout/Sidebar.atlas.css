@@ -2,19 +2,20 @@
 .atlas-sidebar {
   display: flex;
   flex-direction: column;
-  width: 240px;
+  width: 220px;
   height: 100vh;
   background: var(--app-surface);
-  border-inline-start: 1px solid var(--app-border);
+  border-inline-end: 1px solid var(--app-border);
   position: sticky;
   inset-block-start: 0;
   flex-shrink: 0;
   font-family: var(--font-arabic);
   transition: width var(--app-transition);
+  overflow: hidden;
 }
 
 .atlas-sidebar.is-collapsed {
-  width: 64px;
+  width: 60px;
 }
 
 .atlas-sidebar--mobile {
@@ -156,11 +157,18 @@
 /* ─── Nav sections ────────────────────────────────────────────────── */
 .atlas-sidebar-nav {
   flex: 1;
+  min-height: 0; /* critical: allows flex child to scroll */
   overflow-y: auto;
   padding: var(--app-space-3);
   display: flex;
   flex-direction: column;
   gap: var(--app-space-4);
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+.atlas-sidebar-nav:hover {
+  scrollbar-color: var(--app-border) transparent;
 }
 
 .atlas-nav-section {
@@ -191,10 +199,11 @@
   display: flex;
   align-items: center;
   gap: var(--app-space-2);
-  padding: 7px var(--app-space-2);
+  padding: 0 var(--app-space-2);
+  height: 36px;
   border-radius: var(--app-radius-sm);
   color: var(--app-text-soft);
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 500;
   text-decoration: none;
   transition: var(--app-transition-fast, var(--app-transition));
@@ -265,38 +274,51 @@
 }
 
 /* Collapsed state: hide labels/badges */
-.is-collapsed .atlas-nav-link { justify-content: center; padding: 8px; }
+.is-collapsed .atlas-nav-link { justify-content: center; padding: 8px; border-inline-end-color: transparent; }
+.is-collapsed .atlas-nav-link.is-active { border-inline-end-color: var(--app-accent); }
 .is-collapsed .atlas-nav-section-title { display: none; }
 .is-collapsed .atlas-brand { justify-content: center; }
+.is-collapsed .atlas-sidebar-customize,
+.is-collapsed .atlas-shortcuts-hint { display: none; }
 
 /* ─── Keyboard shortcuts hint ─────────────────────────────────────── */
 .atlas-shortcuts-hint {
   display: flex;
   align-items: center;
   gap: var(--app-space-2);
-  width: 100%;
-  padding: var(--app-space-2) var(--app-space-3);
-  background: transparent;
-  border: 0;
+  width: calc(100% - var(--app-space-4));
+  margin: 0 var(--app-space-2) var(--app-space-1);
+  padding: 6px var(--app-space-2);
+  background: var(--app-surface-muted);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-sm);
   font: inherit;
-  font-size: 11px;
-  color: var(--app-text-light);
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--app-text-muted);
   cursor: pointer;
-  transition: var(--app-transition);
+  transition: background 130ms ease, border-color 130ms ease, color 130ms ease;
   text-align: start;
+  flex-shrink: 0;
 }
 
-.atlas-shortcuts-hint:hover { color: var(--app-text-muted); }
+.atlas-shortcuts-hint:hover {
+  background: var(--app-surface-hover);
+  border-color: #cbd5e1;
+  color: var(--app-text-soft);
+}
+
 .atlas-shortcuts-hint span { flex: 1; }
 
 .atlas-shortcuts-hint kbd {
   font-family: var(--font-mono);
   font-size: 10px;
   padding: 1px 5px;
-  background: var(--app-surface-muted);
+  background: var(--app-surface);
   border: 1px solid var(--app-border);
   border-radius: var(--app-radius-xs);
-  color: var(--app-text-light);
+  color: var(--app-text-muted);
+  box-shadow: 0 1px 0 var(--app-border);
 }
 
 /* ─── User profile ────────────────────────────────────────────────── */

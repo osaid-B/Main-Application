@@ -63,6 +63,7 @@ import GeneralLedger from "./pages/GeneralLedger";
 import ChartOfAccounts from "./pages/ChartOfAccounts";
 import InventoryOverview from "./pages/InventoryOverview";
 import InventoryMovements from "./pages/InventoryMovements";
+import BarcodeProduct from "./pages/BarcodeProduct";
 
 function AppRoutes() {
   const { isAuthenticated } = useAuth();
@@ -86,6 +87,7 @@ function AppRoutes() {
           <Route path="/customers" element={<Customers />} />
           <Route path="/customers/new" element={<ErrorBoundary fallback={(_, reset) => <PageCrashFallback onReset={reset} />}><AddCustomer /></ErrorBoundary>} />
           <Route path="/products" element={<Products />} />
+          <Route path="/products/barcode/:code" element={<BarcodeProduct />} />
           <Route path="/purchases" element={<Purchases />} />
           <Route path="/suppliers" element={<Suppliers />} />
           <Route path="/suppliers/new" element={<ErrorBoundary fallback={(_, reset) => <PageCrashFallback onReset={reset} />}><AddSupplier /></ErrorBoundary>} />

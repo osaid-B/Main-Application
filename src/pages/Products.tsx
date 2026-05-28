@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertTriangle,
+  Barcode,
   Bell,
   CheckCircle2,
   ChevronDown,
@@ -25,6 +26,7 @@ import {
   X,
   XCircle,
 } from "lucide-react";
+import { BarcodeModal } from "../components/ui/BarcodeModal";
 import "./Products.css";
 
 import { Button } from "../components/ui/Button";
@@ -266,6 +268,7 @@ export default function Products() {
 
   const [deleteTarget, setDeleteTarget] = useState<ProductRow | null>(null);
   const [deleteCode, setDeleteCode] = useState("");
+  const [barcodeProduct, setBarcodeProduct] = useState<ProductRow | null>(null);
 
   const [page, setPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -1105,6 +1108,18 @@ export default function Products() {
 
                           <Button
                             type="button"
+                            variant="icon"
+                            size="sm"
+                            className="product-action-icon"
+                            title="Barcode"
+                            aria-label="Show barcode"
+                            onClick={() => setBarcodeProduct(product)}
+                          >
+                            <Barcode size={15} />
+                          </Button>
+
+                          <Button
+                            type="button"
                             variant="danger"
                             size="sm"
                             className="product-action-icon delete"
@@ -1914,6 +1929,13 @@ export default function Products() {
           </div>
         </div>
       ) : null}
+
+      {barcodeProduct && (
+        <BarcodeModal
+          product={barcodeProduct}
+          onClose={() => setBarcodeProduct(null)}
+        />
+      )}
     </div>
   );
 }
