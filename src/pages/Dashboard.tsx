@@ -38,7 +38,7 @@ function downloadCsv(filename: string, headers: string[], rows: (string | number
 
 export default function Dashboard() {
   const [dateRange, setDateRange] = useState<"week" | "month">("week");
-  const { t, isArabic } = useSettings();
+  const { t } = useSettings();
 
   const {
     totalCustomers,

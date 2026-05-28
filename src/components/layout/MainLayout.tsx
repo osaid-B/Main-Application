@@ -320,7 +320,7 @@ export default function MainLayout() {
               className={`mobile-bottom-link ${isActive ? "active" : ""}`}
               onClick={() => navigate(item.path)}
             >
-              <span>{isArabic ? (item.labelAr ?? item.label) : item.label}</span>
+              <span>{item.label}</span>
             </button>
           );
         })}
