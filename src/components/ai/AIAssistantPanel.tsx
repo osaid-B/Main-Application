@@ -139,15 +139,15 @@ export default function AIAssistantPanel({
   }
 
   return (
-    <div className={`ai-panel-root${isOpen ? " is-open" : ""}`} dir="rtl">
-      {/* Side tab */}
+    <div className={`ai-panel-root${isOpen ? " is-open" : ""}`}>
+      {/* Side tab — no dir attr so flex order stays LTR: [tab][panel], tab at right edge */}
       <button type="button" className="ai-panel-tab" onClick={onClose} aria-label="أغلق لوحة الذكاء الاصطناعي">
         <Bot size={16} />
         <span className="ai-panel-tab-label">AI</span>
       </button>
 
-      {/* Panel body */}
-      <div className="ai-panel-body" role="dialog" aria-label="AI Copilot" aria-modal="false">
+      {/* Panel body — dir=rtl for Arabic content */}
+      <div className="ai-panel-body" dir="rtl" role="dialog" aria-label="AI Copilot" aria-modal="false">
         {/* Header */}
         <div className="ai-panel-header">
           <div className="ai-panel-header-left">
