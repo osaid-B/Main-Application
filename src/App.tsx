@@ -5,7 +5,6 @@ import { ErrorBoundary } from "./components/ui/ErrorBoundary";
 import MainLayout from "./components/layout/MainLayout";
 import { PageCrashFallback } from "./components/ui/PageCrashFallback";
 import { useAuth } from "./context/AuthContext";
-import { SettingsProvider } from "./context/SettingsContext";
 import { DataProvider } from "./context/DataContext";
 import { FactoryProvider } from "./context/FactoryContext";
 import { NotificationsProvider } from "./context/NotificationsContext";
@@ -171,18 +170,16 @@ function AppRoutes() {
 
 export default function App() {
   return (
-    <SettingsProvider>
-      <DataProvider>
-        <FactoryProvider>
-          <NotificationsProvider>
-            <SidebarPreferencesProvider>
-              <ErrorBoundary>
-                <AppRoutes />
-              </ErrorBoundary>
-            </SidebarPreferencesProvider>
-          </NotificationsProvider>
-        </FactoryProvider>
-      </DataProvider>
-    </SettingsProvider>
+    <DataProvider>
+      <FactoryProvider>
+        <NotificationsProvider>
+          <SidebarPreferencesProvider>
+            <ErrorBoundary>
+              <AppRoutes />
+            </ErrorBoundary>
+          </SidebarPreferencesProvider>
+        </NotificationsProvider>
+      </FactoryProvider>
+    </DataProvider>
   );
 }
