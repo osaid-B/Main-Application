@@ -20,6 +20,7 @@ export interface PosProduct {
   stock: number;
   category: Exclude<PosCategory, "all">;
   emoji: string;
+  barcode?: string;
 }
 
 export interface LoyaltyCustomer {
@@ -60,34 +61,34 @@ export const POS_CATEGORIES: Array<{ id: PosCategory; label: string; count: numb
 // ─── Products ─────────────────────────────────────────────────────────────────
 
 export const POS_PRODUCTS: PosProduct[] = [
-  { id: "p-001", name: "مياه معدنية 500مل",   sku: "BEV-H2O-500",  price: 2.50,  stock: 120, category: "beverages", emoji: "💧" },
-  { id: "p-002", name: "عصير برتقال 1ل",       sku: "BEV-OJ-1L",   price: 6.00,  stock: 44,  category: "beverages", emoji: "🍊" },
-  { id: "p-003", name: "كولا 330مل",           sku: "BEV-COL-330",  price: 4.50,  stock: 88,  category: "beverages", emoji: "🥤" },
-  { id: "p-004", name: "شاي أخضر علبة",        sku: "BEV-GT-BOX",  price: 12.00, stock: 30,  category: "beverages", emoji: "🍵" },
-  { id: "p-005", name: "قهوة سريعة 200جم",     sku: "BEV-CF-200",  price: 18.50, stock: 22,  category: "beverages", emoji: "☕" },
-  { id: "p-006", name: "مياه غازية 750مل",     sku: "BEV-SPK-750",  price: 5.00,  stock: 0,   category: "beverages", emoji: "🫧" },
+  { id: "p-001", name: "مياه معدنية 500مل",   sku: "BEV-H2O-500",  price: 2.50,  stock: 120, category: "beverages", emoji: "💧", barcode: "6240010010001" },
+  { id: "p-002", name: "عصير برتقال 1ل",       sku: "BEV-OJ-1L",   price: 6.00,  stock: 44,  category: "beverages", emoji: "🍊", barcode: "6240010010002" },
+  { id: "p-003", name: "كولا 330مل",           sku: "BEV-COL-330",  price: 4.50,  stock: 88,  category: "beverages", emoji: "🥤", barcode: "6240010010003" },
+  { id: "p-004", name: "شاي أخضر علبة",        sku: "BEV-GT-BOX",  price: 12.00, stock: 30,  category: "beverages", emoji: "🍵", barcode: "6240010010004" },
+  { id: "p-005", name: "قهوة سريعة 200جم",     sku: "BEV-CF-200",  price: 18.50, stock: 22,  category: "beverages", emoji: "☕", barcode: "6240010010005" },
+  { id: "p-006", name: "مياه غازية 750مل",     sku: "BEV-SPK-750",  price: 5.00,  stock: 0,   category: "beverages", emoji: "🫧", barcode: "6240010010006" },
 
-  { id: "p-007", name: "أرز بسمتي 1كجم",       sku: "FOOD-RIC-1K",  price: 9.75,  stock: 55,  category: "food",      emoji: "🍚" },
-  { id: "p-008", name: "زيت زيتون 500مل",       sku: "FOOD-OO-500",  price: 22.00, stock: 18,  category: "food",      emoji: "🫒" },
-  { id: "p-009", name: "معكرونة 500جم",         sku: "FOOD-PAS-500", price: 5.50,  stock: 70,  category: "food",      emoji: "🍝" },
-  { id: "p-010", name: "سكر أبيض 1كجم",         sku: "FOOD-SUG-1K",  price: 4.00,  stock: 90,  category: "food",      emoji: "🍬" },
-  { id: "p-011", name: "طحين 2كجم",            sku: "FOOD-FLR-2K",  price: 7.25,  stock: 40,  category: "food",      emoji: "🌾" },
-  { id: "p-012", name: "صلصة طماطم 400جم",      sku: "FOOD-TOM-400", price: 6.00,  stock: 33,  category: "food",      emoji: "🍅" },
-  { id: "p-013", name: "تونا معلبة",            sku: "FOOD-TUN-CAN", price: 8.50,  stock: 50,  category: "food",      emoji: "🐟" },
+  { id: "p-007", name: "أرز بسمتي 1كجم",       sku: "FOOD-RIC-1K",  price: 9.75,  stock: 55,  category: "food",      emoji: "🍚", barcode: "6240010020001" },
+  { id: "p-008", name: "زيت زيتون 500مل",       sku: "FOOD-OO-500",  price: 22.00, stock: 18,  category: "food",      emoji: "🫒", barcode: "6240010020002" },
+  { id: "p-009", name: "معكرونة 500جم",         sku: "FOOD-PAS-500", price: 5.50,  stock: 70,  category: "food",      emoji: "🍝", barcode: "6240010020003" },
+  { id: "p-010", name: "سكر أبيض 1كجم",         sku: "FOOD-SUG-1K",  price: 4.00,  stock: 90,  category: "food",      emoji: "🍬", barcode: "6240010020004" },
+  { id: "p-011", name: "طحين 2كجم",            sku: "FOOD-FLR-2K",  price: 7.25,  stock: 40,  category: "food",      emoji: "🌾", barcode: "6240010020005" },
+  { id: "p-012", name: "صلصة طماطم 400جم",      sku: "FOOD-TOM-400", price: 6.00,  stock: 33,  category: "food",      emoji: "🍅", barcode: "6240010020006" },
+  { id: "p-013", name: "تونا معلبة",            sku: "FOOD-TUN-CAN", price: 8.50,  stock: 50,  category: "food",      emoji: "🐟", barcode: "6240010020007" },
 
-  { id: "p-014", name: "شيبس مشوي 50جم",        sku: "SNK-CHIP-50",  price: 3.00,  stock: 200, category: "snacks",    emoji: "🥔" },
-  { id: "p-015", name: "شوكولاتة حليب 100جم",   sku: "SNK-CHO-100",  price: 7.50,  stock: 65,  category: "snacks",    emoji: "🍫" },
-  { id: "p-016", name: "بسكويت شاي 200جم",      sku: "SNK-BSC-200",  price: 4.50,  stock: 80,  category: "snacks",    emoji: "🍪" },
-  { id: "p-017", name: "مكسرات مشكلة 250جم",    sku: "SNK-NUT-250",  price: 14.00, stock: 28,  category: "snacks",    emoji: "🥜" },
-  { id: "p-018", name: "حلوى جيلي",             sku: "SNK-JEL-PKT",  price: 2.00,  stock: 0,   category: "snacks",    emoji: "🍭" },
+  { id: "p-014", name: "شيبس مشوي 50جم",        sku: "SNK-CHIP-50",  price: 3.00,  stock: 200, category: "snacks",    emoji: "🥔", barcode: "6240010030001" },
+  { id: "p-015", name: "شوكولاتة حليب 100جم",   sku: "SNK-CHO-100",  price: 7.50,  stock: 65,  category: "snacks",    emoji: "🍫", barcode: "6240010030002" },
+  { id: "p-016", name: "بسكويت شاي 200جم",      sku: "SNK-BSC-200",  price: 4.50,  stock: 80,  category: "snacks",    emoji: "🍪", barcode: "6240010030003" },
+  { id: "p-017", name: "مكسرات مشكلة 250جم",    sku: "SNK-NUT-250",  price: 14.00, stock: 28,  category: "snacks",    emoji: "🥜", barcode: "6240010030004" },
+  { id: "p-018", name: "حلوى جيلي",             sku: "SNK-JEL-PKT",  price: 2.00,  stock: 0,   category: "snacks",    emoji: "🍭", barcode: "6240010030005" },
 
-  { id: "p-019", name: "حليب كامل الدسم 1ل",    sku: "DAI-MLK-1L",   price: 5.50,  stock: 60,  category: "dairy",     emoji: "🥛" },
-  { id: "p-020", name: "جبنة بيضاء 500جم",       sku: "DAI-CHE-500",  price: 13.00, stock: 25,  category: "dairy",     emoji: "🧀" },
-  { id: "p-021", name: "لبن زبادي 400جم",        sku: "DAI-YOG-400",  price: 4.75,  stock: 48,  category: "dairy",     emoji: "🫙" },
-  { id: "p-022", name: "زبدة 200جم",            sku: "DAI-BUT-200",  price: 8.00,  stock: 20,  category: "dairy",     emoji: "🧈" },
+  { id: "p-019", name: "حليب كامل الدسم 1ل",    sku: "DAI-MLK-1L",   price: 5.50,  stock: 60,  category: "dairy",     emoji: "🥛", barcode: "6240010040001" },
+  { id: "p-020", name: "جبنة بيضاء 500جم",       sku: "DAI-CHE-500",  price: 13.00, stock: 25,  category: "dairy",     emoji: "🧀", barcode: "6240010040002" },
+  { id: "p-021", name: "لبن زبادي 400جم",        sku: "DAI-YOG-400",  price: 4.75,  stock: 48,  category: "dairy",     emoji: "🫙", barcode: "6240010040003" },
+  { id: "p-022", name: "زبدة 200جم",            sku: "DAI-BUT-200",  price: 8.00,  stock: 20,  category: "dairy",     emoji: "🧈", barcode: "6240010040004" },
 
-  { id: "p-023", name: "صابون يدين سائل 500مل",  sku: "HH-SOAP-500",  price: 7.00,  stock: 35,  category: "household", emoji: "🧴" },
-  { id: "p-024", name: "مناديل ورقية علبة",      sku: "HH-TIS-BOX",   price: 3.50,  stock: 90,  category: "household", emoji: "🧻" },
+  { id: "p-023", name: "صابون يدين سائل 500مل",  sku: "HH-SOAP-500",  price: 7.00,  stock: 35,  category: "household", emoji: "🧴", barcode: "6240010050001" },
+  { id: "p-024", name: "مناديل ورقية علبة",      sku: "HH-TIS-BOX",   price: 3.50,  stock: 90,  category: "household", emoji: "🧻", barcode: "6240010050002" },
 ];
 
 // ─── Loyalty Customers ────────────────────────────────────────────────────────

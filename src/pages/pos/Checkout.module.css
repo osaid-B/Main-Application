@@ -477,3 +477,12 @@
   margin-inline-start: auto;
   color: var(--app-text-light);
 }
+
+.scannerHint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--app-text-light);
+  padding: 4px 2px;
+}

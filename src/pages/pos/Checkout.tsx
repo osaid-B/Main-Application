@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Barcode,
   Plus,
@@ -11,6 +11,7 @@ import {
 import { Button } from "../../components/ui/Button";
 import { Badge } from "../../components/ui/Badge";
 import { Input } from "../../components/ui/Input";
+import { useToast } from "../../components/ui/Toast";
 import {
   POS_CATEGORIES,
   POS_PRODUCTS,
@@ -30,6 +31,7 @@ interface CartLine {
 const TAX_RATE = 0.16;
 
 export default function Checkout() {
+  const { toast } = useToast();
   const [cart, setCart] = useState<CartLine[]>([]);
   const [category, setCategory] = useState<PosCategory>("all");
   const [query, setQuery] = useState("");
@@ -37,6 +39,10 @@ export default function Checkout() {
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [now, setNow] = useState(new Date());
   const [saleId] = useState(() => (9821 + Math.floor(Math.random() * 100)).toString().slice(0, 4));
+
+  // Barcode scanner: captures rapid keystrokes followed by Enter (typical scanner behavior)
+  const scanBuffer = useRef("");
+  const scanTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const t = window.setInterval(() => setNow(new Date()), 1000);
@@ -64,6 +70,43 @@ export default function Checkout() {
       return [...prev, { product: p, qty: 1 }];
     });
   }
+
+  // Barcode scanner: listens for rapid digit input + Enter from hardware scanners
+  useEffect(() => {
+    function handleScan(e: KeyboardEvent) {
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA") return;
+
+      if (e.key === "Enter") {
+        const code = scanBuffer.current.trim();
+        scanBuffer.current = "";
+        if (scanTimer.current) clearTimeout(scanTimer.current);
+
+        if (code.length >= 8) {
+          const found = POS_PRODUCTS.find((p) => p.barcode === code || p.sku === code);
+          if (found) {
+            addToCart(found);
+            toast(`تمت إضافة: ${found.name}`, { type: "success" });
+          } else {
+            toast("المنتج غير موجود", { type: "error" });
+          }
+        }
+        return;
+      }
+
+      if (e.key.length === 1) {
+        scanBuffer.current += e.key;
+        if (scanTimer.current) clearTimeout(scanTimer.current);
+        scanTimer.current = setTimeout(() => { scanBuffer.current = ""; }, 500);
+      }
+    }
+
+    window.addEventListener("keydown", handleScan);
+    return () => {
+      window.removeEventListener("keydown", handleScan);
+      if (scanTimer.current) clearTimeout(scanTimer.current);
+    };
+  }, [toast]);
 
   function adjustQty(id: string, delta: number) {
     setCart((prev) =>
@@ -257,6 +300,10 @@ export default function Checkout() {
             <Button variant="secondary" size="sm" leftIcon={<Barcode size={14} />}>
               مسح <kbd className={styles.btnKbd}>F2</kbd>
             </Button>
+          </div>
+          <div className={styles.scannerHint}>
+            <Barcode size={12} />
+            <span>📷 امسح الباركود — يُضاف المنتج تلقائيًا</span>
           </div>
 
           <div className={styles.cats}>
