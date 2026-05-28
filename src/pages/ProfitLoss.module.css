@@ -1,0 +1,76 @@
+.page { padding: var(--app-space-6) 0 var(--app-space-10); }
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-4);
+  margin-bottom: var(--app-space-6);
+}
+
+.breadcrumb { font-size: 12px; color: var(--app-text-light); margin: 0 0 4px; }
+.title { margin: 0; font-size: clamp(1.4rem, 2vw, 1.75rem); font-weight: 700; color: var(--app-text); }
+.subtitle { margin: 4px 0 0; font-size: 13px; color: var(--app-text-muted); }
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--app-space-3);
+  align-items: center;
+  margin-bottom: var(--app-space-6);
+}
+
+.periodGroup { display: flex; gap: 2px; background: var(--app-surface-raised); border: 1px solid var(--app-border); border-radius: var(--app-radius); padding: 2px; }
+.periodBtn { background: transparent; border: 0; border-radius: calc(var(--app-radius) - 2px); padding: 6px 14px; font-size: 13px; font-weight: 500; color: var(--app-text-muted); cursor: pointer; transition: background 0.12s, color 0.12s; }
+.periodBtnActive { background: var(--app-surface); color: var(--app-text); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+
+.dateInputs { display: flex; gap: var(--app-space-2); align-items: center; }
+.dateInput { padding: 6px 10px; border: 1px solid var(--app-border); border-radius: var(--app-radius); background: var(--app-surface); color: var(--app-text); font-size: 13px; }
+.dateSep { font-size: 12px; color: var(--app-text-muted); }
+
+.compareToggle { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--app-text-muted); cursor: pointer; user-select: none; }
+.toggleSwitch { position: relative; width: 34px; height: 18px; }
+.toggleSwitch input { opacity: 0; width: 0; height: 0; }
+.toggleTrack { position: absolute; inset: 0; background: var(--app-border-strong); border-radius: 9px; transition: background 0.2s; cursor: pointer; }
+.toggleTrack::after { content: ""; position: absolute; width: 14px; height: 14px; inset-block-start: 2px; inset-inline-start: 2px; background: #fff; border-radius: 50%; transition: inset-inline-start 0.2s; }
+.toggleChecked .toggleTrack { background: var(--atlas-blue, #2563eb); }
+.toggleChecked .toggleTrack::after { inset-inline-start: 18px; }
+
+.exportGroup { display: flex; gap: var(--app-space-2); margin-inline-start: auto; }
+
+/* Statement */
+.statement {
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-lg);
+  overflow: hidden;
+  box-shadow: var(--app-shadow-soft);
+}
+
+.statementHeader {
+  padding: var(--app-space-5) var(--app-space-6);
+  border-bottom: 1px solid var(--app-border);
+  text-align: center;
+  background: var(--app-surface-raised, var(--app-surface));
+}
+.companyName { margin: 0; font-size: 15px; font-weight: 700; color: var(--app-text); }
+.statementTitle { margin: 4px 0 0; font-size: 18px; font-weight: 700; color: var(--app-text); }
+.statementPeriod { margin: 4px 0 0; font-size: 12px; color: var(--app-text-muted); }
+
+.statTable { width: 100%; border-collapse: collapse; }
+.statTable td { padding: 9px 24px; font-size: 13.5px; }
+.statTable td:not(:first-child) { text-align: end; min-width: 130px; }
+
+.sectionHeader td { background: var(--app-surface-raised, #f8f9fb); font-weight: 700; font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--app-text-muted); padding-block: 10px; border-top: 1px solid var(--app-border); border-bottom: 1px solid var(--app-border); }
+
+.dataRow td { border-bottom: 1px solid var(--app-border-light, #f0f0f0); color: var(--app-text); }
+.dataRow td:first-child { padding-inline-start: 40px; color: var(--app-text-muted); }
+.dataRow:hover td { background: var(--app-hover); }
+
+.subtotalRow td { font-weight: 600; color: var(--app-text); border-bottom: 1px solid var(--app-border); background: var(--app-hover); }
+.totalRow td { font-weight: 700; font-size: 14px; color: var(--app-text); border-top: 2px solid var(--app-border-strong); border-bottom: 2px solid var(--app-border-strong); background: var(--app-surface-raised, #f8f9fb); }
+.netIncomeRow td { font-weight: 700; font-size: 15px; color: var(--app-text); border-top: 3px double var(--app-border-strong); background: var(--app-surface-raised, #f8f9fb); }
+
+.varPos { color: var(--atlas-green, #16a34a); font-weight: 600; }
+.varNeg { color: var(--atlas-red, #dc2626); font-weight: 600; }
+
+.mono { font-variant-numeric: tabular-nums; }

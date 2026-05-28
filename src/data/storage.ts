@@ -361,6 +361,17 @@ export function saveReconciliationItems(items: ReconciliationItem[]) {
   writeStorage(RECONCILIATION_ITEMS_KEY, items);
 }
 
+/* Stock Movements */
+const STOCK_MOVEMENTS_KEY = "dashboard_stock_movements";
+
+export function getStockMovements(): import("./types").StockMovement[] {
+  return readStorage<import("./types").StockMovement[]>(STOCK_MOVEMENTS_KEY, []);
+}
+
+export function saveStockMovements(movements: import("./types").StockMovement[]): void {
+  writeStorage(STOCK_MOVEMENTS_KEY, movements);
+}
+
 /* Optional helper: reset everything */
 export function resetAllStorage() {
   resetCustomers();

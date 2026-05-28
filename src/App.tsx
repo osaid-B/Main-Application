@@ -57,6 +57,12 @@ import FactoryBatches from "./pages/factory/FactoryBatches";
 import FactoryCosting from "./pages/factory/FactoryCosting";
 import ComingSoon from "./pages/ComingSoon";
 import Notifications from "./pages/Notifications";
+import ProfitLoss from "./pages/ProfitLoss";
+import BalanceSheet from "./pages/BalanceSheet";
+import GeneralLedger from "./pages/GeneralLedger";
+import ChartOfAccounts from "./pages/ChartOfAccounts";
+import InventoryOverview from "./pages/InventoryOverview";
+import InventoryMovements from "./pages/InventoryMovements";
 
 function AppRoutes() {
   const { isAuthenticated } = useAuth();
@@ -93,20 +99,20 @@ function AppRoutes() {
           <Route path="/preview" element={<Preview />} />
 
           {/* Finance & Accounting */}
-          <Route path="/general-ledger" element={<ComingSoon title="General Ledger" />} />
-          <Route path="/chart-of-accounts" element={<ComingSoon title="Chart of Accounts" />} />
+          <Route path="/general-ledger" element={<GeneralLedger />} />
+          <Route path="/chart-of-accounts" element={<ChartOfAccounts />} />
           <Route element={<RoleGuard roles={["Admin", "Manager"]} />}>
             <Route path="/reports" element={<Reports />} />
-            <Route path="/reports/profit-loss" element={<ComingSoon title="Profit & Loss" />} />
-            <Route path="/reports/balance-sheet" element={<ComingSoon title="Balance Sheet" />} />
+            <Route path="/reports/profit-loss" element={<ProfitLoss />} />
+            <Route path="/reports/balance-sheet" element={<BalanceSheet />} />
           </Route>
           <Route element={<RoleGuard roles={["Admin", "Manager", "Finance"]} />}>
             <Route path="/expenses" element={<Expenses />} />
           </Route>
 
           {/* Inventory & Operations */}
-          <Route path="/inventory" element={<ComingSoon title="Inventory" />} />
-          <Route path="/inventory/movements" element={<ComingSoon title="Stock Movements" />} />
+          <Route path="/inventory" element={<InventoryOverview />} />
+          <Route path="/inventory/movements" element={<InventoryMovements />} />
           <Route path="/manufacturing" element={<ComingSoon title="Manufacturing" />} />
 
           {/* Sales */}

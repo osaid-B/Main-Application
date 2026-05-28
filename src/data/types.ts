@@ -438,15 +438,19 @@ export type JournalEntry = {
 // ── Chart of Accounts ─────────────────────────────────────────────────────────
 
 export type AccountType = "asset" | "liability" | "equity" | "revenue" | "expense";
+export type NormalBalance = "debit" | "credit";
 
 export type ChartAccount = {
   id: string;
-  name: string;
+  code: string;
+  nameAr: string;
+  nameEn: string;
   type: AccountType;
+  normalBalance: NormalBalance;
   parentId?: string;
-  balance: number;
-  currency: "ILS" | "USD" | "EUR";
+  isParent?: boolean;
   isActive: boolean;
+  balance?: number;
 };
 
 // ── Inventory ─────────────────────────────────────────────────────────────────
@@ -460,17 +464,21 @@ export type StockLevel = {
   lastCountDate?: string;
 };
 
-export type StockMovementType = "in" | "out" | "transfer" | "adjustment";
+export type MovementType = "receive" | "issue" | "adjustment" | "damage" | "transfer";
 
 export type StockMovement = {
   id: string;
-  date: string;
   productId: string;
-  warehouseId: string;
-  type: StockMovementType;
-  quantity: number;
+  productName: string;
+  type: MovementType;
+  quantityIn: number;
+  quantityOut: number;
+  stockAfter: number;
   reference?: string;
+  reason?: string;
   notes?: string;
+  date: string;
+  createdBy?: string;
 };
 
 // ── Manufacturing ─────────────────────────────────────────────────────────────
@@ -702,3 +710,4 @@ export type CostingEntry = {
   costPerUnit: number;
   variance: number; // actual - standard
 };
+
