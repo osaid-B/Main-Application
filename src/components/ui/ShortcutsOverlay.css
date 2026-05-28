@@ -35,7 +35,7 @@
   left: 50%;
   transform: translate(-50%, -50%);
   z-index: 3001;
-  width: min(540px, calc(100vw - 32px));
+  width: min(520px, calc(100vw - 32px));
   max-height: min(82dvh, 660px);
   overflow-y: auto;
   border: 1px solid var(--app-border);
@@ -120,16 +120,17 @@
 /* ─── Body ────────────────────────────────────────────────────── */
 .shortcuts-overlay-body {
   padding: 14px 16px 18px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
+  column-count: 2;
+  column-gap: 24px;
 }
 
 /* ─── Group ───────────────────────────────────────────────────── */
 .shortcuts-group {
+  break-inside: avoid;
   display: flex;
   flex-direction: column;
   gap: 4px;
+  margin-bottom: 14px;
 }
 
 .shortcuts-group-label {

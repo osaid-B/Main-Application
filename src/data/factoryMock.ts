@@ -1,4 +1,4 @@
-import type {
+﻿import type {
   ProductionOrder,
   QualityCheck,
   RawMaterial,
@@ -12,12 +12,12 @@ import type {
 // ── Products reference (used across factory pages) ────────────────────────────
 
 export const FACTORY_PRODUCTS: Array<{ id: string; name: string; nameAr: string; sku: string; category: string }> = [
-  { id: "FP-001", name: "Extra Virgin Olive Oil 500ml", nameAr: "زيت زيتون بكر ممتاز 500مل", sku: "EVOO-500", category: "Oil" },
-  { id: "FP-002", name: "Extra Virgin Olive Oil 1L", nameAr: "زيت زيتون بكر ممتاز 1 لتر", sku: "EVOO-1L", category: "Oil" },
-  { id: "FP-003", name: "Tomato Paste 400g", nameAr: "معجون طماطم 400 جرام", sku: "TP-400", category: "Paste" },
-  { id: "FP-004", name: "Canned Chickpeas 800g", nameAr: "حمص معلب 800 جرام", sku: "CC-800", category: "Canned" },
-  { id: "FP-005", name: "Dried Figs 500g", nameAr: "تين مجفف 500 جرام", sku: "DF-500", category: "Dried" },
-  { id: "FP-006", name: "Tahini 300g", nameAr: "طحينة 300 جرام", sku: "TAH-300", category: "Paste" },
+  { id: "FP-001", name: "زيت زيتون بكر ممتاز 500مل", nameAr: "زيت زيتون بكر ممتاز 500مل", sku: "EVOO-500", category: "Oil" },
+  { id: "FP-002", name: "زيت زيتون بكر ممتاز 1 لتر", nameAr: "زيت زيتون بكر ممتاز 1 لتر", sku: "EVOO-1L", category: "Oil" },
+  { id: "FP-003", name: "معجون طماطم 400 جرام", nameAr: "معجون طماطم 400 جرام", sku: "TP-400", category: "Paste" },
+  { id: "FP-004", name: "حمص معلب 800 جرام", nameAr: "حمص معلب 800 جرام", sku: "CC-800", category: "Canned" },
+  { id: "FP-005", name: "تين مجفف 500 جرام", nameAr: "تين مجفف 500 جرام", sku: "DF-500", category: "Dried" },
+  { id: "FP-006", name: "طحينة 300 جرام", nameAr: "طحينة 300 جرام", sku: "TAH-300", category: "Paste" },
 ];
 
 // ── Production Orders ─────────────────────────────────────────────────────────
@@ -127,7 +127,7 @@ export const FACTORY_BOMS: BomTemplate[] = [
   {
     id: "BOM-001",
     productId: "FP-001",
-    productName: "Extra Virgin Olive Oil 500ml",
+    productName: "زيت زيتون بكر ممتاز 500مل",
     productNameAr: "زيت زيتون بكر ممتاز 500مل",
     version: "v2.1",
     effectiveDate: "2026-01-01",
@@ -140,7 +140,7 @@ export const FACTORY_BOMS: BomTemplate[] = [
   {
     id: "BOM-002",
     productId: "FP-002",
-    productName: "Extra Virgin Olive Oil 1L",
+    productName: "زيت زيتون بكر ممتاز 1 لتر",
     productNameAr: "زيت زيتون بكر ممتاز 1 لتر",
     version: "v2.0",
     effectiveDate: "2026-01-01",
@@ -153,7 +153,7 @@ export const FACTORY_BOMS: BomTemplate[] = [
   {
     id: "BOM-003",
     productId: "FP-003",
-    productName: "Tomato Paste 400g",
+    productName: "معجون طماطم 400 جرام",
     productNameAr: "معجون طماطم 400 جرام",
     version: "v1.5",
     effectiveDate: "2026-02-01",
@@ -166,7 +166,7 @@ export const FACTORY_BOMS: BomTemplate[] = [
   {
     id: "BOM-004",
     productId: "FP-004",
-    productName: "Canned Chickpeas 800g",
+    productName: "حمص معلب 800 جرام",
     productNameAr: "حمص معلب 800 جرام",
     version: "v1.3",
     effectiveDate: "2026-02-01",
@@ -179,7 +179,7 @@ export const FACTORY_BOMS: BomTemplate[] = [
   {
     id: "BOM-005",
     productId: "FP-006",
-    productName: "Tahini 300g",
+    productName: "طحينة 300 جرام",
     productNameAr: "طحينة 300 جرام",
     version: "v1.0",
     effectiveDate: "2026-03-01",
@@ -196,8 +196,8 @@ export const FACTORY_BOMS: BomTemplate[] = [
 export const FACTORY_QC: QualityCheck[] = [
   { id: "QC-001", productionOrderId: "MO-1001", productId: "FP-001", productName: "EVOO 500ml", batchId: "BTH-001", inspectionDate: "2026-05-10", inspector: "Laila Mansour", status: "pass", defectRate: 0.8, sampleSize: 200, failedUnits: 2, notes: "Minor cap seal issue on 2 units." },
   { id: "QC-002", productionOrderId: "MO-1002", productId: "FP-002", productName: "EVOO 1L", batchId: "BTH-002", inspectionDate: "2026-05-18", inspector: "Ahmad Qasim", status: "pass", defectRate: 0.0, sampleSize: 150, failedUnits: 0 },
-  { id: "QC-003", productionOrderId: "MO-1003", productId: "FP-003", productName: "Tomato Paste 400g", batchId: "BTH-003", inspectionDate: "2026-05-22", inspector: "Laila Mansour", status: "pending", defectRate: 0.0, sampleSize: 0, failedUnits: 0, notes: "Inspection scheduled after order completion." },
-  { id: "QC-004", productionOrderId: "MO-1004", productId: "FP-004", productName: "Canned Chickpeas 800g", batchId: "BTH-004", inspectionDate: "2026-05-28", inspector: "Mona Ibrahim", status: "pending", defectRate: 0.0, sampleSize: 0, failedUnits: 0 },
+  { id: "QC-003", productionOrderId: "MO-1003", productId: "FP-003", productName: "معجون طماطم 400 جرام", batchId: "BTH-003", inspectionDate: "2026-05-22", inspector: "Laila Mansour", status: "pending", defectRate: 0.0, sampleSize: 0, failedUnits: 0, notes: "Inspection scheduled after order completion." },
+  { id: "QC-004", productionOrderId: "MO-1004", productId: "FP-004", productName: "حمص معلب 800 جرام", batchId: "BTH-004", inspectionDate: "2026-05-28", inspector: "Mona Ibrahim", status: "pending", defectRate: 0.0, sampleSize: 0, failedUnits: 0 },
   { id: "QC-005", productionOrderId: "MO-1007", productId: "FP-001", productName: "EVOO 500ml", batchId: "BTH-005", inspectionDate: "2026-04-21", inspector: "Ahmad Qasim", status: "fail", defectRate: 12.5, sampleSize: 120, failedUnits: 15, notes: "Acidity exceeded standard — batch destroyed." },
   { id: "QC-006", productionOrderId: "MO-1001", productId: "FP-001", productName: "EVOO 500ml", batchId: "BTH-006", inspectionDate: "2026-05-09", inspector: "Mona Ibrahim", status: "conditional", defectRate: 3.2, sampleSize: 250, failedUnits: 8, notes: "Approved with rework on 8 units — relabeling required." },
 ];
@@ -224,10 +224,10 @@ export const RAW_MATERIALS: RawMaterial[] = [
 export const FINISHED_GOODS: FinishedGood[] = [
   { id: "FG-001", name: "EVOO 500ml", nameAr: "زيت زيتون بكر ممتاز 500مل", sku: "EVOO-500", category: "Oil", onHand: 2240, reserved: 480, unitCost: 10.1, sellingPrice: 18.5, productionOrderId: "MO-1001", lastProducedDate: "2026-05-10" },
   { id: "FG-002", name: "EVOO 1L", nameAr: "زيت زيتون بكر ممتاز 1 لتر", sku: "EVOO-1L", category: "Oil", onHand: 1680, reserved: 350, unitCost: 18.0, sellingPrice: 32.0, productionOrderId: "MO-1002", lastProducedDate: "2026-05-18" },
-  { id: "FG-003", name: "Tomato Paste 400g", nameAr: "معجون طماطم 400 جرام", sku: "TP-400", category: "Paste", onHand: 0, reserved: 0, unitCost: 7.2, sellingPrice: 12.5, productionOrderId: "MO-1003", lastProducedDate: undefined },
-  { id: "FG-004", name: "Canned Chickpeas 800g", nameAr: "حمص معلب 800 جرام", sku: "CC-800", category: "Canned", onHand: 0, reserved: 0, unitCost: 9.4, sellingPrice: 16.0, productionOrderId: "MO-1004", lastProducedDate: undefined },
-  { id: "FG-005", name: "Dried Figs 500g", nameAr: "تين مجفف 500 جرام", sku: "DF-500", category: "Dried", onHand: 380, reserved: 80, unitCost: 23.0, sellingPrice: 38.0, lastProducedDate: "2026-04-30" },
-  { id: "FG-006", name: "Tahini 300g", nameAr: "طحينة 300 جرام", sku: "TAH-300", category: "Paste", onHand: 820, reserved: 200, unitCost: 11.4, sellingPrice: 19.0, lastProducedDate: "2026-04-25" },
+  { id: "FG-003", name: "معجون طماطم 400 جرام", nameAr: "معجون طماطم 400 جرام", sku: "TP-400", category: "Paste", onHand: 0, reserved: 0, unitCost: 7.2, sellingPrice: 12.5, productionOrderId: "MO-1003", lastProducedDate: undefined },
+  { id: "FG-004", name: "حمص معلب 800 جرام", nameAr: "حمص معلب 800 جرام", sku: "CC-800", category: "Canned", onHand: 0, reserved: 0, unitCost: 9.4, sellingPrice: 16.0, productionOrderId: "MO-1004", lastProducedDate: undefined },
+  { id: "FG-005", name: "تين مجفف 500 جرام", nameAr: "تين مجفف 500 جرام", sku: "DF-500", category: "Dried", onHand: 380, reserved: 80, unitCost: 23.0, sellingPrice: 38.0, lastProducedDate: "2026-04-30" },
+  { id: "FG-006", name: "طحينة 300 جرام", nameAr: "طحينة 300 جرام", sku: "TAH-300", category: "Paste", onHand: 820, reserved: 200, unitCost: 11.4, sellingPrice: 19.0, lastProducedDate: "2026-04-25" },
 ];
 
 // ── Warehouse Locations ───────────────────────────────────────────────────────
@@ -390,8 +390,8 @@ export const IMPORT_ORDERS: ImportOrder[] = [
 export const PRODUCTION_BATCHES: ProductionBatch[] = [
   { id: "BTH-001", productionOrderId: "MO-1001", productName: "EVOO 500ml", quantity: 2400, producedDate: "2026-05-10", expiryDate: "2027-05-10", status: "closed", qcStatus: "pass", unitCost: 10.1, totalCost: 24240 },
   { id: "BTH-002", productionOrderId: "MO-1002", productName: "EVOO 1L", quantity: 1800, producedDate: "2026-05-18", expiryDate: "2027-05-18", status: "closed", qcStatus: "pass", unitCost: 18.0, totalCost: 32400 },
-  { id: "BTH-003", productionOrderId: "MO-1003", productName: "Tomato Paste 400g", quantity: 0, producedDate: "", expiryDate: "", status: "open", qcStatus: "pending", unitCost: 7.2, totalCost: 0, notes: "Production in progress." },
-  { id: "BTH-004", productionOrderId: "MO-1004", productName: "Canned Chickpeas 800g", quantity: 0, producedDate: "", expiryDate: "", status: "open", qcStatus: "pending", unitCost: 9.4, totalCost: 0 },
+  { id: "BTH-003", productionOrderId: "MO-1003", productName: "معجون طماطم 400 جرام", quantity: 0, producedDate: "", expiryDate: "", status: "open", qcStatus: "pending", unitCost: 7.2, totalCost: 0, notes: "Production in progress." },
+  { id: "BTH-004", productionOrderId: "MO-1004", productName: "حمص معلب 800 جرام", quantity: 0, producedDate: "", expiryDate: "", status: "open", qcStatus: "pending", unitCost: 9.4, totalCost: 0 },
   { id: "BTH-005", productionOrderId: "MO-1007", productName: "EVOO 500ml", quantity: 600, producedDate: "2026-04-21", expiryDate: "2027-04-21", status: "quarantine", qcStatus: "fail", unitCost: 10.1, totalCost: 6060, notes: "Batch failed acidity QC — under review." },
   { id: "BTH-006", productionOrderId: "MO-1001", productName: "EVOO 500ml (rework)", quantity: 2392, producedDate: "2026-05-10", expiryDate: "2027-05-10", status: "closed", qcStatus: "conditional", unitCost: 10.3, totalCost: 24638, notes: "8 units relabeled and reapproved." },
 ];
@@ -401,8 +401,8 @@ export const PRODUCTION_BATCHES: ProductionBatch[] = [
 export const COSTING_ENTRIES: CostingEntry[] = [
   { id: "CST-001", productionOrderId: "MO-1001", productName: "EVOO 500ml", period: "2026-05", rawMaterialCost: 16800, laborCost: 3200, overheadCost: 4240, totalCost: 24240, unitsProduced: 2400, costPerUnit: 10.1, variance: -360 },
   { id: "CST-002", productionOrderId: "MO-1002", productName: "EVOO 1L", period: "2026-05", rawMaterialCost: 22600, laborCost: 4800, overheadCost: 5000, totalCost: 32400, unitsProduced: 1800, costPerUnit: 18.0, variance: 200 },
-  { id: "CST-003", productionOrderId: "MO-1003", productName: "Tomato Paste 400g", period: "2026-05", rawMaterialCost: 0, laborCost: 0, overheadCost: 0, totalCost: 0, unitsProduced: 0, costPerUnit: 0, variance: 0 },
-  { id: "CST-004", productionOrderId: "MO-1004", productName: "Canned Chickpeas 800g", period: "2026-05", rawMaterialCost: 0, laborCost: 0, overheadCost: 0, totalCost: 0, unitsProduced: 0, costPerUnit: 0, variance: 0 },
+  { id: "CST-003", productionOrderId: "MO-1003", productName: "معجون طماطم 400 جرام", period: "2026-05", rawMaterialCost: 0, laborCost: 0, overheadCost: 0, totalCost: 0, unitsProduced: 0, costPerUnit: 0, variance: 0 },
+  { id: "CST-004", productionOrderId: "MO-1004", productName: "حمص معلب 800 جرام", period: "2026-05", rawMaterialCost: 0, laborCost: 0, overheadCost: 0, totalCost: 0, unitsProduced: 0, costPerUnit: 0, variance: 0 },
   { id: "CST-005", productionOrderId: "MO-1007", productName: "EVOO 500ml", period: "2026-04", rawMaterialCost: 4200, laborCost: 1200, overheadCost: 660, totalCost: 6060, unitsProduced: 600, costPerUnit: 10.1, variance: 560 },
 ];
 

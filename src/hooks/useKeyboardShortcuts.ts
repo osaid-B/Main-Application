@@ -92,7 +92,7 @@ export function useKeyboardShortcuts(
         switch (e.key.toLowerCase()) {
           case "h": navigate("/dashboard"); break;
           case "c": navigate("/customers"); break;
-          case "p": navigate("/products"); break;
+          case "r": navigate("/products"); break;
           case "o": navigate("/purchases"); break;
           case "s": navigate("/suppliers"); break;
           case "i": navigate("/invoices"); break;
@@ -100,6 +100,8 @@ export function useKeyboardShortcuts(
           case "t": navigate("/treasury"); break;
           case "e": navigate("/employees"); break;
           case "d": navigate("/data-import"); break;
+          case "f": navigate("/factory"); break;
+          case "p": navigate("/pos"); break;
           case ",": navigate("/settings"); break;
         }
         return;
@@ -140,10 +142,12 @@ export function useKeyboardShortcuts(
     { keys: "?",          description: "Show this help",     action: onToggleHelp,  group: "general" },
     { keys: "G H",        description: "Dashboard",          action: () => navigate("/dashboard"),   group: "nav" },
     { keys: "G C",        description: "Customers",          action: () => navigate("/customers"),   group: "nav" },
-    { keys: "G P",        description: "Products",           action: () => navigate("/products"),    group: "nav" },
+    { keys: "G I",        description: "Invoices",           action: () => navigate("/invoices"),    group: "nav" },
+    { keys: "G F",        description: "Factory",            action: () => navigate("/factory"),     group: "nav" },
+    { keys: "G P",        description: "POS",                action: () => navigate("/pos"),         group: "nav" },
+    { keys: "G R",        description: "Products",           action: () => navigate("/products"),    group: "nav" },
     { keys: "G O",        description: "Purchases",          action: () => navigate("/purchases"),   group: "nav" },
     { keys: "G S",        description: "Suppliers",          action: () => navigate("/suppliers"),   group: "nav" },
-    { keys: "G I",        description: "Invoices",           action: () => navigate("/invoices"),    group: "nav" },
     { keys: "G Y",        description: "Payments",           action: () => navigate("/payments"),    group: "nav" },
     { keys: "G T",        description: "Treasury",           action: () => navigate("/treasury"),    group: "nav" },
     { keys: "G E",        description: "Employees",          action: () => navigate("/employees"),   group: "nav" },
