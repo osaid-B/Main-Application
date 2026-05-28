@@ -4,6 +4,7 @@ import { ArrowLeft, Globe, MapPin, Save } from "lucide-react";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
 import { PhoneInput } from "../components/ui/PhoneInput";
+import { Select } from "../components/ui/Select";
 import { Container } from "../components/layout/Container";
 import { FormSection } from "../components/forms/FormSection";
 import { ButtonGroup } from "../components/forms/ButtonGroup";
@@ -136,33 +137,23 @@ export default function AddSupplier() {
             placeholder={ts.emailPlaceholder}
           />
           {kind === "local" && (
-            <div>
-              <label style={{ fontSize: 13, fontWeight: 500, display: "block", marginBottom: 4 }}>{ts.govLabel}</label>
-              <select
-                value={governorate}
-                onChange={(e) => setGovernorate(e.target.value)}
-                style={{ width: "100%", padding: "8px 12px", border: "1px solid var(--app-border)", borderRadius: "var(--app-radius-sm)", fontSize: 14, background: "var(--app-surface)", color: "var(--app-text)" }}
-              >
-                <option value="">{ts.govPlaceholder}</option>
-                {PALESTINIAN_GOVERNORATES.map((g) => (
-                  <option key={g.id} value={g.nameAr}>{g.nameAr}</option>
-                ))}
-              </select>
-            </div>
+            <Select
+              label={ts.govLabel}
+              value={governorate}
+              onChange={(e) => setGovernorate(e.target.value)}
+              placeholder={ts.govPlaceholder}
+              options={PALESTINIAN_GOVERNORATES.map((g) => ({ value: g.nameAr, label: g.nameAr }))}
+              fullWidth
+            />
           )}
-          <div>
-            <label style={{ fontSize: 13, fontWeight: 500, display: "block", marginBottom: 4 }}>{ts.bankLabel}</label>
-            <select
-              value={bank}
-              onChange={(e) => setBank(e.target.value)}
-              style={{ width: "100%", padding: "8px 12px", border: "1px solid var(--app-border)", borderRadius: "var(--app-radius-sm)", fontSize: 14, background: "var(--app-surface)", color: "var(--app-text)" }}
-            >
-              <option value="">{ts.bankPlaceholder}</option>
-              {PALESTINIAN_BANKS.map((b) => (
-                <option key={b.id} value={b.nameAr}>{b.nameAr}</option>
-              ))}
-            </select>
-          </div>
+          <Select
+            label={ts.bankLabel}
+            value={bank}
+            onChange={(e) => setBank(e.target.value)}
+            placeholder={ts.bankPlaceholder}
+            options={PALESTINIAN_BANKS.map((b) => ({ value: b.nameAr, label: b.nameAr }))}
+            fullWidth
+          />
         </FormSection>
 
         {kind === "import" && (

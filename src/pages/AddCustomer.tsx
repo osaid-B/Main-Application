@@ -17,22 +17,21 @@ import {
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
 import { PhoneInput } from "../components/ui/PhoneInput";
+import { Select } from "../components/ui/Select";
 import { Badge } from "../components/ui/Badge";
 import { Container } from "../components/layout/Container";
 import { FormSection } from "../components/forms/FormSection";
 import { ButtonGroup } from "../components/forms/ButtonGroup";
 import { RadioCardGroup } from "../components/forms/RadioCardGroup";
 import { TagInput } from "../components/forms/TagInput";
-import { SmartLocationPicker } from "../components/forms/SmartLocationPicker";
 import {
-  CITIES_BY_GOVERNORATE,
-  GOVERNORATES,
   SALES_REPS,
   type CustomerClassification,
   type CustomerType,
   type Currency,
   type PaymentTerms,
 } from "../data/customersMock";
+import { PALESTINIAN_GOVERNORATES } from "../config/palestineConfig";
 import { validatePhone } from "../utils/phoneValidation";
 import { translations } from "../i18n/translations";
 import styles from "./AddCustomer.module.css";
@@ -47,8 +46,6 @@ interface FormState {
   email: string;
   governorate: string;
   city: string;
-  neighborhood: string;
-  street: string;
   paymentTerms: PaymentTerms;
   currency: Currency;
   creditLimit: string;
@@ -68,8 +65,6 @@ const INITIAL: FormState = {
   email: "",
   governorate: "",
   city: "",
-  neighborhood: "",
-  street: "",
   paymentTerms: "net30",
   currency: "ILS",
   creditLimit: "",
@@ -80,7 +75,7 @@ const INITIAL: FormState = {
 };
 
 const REQUIRED_KEYS: Array<keyof FormState> = [
-  "name", "type", "code", "phonePrimary", "governorate", "city",
+  "name", "type", "code", "phonePrimary", "governorate",
 ];
 
 function generateCustomerId(customers: Customer[]): string {
@@ -119,13 +114,7 @@ export default function AddCustomer() {
   const [phoneErrors, setPhoneErrors] = useState<{ primary?: string; secondary?: string }>({});
 
   function update<K extends keyof FormState>(key: K, value: FormState[K]) {
-    setForm((prev) => {
-      // Cascading reset: changing governorate clears city.
-      if (key === "governorate" && prev.governorate !== value) {
-        return { ...prev, governorate: value as string, city: "" };
-      }
-      return { ...prev, [key]: value };
-    });
+    setForm((prev) => ({ ...prev, [key]: value }));
   }
 
   // Autosave indicator (drafts persisted in localStorage)
@@ -154,7 +143,7 @@ export default function AddCustomer() {
   }, []);
 
   const completion = useMemo(() => {
-    const TOTAL_FIELDS = 17;
+    const TOTAL_FIELDS = 15;
     const filled = (Object.keys(form) as Array<keyof FormState>).reduce((sum, k) => {
       const v = form[k];
       if (Array.isArray(v)) return sum + (v.length > 0 ? 1 : 0);
@@ -167,10 +156,8 @@ export default function AddCustomer() {
   // Section completeness flags (drive the green ✓ on FormSection)
   const sec1Complete = !!form.name && !!form.code && !!form.type;
   const sec2Complete = !!form.phonePrimary;
-  const sec3Complete = !!form.governorate && !!form.city;
+  const sec3Complete = !!form.governorate;
   const sec4Complete = !!form.paymentTerms && !!form.currency;
-
-  const cityOptions = form.governorate ? CITIES_BY_GOVERNORATE[form.governorate] ?? [] : [];
 
   const missing = REQUIRED_KEYS.filter((k) => {
     const v = form[k];
@@ -206,7 +193,7 @@ export default function AddCustomer() {
       classification: form.classification,
       governorate: form.governorate,
       city: form.city,
-      address: [form.neighborhood, form.street].filter(Boolean).join(", ") || undefined,
+      address: undefined,
       paymentTerms: form.paymentTerms,
       currency: form.currency,
       creditLimit: form.creditLimit ? Number(form.creditLimit) : undefined,
@@ -232,13 +219,6 @@ export default function AddCustomer() {
           </button>
           <h1 className={styles.title}>{t.addCustomer.pageTitle}</h1>
           <p className={styles.subtitle}>{t.addCustomer.pageSubtitle}</p>
-        </div>
-        <div className={styles.pageActions}>
-          <Button variant="secondary" size="sm" onClick={() => navigate("/customers")}>{t.addCustomer.cancel}</Button>
-          <Button variant="secondary" size="sm">{t.addCustomer.saveAsDraft}</Button>
-          <Button variant="primary" size="sm" leftIcon={<Save size={14} />} disabled={!canSave} onClick={handleSave}>
-            {t.addCustomer.saveCustomer}
-          </Button>
         </div>
       </header>
 
@@ -341,37 +321,20 @@ export default function AddCustomer() {
             isComplete={sec3Complete}
           >
             <div className={styles.row2}>
-              <SmartLocationPicker
+              <Select
                 label={t.addCustomer.fields.governorate}
                 required
-                options={GOVERNORATES}
                 value={form.governorate}
-                onChange={(v) => update("governorate", v)}
+                onChange={(e) => update("governorate", e.target.value)}
                 placeholder={t.addCustomer.fields.governoratePlaceholder}
+                options={PALESTINIAN_GOVERNORATES.map((g) => ({ value: g.id, label: g.nameAr }))}
+                fullWidth
               />
-              <SmartLocationPicker
+              <Input
                 label={t.addCustomer.fields.city}
-                required
-                options={cityOptions}
                 value={form.city}
-                onChange={(v) => update("city", v)}
-                placeholder={form.governorate ? t.addCustomer.fields.cityPlaceholder : t.addCustomer.fields.cityPlaceholderFirst}
-                disabled={!form.governorate}
-                allowAddNew
-              />
-            </div>
-            <div className={styles.row2}>
-              <Input
-                label={t.addCustomer.fields.neighborhood}
-                value={form.neighborhood}
-                onChange={(e) => update("neighborhood", e.target.value)}
-                placeholder={t.addCustomer.fields.phonePlaceholderOptional}
-              />
-              <Input
-                label={t.addCustomer.fields.street}
-                value={form.street}
-                onChange={(e) => update("street", e.target.value)}
-                placeholder={t.addCustomer.fields.phonePlaceholderOptional}
+                onChange={(e) => update("city", e.target.value)}
+                placeholder="مثال: بيتا، حوارة، رافات..."
               />
             </div>
           </FormSection>
@@ -545,7 +508,6 @@ function CustomerPreviewCard({ form, completion }: PreviewProps) {
         <Row label={t.addCustomer.preview.email}        value={form.email || "—"} />
         <Row label={t.addCustomer.preview.governorate}  value={form.governorate || "—"} />
         <Row label={t.addCustomer.preview.city}         value={form.city || "—"} />
-        <Row label={t.addCustomer.preview.neighborhood} value={[form.neighborhood, form.street].filter(Boolean).join(" · ") || "—"} />
         <Row label={t.addCustomer.preview.taxId}        value={form.taxId || "—"} />
         <Row label={t.addCustomer.preview.creditLimit}  value={form.creditLimit ? `${form.creditLimit} ${form.currency}` : "—"} />
         <Row label={t.addCustomer.preview.salesRep}     value={form.salesRep} />

@@ -4,6 +4,7 @@ import { ArrowLeft, Briefcase, Calendar, Clock, GraduationCap, Save } from "luci
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
 import { PhoneInput } from "../components/ui/PhoneInput";
+import { Select } from "../components/ui/Select";
 import { Container } from "../components/layout/Container";
 import { FormSection } from "../components/forms/FormSection";
 import { RadioCardGroup } from "../components/forms/RadioCardGroup";
@@ -45,16 +46,6 @@ export default function AddEmployee() {
     setPhoneError(undefined);
     navigate("/employees");
   }
-
-  const selectStyle: React.CSSProperties = {
-    width: "100%",
-    padding: "8px 12px",
-    border: "1px solid var(--app-border)",
-    borderRadius: "var(--app-radius-sm)",
-    fontSize: 14,
-    background: "var(--app-surface)",
-    color: "var(--app-text)",
-  };
 
   return (
     <Container maxWidth="lg" padding="md">
@@ -114,15 +105,14 @@ export default function AddEmployee() {
             onChange={(e) => setNationalId(e.target.value.replace(/\D/g, "").slice(0, 9))}
             placeholder={te.idPlaceholder}
           />
-          <div>
-            <label style={{ fontSize: 13, fontWeight: 500, display: "block", marginBottom: 4 }}>{te.govLabel}</label>
-            <select value={governorate} onChange={(e) => setGovernorate(e.target.value)} style={selectStyle}>
-              <option value="">{te.govPlaceholder}</option>
-              {PALESTINIAN_GOVERNORATES.map((g) => (
-                <option key={g.id} value={g.nameAr}>{g.nameAr}</option>
-              ))}
-            </select>
-          </div>
+          <Select
+            label={te.govLabel}
+            value={governorate}
+            onChange={(e) => setGovernorate(e.target.value)}
+            placeholder={te.govPlaceholder}
+            options={PALESTINIAN_GOVERNORATES.map((g) => ({ value: g.nameAr, label: g.nameAr }))}
+            fullWidth
+          />
           <Input
             label={te.departmentLabel}
             value={department}
@@ -164,15 +154,14 @@ export default function AddEmployee() {
               onKeyDown={(e) => { if (e.ctrlKey || e.metaKey) return; if (!["0","1","2","3","4","5","6","7","8","9",".","Backspace","Delete","Tab","ArrowLeft","ArrowRight","Home","End"].includes(e.key)) e.preventDefault(); }}
               onChange={(e) => setStipend(e.target.value.replace(/[^\d.]/g, "").replace(/(\.\d{2})\d+/,"$1"))} placeholder="0" />
           )}
-          <div>
-            <label style={{ fontSize: 13, fontWeight: 500, display: "block", marginBottom: 4 }}>{te.bankLabel}</label>
-            <select value={bank} onChange={(e) => setBank(e.target.value)} style={selectStyle}>
-              <option value="">{te.bankPlaceholder}</option>
-              {PALESTINIAN_BANKS.map((b) => (
-                <option key={b.id} value={b.nameAr}>{b.nameAr}</option>
-              ))}
-            </select>
-          </div>
+          <Select
+            label={te.bankLabel}
+            value={bank}
+            onChange={(e) => setBank(e.target.value)}
+            placeholder={te.bankPlaceholder}
+            options={PALESTINIAN_BANKS.map((b) => ({ value: b.nameAr, label: b.nameAr }))}
+            fullWidth
+          />
           <Input
             label={te.ibanLabel}
             value={iban}
