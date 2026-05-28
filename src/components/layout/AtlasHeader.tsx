@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useLocation, useNavigate } from "react-router-dom";
-import { ChevronLeft, ChevronRight, FileText, Package, Plus, Search, Sparkles, Truck, Users } from "lucide-react";
+import { ChevronRight, FileText, Package, Plus, Search, Truck, Users } from "lucide-react";
 import { Button } from "../ui/Button";
 import { useWorkspace, WORKSPACES, type Workspace } from "../../contexts/WorkspaceContext";
-import { useAI } from "../../context/AIContext";
 import { useSettings } from "../../context/SettingsContext";
 import { useData } from "../../context/DataContext";
 import NotificationsPanel from "../notifications/NotificationsPanel";
@@ -22,7 +21,6 @@ export default function AtlasHeader() {
   const location = useLocation();
   const navigate = useNavigate();
   const { workspace, setWorkspace } = useWorkspace();
-  const { openAI } = useAI();
   const { t, isArabic } = useSettings();
   const { customers, invoices, products, suppliers } = useData();
 
@@ -171,12 +169,24 @@ export default function AtlasHeader() {
   // ── Compute flat index offset per group (for keyboard nav) ────────────────
   let flatOffset = 0;
 
-  // ── Page title ─────────────────────────────────────────────────────────────
-  const pageTitles = t.header.pageTitles as unknown as Record<string, string>;
-  const pageTitle =
-    pageTitles[location.pathname] ??
-    pageTitles[`/${location.pathname.split("/")[1]}`] ??
-    "";
+  // ── Context-aware new action ───────────────────────────────────────────────
+  const PAGE_CREATE_MAP: Record<string, { actionId: string; navigateTo: string }> = {
+    "/customers": { actionId: "new-customer", navigateTo: "/customers/new" },
+    "/invoices":  { actionId: "new-invoice",  navigateTo: "/invoices" },
+    "/products":  { actionId: "new-product",  navigateTo: "/products" },
+    "/purchases": { actionId: "new-purchase", navigateTo: "/purchases" },
+    "/suppliers": { actionId: "new-supplier", navigateTo: "/suppliers/new" },
+    "/payments":  { actionId: "new-payment",  navigateTo: "/payments" },
+    "/employees": { actionId: "new-employee", navigateTo: "/employees/new" },
+  };
+  const basePath = `/${location.pathname.split("/")[1]}`;
+  const ctxEntry = PAGE_CREATE_MAP[basePath] ?? null;
+  const ctxAction = ctxEntry
+    ? quickCreateActions.find(a => a.id === ctxEntry.actionId) ?? null
+    : null;
+  const ctxLabel = ctxAction
+    ? (t.shell.quickCreateItems[ctxAction.id as keyof typeof t.shell.quickCreateItems]?.label ?? ctxAction.label)
+    : t.header.newAction;
 
   // ── Quick-create dropdown position ────────────────────────────────────────
   const [createStyle, setCreateStyle] = useState<React.CSSProperties>({});
@@ -194,13 +204,17 @@ export default function AtlasHeader() {
 
   return (
     <header className={`atlas-header${scrolled ? " is-scrolled" : ""}`} dir={isArabic ? "rtl" : "ltr"}>
-      {/* Left: breadcrumb */}
+      {/* Left: logo + brand */}
       <div className="atlas-header-left">
-        <nav aria-label="Breadcrumb" className="atlas-breadcrumb">
-          <span>{t.header.brand}</span>
-          <ChevronLeft size={12} className="atlas-breadcrumb-sep" aria-hidden />
-          <span className="atlas-breadcrumb-current">{pageTitle}</span>
-        </nav>
+        <button
+          type="button"
+          className="atlas-brand-btn"
+          onClick={() => navigate("/dashboard")}
+          aria-label={t.header.brand}
+        >
+          <span className="atlas-brand-logo-sm" aria-hidden>A</span>
+          <span className="atlas-brand-name">{t.header.brand}</span>
+        </button>
       </div>
 
       {/* Center: global search */}
@@ -302,16 +316,6 @@ export default function AtlasHeader() {
           })}
         </div>
 
-        <button
-          type="button"
-          className="atlas-icon-btn"
-          onClick={() => openAI()}
-          aria-label={t.header.openAI}
-          title={t.header.openAI}
-        >
-          <Sparkles size={15} />
-        </button>
-
         <NotificationsPanel />
 
         <div style={{ position: "relative" }}>
@@ -320,14 +324,17 @@ export default function AtlasHeader() {
             variant="primary"
             size="sm"
             leftIcon={<Plus size={14} />}
-            onClick={() => setCreateOpen(v => !v)}
-            aria-expanded={createOpen}
-            aria-haspopup="menu"
+            onClick={() => {
+              if (ctxEntry) { navigate(ctxEntry.navigateTo); }
+              else { setCreateOpen(v => !v); }
+            }}
+            aria-expanded={ctxEntry ? undefined : createOpen}
+            aria-haspopup={ctxEntry ? undefined : "menu"}
           >
-            {t.header.newAction}
+            {ctxLabel}
           </Button>
 
-          {createOpen && createPortal(
+          {!ctxEntry && createOpen && createPortal(
             <div
               ref={createMenuRef}
               className="atlas-create-menu"
