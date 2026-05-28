@@ -30,6 +30,8 @@ import { useData } from "../context/DataContext";
 import type {
   Employee,
   EmployeeAdvance,
+  EmployeeGender,
+  ContractType,
   SalaryType,
   DailyAttendanceEntry,
   DailyAttendanceStatus,
@@ -43,8 +45,16 @@ type EmployeeForm = {
   salaryType: SalaryType;
   hourlyRate: string;
   fixedSalary: string;
+  dailyRate: string;
   notes: string;
   departmentId: string;
+  nationalId: string;
+  gender: EmployeeGender | "";
+  city: string;
+  jobTitle: string;
+  hireDate: string;
+  contractType: ContractType | "";
+  currency: "ILS" | "USD" | "JOD" | "";
 };
 
 type EmployeeFormErrors = {
@@ -54,6 +64,7 @@ type EmployeeFormErrors = {
   workEnd?: string;
   hourlyRate?: string;
   fixedSalary?: string;
+  dailyRate?: string;
 };
 
 type ToastState = {
@@ -107,8 +118,16 @@ const EMPTY_FORM: EmployeeForm = {
   salaryType: "hourly",
   hourlyRate: "10",
   fixedSalary: "0",
+  dailyRate: "0",
   notes: "",
   departmentId: "",
+  nationalId: "",
+  gender: "",
+  city: "",
+  jobTitle: "",
+  hireDate: "",
+  contractType: "",
+  currency: "ILS",
 };
 
 const DELETE_CONFIRMATION_CODE = "123";
@@ -305,6 +324,13 @@ function validateEmployeeForm(values: EmployeeForm): EmployeeFormErrors {
       errors.fixedSalary = "Fixed salary must be a valid positive number.";
     }
   }
+  if (values.salaryType === "daily") {
+    if (values.dailyRate === "") {
+      errors.dailyRate = "Daily rate is required.";
+    } else if (Number.isNaN(Number(values.dailyRate)) || Number(values.dailyRate) < 0) {
+      errors.dailyRate = "Daily rate must be a valid positive number.";
+    }
+  }
   return errors;
 }
 
@@ -418,48 +444,44 @@ function EmployeeFormModal({
           </div>
           <Button variant="icon" size="md" aria-label="Close" onClick={onClose}>×</Button>
         </div>
-        <form className="modal-form" onSubmit={(e) => { e.preventDefault(); onSubmit(); }}>
+        <form className="modal-form emp-modal-form" onSubmit={(e) => { e.preventDefault(); onSubmit(); }}>
+          {/* Section 1: Basic info */}
+          <p className="emp-form-section-title">{t.employees.form.basicInfo ?? "Basic Information"}</p>
           <div className="employees-form-grid">
             <div>
-              <label className="modal-label">{t.employees.form.name}</label>
+              <label className="modal-label">{t.employees.form.name} <span className="emp-req">*</span></label>
               <input className="modal-input" type="text" value={values.name} onChange={(e) => onChange("name", e.target.value)} />
               {errors.name && <p className="form-error">{errors.name}</p>}
             </div>
             <div>
-              <label className="modal-label">{t.employees.form.phone}</label>
-              <input className="modal-input" type="text" value={values.phone} onChange={(e) => onChange("phone", e.target.value.replace(/\D/g, "").slice(0, 10))} />
+              <label className="modal-label">{t.employees.form.phone} <span className="emp-req">*</span></label>
+              <input className="modal-input" type="text" placeholder="05xxxxxxxx" value={values.phone} onChange={(e) => onChange("phone", e.target.value.replace(/\D/g, "").slice(0, 10))} />
               {errors.phone && <p className="form-error">{errors.phone}</p>}
             </div>
             <div>
-              <label className="modal-label">{t.employees.form.workStart}</label>
-              <input className="modal-input" type="time" value={values.workStart} onChange={(e) => onChange("workStart", e.target.value)} />
-              {errors.workStart && <p className="form-error">{errors.workStart}</p>}
+              <label className="modal-label">{t.employees.form.nationalId}</label>
+              <input className="modal-input" type="text" value={values.nationalId} onChange={(e) => onChange("nationalId", e.target.value)} />
             </div>
             <div>
-              <label className="modal-label">{t.employees.form.workEnd}</label>
-              <input className="modal-input" type="time" value={values.workEnd} onChange={(e) => onChange("workEnd", e.target.value)} />
-              {errors.workEnd && <p className="form-error">{errors.workEnd}</p>}
-            </div>
-            <div>
-              <label className="modal-label">{t.employees.form.salaryType}</label>
-              <select className="modal-input" value={values.salaryType} onChange={(e) => onChange("salaryType", e.target.value as SalaryType)}>
-                <option value="hourly">{t.employees.salaryType.hourly}</option>
-                <option value="fixed">{t.employees.salaryType.fixed}</option>
+              <label className="modal-label">{t.employees.form.gender}</label>
+              <select className="modal-input" value={values.gender} onChange={(e) => onChange("gender", e.target.value)}>
+                <option value="">—</option>
+                <option value="male">{t.employees.form.genderMale}</option>
+                <option value="female">{t.employees.form.genderFemale}</option>
               </select>
             </div>
-            {values.salaryType === "hourly" ? (
-              <div>
-                <label className="modal-label">{t.employees.form.hourlyRate}</label>
-                <input className="modal-input" type="number" min="0" step="1" value={values.hourlyRate} onChange={(e) => onChange("hourlyRate", e.target.value)} />
-                {errors.hourlyRate && <p className="form-error">{errors.hourlyRate}</p>}
-              </div>
-            ) : (
-              <div>
-                <label className="modal-label">{t.employees.form.fixedSalary}</label>
-                <input className="modal-input" type="number" min="0" step="1" value={values.fixedSalary} onChange={(e) => onChange("fixedSalary", e.target.value)} />
-                {errors.fixedSalary && <p className="form-error">{errors.fixedSalary}</p>}
-              </div>
-            )}
+            <div>
+              <label className="modal-label">{t.employees.form.jobTitle}</label>
+              <input className="modal-input" type="text" value={values.jobTitle} onChange={(e) => onChange("jobTitle", e.target.value)} />
+            </div>
+            <div>
+              <label className="modal-label">{t.employees.form.city}</label>
+              <input className="modal-input" type="text" value={values.city} onChange={(e) => onChange("city", e.target.value)} />
+            </div>
+            <div>
+              <label className="modal-label">{t.employees.form.hireDate}</label>
+              <input className="modal-input" type="date" value={values.hireDate} onChange={(e) => onChange("hireDate", e.target.value)} />
+            </div>
             <div>
               <label className="modal-label">{t.employees.form.department ?? "Department"}</label>
               <select className="modal-input" value={values.departmentId} onChange={(e) => onChange("departmentId", e.target.value)}>
@@ -469,9 +491,71 @@ function EmployeeFormModal({
                 ))}
               </select>
             </div>
+          </div>
+
+          {/* Section 2: Contract & Salary */}
+          <p className="emp-form-section-title">{t.employees.form.contractSalary ?? "Contract & Salary"}</p>
+          <div className="employees-form-grid">
+            <div>
+              <label className="modal-label">{t.employees.form.contractType}</label>
+              <select className="modal-input" value={values.contractType} onChange={(e) => onChange("contractType", e.target.value)}>
+                <option value="">—</option>
+                <option value="full-time">{t.employees.contractType["full-time"]}</option>
+                <option value="part-time">{t.employees.contractType["part-time"]}</option>
+                <option value="daily">{t.employees.contractType.daily}</option>
+                <option value="temporary">{t.employees.contractType.temporary}</option>
+              </select>
+            </div>
+            <div>
+              <label className="modal-label">{t.employees.form.salaryType} <span className="emp-req">*</span></label>
+              <select className="modal-input" value={values.salaryType} onChange={(e) => onChange("salaryType", e.target.value as SalaryType)}>
+                <option value="hourly">{t.employees.salaryType.hourly}</option>
+                <option value="fixed">{t.employees.salaryType.fixed}</option>
+                <option value="daily">{t.employees.salaryType.daily}</option>
+              </select>
+            </div>
+            {values.salaryType === "hourly" && (
+              <div>
+                <label className="modal-label">{t.employees.form.hourlyRate} <span className="emp-req">*</span></label>
+                <input className="modal-input" type="number" min="0" step="0.5" value={values.hourlyRate} onChange={(e) => onChange("hourlyRate", e.target.value)} />
+                {errors.hourlyRate && <p className="form-error">{errors.hourlyRate}</p>}
+              </div>
+            )}
+            {values.salaryType === "fixed" && (
+              <div>
+                <label className="modal-label">{t.employees.form.fixedSalary} <span className="emp-req">*</span></label>
+                <input className="modal-input" type="number" min="0" step="50" value={values.fixedSalary} onChange={(e) => onChange("fixedSalary", e.target.value)} />
+                {errors.fixedSalary && <p className="form-error">{errors.fixedSalary}</p>}
+              </div>
+            )}
+            {values.salaryType === "daily" && (
+              <div>
+                <label className="modal-label">{t.employees.form.dailyRate} <span className="emp-req">*</span></label>
+                <input className="modal-input" type="number" min="0" step="10" value={values.dailyRate} onChange={(e) => onChange("dailyRate", e.target.value)} />
+                {errors.dailyRate && <p className="form-error">{errors.dailyRate}</p>}
+              </div>
+            )}
+            <div>
+              <label className="modal-label">{t.employees.form.currency}</label>
+              <select className="modal-input" value={values.currency} onChange={(e) => onChange("currency", e.target.value)}>
+                <option value="ILS">ILS — ₪</option>
+                <option value="USD">USD — $</option>
+                <option value="JOD">JOD — د.أ</option>
+              </select>
+            </div>
+            <div>
+              <label className="modal-label">{t.employees.form.workStart} <span className="emp-req">*</span></label>
+              <input className="modal-input" type="time" value={values.workStart} onChange={(e) => onChange("workStart", e.target.value)} />
+              {errors.workStart && <p className="form-error">{errors.workStart}</p>}
+            </div>
+            <div>
+              <label className="modal-label">{t.employees.form.workEnd} <span className="emp-req">*</span></label>
+              <input className="modal-input" type="time" value={values.workEnd} onChange={(e) => onChange("workEnd", e.target.value)} />
+              {errors.workEnd && <p className="form-error">{errors.workEnd}</p>}
+            </div>
             <div className="employees-form-grid-full">
               <label className="modal-label">{t.employees.form.notes}</label>
-              <textarea className="modal-input" rows={4} value={values.notes} onChange={(e) => onChange("notes", e.target.value)} />
+              <textarea className="modal-input" rows={3} value={values.notes} onChange={(e) => onChange("notes", e.target.value)} />
             </div>
           </div>
           <div className="modal-actions">
@@ -1634,7 +1718,9 @@ function EmployeesSection({
                           </div>
                           <div>
                             <strong>{emp.name}</strong>
-                            <span>{t.employees.cols.employee}</span>
+                            <span className="emp-row-subtitle">
+                              {emp.jobTitle || emp.departmentId || t.employees.cols.employee}
+                            </span>
                           </div>
                         </div>
                       </td>
@@ -1647,6 +1733,11 @@ function EmployeesSection({
                         >
                           {shift}
                         </span>
+                        {emp.contractType && (
+                          <span className={`emp-contract-badge emp-contract-${emp.contractType}`}>
+                            {t.employees.contractType[emp.contractType as ContractType]}
+                          </span>
+                        )}
                       </td>
                       <td className="emp-hours-cell">
                         {emp.workStart} – {emp.workEnd}
@@ -1818,7 +1909,25 @@ export default function Employees() {
   const openAddModal = () => { setEditingEmployee(null); setForm(EMPTY_FORM); setFormErrors({}); setShowEmployeeModal(true); };
   const openEditModal = (emp: Employee) => {
     setEditingEmployee(emp);
-    setForm({ name: emp.name, phone: emp.phone, workStart: emp.workStart, workEnd: emp.workEnd, salaryType: emp.salaryType, hourlyRate: String(emp.hourlyRate ?? 0), fixedSalary: String(emp.fixedSalary ?? 0), notes: emp.notes ?? "", departmentId: emp.departmentId ?? "" });
+    setForm({
+      name: emp.name,
+      phone: emp.phone,
+      workStart: emp.workStart,
+      workEnd: emp.workEnd,
+      salaryType: emp.salaryType,
+      hourlyRate: String(emp.hourlyRate ?? 0),
+      fixedSalary: String(emp.fixedSalary ?? 0),
+      dailyRate: String(emp.dailyRate ?? 0),
+      notes: emp.notes ?? "",
+      departmentId: emp.departmentId ?? "",
+      nationalId: emp.nationalId ?? "",
+      gender: (emp.gender ?? "") as EmployeeGender | "",
+      city: emp.city ?? "",
+      jobTitle: emp.jobTitle ?? "",
+      hireDate: emp.hireDate ?? "",
+      contractType: (emp.contractType ?? "") as ContractType | "",
+      currency: (emp.currency ?? "ILS") as "ILS" | "USD" | "JOD",
+    });
     setFormErrors({});
     setShowEmployeeModal(true);
   };
@@ -1828,8 +1937,31 @@ export default function Employees() {
     setFormErrors(errors);
     if (Object.keys(errors).length > 0) return;
 
+    const hrFields = {
+      nationalId: form.nationalId.trim() || undefined,
+      gender: (form.gender as EmployeeGender) || undefined,
+      city: form.city.trim() || undefined,
+      jobTitle: form.jobTitle.trim() || undefined,
+      hireDate: form.hireDate || undefined,
+      contractType: (form.contractType as ContractType) || undefined,
+      currency: (form.currency as "ILS" | "USD" | "JOD") || "ILS",
+    };
+
     if (editingEmployee) {
-      updateEmployee({ ...editingEmployee, name: form.name.trim(), phone: form.phone.trim(), workStart: form.workStart, workEnd: form.workEnd, salaryType: form.salaryType, hourlyRate: form.salaryType === "hourly" ? Number(form.hourlyRate) : undefined, fixedSalary: form.salaryType === "fixed" ? Number(form.fixedSalary) : undefined, notes: form.notes.trim(), departmentId: form.departmentId || undefined });
+      updateEmployee({
+        ...editingEmployee,
+        name: form.name.trim(),
+        phone: form.phone.trim(),
+        workStart: form.workStart,
+        workEnd: form.workEnd,
+        salaryType: form.salaryType,
+        hourlyRate: form.salaryType === "hourly" ? Number(form.hourlyRate) : undefined,
+        fixedSalary: form.salaryType === "fixed" ? Number(form.fixedSalary) : undefined,
+        dailyRate: form.salaryType === "daily" ? Number(form.dailyRate) : undefined,
+        notes: form.notes.trim(),
+        departmentId: form.departmentId || undefined,
+        ...hrFields,
+      });
       resetFormState();
       setToast({ type: "success", message: t.employees.toast.updated });
       return;
@@ -1844,6 +1976,7 @@ export default function Employees() {
       salaryType: form.salaryType,
       hourlyRate: form.salaryType === "hourly" ? Number(form.hourlyRate) : undefined,
       fixedSalary: form.salaryType === "fixed" ? Number(form.fixedSalary) : undefined,
+      dailyRate: form.salaryType === "daily" ? Number(form.dailyRate) : undefined,
       advance: 0,
       advances: [],
       notes: form.notes.trim(),
@@ -1851,6 +1984,7 @@ export default function Employees() {
       attendanceRecords: [],
       dailyAttendance: [],
       isDeleted: false,
+      ...hrFields,
     };
 
     addEmployee(newEmployee);

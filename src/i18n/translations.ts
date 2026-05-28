@@ -1276,6 +1276,8 @@ export const translations = {
         hireDate: "Hire Date",
         contractType: "Contract Type",
         currency: "Salary Currency",
+        basicInfo: "Basic Information",
+        contractSalary: "Contract & Salary",
       },
       validation: {
         nameRequired: "Name is required.",
@@ -4482,6 +4484,8 @@ export const translations = {
         hireDate: "تاريخ التعيين",
         contractType: "نوع العقد",
         currency: "عملة الراتب",
+        basicInfo: "المعلومات الأساسية",
+        contractSalary: "العقد والراتب",
       },
       validation: {
         nameRequired: "الاسم مطلوب.",
