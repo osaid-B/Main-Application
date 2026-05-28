@@ -3,14 +3,12 @@ import { Keyboard, LogOut, Menu, PanelRightOpen, Plus } from "lucide-react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import AtlasHeader from "./AtlasHeader";
-import AppShellCommandBar from "./AppShellCommandBar";
 import AIAssistantPanel from "../ai/AIAssistantPanel";
 import ShortcutsOverlay from "../ui/ShortcutsOverlay";
 import { useAI } from "../../context/AIContext";
 import { useAuth } from "../../context/AuthContext";
 import { useSettings } from "../../context/SettingsContext";
 import { useKeyboardShortcuts } from "../../hooks/useKeyboardShortcuts";
-import "./AppShellCommandBar.css";
 
 export default function MainLayout() {
   const { isOpen, initialPrompt, openAI, closeAI } = useAI();
@@ -34,7 +32,7 @@ export default function MainLayout() {
   );
 
   const focusSearch = useCallback(() => {
-    const input = document.querySelector<HTMLInputElement>(".shell-command-search input");
+    const input = document.querySelector<HTMLInputElement>(".atlas-global-search input");
     if (input) {
       input.focus();
       input.select();
@@ -251,7 +249,6 @@ export default function MainLayout() {
           </header>
 
           <AtlasHeader />
-          <AppShellCommandBar currentPath={location.pathname} />
 
           <div className="app-page-content">
             <Outlet />
