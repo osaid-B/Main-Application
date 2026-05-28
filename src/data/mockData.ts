@@ -327,54 +327,210 @@ export const paymentsData: Payment[] = [
   },
 ];
 
+// Build daily attendance entries for a range of past dates.
+// workDays: 0=Sun,1=Mon,...,6=Sat. Palestinian weekend = Fri(5) + Sat(6).
+function makeDailyAttendance(
+  empId: string,
+  workStart: string,
+  workEnd: string,
+  pattern: Array<"present" | "late" | "absent" | "half-day" | "leave">,
+  advanceMap: Record<string, number> = {}
+) {
+  const entries = [];
+  // Generate last 35 calendar days excluding weekends
+  const today = new Date("2026-05-28");
+  let patternIdx = 0;
+  for (let i = 34; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(today.getDate() - i);
+    const dow = d.getDay(); // 0=Sun,6=Sat
+    if (dow === 5 || dow === 6) continue; // skip Fri+Sat
+    const dateStr = d.toISOString().slice(0, 10);
+    const status = pattern[patternIdx % pattern.length];
+    patternIdx++;
+    const shiftHrs = (() => {
+      const [sh, sm] = workStart.split(":").map(Number);
+      const [eh, em] = workEnd.split(":").map(Number);
+      return Math.max((eh * 60 + em - sh * 60 - sm) / 60, 0);
+    })();
+    const workedHours =
+      status === "absent" || status === "leave" ? 0 :
+      status === "half-day" ? Math.round(shiftHrs / 2 * 4) / 4 :
+      status === "late" ? Math.round((shiftHrs - 0.5) * 4) / 4 :
+      shiftHrs;
+    entries.push({
+      date: dateStr,
+      status,
+      workedHours,
+      advanceAmount: advanceMap[dateStr] ?? 0,
+      notes: status === "late" ? "تأخر عن العمل" : status === "absent" ? "غياب بدون إذن" : undefined,
+    });
+  }
+  void empId; // used for reference only
+  return entries;
+}
+
 export const employeesData: Employee[] = [
   {
     id: "EMP-1001",
     name: "أحمد يوسف سلامة",
-    phone: "+970 59 123 4567",
+    phone: "0591234567",
     workStart: "08:00",
     workEnd: "17:00",
     salaryType: "fixed",
     fixedSalary: 3200,
     advance: 500,
     notes: "مدير المبيعات — شعبة رام الله",
+    departmentId: "DEPT-001",
+    nationalId: "901234567",
+    gender: "male",
+    city: "رام الله",
+    jobTitle: "مدير المبيعات",
+    hireDate: "2022-03-01",
+    contractType: "full-time",
+    currency: "ILS",
     isDeleted: false,
+    advances: [
+      { id: "ADV-1001-1", amount: 300, date: "2026-05-01", notes: "سلفة شهرية" },
+      { id: "ADV-1001-2", amount: 200, date: "2026-05-15", notes: "ظروف طارئة" },
+    ],
+    dailyAttendance: makeDailyAttendance(
+      "EMP-1001", "08:00", "17:00",
+      ["present","present","present","present","present","present","present","present","late","present","present","present","present","present","present","present","present","present","present","present","present","present","present","present","present"],
+      { "2026-05-01": 300, "2026-05-15": 200 }
+    ),
   },
   {
     id: "EMP-1002",
     name: "رنا محمود حسين",
-    phone: "+970 56 987 6543",
+    phone: "0569876543",
     workStart: "09:00",
     workEnd: "18:00",
     salaryType: "fixed",
     fixedSalary: 2800,
     advance: 0,
     notes: "محاسبة ومتابعة الفواتير",
+    departmentId: "DEPT-002",
+    nationalId: "852341100",
+    gender: "female",
+    city: "البيرة",
+    jobTitle: "محاسبة",
+    hireDate: "2023-01-15",
+    contractType: "full-time",
+    currency: "ILS",
     isDeleted: false,
+    advances: [],
+    dailyAttendance: makeDailyAttendance(
+      "EMP-1002", "09:00", "18:00",
+      ["present","present","present","present","present","present","present","present","present","present","present","present","present","present","absent","present","present","present","present","present","present","half-day","present","present","present"]
+    ),
   },
   {
     id: "EMP-1003",
     name: "خالد إبراهيم ناصر",
-    phone: "+970 59 444 7788",
+    phone: "0594447788",
     workStart: "08:30",
     workEnd: "16:30",
     salaryType: "hourly",
     hourlyRate: 28,
     advance: 1000,
     notes: "مندوب مبيعات — ميداني",
+    departmentId: "DEPT-001",
+    nationalId: "774519023",
+    gender: "male",
+    city: "نابلس",
+    jobTitle: "مندوب مبيعات",
+    hireDate: "2021-06-01",
+    contractType: "full-time",
+    currency: "ILS",
     isDeleted: false,
+    advances: [
+      { id: "ADV-1003-1", amount: 500, date: "2026-05-05", notes: "سلفة" },
+      { id: "ADV-1003-2", amount: 500, date: "2026-05-20", notes: "سلفة" },
+    ],
+    dailyAttendance: makeDailyAttendance(
+      "EMP-1003", "08:30", "16:30",
+      ["present","late","present","present","absent","present","present","late","present","present","present","absent","present","present","present","late","present","present","absent","present","present","present","present","late","present"],
+      { "2026-05-05": 500, "2026-05-20": 500 }
+    ),
   },
   {
     id: "EMP-1004",
     name: "فاطمة عمر قاسم",
-    phone: "+970 56 321 0099",
+    phone: "0563210099",
     workStart: "09:00",
     workEnd: "15:00",
     salaryType: "fixed",
     fixedSalary: 2200,
     advance: 0,
     notes: "خدمة الزبائن — استقبال",
+    departmentId: "DEPT-003",
+    nationalId: "963057814",
+    gender: "female",
+    city: "الخليل",
+    jobTitle: "موظفة استقبال",
+    hireDate: "2024-02-01",
+    contractType: "full-time",
+    currency: "ILS",
     isDeleted: false,
+    advances: [],
+    dailyAttendance: makeDailyAttendance(
+      "EMP-1004", "09:00", "15:00",
+      ["present","present","present","present","present","present","present","present","present","present","present","present","leave","leave","present","present","present","present","present","present","present","present","present","present","present"]
+    ),
+  },
+  {
+    id: "EMP-1005",
+    name: "محمد سامي العمر",
+    phone: "0527654321",
+    workStart: "08:00",
+    workEnd: "17:00",
+    salaryType: "daily",
+    dailyRate: 150,
+    advance: 300,
+    notes: "سائق توصيل — ميداني",
+    departmentId: "DEPT-001",
+    nationalId: "641823905",
+    gender: "male",
+    city: "جنين",
+    jobTitle: "سائق توصيل",
+    hireDate: "2025-01-10",
+    contractType: "daily",
+    currency: "ILS",
+    isDeleted: false,
+    advances: [
+      { id: "ADV-1005-1", amount: 300, date: "2026-05-10", notes: "سلفة" },
+    ],
+    dailyAttendance: makeDailyAttendance(
+      "EMP-1005", "08:00", "17:00",
+      ["present","present","absent","present","present","present","present","absent","present","present","present","present","present","late","present","present","present","present","present","absent","present","present","present","present","present"],
+      { "2026-05-10": 300 }
+    ),
+  },
+  {
+    id: "EMP-1006",
+    name: "نور حسن شحادة",
+    phone: "0581122334",
+    workStart: "10:00",
+    workEnd: "16:00",
+    salaryType: "hourly",
+    hourlyRate: 22,
+    advance: 0,
+    notes: "موظفة تسويق — جزء وقت",
+    departmentId: "DEPT-003",
+    nationalId: "512907634",
+    gender: "female",
+    city: "طولكرم",
+    jobTitle: "موظفة تسويق",
+    hireDate: "2025-03-15",
+    contractType: "part-time",
+    currency: "ILS",
+    isDeleted: false,
+    advances: [],
+    dailyAttendance: makeDailyAttendance(
+      "EMP-1006", "10:00", "16:00",
+      ["present","present","present","late","present","present","present","present","present","half-day","present","present","present","present","present","present","present","absent","present","present","present","present","present","present","present"]
+    ),
   },
 ];
 

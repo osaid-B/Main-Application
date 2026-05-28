@@ -81,7 +81,7 @@ export interface EmployeeRow {
   department_id: Nullable<string>;
   work_start: string;
   work_end: string;
-  salary_type: "hourly" | "fixed";
+  salary_type: "hourly" | "fixed" | "daily";
   hourly_rate: Nullable<number>;
   fixed_salary: Nullable<number>;
   advance: number;

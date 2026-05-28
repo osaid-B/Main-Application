@@ -353,7 +353,11 @@ export type ReconciliationItem = {
   notes?: string;
 };
 
-export type SalaryType = "hourly" | "fixed";
+export type SalaryType = "hourly" | "fixed" | "daily";
+
+export type ContractType = "full-time" | "part-time" | "daily" | "temporary";
+
+export type EmployeeGender = "male" | "female";
 
 export type AttendanceRecordStatus =
   | "not-started"
@@ -399,11 +403,10 @@ export type Employee = {
   phone: string;
   workStart: string;
   workEnd: string;
-  checkIn?: string;
-  checkOut?: string;
   salaryType: SalaryType;
   hourlyRate?: number;
   fixedSalary?: number;
+  dailyRate?: number;
   advance: number;
   advances?: EmployeeAdvance[];
   notes?: string;
@@ -411,6 +414,18 @@ export type Employee = {
   attendanceRecords?: AttendanceRecord[];
   dailyAttendance?: DailyAttendanceEntry[];
   isDeleted?: boolean;
+
+  // Palestinian HR fields
+  nationalId?: string;
+  gender?: EmployeeGender;
+  city?: string;
+  jobTitle?: string;
+  hireDate?: string;
+  contractType?: ContractType;
+  insuranceNumber?: string;
+  bankAccount?: string;
+  emergencyContact?: string;
+  currency?: "ILS" | "USD" | "JOD";
 };
 
 // ── General Ledger ────────────────────────────────────────────────────────────

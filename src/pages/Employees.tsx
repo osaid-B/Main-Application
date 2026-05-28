@@ -346,10 +346,13 @@ function getDailyAttendanceSummaryForRange(employee: Employee, range: Attendance
 
 function getEmployeePayrollForRange(employee: Employee, range: AttendanceRange) {
   const summary = getDailyAttendanceSummaryForRange(employee, range);
-  const gross =
+  const presentDays = summary.present + summary.late + summary.halfDay * 0.5;
+  const gross: number =
     employee.salaryType === "hourly"
       ? summary.totalHours * Number(employee.hourlyRate || 0)
-      : Number(employee.fixedSalary || 0);
+      : employee.salaryType === "daily"
+        ? presentDays * Number(employee.dailyRate || 0)
+        : Number(employee.fixedSalary || 0);
   const net = gross - summary.advance;
   return { totalHours: summary.totalHours, gross, advance: summary.advance, net };
 }
