@@ -13,6 +13,7 @@ export interface AIChatRequest {
     page?: string;
     entityId?: string;
     language?: "ar" | "en";
+    dataContext?: Record<string, unknown>;
   };
 }
 

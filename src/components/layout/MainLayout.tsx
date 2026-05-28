@@ -257,16 +257,6 @@ export default function MainLayout() {
           </div>
         </div>
 
-        <button
-          onClick={() => openAI()}
-          className="app-floating-ai"
-          type="button"
-          aria-label={t.layout.mobileOpenAI}
-        >
-          <span>AI</span>
-          <small>{t.layout.aiCopilot}</small>
-        </button>
-
         {logoutPending && (
           <div className="logout-confirm-toast" role="alertdialog" aria-label="Confirm sign out">
             <div className="logout-confirm-icon">

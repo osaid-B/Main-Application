@@ -1,7 +1,14 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Bot, X } from "lucide-react";
+import { useData } from "../../context/DataContext";
+import { useFactory } from "../../context/FactoryContext";
 import { aiService } from "../../services/ai.service";
-import type { AIMessage, AIQuickAction } from "../../types/ai.types";
+import { buildAIContext, buildSmartAlerts, type AISmartAlert } from "../../services/aiDataService";
+import type { AIMessage } from "../../types/ai.types";
 import AIChatMessage from "./AIChatMessage";
+import "./AIAssistantPanel.css";
+
+type Tab = "chat" | "reports" | "alerts";
 
 type AIAssistantPanelProps = {
   isOpen: boolean;
@@ -9,492 +16,289 @@ type AIAssistantPanelProps = {
   initialPrompt?: string;
 };
 
+const QUICK_REPORTS = [
+  { id: "summary",     icon: "📊", label: "ملخص اليوم",          prompt: "ما هو ملخص أداء اليوم؟" },
+  { id: "overdue",     icon: "⚠️", label: "الفواتير المتأخرة",    prompt: "اعرض لي جميع الفواتير المتأخرة مع المبالغ" },
+  { id: "low-stock",   icon: "📦", label: "المخزون المنخفض",      prompt: "ما هي المنتجات التي تحتاج إعادة طلب؟" },
+  { id: "factory",     icon: "🏭", label: "حالة المصنع",          prompt: "ما هي حالة أوامر الإنتاج الحالية؟" },
+  { id: "top-clients", icon: "💰", label: "أفضل العملاء",         prompt: "من هم أفضل 5 عملاء من حيث المبيعات؟" },
+  { id: "revenue",     icon: "📈", label: "الإيرادات هذا الشهر",  prompt: "ما هو إجمالي الإيرادات هذا الشهر؟" },
+] as const;
+
 export default function AIAssistantPanel({
   isOpen,
   onClose,
   initialPrompt,
 }: AIAssistantPanelProps) {
-  const currentPage = window.location.pathname;
+  const data = useData();
+  const factory = useFactory();
 
+  const [tab, setTab] = useState<Tab>("chat");
   const [messages, setMessages] = useState<AIMessage[]>([
     {
-      id: "welcome-message",
+      id: "welcome",
       role: "assistant",
-      content:
-        "مرحبًا، أنا AI Copilot. أستطيع مساعدتك في فهم البيانات، تلخيص الصفحات، واقتراح الخطوات التالية.",
+      content: "مرحبًا، أنا AI Copilot. أستطيع مساعدتك في فهم البيانات، تلخيص الصفحات، واقتراح الخطوات التالية.",
     },
   ]);
-
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [lastSuggestions, setLastSuggestions] = useState<string[]>([]);
+  const [alerts, setAlerts] = useState<AISmartAlert[]>([]);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const lastInitialPromptRef = useRef("");
 
-  const quickActions = useMemo<AIQuickAction[]>(() => {
-    if (currentPage.includes("customers")) {
-      return [
-        {
-          id: "customers-summary",
-          label: "تلخيص العملاء",
-          prompt: "لخص حالة العملاء الحاليين",
-        },
-        {
-          id: "customers-risk",
-          label: "عملاء يحتاجون متابعة",
-          prompt: "من العملاء الذين يحتاجون متابعة الآن؟",
-        },
-        {
-          id: "customers-growth",
-          label: "فرص النمو",
-          prompt: "ما فرص النمو أو التحسين في بيانات العملاء؟",
-        },
-      ];
+  // Compute alerts when panel opens
+  useEffect(() => {
+    if (isOpen) {
+      setAlerts(buildSmartAlerts(data, factory));
     }
-
-    if (currentPage.includes("invoices")) {
-      return [
-        {
-          id: "invoices-overview",
-          label: "تلخيص الفواتير",
-          prompt: "لخص حالة الفواتير الحالية",
-        },
-        {
-          id: "invoices-debit",
-          label: "الفواتير المتأخرة",
-          prompt: "ما وضع الفواتير المتأخرة أو غير المسددة؟",
-        },
-        {
-          id: "invoices-actions",
-          label: "إجراءات مقترحة",
-          prompt: "اقترح أهم الإجراءات المطلوبة بخصوص الفواتير",
-        },
-      ];
-    }
-
-    if (currentPage.includes("products")) {
-      return [
-        {
-          id: "products-stock",
-          label: "تحليل المخزون",
-          prompt: "حلل حالة المخزون الحالية",
-        },
-        {
-          id: "products-alerts",
-          label: "تنبيهات المخزون",
-          prompt: "ما أهم تنبيهات المخزون الآن؟",
-        },
-        {
-          id: "products-actions",
-          label: "إجراءات سريعة",
-          prompt: "ما الإجراءات المقترحة لتحسين حالة المنتجات؟",
-        },
-      ];
-    }
-
-    if (currentPage.includes("dashboard")) {
-      return [
-        {
-          id: "dashboard-summary",
-          label: "ملخص تنفيذي",
-          prompt: "اعطني ملخصًا تنفيذيًا سريعًا عن الداشبورد",
-        },
-        {
-          id: "dashboard-alerts",
-          label: "أهم التنبيهات",
-          prompt: "ما أهم التنبيهات في البيانات الحالية؟",
-        },
-        {
-          id: "dashboard-actions",
-          label: "الإجراء التالي",
-          prompt: "ما أهم إجراء يجب اتخاذه الآن؟",
-        },
-      ];
-    }
-
-    return [
-      {
-        id: "general-summary",
-        label: "تلخيص الصفحة",
-        prompt: "لخص محتوى هذه الصفحة",
-      },
-      {
-        id: "general-alerts",
-        label: "أهم التنبيهات",
-        prompt: "ما أهم التنبيهات أو الملاحظات في هذه الصفحة؟",
-      },
-      {
-        id: "general-actions",
-        label: "إجراءات مقترحة",
-        prompt: "ما الإجراءات المقترحة بناءً على هذه الصفحة؟",
-      },
-    ];
-  }, [currentPage]);
+  }, [isOpen, data, factory]);
 
   useEffect(() => {
     if (!isOpen) return;
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading, isOpen]);
 
-  const handleSend = useCallback(async (customMessage?: string) => {
-    const messageToSend = (customMessage || input).trim();
-
-    if (!messageToSend || loading) return;
-
-    const userMessage: AIMessage = {
-      id: `${Date.now()}-user`,
-      role: "user",
-      content: messageToSend,
+  // Escape key closes panel
+  useEffect(() => {
+    if (!isOpen) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
     };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [isOpen, onClose]);
 
-    setMessages((prev) => [...prev, userMessage]);
-    setInput("");
-    setLoading(true);
+  const handleSend = useCallback(
+    async (customMessage?: string) => {
+      const msg = (customMessage ?? input).trim();
+      if (!msg || loading) return;
 
-    try {
-      const response = await aiService.sendMessage({
-        message: messageToSend,
-        context: {
-          page: currentPage,
-          language: "ar",
-        },
-      });
+      const userMessage: AIMessage = { id: `${Date.now()}-user`, role: "user", content: msg };
+      setMessages((prev) => [...prev, userMessage]);
+      setInput("");
+      setLoading(true);
 
-      const assistantMessage: AIMessage = {
-        id: `${Date.now()}-assistant`,
-        role: "assistant",
-        content: response.reply,
-      };
+      // Switch to chat tab when triggered from other tabs
+      setTab("chat");
 
-      setMessages((prev) => [...prev, assistantMessage]);
-      setLastSuggestions(response.suggestions ?? []);
-    } catch {
-      const errorMessage: AIMessage = {
-        id: `${Date.now()}-error`,
-        role: "assistant",
-        content: "حدث خطأ أثناء الحصول على الرد. حاول مرة أخرى.",
-      };
+      try {
+        const ctx = buildAIContext(data, factory);
+        const response = await aiService.sendMessage({
+          message: msg,
+          context: {
+            page: window.location.pathname,
+            language: "ar",
+            dataContext: ctx,
+          },
+        });
 
-      setMessages((prev) => [...prev, errorMessage]);
-      setLastSuggestions([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [currentPage, input, loading]);
+        const assistantMessage: AIMessage = {
+          id: `${Date.now()}-assistant`,
+          role: "assistant",
+          content: response.reply,
+        };
+        setMessages((prev) => [...prev, assistantMessage]);
+        setLastSuggestions(response.suggestions ?? []);
+      } catch {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `${Date.now()}-error`,
+            role: "assistant",
+            content: "حدث خطأ أثناء الحصول على الرد. حاول مرة أخرى.",
+          },
+        ]);
+        setLastSuggestions([]);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [data, factory, input, loading]
+  );
 
   useEffect(() => {
     if (!isOpen || !initialPrompt) return;
     if (lastInitialPromptRef.current === initialPrompt) return;
-
     lastInitialPromptRef.current = initialPrompt;
     void handleSend(initialPrompt);
   }, [handleSend, initialPrompt, isOpen]);
 
-  const handleClearChat = () => {
+  function handleClearChat() {
     setMessages([
       {
-        id: "welcome-message-reset",
+        id: `welcome-reset-${Date.now()}`,
         role: "assistant",
-        content:
-          "تم بدء محادثة جديدة. يمكنك سؤالي عن الصفحة الحالية أو اختيار اقتراح جاهز.",
+        content: "تم بدء محادثة جديدة.",
       },
     ]);
     setLastSuggestions([]);
     setInput("");
     lastInitialPromptRef.current = "";
-  };
-
-  if (!isOpen) return null;
+  }
 
   return (
-    <div style={styles.overlay}>
-      <div style={styles.panel}>
-        <div style={styles.header}>
-          <div>
-            <div style={styles.headerTopRow}>
-              <h2 style={styles.title}>AI Copilot</h2>
-              <span style={styles.statusBadge}>Ready</span>
+    <div className={`ai-panel-root${isOpen ? " is-open" : ""}`} dir="rtl">
+      {/* Side tab */}
+      <button type="button" className="ai-panel-tab" onClick={onClose} aria-label="أغلق لوحة الذكاء الاصطناعي">
+        <Bot size={16} />
+        <span className="ai-panel-tab-label">AI</span>
+      </button>
+
+      {/* Panel body */}
+      <div className="ai-panel-body" role="dialog" aria-label="AI Copilot" aria-modal="false">
+        {/* Header */}
+        <div className="ai-panel-header">
+          <div className="ai-panel-header-left">
+            <div className="ai-panel-header-icon">AI</div>
+            <h2 className="ai-panel-header-title">AI Copilot</h2>
+            <span className="ai-panel-status">Ready</span>
+          </div>
+          <div className="ai-panel-header-actions">
+            <button type="button" className="ai-panel-clear-btn" onClick={handleClearChat}>
+              مسح
+            </button>
+            <button type="button" className="ai-panel-close-btn" onClick={onClose} aria-label="إغلاق">
+              <X size={14} />
+            </button>
+          </div>
+        </div>
+
+        {/* Tabs nav */}
+        <div className="ai-panel-tabs-nav" role="tablist">
+          {(["chat", "reports", "alerts"] as Tab[]).map((t) => (
+            <button
+              key={t}
+              type="button"
+              role="tab"
+              aria-selected={tab === t}
+              className={`ai-panel-tab-btn${tab === t ? " is-active" : ""}`}
+              onClick={() => setTab(t)}
+            >
+              {t === "chat" && "محادثة"}
+              {t === "reports" && "تقارير سريعة"}
+              {t === "alerts" && `تنبيهات${alerts.length > 0 ? ` (${alerts.length})` : ""}`}
+            </button>
+          ))}
+        </div>
+
+        {/* ── Chat tab ── */}
+        {tab === "chat" && (
+          <div className="ai-panel-tab-content">
+            <div className="ai-chat-messages">
+              {messages.map((message) => (
+                <AIChatMessage key={message.id} message={message} />
+              ))}
+
+              {loading && (
+                <AIChatMessage
+                  message={{ id: "loading", role: "assistant", content: "جاري التحليل..." }}
+                />
+              )}
+
+              {!loading && lastSuggestions.length > 0 && (
+                <div className="ai-followup-box">
+                  <div className="ai-followup-label">أسئلة متابعة مقترحة</div>
+                  <div className="ai-followup-chips">
+                    {lastSuggestions.map((s) => (
+                      <button
+                        key={s}
+                        type="button"
+                        className="ai-followup-chip"
+                        onClick={() => void handleSend(s)}
+                      >
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div ref={messagesEndRef} />
             </div>
 
-            <p style={styles.subtitle}>
-              الصفحة الحالية: <strong>{currentPage}</strong>
-            </p>
-          </div>
-
-          <div style={styles.headerActions}>
-            <button type="button" onClick={handleClearChat} style={styles.headerButton}>
-              Clear
-            </button>
-            <button type="button" onClick={onClose} style={styles.closeButton}>
-              ×
-            </button>
-          </div>
-        </div>
-
-        <div style={styles.contextBox}>
-          <div style={styles.contextTitle}>اقتراحات سريعة</div>
-          <div style={styles.quickActionsRow}>
-            {quickActions.map((action) => (
-              <button
-                key={action.id}
-                type="button"
-                style={styles.quickActionButton}
-                onClick={() => void handleSend(action.prompt)}
-                disabled={loading}
-              >
-                {action.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div style={styles.messagesContainer}>
-          {messages.map((message) => (
-            <AIChatMessage key={message.id} message={message} />
-          ))}
-
-          {loading && (
-            <AIChatMessage
-              message={{
-                id: "loading",
-                role: "assistant",
-                content: "جاري التحليل والتفكير...",
-              }}
-            />
-          )}
-
-          {!loading && lastSuggestions.length > 0 && (
-            <div style={styles.followUpBox}>
-              <div style={styles.followUpTitle}>أسئلة متابعة مقترحة</div>
-
-              <div style={styles.followUpActions}>
-                {lastSuggestions.map((suggestion) => (
-                  <button
-                    key={suggestion}
-                    type="button"
-                    style={styles.followUpChip}
-                    onClick={() => void handleSend(suggestion)}
-                  >
-                    {suggestion}
-                  </button>
-                ))}
+            <div className="ai-chat-footer">
+              <div className="ai-chat-input-row">
+                <input
+                  type="text"
+                  className="ai-chat-input"
+                  placeholder="اسأل عن بياناتك..."
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") void handleSend();
+                  }}
+                  disabled={loading}
+                />
+                <button
+                  type="button"
+                  className="ai-chat-send-btn"
+                  onClick={() => void handleSend()}
+                  disabled={loading || !input.trim()}
+                >
+                  إرسال
+                </button>
               </div>
             </div>
-          )}
-
-          <div ref={messagesEndRef} />
-        </div>
-
-        <div style={styles.footer}>
-          <div style={styles.inputWrapper}>
-            <input
-              type="text"
-              placeholder="اسأل عن هذه الصفحة، أو اطلب ملخصًا أو إجراءً مقترحًا..."
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  void handleSend();
-                }
-              }}
-              style={styles.input}
-              disabled={loading}
-            />
-
-            <button
-              type="button"
-              onClick={() => void handleSend()}
-              style={styles.sendButton}
-              disabled={loading || !input.trim()}
-            >
-              إرسال
-            </button>
           </div>
+        )}
 
-          <p style={styles.footerHint}>
-            استخدمه للتلخيص، التحليل، اقتراح الخطوات التالية، وشرح الأرقام بسرعة.
-          </p>
-        </div>
+        {/* ── Quick Reports tab ── */}
+        {tab === "reports" && (
+          <div className="ai-panel-tab-content">
+            <div className="ai-reports-grid">
+              <p className="ai-report-section-label">اختر تقريرًا لإرساله تلقائيًا للمحادثة</p>
+              {QUICK_REPORTS.map((r) => (
+                <button
+                  key={r.id}
+                  type="button"
+                  className="ai-report-btn"
+                  disabled={loading}
+                  onClick={() => void handleSend(r.prompt)}
+                >
+                  <span className="ai-report-btn-icon">{r.icon}</span>
+                  <span>
+                    {r.label}
+                    <span className="ai-report-btn-desc">{r.prompt}</span>
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ── Smart Alerts tab ── */}
+        {tab === "alerts" && (
+          <div className="ai-panel-tab-content">
+            <div className="ai-alerts-list">
+              {alerts.length === 0 ? (
+                <div className="ai-alerts-empty">
+                  <span style={{ fontSize: "28px" }}>✅</span>
+                  <span>لا توجد تنبيهات حالية</span>
+                </div>
+              ) : (
+                alerts.map((alert, i) => (
+                  <div key={i} className={`ai-alert-card ai-alert-card--${alert.severity}`}>
+                    <span className="ai-alert-dot" />
+                    <div className="ai-alert-content">
+                      <p className="ai-alert-title">{alert.title}</p>
+                      <p className="ai-alert-detail">{alert.detail}</p>
+                    </div>
+                    <button
+                      type="button"
+                      className="ai-alert-ask-btn"
+                      onClick={() => void handleSend(`أخبرني المزيد عن: ${alert.title}`)}
+                    >
+                      اسأل
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
 }
-
-const styles: Record<string, React.CSSProperties> = {
-  overlay: {
-    position: "fixed",
-    inset: 0,
-    backgroundColor: "rgba(15, 23, 42, 0.18)",
-    display: "flex",
-    justifyContent: "flex-end",
-    zIndex: 9999,
-  },
-  panel: {
-    width: "min(460px, 100vw)",
-    maxWidth: "100%",
-    height: "100dvh",
-    backgroundColor: "#ffffff",
-    display: "flex",
-    flexDirection: "column",
-    boxShadow: "-8px 0 30px rgba(15, 23, 42, 0.14)",
-  },
-  header: {
-    display: "flex",
-    justifyContent: "space-between",
-    gap: "12px",
-    alignItems: "flex-start",
-    padding: "18px",
-    borderBottom: "1px solid #e5e7eb",
-  },
-  headerTopRow: {
-    display: "flex",
-    alignItems: "center",
-    gap: "10px",
-    marginBottom: "6px",
-  },
-  title: {
-    margin: 0,
-    fontSize: "20px",
-    fontWeight: 800,
-    color: "#111827",
-  },
-  subtitle: {
-    margin: 0,
-    fontSize: "13px",
-    color: "#6b7280",
-    lineHeight: 1.5,
-  },
-  statusBadge: {
-    display: "inline-flex",
-    alignItems: "center",
-    padding: "5px 10px",
-    borderRadius: "999px",
-    backgroundColor: "#ecfdf5",
-    color: "#059669",
-    fontSize: "11px",
-    fontWeight: 700,
-  },
-  headerActions: {
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
-  },
-  headerButton: {
-    border: "1px solid #d1d5db",
-    backgroundColor: "#ffffff",
-    color: "#374151",
-    borderRadius: "10px",
-    padding: "8px 10px",
-    fontSize: "12px",
-    fontWeight: 600,
-    cursor: "pointer",
-  },
-  closeButton: {
-    border: "none",
-    background: "#f3f4f6",
-    width: "36px",
-    height: "36px",
-    borderRadius: "10px",
-    fontSize: "22px",
-    lineHeight: 1,
-    cursor: "pointer",
-    color: "#111827",
-  },
-  contextBox: {
-    padding: "14px 18px",
-    borderBottom: "1px solid #f1f5f9",
-    backgroundColor: "#fafcff",
-  },
-  contextTitle: {
-    fontSize: "12px",
-    fontWeight: 700,
-    color: "#475569",
-    marginBottom: "10px",
-  },
-  quickActionsRow: {
-    display: "flex",
-    flexWrap: "wrap",
-    gap: "8px",
-  },
-  quickActionButton: {
-    border: "1px solid #dbeafe",
-    backgroundColor: "#eff6ff",
-    color: "#1d4ed8",
-    borderRadius: "999px",
-    padding: "8px 12px",
-    fontSize: "12px",
-    fontWeight: 600,
-    cursor: "pointer",
-  },
-  messagesContainer: {
-    flex: 1,
-    overflowY: "auto",
-    padding: "16px",
-    display: "flex",
-    flexDirection: "column",
-    gap: "12px",
-    backgroundColor: "#fcfcfd",
-  },
-  followUpBox: {
-    marginTop: "4px",
-    padding: "12px",
-    border: "1px solid #e5e7eb",
-    borderRadius: "14px",
-    backgroundColor: "#ffffff",
-  },
-  followUpTitle: {
-    fontSize: "12px",
-    fontWeight: 700,
-    color: "#475569",
-    marginBottom: "10px",
-  },
-  followUpActions: {
-    display: "flex",
-    flexWrap: "wrap",
-    gap: "8px",
-  },
-  followUpChip: {
-    border: "1px solid #d1d5db",
-    backgroundColor: "#f9fafb",
-    color: "#111827",
-    borderRadius: "999px",
-    padding: "8px 12px",
-    fontSize: "12px",
-    cursor: "pointer",
-  },
-  footer: {
-    borderTop: "1px solid #e5e7eb",
-    padding: "16px",
-    backgroundColor: "#ffffff",
-  },
-  inputWrapper: {
-    display: "flex",
-    gap: "10px",
-    alignItems: "center",
-  },
-  input: {
-    flex: 1,
-    padding: "13px 14px",
-    borderRadius: "12px",
-    border: "1px solid #d1d5db",
-    fontSize: "14px",
-    outline: "none",
-  },
-  sendButton: {
-    border: "none",
-    backgroundColor: "#111827",
-    color: "#ffffff",
-    padding: "13px 16px",
-    borderRadius: "12px",
-    cursor: "pointer",
-    fontSize: "14px",
-    fontWeight: 700,
-    minWidth: "84px",
-  },
-  footerHint: {
-    margin: "10px 0 0",
-    fontSize: "12px",
-    color: "#6b7280",
-    lineHeight: 1.5,
-  },
-};

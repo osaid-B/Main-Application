@@ -39,7 +39,7 @@ import {
 import { isSuccessfulPaymentStatus, roundMoney } from "../data/relations";
 import { POS_CASHIERS, type PosCashier } from "../data/posMock";
 
-interface DataContextValue {
+export interface DataContextValue {
   // Raw entity lists
   customers: Customer[];
   departments: Department[];

@@ -27,7 +27,7 @@ import {
   FACTORY_PRODUCTS,
 } from "../data/factoryMock";
 
-interface FactoryContextValue {
+export interface FactoryContextValue {
   // Data
   factoryOrders: ProductionOrder[];
   qualityChecks: QualityCheck[];
