@@ -686,3 +686,93 @@ kbd {
 /* Atlas accent text for body when no workspace set (defaults to blue/Company) */
 :root { --app-text-light: #94a3b8; }
 
+/* ─── Dark Mode Token Overrides ─────────────────────────────────────────── */
+[data-theme="dark"] {
+  /* Backgrounds */
+  --app-bg: #0f1117;
+  --app-surface: #1a1d27;
+  --app-surface-strong: #1e2130;
+  --app-surface-muted: #13151f;
+  --app-surface-hover: #1e2130;
+
+  /* Borders */
+  --app-border: rgba(45, 49, 72, 0.9);
+  --app-border-strong: rgba(60, 66, 96, 0.6);
+
+  /* Text */
+  --app-text: #f1f5f9;
+  --app-text-soft: #cbd5e1;
+  --app-text-muted: #94a3b8;
+  --app-text-subtle: #64748b;
+  --app-text-light: #475569;
+
+  /* Accent — lighter blue for dark bg contrast */
+  --app-accent-subtle: #1e2d4a;
+  --app-accent-text: var(--atlas-blue-400);
+
+  /* Shadows — more opaque on dark */
+  --app-shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --app-shadow-soft: 0 1px 3px rgba(0, 0, 0, 0.4), 0 1px 6px rgba(0, 0, 0, 0.3);
+  --app-shadow-strong: 0 4px 12px rgba(0, 0, 0, 0.5), 0 2px 4px rgba(0, 0, 0, 0.3);
+  --app-shadow-overlay: 0 20px 60px rgba(0, 0, 0, 0.6), 0 4px 16px rgba(0, 0, 0, 0.4);
+
+  /* Status (brighter for dark bg readability) */
+  --app-success: #22c55e;
+  --app-success-subtle: #0f2a1a;
+  --app-warning: #f59e0b;
+  --app-warning-subtle: #2a1f0a;
+  --app-danger: #ef4444;
+  --app-danger-subtle: #2a0f0f;
+  --app-info: #38bdf8;
+  --app-info-subtle: #0c1f2e;
+
+  /* Sidebar — even darker */
+  --sidebar-bg: #0d0f18;
+  --sidebar-surface: #13151f;
+  --sidebar-border: rgba(255, 255, 255, 0.05);
+}
+
+[data-theme="dark"] body {
+  transition: background 220ms ease, color 220ms ease;
+}
+
+/* Table rows in dark mode */
+[data-theme="dark"] .app-data-table td {
+  border-top-color: rgba(45, 49, 72, 0.6);
+}
+
+/* kbd in dark mode */
+[data-theme="dark"] kbd {
+  background: #1e2130;
+  border-color: rgba(255, 255, 255, 0.12);
+  border-bottom-color: rgba(255, 255, 255, 0.2);
+  color: var(--app-text-muted);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.4);
+}
+
+/* Status chips in dark mode */
+[data-theme="dark"] .status-chip.neutral {
+  background: #1e2130;
+  border-color: var(--app-border);
+  color: var(--app-text-soft);
+}
+
+/* Workspace overrides for dark mode — keep accent colors readable */
+[data-theme="dark"][data-workspace="company"],
+[data-theme="dark"] [data-workspace="company"] {
+  --app-accent-subtle: #1e2d4a;
+  --app-accent-text: var(--atlas-blue-300);
+}
+
+[data-theme="dark"][data-workspace="pos"],
+[data-theme="dark"] [data-workspace="pos"] {
+  --app-accent-subtle: #0f2a1e;
+  --app-accent-text: var(--atlas-green-300);
+}
+
+[data-theme="dark"][data-workspace="factory"],
+[data-theme="dark"] [data-workspace="factory"] {
+  --app-accent-subtle: #1e1540;
+  --app-accent-text: var(--atlas-purple-300);
+}
+
