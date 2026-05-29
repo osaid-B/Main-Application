@@ -290,7 +290,7 @@ function CustomerRow({
           {c.classification === "risk" && <Badge variant="danger" size="sm">{t.customers.filters.risk}</Badge>}
         </div>
       </td>
-      <td>
+      <td className="col-badge">
         {c.type ? (
           <Badge variant={typeBadgeVariant} size="sm">
             {TYPE_LABELS[c.type]}
@@ -306,7 +306,7 @@ function CustomerRow({
         </div>
       </td>
       <td>{c.paymentTerms ? PAYMENT_TERMS_LABELS[c.paymentTerms] : <span className={styles.zeroBalance}>—</span>}</td>
-      <td>
+      <td className="col-num">
         <span className={`${styles.balance} ${styles[`bal_${balanceTone}`]}`}>
           {balance > 0
             ? formatBalance(balance, c.currency ?? "ILS")
@@ -314,16 +314,16 @@ function CustomerRow({
           {alerts.length > 0 && <AlertTriangle size={12} className={styles.alertIcon} aria-hidden />}
         </span>
       </td>
-      <td className={styles.timeCell}>
+      <td className={`${styles.timeCell} col-date`}>
         {(liveLastOrder ?? c.lastOrderDate) ? relativeDate((liveLastOrder ?? c.lastOrderDate)!) : c.joinedAt ? relativeDate(c.joinedAt) : "—"}
       </td>
-      <td>
+      <td className="col-badge">
         <span className={`${styles.statusPill} ${styles[`statusPill_${statusNorm}`]}`}>
           <span className={`status-dot status-dot--${statusColor}`} aria-hidden />
           {t.customers.status[statusNorm]}
         </span>
       </td>
-      <td className={styles.actionsCell}>
+      <td className={`${styles.actionsCell} col-actions`}>
         <div ref={menuWrapRef} className={styles.menuWrap}>
           <Button
             variant="icon"

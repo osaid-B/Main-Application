@@ -1586,7 +1586,7 @@ export default function Suppliers() {
 
                     <thead>
                       <tr>
-                        <th>
+                        <th className="col-entity">
                           <button
                             type="button"
                             className="table-sort-btn"
@@ -1600,7 +1600,7 @@ export default function Suppliers() {
 
                         <th>{t.suppliers.cols.location}</th>
 
-                        <th>
+                        <th className="col-currency">
                           <button
                             type="button"
                             className="table-sort-btn"
@@ -1610,7 +1610,7 @@ export default function Suppliers() {
                           </button>
                         </th>
 
-                        <th>
+                        <th className="col-badge">
                           <button
                             type="button"
                             className="table-sort-btn"
@@ -1620,7 +1620,7 @@ export default function Suppliers() {
                           </button>
                         </th>
 
-                        <th>{t.suppliers.cols.actions}</th>
+                        <th className="col-actions">{t.suppliers.cols.actions}</th>
                       </tr>
                     </thead>
 
@@ -1659,7 +1659,7 @@ export default function Suppliers() {
                             </div>
                           </td>
 
-                          <td>
+                          <td className="col-currency">
                             <div className="supplier-table-cell balance-stack">
                               <strong className="balance-cell">
                                 {money(supplier.outstandingBalance)}
@@ -1667,7 +1667,7 @@ export default function Suppliers() {
                             </div>
                           </td>
 
-                          <td>
+                          <td className="col-badge">
                             <div className="supplier-table-cell status-stack">
                               <Badge
                                 variant={
@@ -1691,7 +1691,7 @@ export default function Suppliers() {
                             </div>
                           </td>
 
-                          <td className="supplier-actions-cell">
+                          <td className="supplier-actions-cell col-actions">
                             <div className="supplier-actions-menu-wrap">
                               <Button
                                 variant="ghost"
