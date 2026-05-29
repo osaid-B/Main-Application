@@ -727,3 +727,62 @@ export type CostingEntry = {
   variance: number; // actual - standard
 };
 
+
+// ─── Leave Management ─────────────────────────────────────────────────────────
+
+export type LeaveType =
+  | "annual"
+  | "sick"
+  | "maternity"
+  | "paternity"
+  | "emergency"
+  | "hajj"
+  | "unpaid";
+
+export type LeaveStatus = "pending" | "approved" | "rejected" | "cancelled";
+
+export type LeaveRequest = {
+  id: string;
+  employeeId: string;
+  leaveType: LeaveType;
+  startDate: string;
+  endDate: string;
+  totalDays: number;
+  reason: string;
+  attachmentName?: string;
+  status: LeaveStatus;
+  createdAt: string;
+  reviewedAt?: string;
+  reviewedBy?: string;
+  rejectionReason?: string;
+};
+
+export type LeaveBalanceEntry = {
+  entitled: number;
+  used: number;
+  pending: number;
+};
+
+export type LeaveBalance = {
+  employeeId: string;
+  year: number;
+  annual: LeaveBalanceEntry;
+  sick: LeaveBalanceEntry;
+  maternity: LeaveBalanceEntry;
+  paternity: LeaveBalanceEntry;
+  emergency: LeaveBalanceEntry;
+  hajj: LeaveBalanceEntry;
+  unpaid: LeaveBalanceEntry;
+  hajjEverUsed: boolean;
+};
+
+export type LeavePolicy = {
+  annualEntitlement: number;
+  sickEntitlement: number;
+  maternityDays: number;
+  paternityDays: number;
+  emergencyDaysLimit: number;
+  medCertAfterDays: number;
+  advanceNoticeDays: number;
+  minServiceForHajjMonths: number;
+};
