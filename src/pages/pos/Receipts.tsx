@@ -161,18 +161,28 @@ export default function Receipts() {
           </div>
         </div>
 
-        <div className={styles.tableWrap}>
-          <table className={styles.table}>
+        <div className={`${styles.tableWrap} atlas-table-wrapper`}>
+          <table className={`${styles.table} atlas-table`}>
+            <colgroup>
+              <col className="col-w-110" />
+              <col className="col-date col-w-130" />
+              <col className="col-w-130" />
+              <col className="col-w-80" />
+              <col className="col-currency col-w-120" />
+              <col className="col-w-120" />
+              <col className="col-w-90" />
+              <col className="col-actions" />
+            </colgroup>
             <thead>
               <tr>
-                <th>{tc.cols.receipt}</th>
-                <th>{tc.cols.dateTime}</th>
+                <th className="col-code">{tc.cols.receipt}</th>
+                <th className="col-date">{tc.cols.dateTime}</th>
                 <th>{tc.cols.cashier}</th>
-                <th>{tc.cols.items}</th>
-                <th className={styles.numEnd}>{tc.cols.total}</th>
-                <th>{tc.cols.method}</th>
-                <th>{tc.cols.status}</th>
-                <th>{tc.cols.actions}</th>
+                <th className="col-num">{tc.cols.items}</th>
+                <th className="col-num">{tc.cols.total}</th>
+                <th className="col-badge">{tc.cols.method}</th>
+                <th className="col-badge">{tc.cols.status}</th>
+                <th className="col-actions">{tc.cols.actions}</th>
               </tr>
             </thead>
             <tbody>

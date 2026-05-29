@@ -152,15 +152,22 @@ export default function LoyaltyProfile() {
 
         {/* Tab: History */}
         {activeTab === "history" && (
-          <div className={styles.tableWrap}>
-            <table className={styles.table}>
+          <div className={`${styles.tableWrap} atlas-table-wrapper`}>
+            <table className={`${styles.table} atlas-table`}>
+              <colgroup>
+                <col className="col-date col-w-130" />
+                <col className="col-w-110" />
+                <col className="col-w-90" />
+                <col />
+                <col className="col-w-90" />
+              </colgroup>
               <thead>
                 <tr>
-                  <th>{tc.cols.date}</th>
-                  <th>{tc.cols.action}</th>
-                  <th className={styles.numEnd}>{tc.cols.coins}</th>
+                  <th className="col-date">{tc.cols.date}</th>
+                  <th className="col-badge">{tc.cols.action}</th>
+                  <th className="col-num">{tc.cols.coins}</th>
                   <th>{tc.cols.trigger}</th>
-                  <th className={styles.numEnd}>{tc.cols.balance}</th>
+                  <th className="col-num">{tc.cols.balance}</th>
                 </tr>
               </thead>
               <tbody>

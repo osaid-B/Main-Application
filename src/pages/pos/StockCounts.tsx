@@ -105,18 +105,28 @@ export default function StockCounts() {
           </div>
         </div>
 
-        <div className={styles.tableWrap}>
-          <table className={styles.table}>
+        <div className={`${styles.tableWrap} atlas-table-wrapper`}>
+          <table className={`${styles.table} atlas-table`}>
+            <colgroup>
+              <col className="col-w-110" />
+              <col className="col-date col-w-120" />
+              <col />
+              <col className="col-w-100" />
+              <col className="col-w-80" />
+              <col className="col-w-100" />
+              <col className="col-w-130" />
+              <col className="col-actions" />
+            </colgroup>
             <thead>
               <tr>
-                <th>{tc.cols.countId}</th>
-                <th>{tc.cols.date}</th>
+                <th className="col-code">{tc.cols.countId}</th>
+                <th className="col-date">{tc.cols.date}</th>
                 <th>{tc.cols.location}</th>
-                <th>{tc.cols.status}</th>
-                <th className={styles.numEnd}>{tc.cols.items}</th>
-                <th className={styles.numEnd}>{tc.cols.variance}</th>
+                <th className="col-badge">{tc.cols.status}</th>
+                <th className="col-num">{tc.cols.items}</th>
+                <th className="col-num">{tc.cols.variance}</th>
                 <th>{tc.cols.countedBy}</th>
-                <th>{tc.cols.actions}</th>
+                <th className="col-actions">{tc.cols.actions}</th>
               </tr>
             </thead>
             <tbody>

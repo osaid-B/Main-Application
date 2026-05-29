@@ -127,16 +127,24 @@ export default function CoinsReports() {
           </div>
         </div>
 
-        <div className={styles.tableWrap}>
-          <table className={styles.table}>
+        <div className={`${styles.tableWrap} atlas-table-wrapper`}>
+          <table className={`${styles.table} atlas-table`}>
+            <colgroup>
+              <col />
+              <col className="col-date col-w-120" />
+              <col className="col-w-100" />
+              <col className="col-w-90" />
+              <col className="col-w-130" />
+              <col className="col-w-90" />
+            </colgroup>
             <thead>
               <tr>
                 <th>{tc.cols.customer}</th>
-                <th>{tc.cols.date}</th>
-                <th>{tc.cols.action}</th>
-                <th className={styles.numEnd}>{tc.cols.coins}</th>
+                <th className="col-date">{tc.cols.date}</th>
+                <th className="col-badge">{tc.cols.action}</th>
+                <th className="col-num">{tc.cols.coins}</th>
                 <th>{tc.cols.trigger}</th>
-                <th className={styles.numEnd}>{tc.cols.balanceAfter}</th>
+                <th className="col-num">{tc.cols.balanceAfter}</th>
               </tr>
             </thead>
             <tbody>

@@ -72,23 +72,33 @@ export default function FactorySources() {
           </select>
         </div>
 
-        <div className={styles.tableWrap}>
+        <div className={`${styles.tableWrap} atlas-table-wrapper`}>
           {isLoading ? (
             <Skeleton variant="rect" height={280} />
           ) : filtered.length === 0 ? (
             <EmptyState icon={<Globe size={32} />} title={tc.noData} />
           ) : (
-            <table className={styles.table}>
+            <table className={`${styles.table} atlas-table`}>
+              <colgroup>
+                <col />
+                <col className="col-w-90" />
+                <col className="col-w-160" />
+                <col className="col-w-100" />
+                <col className="col-w-100" />
+                <col className="col-currency col-w-120" />
+                <col className="col-currency col-w-130" />
+                <col className="col-date col-w-120" />
+              </colgroup>
               <thead>
                 <tr>
                   <th>{tc.cols.material}</th>
-                  <th>{tc.cols.origin}</th>
+                  <th className="col-badge">{tc.cols.origin}</th>
                   <th>{tc.cols.supplier}</th>
                   <th>{tc.cols.country}</th>
-                  <th className={styles.numEnd}>{tc.cols.quantity}</th>
-                  <th className={styles.numEnd}>{tc.cols.unitCost}</th>
-                  <th className={styles.numEnd}>{tc.cols.totalValue}</th>
-                  <th>{tc.cols.purchaseDate}</th>
+                  <th className="col-num">{tc.cols.quantity}</th>
+                  <th className="col-num">{tc.cols.unitCost}</th>
+                  <th className="col-num">{tc.cols.totalValue}</th>
+                  <th className="col-date">{tc.cols.purchaseDate}</th>
                 </tr>
               </thead>
               <tbody>

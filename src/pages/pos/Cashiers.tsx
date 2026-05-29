@@ -114,18 +114,28 @@ export default function Cashiers() {
           </div>
         </div>
 
-        <div className={styles.tableWrap}>
-          <table className={styles.table}>
+        <div className={`${styles.tableWrap} atlas-table-wrapper`}>
+          <table className={`${styles.table} atlas-table`}>
+            <colgroup>
+              <col />
+              <col className="col-w-100" />
+              <col className="col-w-90" />
+              <col className="col-w-110" />
+              <col className="col-currency col-w-120" />
+              <col className="col-w-100" />
+              <col className="col-date col-w-120" />
+              <col className="col-actions" />
+            </colgroup>
             <thead>
               <tr>
                 <th>{tc.cols.cashier}</th>
-                <th>{tc.cols.code}</th>
-                <th>{tc.cols.status}</th>
+                <th className="col-code">{tc.cols.code}</th>
+                <th className="col-badge">{tc.cols.status}</th>
                 <th>{tc.cols.shift}</th>
-                <th className={styles.numEnd}>{tc.cols.todaySales}</th>
-                <th className={styles.numEnd}>{tc.cols.transactions}</th>
-                <th>{tc.cols.lastActive}</th>
-                <th>{tc.cols.actions}</th>
+                <th className="col-num">{tc.cols.todaySales}</th>
+                <th className="col-num">{tc.cols.transactions}</th>
+                <th className="col-date">{tc.cols.lastActive}</th>
+                <th className="col-actions">{tc.cols.actions}</th>
               </tr>
             </thead>
             <tbody>

@@ -79,25 +79,38 @@ export default function FactoryQc() {
           </select>
         </div>
 
-        <div className={styles.tableWrap}>
+        <div className={`${styles.tableWrap} atlas-table-wrapper`}>
           {isLoading ? (
             <Skeleton variant="rect" height={240} />
           ) : filtered.length === 0 ? (
             <EmptyState icon={<ShieldCheck size={32} />} title={tc.noData} />
           ) : (
-            <table className={styles.table}>
+            <table className={`${styles.table} atlas-table`}>
+              <colgroup>
+                <col className="col-w-110" />
+                <col className="col-w-110" />
+                <col />
+                <col className="col-w-110" />
+                <col className="col-date" />
+                <col className="col-w-120" />
+                <col className="col-w-90" />
+                <col className="col-w-90" />
+                <col className="col-w-90" />
+                <col className="col-w-100" />
+                <col />
+              </colgroup>
               <thead>
                 <tr>
-                  <th>{tc.cols.checkId}</th>
-                  <th>{tc.cols.batch}</th>
+                  <th className="col-code">{tc.cols.checkId}</th>
+                  <th className="col-code">{tc.cols.batch}</th>
                   <th>{tc.cols.product}</th>
-                  <th>{tc.cols.order}</th>
-                  <th>{tc.cols.date}</th>
+                  <th className="col-code">{tc.cols.order}</th>
+                  <th className="col-date">{tc.cols.date}</th>
                   <th>{tc.cols.inspector}</th>
-                  <th className={styles.numEnd}>{tc.cols.sampleSize}</th>
-                  <th className={styles.numEnd}>{tc.cols.failedUnits}</th>
-                  <th className={styles.numEnd}>{tc.cols.defectRate}</th>
-                  <th>{tc.cols.status}</th>
+                  <th className="col-num">{tc.cols.sampleSize}</th>
+                  <th className="col-num">{tc.cols.failedUnits}</th>
+                  <th className="col-num">{tc.cols.defectRate}</th>
+                  <th className="col-badge">{tc.cols.status}</th>
                   <th>{tc.cols.notes}</th>
                 </tr>
               </thead>

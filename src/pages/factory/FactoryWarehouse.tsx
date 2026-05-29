@@ -47,22 +47,33 @@ export default function FactoryWarehouse() {
           <Kpi label={tc.kpi.utilisation}   value={`${utilPct}%`}                 tone="neutral" />
         </Grid>
 
-        <div className={styles.tableWrap}>
+        <div className={`${styles.tableWrap} atlas-table-wrapper`}>
           {isLoading ? (
             <Skeleton variant="rect" height={280} />
           ) : WAREHOUSE_LOCATIONS.length === 0 ? (
             <EmptyState icon={<Warehouse size={32} />} title={tc.noData} />
           ) : (
-            <table className={styles.table}>
+            <table className={`${styles.table} atlas-table`}>
+              <colgroup>
+                <col className="col-w-110" />
+                <col />
+                <col className="col-w-90" />
+                <col className="col-w-90" />
+                <col className="col-w-80" />
+                <col className="col-w-80" />
+                <col className="col-w-90" />
+                <col className="col-w-100" />
+                <col />
+              </colgroup>
               <thead>
                 <tr>
-                  <th>{tc.cols.locationId}</th>
+                  <th className="col-code">{tc.cols.locationId}</th>
                   <th>{tc.cols.name}</th>
                   <th>{tc.cols.zone}</th>
-                  <th className={styles.numEnd}>{tc.cols.capacity}</th>
-                  <th className={styles.numEnd}>{tc.cols.used}</th>
-                  <th className={styles.numEnd}>{tc.cols.free}</th>
-                  <th>{tc.cols.utilPct}</th>
+                  <th className="col-num">{tc.cols.capacity}</th>
+                  <th className="col-num">{tc.cols.used}</th>
+                  <th className="col-num">{tc.cols.free}</th>
+                  <th className="col-num">{tc.cols.utilPct}</th>
                   <th>{tc.cols.temperature}</th>
                   <th>{tc.cols.notes}</th>
                 </tr>

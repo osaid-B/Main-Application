@@ -63,25 +63,38 @@ export default function FactoryFinishedGoods() {
           </select>
         </div>
 
-        <div className={styles.tableWrap}>
+        <div className={`${styles.tableWrap} atlas-table-wrapper`}>
           {isLoading ? (
             <Skeleton variant="rect" height={280} />
           ) : filtered.length === 0 ? (
             <EmptyState icon={<Package size={32} />} title={tc.noData} />
           ) : (
-            <table className={styles.table}>
+            <table className={`${styles.table} atlas-table`}>
+              <colgroup>
+                <col />
+                <col className="col-w-110" />
+                <col className="col-w-100" />
+                <col className="col-w-90" />
+                <col className="col-w-90" />
+                <col className="col-w-100" />
+                <col className="col-currency col-w-120" />
+                <col className="col-currency col-w-120" />
+                <col className="col-w-90" />
+                <col className="col-date col-w-110" />
+                <col className="col-actions" />
+              </colgroup>
               <thead>
                 <tr>
                   <th>{tc.cols.name}</th>
-                  <th>{tc.cols.sku}</th>
-                  <th>{tc.cols.category}</th>
-                  <th className={styles.numEnd}>{tc.cols.onHand}</th>
-                  <th className={styles.numEnd}>{tc.cols.reserved}</th>
-                  <th className={styles.numEnd}>{tc.cols.available}</th>
-                  <th className={styles.numEnd}>{tc.cols.unitCost}</th>
-                  <th className={styles.numEnd}>{tc.cols.sellingPrice}</th>
-                  <th className={styles.numEnd}>{tc.cols.margin}</th>
-                  <th>{tc.cols.lastProduced}</th>
+                  <th className="col-code">{tc.cols.sku}</th>
+                  <th className="col-badge">{tc.cols.category}</th>
+                  <th className="col-num">{tc.cols.onHand}</th>
+                  <th className="col-num">{tc.cols.reserved}</th>
+                  <th className="col-num">{tc.cols.available}</th>
+                  <th className="col-num">{tc.cols.unitCost}</th>
+                  <th className="col-num">{tc.cols.sellingPrice}</th>
+                  <th className="col-num">{tc.cols.margin}</th>
+                  <th className="col-date">{tc.cols.lastProduced}</th>
                 </tr>
               </thead>
               <tbody>
