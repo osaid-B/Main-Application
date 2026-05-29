@@ -85,12 +85,12 @@ export default function FactoryWarehouse() {
                   const fillClass = pct >= 90 ? styles.utilFillDanger : pct >= 70 ? styles.utilFillWarn : styles.utilFill;
                   return (
                     <tr key={loc.id}>
-                      <td><span className={styles.mono}>{loc.id}</span></td>
+                      <td className="col-code"><span className={styles.mono}>{loc.id}</span></td>
                       <td>{loc.name}</td>
-                      <td><Badge variant={ZONE_VARIANT[loc.zone]} size="sm">{tc.zones[loc.zone]}</Badge></td>
-                      <td className={`${styles.numEnd} ${styles.mono}`}>{loc.capacity.toLocaleString()}</td>
-                      <td className={`${styles.numEnd} ${styles.mono}`}>{loc.used.toLocaleString()}</td>
-                      <td className={`${styles.numEnd} ${styles.mono}`}>{free.toLocaleString()}</td>
+                      <td className="col-badge"><Badge variant={ZONE_VARIANT[loc.zone]} size="sm">{tc.zones[loc.zone]}</Badge></td>
+                      <td className={`${styles.numEnd} ${styles.mono} col-num`}>{loc.capacity.toLocaleString()}</td>
+                      <td className={`${styles.numEnd} ${styles.mono} col-num`}>{loc.used.toLocaleString()}</td>
+                      <td className={`${styles.numEnd} ${styles.mono} col-num`}>{free.toLocaleString()}</td>
                       <td style={{ minWidth: 100 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                           <div className={styles.utilBar} style={{ width: 60 }}>

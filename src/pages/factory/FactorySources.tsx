@@ -105,17 +105,17 @@ export default function FactorySources() {
                 {filtered.map((r) => (
                   <tr key={r.id}>
                     <td>{isArabic ? r.materialNameAr : r.materialName}</td>
-                    <td>
+                    <td className="col-badge">
                       <Badge variant={r.origin === "local" ? "success" : "info"} size="sm">
                         {tc.originLabel[r.origin]}
                       </Badge>
                     </td>
                     <td>{isArabic ? r.supplierAr : r.supplier}</td>
                     <td>{isArabic ? r.countryAr : r.country}</td>
-                    <td className={`${styles.numEnd} ${styles.mono}`}>{r.quantity.toLocaleString()} {r.unit}</td>
-                    <td className={`${styles.numEnd} ${styles.mono}`}>{formatCurrency(r.unitCost)}</td>
-                    <td className={`${styles.numEnd} ${styles.mono}`}>{formatCurrency(r.totalValue)}</td>
-                    <td className={styles.mono}>{r.purchaseDate}</td>
+                    <td className={`${styles.numEnd} ${styles.mono} col-num`}>{r.quantity.toLocaleString()} {r.unit}</td>
+                    <td className={`${styles.numEnd} ${styles.mono} col-num`}>{formatCurrency(r.unitCost)}</td>
+                    <td className={`${styles.numEnd} ${styles.mono} col-num`}>{formatCurrency(r.totalValue)}</td>
+                    <td className={`${styles.mono} col-date`}>{r.purchaseDate}</td>
                   </tr>
                 ))}
               </tbody>

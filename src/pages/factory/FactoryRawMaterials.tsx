@@ -98,7 +98,6 @@ export default function FactoryRawMaterials() {
                 <col className="col-currency col-w-120" />
                 <col className="col-currency col-w-130" />
                 <col className="col-w-80" />
-                <col className="col-actions" />
               </colgroup>
               <thead>
                 <tr>
@@ -119,14 +118,14 @@ export default function FactoryRawMaterials() {
                   return (
                     <tr key={m.id}>
                       <td>{m.name}</td>
-                      <td><span className={styles.tag}>{m.category}</span></td>
-                      <td><span className={styles.tag}>{tc.originLabel[m.origin]}</span></td>
+                      <td className="col-badge"><span className={styles.tag}>{m.category}</span></td>
+                      <td className="col-badge"><span className={styles.tag}>{tc.originLabel[m.origin]}</span></td>
                       <td>{m.supplier}</td>
-                      <td className={`${styles.numEnd} ${styles.mono}`}>{m.onHand.toLocaleString()} {m.unit}</td>
-                      <td className={`${styles.numEnd} ${styles.mono}`}>{m.reorderPoint.toLocaleString()} {m.unit}</td>
-                      <td className={`${styles.numEnd} ${styles.mono}`}>{formatCurrency(m.unitCost)}</td>
-                      <td className={`${styles.numEnd} ${styles.mono}`}>{formatCurrency(m.onHand * m.unitCost)}</td>
-                      <td><Badge variant={STATUS_VARIANT[st]} size="sm">{tc.status[st]}</Badge></td>
+                      <td className={`${styles.numEnd} ${styles.mono} col-num`}>{m.onHand.toLocaleString()} {m.unit}</td>
+                      <td className={`${styles.numEnd} ${styles.mono} col-num`}>{m.reorderPoint.toLocaleString()} {m.unit}</td>
+                      <td className={`${styles.numEnd} ${styles.mono} col-num`}>{formatCurrency(m.unitCost)}</td>
+                      <td className={`${styles.numEnd} ${styles.mono} col-num`}>{formatCurrency(m.onHand * m.unitCost)}</td>
+                      <td className="col-badge"><Badge variant={STATUS_VARIANT[st]} size="sm">{tc.status[st]}</Badge></td>
                     </tr>
                   );
                 })}

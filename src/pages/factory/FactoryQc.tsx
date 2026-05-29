@@ -117,16 +117,16 @@ export default function FactoryQc() {
               <tbody>
                 {filtered.map((q) => (
                   <tr key={q.id}>
-                    <td><span className={styles.mono}>{q.id}</span></td>
-                    <td><span className={styles.mono}>{q.batchId}</span></td>
+                    <td className="col-code"><span className={styles.mono}>{q.id}</span></td>
+                    <td className="col-code"><span className={styles.mono}>{q.batchId}</span></td>
                     <td>{q.productName}</td>
-                    <td><span className={styles.mono}>{q.productionOrderId}</span></td>
-                    <td className={styles.mono}>{q.inspectionDate}</td>
+                    <td className="col-code"><span className={styles.mono}>{q.productionOrderId}</span></td>
+                    <td className={`${styles.mono} col-date`}>{q.inspectionDate}</td>
                     <td>{q.inspector}</td>
-                    <td className={`${styles.numEnd} ${styles.mono}`}>{q.sampleSize || "—"}</td>
-                    <td className={`${styles.numEnd} ${styles.mono}`}>{q.failedUnits || "—"}</td>
-                    <td className={`${styles.numEnd} ${styles.mono}`}>{q.defectRate > 0 ? `${q.defectRate}%` : "—"}</td>
-                    <td><Badge variant={QC_VARIANT[q.status]} size="sm">{tc.status[q.status]}</Badge></td>
+                    <td className={`${styles.numEnd} ${styles.mono} col-num`}>{q.sampleSize || "—"}</td>
+                    <td className={`${styles.numEnd} ${styles.mono} col-num`}>{q.failedUnits || "—"}</td>
+                    <td className={`${styles.numEnd} ${styles.mono} col-num`}>{q.defectRate > 0 ? `${q.defectRate}%` : "—"}</td>
+                    <td className="col-badge"><Badge variant={QC_VARIANT[q.status]} size="sm">{tc.status[q.status]}</Badge></td>
                     <td style={{ maxWidth: 200, color: "var(--app-text-muted)", fontSize: 11 }}>{q.notes ?? "—"}</td>
                   </tr>
                 ))}

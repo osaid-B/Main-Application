@@ -127,20 +127,20 @@ export default function FactoryCosting() {
                   const liveBomCost = computeLiveBomCost(e.productionOrderId);
                   return (
                     <tr key={e.id}>
-                      <td><span className={styles.mono}>{e.id}</span></td>
-                      <td><span className={styles.mono}>{e.productionOrderId}</span></td>
+                      <td className="col-code"><span className={styles.mono}>{e.id}</span></td>
+                      <td className="col-code"><span className={styles.mono}>{e.productionOrderId}</span></td>
                       <td>{e.productName}</td>
-                      <td><span className={styles.tag}>{e.period}</span></td>
-                      <td className={`${styles.numEnd} ${styles.mono}`}>{e.rawMaterialCost > 0 ? formatCurrency(e.rawMaterialCost) : "—"}</td>
-                      <td className={`${styles.numEnd} ${styles.mono}`}>{e.laborCost > 0 ? formatCurrency(e.laborCost) : "—"}</td>
-                      <td className={`${styles.numEnd} ${styles.mono}`}>{e.overheadCost > 0 ? formatCurrency(e.overheadCost) : "—"}</td>
-                      <td className={`${styles.numEnd} ${styles.mono}`}>{e.totalCost > 0 ? formatCurrency(e.totalCost) : "—"}</td>
-                      <td className={`${styles.numEnd} ${styles.mono}`}>{e.unitsProduced > 0 ? e.unitsProduced.toLocaleString() : "—"}</td>
-                      <td className={`${styles.numEnd} ${styles.mono}`}>{e.costPerUnit > 0 ? formatCurrency(e.costPerUnit) : "—"}</td>
-                      <td className={`${styles.numEnd} ${styles.mono}`} style={varClass}>
+                      <td className="col-badge"><span className={styles.tag}>{e.period}</span></td>
+                      <td className={`${styles.numEnd} ${styles.mono} col-num`}>{e.rawMaterialCost > 0 ? formatCurrency(e.rawMaterialCost) : "—"}</td>
+                      <td className={`${styles.numEnd} ${styles.mono} col-num`}>{e.laborCost > 0 ? formatCurrency(e.laborCost) : "—"}</td>
+                      <td className={`${styles.numEnd} ${styles.mono} col-num`}>{e.overheadCost > 0 ? formatCurrency(e.overheadCost) : "—"}</td>
+                      <td className={`${styles.numEnd} ${styles.mono} col-num`}>{e.totalCost > 0 ? formatCurrency(e.totalCost) : "—"}</td>
+                      <td className={`${styles.numEnd} ${styles.mono} col-num`}>{e.unitsProduced > 0 ? e.unitsProduced.toLocaleString() : "—"}</td>
+                      <td className={`${styles.numEnd} ${styles.mono} col-num`}>{e.costPerUnit > 0 ? formatCurrency(e.costPerUnit) : "—"}</td>
+                      <td className={`${styles.numEnd} ${styles.mono} col-num`} style={varClass}>
                         {e.variance !== 0 ? formatCurrency(Math.abs(e.variance)) : "—"}
                       </td>
-                      <td className={`${styles.numEnd} ${styles.mono}`} style={{ color: "var(--app-text-muted)", fontSize: 12 }}>
+                      <td className={`${styles.numEnd} ${styles.mono} col-num`} style={{ color: "var(--app-text-muted)", fontSize: 12 }}>
                         {liveBomCost !== null ? formatCurrency(liveBomCost) : "—"}
                       </td>
                     </tr>

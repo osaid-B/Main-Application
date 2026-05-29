@@ -107,17 +107,17 @@ export default function FactoryImports() {
               <tbody>
                 {filtered.map((imp) => (
                   <tr key={imp.id}>
-                    <td><span className={styles.mono}>{imp.id}</span></td>
+                    <td className="col-code"><span className={styles.mono}>{imp.id}</span></td>
                     <td>{imp.supplierName}</td>
-                    <td>{imp.origin}</td>
-                    <td className={`${styles.numEnd} ${styles.mono}`}>{imp.items.length}</td>
-                    <td className={`${styles.numEnd} ${styles.mono}`}>{formatCurrency(imp.totalValue)}</td>
-                    <td><span className={styles.tag}>{imp.currency}</span></td>
-                    <td className={styles.mono}>{imp.orderDate}</td>
-                    <td className={styles.mono}>{imp.estimatedArrival}</td>
-                    <td><Badge variant={STATUS_VARIANT[imp.status]} size="sm">{tc.status[imp.status]}</Badge></td>
+                    <td className="col-badge">{imp.origin}</td>
+                    <td className={`${styles.numEnd} ${styles.mono} col-num`}>{imp.items.length}</td>
+                    <td className={`${styles.numEnd} ${styles.mono} col-num`}>{formatCurrency(imp.totalValue)}</td>
+                    <td className="col-badge"><span className={styles.tag}>{imp.currency}</span></td>
+                    <td className={`${styles.mono} col-date`}>{imp.orderDate}</td>
+                    <td className={`${styles.mono} col-date`}>{imp.estimatedArrival}</td>
+                    <td className="col-badge"><Badge variant={STATUS_VARIANT[imp.status]} size="sm">{tc.status[imp.status]}</Badge></td>
                     <td className={styles.mono} style={{ fontSize: 11, color: "var(--app-text-muted)" }}>{imp.customsRef ?? "—"}</td>
-                    <td style={{ display: "flex", gap: 6 }}>
+                    <td className="col-actions" style={{ display: "flex", gap: 6 }}>
                       <button type="button" className={styles.actionBtn} onClick={() => setDetail(imp)}>{tc.actions.view}</button>
                       {imp.status !== "received" && imp.status !== "cancelled" && (
                         <button

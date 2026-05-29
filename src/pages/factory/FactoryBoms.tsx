@@ -64,8 +64,8 @@ export default function FactoryBoms() {
                 <col className="col-w-110" />
                 <col />
                 <col className="col-w-90" />
-                <col className="col-w-80" />
                 <col className="col-date col-w-130" />
+                <col className="col-w-80" />
                 <col className="col-actions" />
               </colgroup>
               <thead>
@@ -81,12 +81,12 @@ export default function FactoryBoms() {
               <tbody>
                 {filtered.map((bom) => (
                   <tr key={bom.id}>
-                    <td><span className={styles.mono}>{bom.id}</span></td>
+                    <td className="col-code"><span className={styles.mono}>{bom.id}</span></td>
                     <td>{bom.productName}</td>
-                    <td><span className={styles.tag}>{bom.version}</span></td>
-                    <td className={styles.mono}>{bom.effectiveDate}</td>
-                    <td className={`${styles.numEnd} ${styles.mono}`}>{bom.lines.length}</td>
-                    <td>
+                    <td className="col-badge"><span className={styles.tag}>{bom.version}</span></td>
+                    <td className={`${styles.mono} col-date`}>{bom.effectiveDate}</td>
+                    <td className={`${styles.numEnd} ${styles.mono} col-num`}>{bom.lines.length}</td>
+                    <td className="col-actions">
                       <button type="button" className={styles.actionBtn} onClick={() => setDetail(bom)}>{tc.actions.view}</button>
                     </td>
                   </tr>

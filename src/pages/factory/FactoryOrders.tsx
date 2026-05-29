@@ -97,9 +97,7 @@ export default function FactoryOrders() {
                 <col className="col-w-100" />
                 <col className="col-date" />
                 <col className="col-date" />
-                <col className="col-w-80" />
                 <col className="col-w-90" />
-                <col className="col-w-100" />
                 <col className="col-actions" />
               </colgroup>
               <thead>
@@ -116,13 +114,13 @@ export default function FactoryOrders() {
               <tbody>
                 {filtered.map((o) => (
                   <tr key={o.id}>
-                    <td><span className={styles.mono}>{o.id}</span></td>
+                    <td className="col-code"><span className={styles.mono}>{o.id}</span></td>
                     <td>{getProductName(o.productId)}</td>
-                    <td className={`${styles.numEnd} ${styles.mono}`}>{o.quantity.toLocaleString()}</td>
-                    <td className={styles.mono}>{o.startDate}</td>
-                    <td className={styles.mono}>{o.dueDate}</td>
-                    <td><Badge variant={STATUS_VARIANT[o.status]} size="sm">{tc.status[o.status]}</Badge></td>
-                    <td>
+                    <td className={`${styles.numEnd} ${styles.mono} col-num`}>{o.quantity.toLocaleString()}</td>
+                    <td className={`${styles.mono} col-date`}>{o.startDate}</td>
+                    <td className={`${styles.mono} col-date`}>{o.dueDate}</td>
+                    <td className="col-badge"><Badge variant={STATUS_VARIANT[o.status]} size="sm">{tc.status[o.status]}</Badge></td>
+                    <td className="col-actions">
                       <div className={styles.rowActions}>
                         <button type="button" className={styles.actionBtn} onClick={() => setDetail(o)}>{tc.actions.view}</button>
                         {o.status === "planned" && (

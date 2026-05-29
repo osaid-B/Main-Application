@@ -114,16 +114,16 @@ export default function FactoryBatches() {
               <tbody>
                 {filtered.map((b) => (
                   <tr key={b.id}>
-                    <td><span className={styles.mono}>{b.id}</span></td>
-                    <td><span className={styles.mono}>{b.productionOrderId}</span></td>
+                    <td className="col-code"><span className={styles.mono}>{b.id}</span></td>
+                    <td className="col-code"><span className={styles.mono}>{b.productionOrderId}</span></td>
                     <td>{b.productName}</td>
-                    <td className={`${styles.numEnd} ${styles.mono}`}>{b.quantity > 0 ? b.quantity.toLocaleString() : "—"}</td>
-                    <td className={styles.mono}>{b.producedDate || "—"}</td>
-                    <td className={styles.mono}>{b.expiryDate || "—"}</td>
-                    <td><Badge variant={BATCH_STATUS_VARIANT[b.status]} size="sm">{tc.status[b.status]}</Badge></td>
-                    <td><Badge variant={QC_VARIANT[b.qcStatus]} size="sm">{tc.qcStatus[b.qcStatus]}</Badge></td>
-                    <td className={`${styles.numEnd} ${styles.mono}`}>{b.unitCost > 0 ? formatCurrency(b.unitCost) : "—"}</td>
-                    <td className={`${styles.numEnd} ${styles.mono}`}>{b.totalCost > 0 ? formatCurrency(b.totalCost) : "—"}</td>
+                    <td className={`${styles.numEnd} ${styles.mono} col-num`}>{b.quantity > 0 ? b.quantity.toLocaleString() : "—"}</td>
+                    <td className={`${styles.mono} col-date`}>{b.producedDate || "—"}</td>
+                    <td className={`${styles.mono} col-date`}>{b.expiryDate || "—"}</td>
+                    <td className="col-badge"><Badge variant={BATCH_STATUS_VARIANT[b.status]} size="sm">{tc.status[b.status]}</Badge></td>
+                    <td className="col-badge"><Badge variant={QC_VARIANT[b.qcStatus]} size="sm">{tc.qcStatus[b.qcStatus]}</Badge></td>
+                    <td className={`${styles.numEnd} ${styles.mono} col-num`}>{b.unitCost > 0 ? formatCurrency(b.unitCost) : "—"}</td>
+                    <td className={`${styles.numEnd} ${styles.mono} col-num`}>{b.totalCost > 0 ? formatCurrency(b.totalCost) : "—"}</td>
                     <td style={{ fontSize: 11, color: "var(--app-text-muted)", maxWidth: 160 }}>{b.notes ?? "—"}</td>
                   </tr>
                 ))}

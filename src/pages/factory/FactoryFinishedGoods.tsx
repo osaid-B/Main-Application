@@ -81,7 +81,6 @@ export default function FactoryFinishedGoods() {
                 <col className="col-currency col-w-120" />
                 <col className="col-w-90" />
                 <col className="col-date col-w-110" />
-                <col className="col-actions" />
               </colgroup>
               <thead>
                 <tr>
@@ -104,15 +103,15 @@ export default function FactoryFinishedGoods() {
                   return (
                     <tr key={g.id}>
                       <td>{g.name}</td>
-                      <td><span className={styles.mono}>{g.sku}</span></td>
-                      <td><span className={styles.tag}>{g.category}</span></td>
-                      <td className={`${styles.numEnd} ${styles.mono}`}>{g.onHand.toLocaleString()}</td>
-                      <td className={`${styles.numEnd} ${styles.mono}`}>{g.reserved.toLocaleString()}</td>
-                      <td className={`${styles.numEnd} ${styles.mono}`}>{avail.toLocaleString()}</td>
-                      <td className={`${styles.numEnd} ${styles.mono}`}>{formatCurrency(g.unitCost)}</td>
-                      <td className={`${styles.numEnd} ${styles.mono}`}>{formatCurrency(g.sellingPrice)}</td>
-                      <td className={`${styles.numEnd} ${styles.mono}`}>{margin}%</td>
-                      <td className={styles.mono}>{g.lastProducedDate ?? "—"}</td>
+                      <td className="col-code"><span className={styles.mono}>{g.sku}</span></td>
+                      <td className="col-badge"><span className={styles.tag}>{g.category}</span></td>
+                      <td className={`${styles.numEnd} ${styles.mono} col-num`}>{g.onHand.toLocaleString()}</td>
+                      <td className={`${styles.numEnd} ${styles.mono} col-num`}>{g.reserved.toLocaleString()}</td>
+                      <td className={`${styles.numEnd} ${styles.mono} col-num`}>{avail.toLocaleString()}</td>
+                      <td className={`${styles.numEnd} ${styles.mono} col-num`}>{formatCurrency(g.unitCost)}</td>
+                      <td className={`${styles.numEnd} ${styles.mono} col-num`}>{formatCurrency(g.sellingPrice)}</td>
+                      <td className={`${styles.numEnd} ${styles.mono} col-num`}>{margin}%</td>
+                      <td className={`${styles.mono} col-date`}>{g.lastProducedDate ?? "—"}</td>
                     </tr>
                   );
                 })}
