@@ -433,8 +433,7 @@ canvas {
     align-items: center;
     justify-content: space-between;
     gap: 10px;
-    position: sticky;
-    top: 0;
+    position: static;
     z-index: 90;
     padding: 10px 0 12px;
     background: linear-gradient(
@@ -902,4 +901,3 @@ canvas {
     grid-template-columns: 1fr !important;
   }
 }
-

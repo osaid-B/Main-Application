@@ -252,7 +252,7 @@ export default function MainLayout() {
 
           <AtlasHeader />
 
-          <div className="app-page-content">
+          <div className="app-page-content app-route-transition" key={location.pathname}>
             <Outlet />
           </div>
         </div>

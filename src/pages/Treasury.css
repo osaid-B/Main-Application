@@ -282,7 +282,7 @@
 .trs-table td {
   padding: 11px 14px;
   border-bottom: 1px solid #f1f5f9;
-  text-align: left;
+  text-align: start;
   vertical-align: middle;
 }
 
@@ -657,8 +657,16 @@
   border-radius: 10px;
   background: transparent;
   cursor: pointer;
-  text-align: left;
+  text-align: start;
   transition: background 0.15s;
+}
+
+html[dir="rtl"] .trs-kpi-value,
+html[dir="rtl"] .trs-amount,
+html[dir="rtl"] .trs-account-balance {
+  direction: ltr;
+  unicode-bidi: isolate;
+  display: inline-block;
 }
 
 .trs-signal-row:hover { background: #f8fafc; }

@@ -117,7 +117,7 @@ function AppRoutes() {
           <Route path="/manufacturing" element={<ComingSoon title="Manufacturing" />} />
 
           {/* Sales */}
-          <Route path="/quotes" element={<ComingSoon title="Quotes" />} />
+          <Route path="/quotes" element={<ComingSoon title="عروض الأسعار" />} />
 
           {/* Org & Access */}
           <Route path="/departments" element={<Departments />} />

@@ -348,7 +348,7 @@ function CustomerRow({
                 role="menuitem"
                 onClick={() => { setMenuOpen(false); onLoyalty(); }}
               >
-                {t.customers.rowMenu.loyalty ?? "Loyalty Profile"}
+                {t.customers.rowMenu.loyalty ?? "ملف الولاء"}
               </button>
               <button
                 type="button"

@@ -159,6 +159,24 @@ body {
   font-family: "Cairo", "Tajawal", "IBM Plex Sans Arabic", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
 }
 
+html[dir="rtl"] .app-main,
+html[dir="rtl"] .app-page-content {
+  direction: rtl;
+}
+
+html[dir="rtl"] :where(input, select, textarea) {
+  text-align: start;
+}
+
+html[dir="rtl"] :where(input[type="email"], input[type="number"], input[type="tel"], input[inputmode="numeric"], .financial-value, .numeric-cell, .balance-cell) {
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+html[dir="rtl"] :where(table th, table td) {
+  text-align: start;
+}
+
 button,
 input,
 select,
@@ -230,6 +248,27 @@ a:focus-visible {
 
 .app-page-content > * {
   position: relative;
+}
+
+.app-route-transition > * {
+  animation: app-route-enter 160ms ease-out both;
+}
+
+@keyframes app-route-enter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-route-transition > * {
+    animation: none;
+  }
 }
 
 /* ─── Surfaces ──────────────────────────────────────────────────────────── */
@@ -775,4 +814,3 @@ kbd {
   --app-accent-subtle: #1e1540;
   --app-accent-text: var(--atlas-purple-300);
 }
-
