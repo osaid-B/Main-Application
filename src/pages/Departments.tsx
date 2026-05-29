@@ -147,21 +147,21 @@ export default function Departments() {
                         <div className={styles.headName}>{d.headName ?? "—"}</div>
                         {d.headId && <div className={styles.headId}>{d.headId}</div>}
                       </td>
-                      <td className={`${styles.numEnd} ${styles.mono}`}>{d.headcount}</td>
-                      <td className={`${styles.numEnd} ${styles.mono}`}>
+                      <td className={`${styles.numEnd} ${styles.mono} col-num`}>{d.headcount}</td>
+                      <td className={`${styles.numEnd} ${styles.mono} col-num`}>
                         {d.monthlyRevenue > 0 ? formatCurrency(d.monthlyRevenue) : "—"}
                       </td>
-                      <td className={`${styles.numEnd} ${styles.mono}`}>
+                      <td className={`${styles.numEnd} ${styles.mono} col-num`}>
                         {d.openPositions > 0 ? (
                           <span className={styles.openPos}>{d.openPositions}</span>
                         ) : "—"}
                       </td>
-                      <td>
+                      <td className="col-badge">
                         <Badge variant={d.status === "active" ? "success" : "neutral"} size="sm">
                           {d.status === "active" ? t.common.active : t.common.inactive}
                         </Badge>
                       </td>
-                      <td>
+                      <td className="col-actions">
                         <button
                           type="button"
                           className={styles.editBtn}

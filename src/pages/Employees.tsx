@@ -1747,7 +1747,7 @@ function EmployeesSection({
                       </td>
                       <td className="emp-code-cell">{emp.id}</td>
                       <td>{emp.phone}</td>
-                      <td>
+                      <td className="col-badge">
                         <span
                           className="emp-shift-badge"
                           style={{ background: shiftColors.bg, color: shiftColors.color }}
@@ -1760,16 +1760,16 @@ function EmployeesSection({
                           </span>
                         )}
                       </td>
-                      <td className="emp-hours-cell">
+                      <td className="emp-hours-cell col-num">
                         {emp.workStart} – {emp.workEnd}
                       </td>
-                      <td>
+                      <td className="col-badge">
                         <span className={`emp-status-badge ${isActive ? "active" : "inactive"}`}>
                           <span className="emp-status-dot" />
                           {isActive ? t.common.active : t.common.inactive}
                         </span>
                       </td>
-                      <td>
+                      <td className="col-actions">
                         <div className="emp-row-actions">
                           <Button variant="icon" size="sm" aria-label="View" title="View">
                             <Eye size={14} />
