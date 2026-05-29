@@ -1689,32 +1689,32 @@ function EmployeesSection({
       {/* Table */}
       {filtered.length > 0 ? (
         <>
-          <div className="emp-table-wrap">
-            <table className="emp-table app-data-table">
+          <div className="emp-table-wrap atlas-table-wrapper">
+            <table className="emp-table app-data-table atlas-table">
               <colgroup>
-                <col style={{ width: "26%" }} />
-                <col style={{ width: "12%" }} />
-                <col style={{ width: "16%" }} />
-                <col style={{ width: "11%" }} />
-                <col style={{ width: "14%" }} />
-                <col style={{ width: "12%" }} />
-                <col style={{ width: "9%" }} />
+                <col />
+                <col className="col-w-100" />
+                <col className="col-w-130" />
+                <col className="col-w-110" />
+                <col className="col-w-100" />
+                <col className="col-w-90" />
+                <col className="col-actions" />
               </colgroup>
               <thead>
                 <tr>
-                  <th className="emp-sortable" onClick={() => toggleSort("name")}>
+                  <th className="col-entity emp-sortable" onClick={() => toggleSort("name")}>
                     {t.employees.cols.employee} {sortKey === "name" ? (sortDir === "asc" ? "↑" : "↓") : <span className="emp-sort-icon"><ChevronLeft size={10} style={{ transform: "rotate(-90deg)" }} /></span>}
                   </th>
-                  <th className="emp-sortable" onClick={() => toggleSort("id")}>
+                  <th className="col-code emp-sortable" onClick={() => toggleSort("id")}>
                     {t.employees.cols.empCode} {sortKey === "id" ? (sortDir === "asc" ? "↑" : "↓") : ""}
                   </th>
                   <th className="emp-sortable" onClick={() => toggleSort("phone")}>
                     {t.common.phone} {sortKey === "phone" ? (sortDir === "asc" ? "↑" : "↓") : ""}
                   </th>
-                  <th>{t.employees.cols.shift}</th>
-                  <th>{t.employees.cols.defaultHours}</th>
-                  <th>{t.employees.cols.status}</th>
-                  <th>{t.employees.cols.actions}</th>
+                  <th className="col-badge">{t.employees.cols.shift}</th>
+                  <th className="col-num">{t.employees.cols.defaultHours}</th>
+                  <th className="col-badge">{t.employees.cols.status}</th>
+                  <th className="col-actions">{t.employees.cols.actions}</th>
                 </tr>
               </thead>
               <tbody>
