@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { USE_SUPABASE } from "../lib/supabase";
-import { signIn as sbSignIn, signOut as sbSignOut, getSession } from "../services/auth";
+import { signIn as sbSignIn, signOut as sbSignOut, getSession, onAuthStateChange } from "../services/auth";
 
 export type UserRole = "Admin" | "Manager" | "Finance" | "Factory" | "Cashier";
 
@@ -76,6 +76,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const role = (authUser.role ?? "Cashier") as UserRole;
       setUser({ username: authUser.email, role });
     }).catch(() => {});
+  }, []);
+
+  // Keep session in sync with token refreshes / sign-out from other tabs
+  useEffect(() => {
+    if (!USE_SUPABASE) return;
+    return onAuthStateChange((authUser) => {
+      if (!authUser) {
+        setUser(null);
+        return;
+      }
+      const role = (authUser.role ?? "Cashier") as UserRole;
+      setUser({ username: authUser.email, role });
+    });
   }, []);
 
   const login = useCallback(async (username: string, password: string): Promise<boolean> => {
