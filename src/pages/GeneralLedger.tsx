@@ -178,9 +178,18 @@ export default function GeneralLedger() {
 
         <div className={styles.tableWrap}>
           <table className={styles.table}>
+            <colgroup>
+              <col className="col-date" />
+              <col className="col-w-100" />
+              <col className="col-w-110" />
+              <col />
+              <col className="col-currency" />
+              <col className="col-currency" />
+              <col className="col-w-130" />
+            </colgroup>
             <thead>
               <tr>
-                <th>{tc.cols.date}</th>
+                <th className="col-date">{tc.cols.date}</th>
                 <th>{tc.cols.type}</th>
                 <th>{tc.cols.reference}</th>
                 <th>{tc.cols.description}</th>

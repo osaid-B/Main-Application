@@ -176,9 +176,19 @@ export default function Expenses() {
         ) : (
         <div className={styles.tableWrap}>
           <table className={styles.table}>
+            <colgroup>
+              <col className="col-check" />
+              <col />
+              <col className="col-w-110" />
+              <col className="col-w-120" />
+              <col className="col-date" />
+              <col className="col-currency" />
+              <col className="col-w-90" />
+              <col className="col-actions" />
+            </colgroup>
             <thead>
               <tr>
-                <th>
+                <th className="col-check">
                   <input
                     type="checkbox"
                     checked={selected.size > 0 && selected.size === filtered.length}
@@ -188,10 +198,10 @@ export default function Expenses() {
                 <th>{tc.cols.description}</th>
                 <th>{tc.cols.category}</th>
                 <th>{tc.cols.payee}</th>
-                <th>{tc.cols.date}</th>
+                <th className="col-date">{tc.cols.date}</th>
                 <th className={styles.numEnd}>{tc.cols.amount}</th>
                 <th>{tc.cols.status}</th>
-                <th>{tc.cols.actions}</th>
+                <th className="col-actions">{tc.cols.actions}</th>
               </tr>
             </thead>
             <tbody>

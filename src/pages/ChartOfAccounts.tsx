@@ -192,6 +192,14 @@ export default function ChartOfAccounts() {
 
         <div className={styles.tableWrap}>
           <table className={styles.table}>
+            <colgroup>
+              <col className="col-w-90" />
+              <col />
+              <col className="col-w-120" />
+              <col className="col-currency" />
+              <col className="col-w-110" />
+              <col className="col-actions" />
+            </colgroup>
             <thead>
               <tr>
                 <th>{tc.cols.code}</th>
@@ -199,7 +207,7 @@ export default function ChartOfAccounts() {
                 <th>{tc.cols.type}</th>
                 <th className={styles.numEnd}>{tc.cols.balance}</th>
                 <th>{tc.cols.normalBalance}</th>
-                <th>{tc.cols.actions}</th>
+                <th className="col-actions">{tc.cols.actions}</th>
               </tr>
             </thead>
             <tbody>

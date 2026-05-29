@@ -111,6 +111,15 @@ export default function Departments() {
         ) : view === "table" ? (
           <div className={styles.tableWrap}>
             <table className={styles.table}>
+              <colgroup>
+                <col />
+                <col className="col-w-130" />
+                <col className="col-w-90" />
+                <col className="col-currency" />
+                <col className="col-w-110" />
+                <col className="col-w-90" />
+                <col className="col-actions" />
+              </colgroup>
               <thead>
                 <tr>
                   <th>{tc.cols.name}</th>

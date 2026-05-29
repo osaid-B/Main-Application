@@ -141,18 +141,28 @@ function RequestsTab({
           <span>{t.leaves.empty.noRequestsDesc}</span>
         </div>
       ) : (
-        <div className="lv-table-wrap">
-          <table className="lv-table app-data-table">
+        <div className="lv-table-wrap atlas-table-wrapper">
+          <table className="lv-table app-data-table atlas-table">
+            <colgroup>
+              <col />
+              <col className="col-w-110" />
+              <col className="col-date" />
+              <col className="col-date" />
+              <col className="col-w-72" />
+              <col className="col-w-140" />
+              <col className="col-w-90" />
+              <col className="col-actions" />
+            </colgroup>
             <thead>
               <tr>
                 <th>{t.leaves.cols.employee}</th>
                 <th>{t.leaves.cols.type}</th>
-                <th>{t.leaves.cols.start}</th>
-                <th>{t.leaves.cols.end}</th>
-                <th>{t.leaves.cols.days}</th>
+                <th className="col-date">{t.leaves.cols.start}</th>
+                <th className="col-date">{t.leaves.cols.end}</th>
+                <th className="col-num">{t.leaves.cols.days}</th>
                 <th>{t.leaves.cols.reason}</th>
                 <th>{t.leaves.cols.status}</th>
-                <th>{t.leaves.cols.actions}</th>
+                <th className="col-actions">{t.leaves.cols.actions}</th>
               </tr>
             </thead>
             <tbody>

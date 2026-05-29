@@ -165,6 +165,16 @@ export default function Customers() {
         {/* Table */}
         <div className={styles.tableWrap}>
           <table className={styles.table}>
+            <colgroup>
+              <col />
+              <col className="col-w-110" />
+              <col className="col-w-110" />
+              <col className="col-w-130" />
+              <col className="col-currency" />
+              <col className="col-date" />
+              <col className="col-w-90" />
+              <col className="col-w-80" />
+            </colgroup>
             <thead>
               <tr>
                 <th>{t.customers.cols.customer}</th>
