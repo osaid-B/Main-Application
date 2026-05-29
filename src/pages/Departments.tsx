@@ -109,8 +109,8 @@ export default function Departments() {
         {isLoading ? (
           <Skeleton variant="rect" height={320} />
         ) : view === "table" ? (
-          <div className={styles.tableWrap}>
-            <table className={styles.table}>
+          <div className={`${styles.tableWrap} atlas-table-wrapper`}>
+            <table className={`${styles.table} atlas-table`}>
               <colgroup>
                 <col />
                 <col className="col-w-130" />
@@ -122,13 +122,13 @@ export default function Departments() {
               </colgroup>
               <thead>
                 <tr>
-                  <th>{tc.cols.name}</th>
+                  <th className="col-entity">{tc.cols.name}</th>
                   <th>{tc.cols.head}</th>
-                  <th className={styles.numEnd}>{tc.cols.headcount}</th>
-                  <th className={styles.numEnd}>{tc.cols.revenue}</th>
-                  <th className={styles.numEnd}>{tc.cols.openPositions}</th>
-                  <th>{tc.cols.status}</th>
-                  <th>{tc.cols.actions}</th>
+                  <th className="col-num">{tc.cols.headcount}</th>
+                  <th className="col-num">{tc.cols.revenue}</th>
+                  <th className="col-num">{tc.cols.openPositions}</th>
+                  <th className="col-badge">{tc.cols.status}</th>
+                  <th className="col-actions">{tc.cols.actions}</th>
                 </tr>
               </thead>
               <tbody>
