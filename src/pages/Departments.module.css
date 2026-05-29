@@ -47,13 +47,13 @@
 .kpi_success::before { background: var(--atlas-green); }
 .kpi_info::before    { background: var(--atlas-blue); }
 .kpi_warning::before { background: var(--atlas-orange); }
-.kpi_neutral::before { background: var(--app-text-light); }
+.kpi_neutral::before { background: var(--app-text-muted); }
 
 .kpiLabel {
   font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.06em;
-  color: var(--app-text-light);
+  color: var(--app-text-muted);
 }
 
 .kpiValue {
@@ -114,6 +114,7 @@
 .table {
   width: 100%;
   border-collapse: collapse;
+  table-layout: fixed;
   font-size: 12px;
 }
 
@@ -124,7 +125,7 @@
   padding: 8px 12px;
   font-size: 10px;
   font-weight: 600;
-  color: var(--app-text-light);
+  color: var(--app-text-muted);
   letter-spacing: 0.04em;
   border-bottom: 1px solid var(--app-border);
   white-space: nowrap;
@@ -367,7 +368,7 @@
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.05em;
-  color: var(--app-text-light);
+  color: var(--app-text-muted);
   margin-bottom: var(--app-space-2);
 }
 

@@ -224,6 +224,14 @@ function OverviewTab({
       {/* Monthly summary table */}
       <div className={styles.tableWrap}>
         <table className={styles.table}>
+          <colgroup>
+            <col className="col-w-90" />
+            <col className="col-currency" />
+            <col className="col-currency" />
+            <col className="col-currency" />
+            <col className="col-currency" />
+            <col className="col-w-80" />
+          </colgroup>
           <thead>
             <tr>
               <th>{tc.table.period}</th>
@@ -305,6 +313,12 @@ function BreakdownTable({
     <div className={styles.tableWrap}>
       <div className={styles.tableHeader}>{title}</div>
       <table className={styles.table}>
+        <colgroup>
+          <col />
+          <col className="col-w-80" />
+          <col className="col-currency" />
+          <col className="col-w-72" />
+        </colgroup>
         <thead>
           <tr>
             <th>{tc.sales.cols.name}</th>
@@ -355,6 +369,12 @@ function ExpensesTableTab({
 
       <div className={styles.tableWrap}>
         <table className={styles.table}>
+          <colgroup>
+            <col className="col-w-90" />
+            <col className="col-currency" />
+            <col className="col-currency" />
+            <col className="col-w-80" />
+          </colgroup>
           <thead>
             <tr>
               <th>{tc.table.period}</th>
@@ -394,6 +414,10 @@ function PLTab({
     <div className={styles.tableWrap}>
       <div className={styles.tableHeader}>{tc.pl.title}</div>
       <table className={styles.table}>
+        <colgroup>
+          <col />
+          <col className="col-currency" />
+        </colgroup>
         <tbody>
           {PL_ITEMS.map((item: PLLineItem, idx) => (
             <tr key={idx} className={item.isTotal ? styles.plTotalRow : ""}>
@@ -477,6 +501,14 @@ function CustomTab({
         filteredData.length > 0 ? (
           <div className={styles.tableWrap}>
             <table className={styles.table}>
+              <colgroup>
+                <col className="col-w-90" />
+                <col className="col-currency" />
+                <col className="col-currency" />
+                <col className="col-currency" />
+                <col className="col-currency" />
+                <col className="col-w-80" />
+              </colgroup>
               <thead>
                 <tr>
                   <th>{tc.table.period}</th>

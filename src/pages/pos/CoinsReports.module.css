@@ -102,6 +102,7 @@
 .table {
   width: 100%;
   border-collapse: collapse;
+  table-layout: fixed;
   font-size: 12px;
 }
 
@@ -109,19 +110,25 @@
 
 .table th {
   text-align: start;
-  padding: 8px 12px;
+  padding: 10px 14px;
   font-size: 10px;
   font-weight: 600;
-  color: var(--app-text-light);
+  color: var(--app-text-muted);
   letter-spacing: 0.04em;
+  text-transform: uppercase;
   border-bottom: 1px solid var(--app-border);
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .table td {
-  padding: 10px 12px;
-  border-bottom: 1px solid var(--app-border-subtle, var(--app-border));
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--app-border);
   vertical-align: middle;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .table tbody tr:last-child td { border-bottom: 0; }

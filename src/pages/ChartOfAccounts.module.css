@@ -11,19 +11,19 @@
 .searchWrap { flex: 1; min-width: 200px; max-width: 360px; }
 
 .tableWrap { background: var(--app-surface); border: 1px solid var(--app-border); border-radius: var(--app-radius-lg); overflow: hidden; box-shadow: var(--app-shadow-soft); }
-.table { width: 100%; border-collapse: collapse; }
-.table th { background: var(--app-surface-raised, #f8f9fb); color: var(--app-text-muted); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; padding: 10px 16px; text-align: start; border-bottom: 1px solid var(--app-border); white-space: nowrap; }
-.table th.numEnd, .table td.numEnd { text-align: end; }
-.table td { padding: 10px 16px; font-size: 13.5px; color: var(--app-text); border-bottom: 1px solid var(--app-border-light, #f0f0f0); vertical-align: middle; }
+.table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.table th { background: var(--app-surface-muted); color: var(--app-text-muted); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; padding: 10px 14px; text-align: start; border-bottom: 1px solid var(--app-border); white-space: nowrap; }
+.table th.numEnd, .table td.numEnd { text-align: end; font-variant-numeric: tabular-nums; font-family: var(--font-mono); }
+.table td { padding: 11px 14px; font-size: 13px; color: var(--app-text); border-bottom: 1px solid var(--app-border); vertical-align: middle; }
 .table tbody tr:last-child td { border-bottom: 0; }
-.table tbody tr:hover td { background: var(--app-hover); }
+.table tbody tr:hover td { background: var(--app-surface-hover); }
 
-.parentRow td { background: var(--app-surface-raised, #f8f9fb); font-weight: 700; font-size: 13px; color: var(--app-text); }
+.parentRow td { background: var(--app-surface-muted); font-weight: 700; font-size: 13px; color: var(--app-text); }
 .level1Row td { padding-inline-start: 28px; }
 .level2Row td { padding-inline-start: 44px; font-size: 13px; }
 .level2Row td:first-child { color: var(--app-text-muted); }
 
-.codeChip { font-family: monospace; font-size: 12px; background: var(--app-hover); padding: 1px 6px; border-radius: 4px; }
+.codeChip { font-family: var(--font-mono); font-size: 12px; background: var(--app-surface-muted); padding: 1px 6px; border-radius: 4px; }
 
 .typeBadge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; }
 .typeAsset    { background: #eff6ff; color: #1d4ed8; }
@@ -36,7 +36,7 @@
 .mono { font-variant-numeric: tabular-nums; }
 
 .actionBtn { background: transparent; border: 0; padding: 3px 8px; border-radius: var(--app-radius); font-size: 12px; color: var(--app-text-muted); cursor: pointer; }
-.actionBtn:hover { background: var(--app-hover); color: var(--app-text); }
+.actionBtn:hover { background: var(--app-surface-hover); color: var(--app-text); }
 .actionsCell { display: flex; gap: 2px; }
 
 .empty { text-align: center; padding: var(--app-space-10); color: var(--app-text-muted); font-size: 13px; }

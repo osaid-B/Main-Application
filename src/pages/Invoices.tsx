@@ -1325,18 +1325,28 @@ export default function Invoices() {
             <span className="inv-table-total">{money(summary.amountDue)}</span>
           </div>
 
-            <div className="invoice-table-wrap app-table-wrap">
-              <table className="invoice-table app-data-table">
+            <div className="invoice-table-wrap app-table-wrap atlas-table-wrapper">
+              <table className="invoice-table app-data-table atlas-table">
+                <colgroup>
+                  <col className="col-w-100" />
+                  <col />
+                  <col className="col-w-140" />
+                  <col className="col-date" />
+                  <col className="col-currency" />
+                  <col className="col-currency" />
+                  <col className="col-w-100" />
+                  <col className="col-actions" />
+                </colgroup>
                 <thead>
                   <tr>
                     <th>{t.invoices.cols.invoice}</th>
                     <th>{getPartyLabel(activeTab, t)}</th>
                     <th>{t.invoices.cols.product}</th>
-                    <th>{t.invoices.cols.issueDate}</th>
-                    <th>{t.invoices.cols.total}</th>
-                    <th>{t.invoices.cols.amountDue}</th>
+                    <th className="col-date">{t.invoices.cols.issueDate}</th>
+                    <th className="col-num">{t.invoices.cols.total}</th>
+                    <th className="col-num">{t.invoices.cols.amountDue}</th>
                     <th>{activeTab === "internal" ? t.invoices.cols.approval : t.invoices.cols.status}</th>
-                    <th>{t.invoices.cols.actions}</th>
+                    <th className="col-actions">{t.invoices.cols.actions}</th>
                   </tr>
                 </thead>
 

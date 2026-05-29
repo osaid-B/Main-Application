@@ -137,19 +137,30 @@ export default function CoinsHistory() {
           </div>
         </div>
 
-        <div className={styles.tableWrap}>
-          <table className={styles.table}>
+        <div className={`${styles.tableWrap} atlas-table-wrapper`}>
+          <table className={`${styles.table} atlas-table`}>
+            <colgroup>
+              <col className="col-date col-w-130" />
+              <col />
+              <col className="col-w-100" />
+              <col className="col-w-110" />
+              <col className="col-w-130" />
+              <col className="col-w-110" />
+              <col className="col-w-100" />
+              <col className="col-w-90" />
+              <col className="col-w-90" />
+            </colgroup>
             <thead>
               <tr>
-                <th>{tc.cols.timestamp}</th>
+                <th className="col-date">{tc.cols.timestamp}</th>
                 <th>{tc.cols.customer}</th>
-                <th>{tc.cols.action}</th>
-                <th>{tc.cols.invoiceRef}</th>
+                <th className="col-badge">{tc.cols.action}</th>
+                <th className="col-code">{tc.cols.invoiceRef}</th>
                 <th>{tc.cols.reason}</th>
                 <th>{tc.cols.user}</th>
                 <th>{tc.cols.branch}</th>
-                <th className={styles.numCol}>{tc.cols.deltaCoins}</th>
-                <th className={styles.numCol}>{tc.cols.balance}</th>
+                <th className="col-num">{tc.cols.deltaCoins}</th>
+                <th className="col-num">{tc.cols.balance}</th>
               </tr>
             </thead>
             <tbody>

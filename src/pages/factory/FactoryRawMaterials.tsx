@@ -81,24 +81,36 @@ export default function FactoryRawMaterials() {
           </select>
         </div>
 
-        <div className={styles.tableWrap}>
+        <div className={`${styles.tableWrap} atlas-table-wrapper`}>
           {isLoading ? (
             <Skeleton variant="rect" height={280} />
           ) : filtered.length === 0 ? (
             <EmptyState icon={<Boxes size={32} />} title={tc.noData} />
           ) : (
-            <table className={styles.table}>
+            <table className={`${styles.table} atlas-table`}>
+              <colgroup>
+                <col />
+                <col className="col-w-100" />
+                <col className="col-w-90" />
+                <col className="col-w-150" />
+                <col className="col-w-100" />
+                <col className="col-w-110" />
+                <col className="col-currency col-w-120" />
+                <col className="col-currency col-w-130" />
+                <col className="col-w-80" />
+                <col className="col-actions" />
+              </colgroup>
               <thead>
                 <tr>
                   <th>{tc.cols.name}</th>
-                  <th>{tc.cols.category}</th>
-                  <th>{tc.cols.origin}</th>
+                  <th className="col-badge">{tc.cols.category}</th>
+                  <th className="col-badge">{tc.cols.origin}</th>
                   <th>{tc.cols.supplier}</th>
-                  <th className={styles.numEnd}>{tc.cols.onHand}</th>
-                  <th className={styles.numEnd}>{tc.cols.reorderPoint}</th>
-                  <th className={styles.numEnd}>{tc.cols.unitCost}</th>
-                  <th className={styles.numEnd}>{tc.cols.totalValue}</th>
-                  <th>{tc.cols.status}</th>
+                  <th className="col-num">{tc.cols.onHand}</th>
+                  <th className="col-num">{tc.cols.reorderPoint}</th>
+                  <th className="col-num">{tc.cols.unitCost}</th>
+                  <th className="col-num">{tc.cols.totalValue}</th>
+                  <th className="col-badge">{tc.cols.status}</th>
                 </tr>
               </thead>
               <tbody>

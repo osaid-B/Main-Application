@@ -124,19 +124,30 @@ export default function SalesRefunds() {
           </select>
         </div>
 
-        <div className={styles.tableWrap}>
-          <table className={styles.table}>
+        <div className={`${styles.tableWrap} atlas-table-wrapper`}>
+          <table className={`${styles.table} atlas-table`}>
+            <colgroup>
+              <col className="col-w-110" />
+              <col className="col-w-110" />
+              <col className="col-date col-w-110" />
+              <col className="col-w-120" />
+              <col />
+              <col className="col-currency col-w-120" />
+              <col className="col-w-130" />
+              <col className="col-w-90" />
+              <col className="col-actions" />
+            </colgroup>
             <thead>
               <tr>
-                <th>{tc.cols.refundId}</th>
-                <th>{tc.cols.originalTx}</th>
-                <th>{tc.cols.date}</th>
+                <th className="col-code">{tc.cols.refundId}</th>
+                <th className="col-code">{tc.cols.originalTx}</th>
+                <th className="col-date">{tc.cols.date}</th>
                 <th>{tc.cols.cashier}</th>
                 <th>{tc.cols.customer}</th>
-                <th className={styles.numEnd}>{tc.cols.amount}</th>
+                <th className="col-num">{tc.cols.amount}</th>
                 <th>{tc.cols.reason}</th>
-                <th>{tc.cols.status}</th>
-                <th>{tc.cols.actions}</th>
+                <th className="col-badge">{tc.cols.status}</th>
+                <th className="col-actions">{tc.cols.actions}</th>
               </tr>
             </thead>
             <tbody>

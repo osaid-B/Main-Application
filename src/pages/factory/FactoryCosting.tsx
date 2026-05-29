@@ -80,27 +80,41 @@ export default function FactoryCosting() {
           </select>
         </div>
 
-        <div className={styles.tableWrap}>
+        <div className={`${styles.tableWrap} atlas-table-wrapper`}>
           {isLoading ? (
             <Skeleton variant="rect" height={280} />
           ) : filtered.length === 0 ? (
             <EmptyState icon={<DollarSign size={32} />} title={tc.noData} />
           ) : (
-            <table className={styles.table}>
+            <table className={`${styles.table} atlas-table`}>
+              <colgroup>
+                <col className="col-w-110" />
+                <col className="col-w-110" />
+                <col />
+                <col className="col-w-90" />
+                <col className="col-currency col-w-120" />
+                <col className="col-currency col-w-100" />
+                <col className="col-currency col-w-100" />
+                <col className="col-currency col-w-110" />
+                <col className="col-w-80" />
+                <col className="col-currency col-w-110" />
+                <col className="col-w-90" />
+                <col className="col-currency col-w-120" />
+              </colgroup>
               <thead>
                 <tr>
-                  <th>{tc.cols.costId}</th>
-                  <th>{tc.cols.order}</th>
+                  <th className="col-code">{tc.cols.costId}</th>
+                  <th className="col-code">{tc.cols.order}</th>
                   <th>{tc.cols.product}</th>
                   <th>{tc.cols.period}</th>
-                  <th className={styles.numEnd}>{tc.cols.rawMaterial}</th>
-                  <th className={styles.numEnd}>{tc.cols.labor}</th>
-                  <th className={styles.numEnd}>{tc.cols.overhead}</th>
-                  <th className={styles.numEnd}>{tc.cols.total}</th>
-                  <th className={styles.numEnd}>{tc.cols.units}</th>
-                  <th className={styles.numEnd}>{tc.cols.perUnit}</th>
-                  <th className={styles.numEnd}>{tc.cols.variance}</th>
-                  <th className={styles.numEnd}>{tc.cols.liveBomCost}</th>
+                  <th className="col-num">{tc.cols.rawMaterial}</th>
+                  <th className="col-num">{tc.cols.labor}</th>
+                  <th className="col-num">{tc.cols.overhead}</th>
+                  <th className="col-num">{tc.cols.total}</th>
+                  <th className="col-num">{tc.cols.units}</th>
+                  <th className="col-num">{tc.cols.perUnit}</th>
+                  <th className="col-num">{tc.cols.variance}</th>
+                  <th className="col-num">{tc.cols.liveBomCost}</th>
                 </tr>
               </thead>
               <tbody>

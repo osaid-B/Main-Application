@@ -176,15 +176,22 @@ export default function Categories() {
                     leftIcon={<Search size={13} />}
                   />
                 </div>
-                <div className={styles.productTableWrap}>
-                  <table className={styles.table}>
+                <div className={`${styles.productTableWrap} atlas-table-wrapper`}>
+                  <table className={`${styles.table} atlas-table`}>
+                    <colgroup>
+                      <col />
+                      <col className="col-w-100" />
+                      <col className="col-currency col-w-120" />
+                      <col className="col-w-90" />
+                      <col className="col-w-90" />
+                    </colgroup>
                     <thead>
                       <tr>
                         <th>{tc.cols.name}</th>
-                        <th>ID</th>
-                        <th className={styles.numEnd}>{t.common.price}</th>
-                        <th className={styles.numEnd}>{tc.cols.products}</th>
-                        <th>{tc.cols.status}</th>
+                        <th className="col-code">ID</th>
+                        <th className="col-num">{t.common.price}</th>
+                        <th className="col-num">{tc.cols.products}</th>
+                        <th className="col-badge">{tc.cols.status}</th>
                       </tr>
                     </thead>
                     <tbody>

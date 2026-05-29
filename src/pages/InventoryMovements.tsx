@@ -166,9 +166,19 @@ export default function InventoryMovements() {
 
         <div className={styles.tableWrap}>
           <table className={styles.table}>
+            <colgroup>
+              <col className="col-date" />
+              <col />
+              <col className="col-w-100" />
+              <col className="col-w-90" />
+              <col className="col-w-90" />
+              <col className="col-w-90" />
+              <col className="col-w-120" />
+              <col className="col-w-110" />
+            </colgroup>
             <thead>
               <tr>
-                <th>{tc.cols.date}</th>
+                <th className="col-date">{tc.cols.date}</th>
                 <th>{tc.cols.product}</th>
                 <th>{tc.cols.type}</th>
                 <th className={styles.numEnd}>{tc.cols.quantityIn}</th>

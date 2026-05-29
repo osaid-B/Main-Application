@@ -137,6 +137,7 @@
 .table {
   width: 100%;
   border-collapse: collapse;
+  table-layout: fixed;
   font-size: 12px;
 }
 
@@ -147,7 +148,7 @@
   padding: 8px 12px;
   font-size: 10px;
   font-weight: 600;
-  color: var(--app-text-light);
+  color: var(--app-text-muted);
   letter-spacing: 0.04em;
   border-bottom: 1px solid var(--app-border);
   white-space: nowrap;

@@ -1153,10 +1153,16 @@ export default function Purchases() {
 
             <div className="purchase-table-section">
               {viewMode === "table" ? (
-                <div className="purchase-table-wrap">
-                  <table className="purchase-table">
+                <div className="purchase-table-wrap atlas-table-wrapper">
+                  <table className="purchase-table atlas-table">
                     <colgroup>
-                      <col /><col /><col /><col /><col /><col /><col />
+                      <col className="col-w-110" />
+                      <col />
+                      <col className="col-date" />
+                      <col className="col-currency" />
+                      <col className="col-w-100" />
+                      <col className="col-w-90" />
+                      <col className="col-actions" />
                     </colgroup>
 
                     <thead>

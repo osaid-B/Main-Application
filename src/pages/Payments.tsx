@@ -985,22 +985,34 @@ export default function Payments() {
             <div className="state-card empty-state"><Receipt size={18} /><div><strong>No matching payments found</strong><p>Adjust your filters or record a new payment.</p></div></div>
           ) : (
             <>
-              <div className="payments-table-wrap app-table-wrap">
-                <table className="payments-table app-data-table">
+              <div className="payments-table-wrap app-table-wrap atlas-table-wrapper">
+                <table className="payments-table app-data-table atlas-table">
+                  <colgroup>
+                    <col className="col-check" />
+                    <col className="col-w-100" />
+                    <col className="col-w-100" />
+                    <col />
+                    <col className="col-currency" />
+                    <col className="col-w-110" />
+                    <col className="col-w-90" />
+                    <col className="col-date" />
+                    <col className="col-w-110" />
+                    <col className="col-actions" />
+                  </colgroup>
                   <thead>
                     <tr>
-                      <th className="checkbox-col">
+                      <th className="col-check">
                         <input type="checkbox" checked={allVisibleSelected} onChange={(e) => toggleAllRows(e.target.checked)} />
                       </th>
                       <th><button type="button" className="sortable-head" onClick={() => requestSort("paymentId")}>{t.payments.cols.paymentId} <ArrowUpDown size={13} /></button></th>
                       <th><button type="button" className="sortable-head" onClick={() => requestSort("invoiceNumber")}>{t.payments.cols.invoice} <ArrowUpDown size={13} /></button></th>
                       <th>{t.payments.cols.customer}</th>
-                      <th className="align-right"><button type="button" className="sortable-head align-right" onClick={() => requestSort("amount")}>{t.payments.cols.amount} <ArrowUpDown size={13} /></button></th>
+                      <th className="col-num align-right"><button type="button" className="sortable-head align-right" onClick={() => requestSort("amount")}>{t.payments.cols.amount} <ArrowUpDown size={13} /></button></th>
                       <th><button type="button" className="sortable-head" onClick={() => requestSort("method")}>{t.payments.cols.method} <ArrowUpDown size={13} /></button></th>
                       <th><button type="button" className="sortable-head" onClick={() => requestSort("status")}>{t.payments.cols.status} <ArrowUpDown size={13} /></button></th>
-                      <th><button type="button" className="sortable-head" onClick={() => requestSort("date")}>{t.payments.cols.date} <ArrowUpDown size={13} /></button></th>
+                      <th className="col-date"><button type="button" className="sortable-head" onClick={() => requestSort("date")}>{t.payments.cols.date} <ArrowUpDown size={13} /></button></th>
                       <th>{t.payments.cols.reference}</th>
-                      <th className="actions-col">{t.payments.cols.actions}</th>
+                      <th className="col-actions">{t.payments.cols.actions}</th>
                     </tr>
                   </thead>
                   <tbody>

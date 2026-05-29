@@ -76,25 +76,38 @@ export default function FactoryBatches() {
           </select>
         </div>
 
-        <div className={styles.tableWrap}>
+        <div className={`${styles.tableWrap} atlas-table-wrapper`}>
           {isLoading ? (
             <Skeleton variant="rect" height={280} />
           ) : filtered.length === 0 ? (
             <EmptyState icon={<Layers size={32} />} title={tc.noData} />
           ) : (
-            <table className={styles.table}>
+            <table className={`${styles.table} atlas-table`}>
+              <colgroup>
+                <col className="col-w-110" />
+                <col className="col-w-110" />
+                <col />
+                <col className="col-w-80" />
+                <col className="col-date" />
+                <col className="col-date" />
+                <col className="col-w-90" />
+                <col className="col-w-90" />
+                <col className="col-currency col-w-120" />
+                <col className="col-currency col-w-120" />
+                <col />
+              </colgroup>
               <thead>
                 <tr>
-                  <th>{tc.cols.batchId}</th>
-                  <th>{tc.cols.order}</th>
+                  <th className="col-code">{tc.cols.batchId}</th>
+                  <th className="col-code">{tc.cols.order}</th>
                   <th>{tc.cols.product}</th>
-                  <th className={styles.numEnd}>{tc.cols.quantity}</th>
-                  <th>{tc.cols.producedDate}</th>
-                  <th>{tc.cols.expiryDate}</th>
-                  <th>{tc.cols.status}</th>
-                  <th>{tc.cols.qcStatus}</th>
-                  <th className={styles.numEnd}>{tc.cols.unitCost}</th>
-                  <th className={styles.numEnd}>{tc.cols.totalCost}</th>
+                  <th className="col-num">{tc.cols.quantity}</th>
+                  <th className="col-date">{tc.cols.producedDate}</th>
+                  <th className="col-date">{tc.cols.expiryDate}</th>
+                  <th className="col-badge">{tc.cols.status}</th>
+                  <th className="col-badge">{tc.cols.qcStatus}</th>
+                  <th className="col-num">{tc.cols.unitCost}</th>
+                  <th className="col-num">{tc.cols.totalCost}</th>
                   <th>{tc.cols.notes}</th>
                 </tr>
               </thead>

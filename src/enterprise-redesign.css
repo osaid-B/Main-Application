@@ -925,3 +925,73 @@ html[dir="rtl"] .app-select-control {
     display: none !important;
   }
 }
+
+/* ─── Additional table normalizations (trs-table, dashboard-table) ────── */
+.trs-table-wrap,
+.lv-table-wrap {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: visible;
+}
+
+.trs-table,
+.dashboard-table,
+.compact-dashboard-table {
+  width: 100% !important;
+  min-width: 0 !important;
+  table-layout: fixed !important;
+  border-collapse: collapse !important;
+  border-spacing: 0 !important;
+}
+
+.trs-table th,
+.trs-table td,
+.dashboard-table th,
+.dashboard-table td,
+.compact-dashboard-table th,
+.compact-dashboard-table td {
+  padding: 10px 12px !important;
+  background: transparent !important;
+  color: var(--app-text) !important;
+  font-size: 13px !important;
+  line-height: 1.4 !important;
+  vertical-align: middle !important;
+  overflow: hidden;
+}
+
+.trs-table td,
+.dashboard-table td,
+.compact-dashboard-table td {
+  border-top: 1px solid rgba(226, 232, 240, 0.7) !important;
+}
+
+.trs-table th,
+.dashboard-table th,
+.compact-dashboard-table th {
+  padding-top: 0 !important;
+  border-top: 0 !important;
+  border-bottom: 1px solid var(--app-border) !important;
+  color: var(--app-text-muted) !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  text-align: start !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.04em !important;
+  background: var(--app-surface-muted) !important;
+}
+
+.trs-table tbody tr:hover,
+.dashboard-table tbody tr:hover,
+.compact-dashboard-table tbody tr:hover {
+  background: var(--app-surface-hover) !important;
+}
+
+html[dir="rtl"] .trs-table th,
+html[dir="rtl"] .trs-table td,
+html[dir="rtl"] .dashboard-table th,
+html[dir="rtl"] .dashboard-table td,
+html[dir="rtl"] .compact-dashboard-table th,
+html[dir="rtl"] .compact-dashboard-table td {
+  text-align: right !important;
+}

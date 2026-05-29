@@ -69,26 +69,39 @@ export default function FactoryImports() {
           </select>
         </div>
 
-        <div className={styles.tableWrap}>
+        <div className={`${styles.tableWrap} atlas-table-wrapper`}>
           {isLoading ? (
             <Skeleton variant="rect" height={280} />
           ) : filtered.length === 0 ? (
             <EmptyState icon={<Ship size={32} />} title={tc.noData} />
           ) : (
-            <table className={styles.table}>
+            <table className={`${styles.table} atlas-table`}>
+              <colgroup>
+                <col className="col-w-110" />
+                <col />
+                <col className="col-w-90" />
+                <col className="col-w-80" />
+                <col className="col-currency col-w-120" />
+                <col className="col-w-80" />
+                <col className="col-date" />
+                <col className="col-date" />
+                <col className="col-w-100" />
+                <col className="col-w-110" />
+                <col className="col-actions" />
+              </colgroup>
               <thead>
                 <tr>
-                  <th>{tc.cols.importId}</th>
+                  <th className="col-code">{tc.cols.importId}</th>
                   <th>{tc.cols.supplier}</th>
-                  <th>{tc.cols.origin}</th>
-                  <th className={styles.numEnd}>{tc.cols.items}</th>
-                  <th className={styles.numEnd}>{tc.cols.totalValue}</th>
+                  <th className="col-badge">{tc.cols.origin}</th>
+                  <th className="col-num">{tc.cols.items}</th>
+                  <th className="col-num">{tc.cols.totalValue}</th>
                   <th>{tc.cols.currency}</th>
-                  <th>{tc.cols.orderDate}</th>
-                  <th>{tc.cols.eta}</th>
-                  <th>{tc.cols.status}</th>
+                  <th className="col-date">{tc.cols.orderDate}</th>
+                  <th className="col-date">{tc.cols.eta}</th>
+                  <th className="col-badge">{tc.cols.status}</th>
                   <th>{tc.cols.customsRef}</th>
-                  <th>{tc.cols.actions}</th>
+                  <th className="col-actions">{tc.cols.actions}</th>
                 </tr>
               </thead>
               <tbody>

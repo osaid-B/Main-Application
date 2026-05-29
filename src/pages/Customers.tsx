@@ -163,18 +163,28 @@ export default function Customers() {
         </div>}
 
         {/* Table */}
-        <div className={styles.tableWrap}>
-          <table className={styles.table}>
+        <div className={`${styles.tableWrap} atlas-table-wrapper`}>
+          <table className={`${styles.table} atlas-table`}>
+            <colgroup>
+              <col />
+              <col className="col-w-100" />
+              <col className="col-w-120" />
+              <col className="col-w-120" />
+              <col className="col-currency" />
+              <col className="col-date" />
+              <col className="col-w-90" />
+              <col className="col-actions" />
+            </colgroup>
             <thead>
               <tr>
-                <th>{t.customers.cols.customer}</th>
-                <th>{t.customers.cols.type}</th>
+                <th className="col-entity">{t.customers.cols.customer}</th>
+                <th className="col-badge">{t.customers.cols.type}</th>
                 <th>{t.customers.cols.city}</th>
                 <th>{t.customers.cols.paymentTerms}</th>
-                <th>{t.customers.cols.balance}</th>
-                <th>{t.customers.cols.lastOrder}</th>
-                <th>{t.customers.cols.status}</th>
-                <th aria-label={t.customers.ariaMore} />
+                <th className="col-num">{t.customers.cols.balance}</th>
+                <th className="col-date">{t.customers.cols.lastOrder}</th>
+                <th className="col-badge">{t.customers.cols.status}</th>
+                <th className="col-actions" aria-label={t.customers.ariaMore} />
               </tr>
             </thead>
             <tbody>

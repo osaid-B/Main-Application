@@ -150,6 +150,17 @@ export default function InventoryOverview() {
 
         <div className={styles.tableWrap}>
           <table className={styles.table}>
+            <colgroup>
+              <col />
+              <col className="col-w-100" />
+              <col className="col-w-110" />
+              <col className="col-w-90" />
+              <col className="col-w-72" />
+              <col className="col-currency" />
+              <col className="col-w-100" />
+              <col className="col-w-90" />
+              <col className="col-actions" />
+            </colgroup>
             <thead>
               <tr>
                 <th>{tc.cols.product}</th>
@@ -160,7 +171,7 @@ export default function InventoryOverview() {
                 <th className={styles.numEnd}>{tc.cols.stockValue}</th>
                 <th className={styles.numEnd}>{tc.cols.reorderPoint}</th>
                 <th>{tc.cols.status}</th>
-                <th>{tc.cols.actions}</th>
+                <th className="col-actions">{tc.cols.actions}</th>
               </tr>
             </thead>
             <tbody>

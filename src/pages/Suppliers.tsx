@@ -1573,15 +1573,15 @@ export default function Suppliers() {
                   )}
                 </div>
               ) : (
-                <div className="suppliers-table-wrap app-table-wrap">
-                  <table className="suppliers-table app-data-table">
+                <div className="suppliers-table-wrap app-table-wrap atlas-table-wrapper">
+                  <table className="suppliers-table app-data-table atlas-table">
                     <colgroup>
-                      <col className="supplier-col" />
-                      <col className="phone-col" />
-                      <col className="location-col" />
-                      <col className="balance-col" />
-                      <col className="status-col" />
-                      <col className="actions-col" />
+                      <col />
+                      <col className="col-w-120" />
+                      <col className="col-w-130" />
+                      <col className="col-currency" />
+                      <col className="col-w-90" />
+                      <col className="col-actions" />
                     </colgroup>
 
                     <thead>

@@ -1,0 +1,238 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   ATLAS ERP — Global Table System  (src/styles/tables.css)
+   All tables should carry `atlas-table-wrapper` + `atlas-table` classes.
+   Column modifiers (col-*) may be applied to <col>, <th>, and <td>.
+═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Wrapper ──────────────────────────────────────────────────────────── */
+.atlas-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: var(--app-radius-md);
+  border: 1px solid var(--app-border);
+  background: var(--app-surface);
+}
+
+/* ── Table base ───────────────────────────────────────────────────────── */
+.atlas-table {
+  width: 100%;
+  border-collapse: collapse;
+  border-spacing: 0;
+  table-layout: fixed;          /* CRITICAL: prevents column-width jumping */
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+/* ── Header ───────────────────────────────────────────────────────────── */
+.atlas-table thead tr {
+  background: var(--app-surface-muted);
+  border-bottom: 1px solid var(--app-border);
+}
+
+.atlas-table thead th {
+  padding: 10px 14px;
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--app-text-muted);
+  white-space: nowrap;
+  user-select: none;
+  vertical-align: middle;
+  text-align: start;              /* logical: LTR=left, RTL=right */
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Body rows ────────────────────────────────────────────────────────── */
+.atlas-table tbody tr {
+  border-bottom: 1px solid var(--app-border);
+  transition: background 150ms ease;
+}
+
+.atlas-table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.atlas-table tbody tr:hover {
+  background: var(--app-surface-hover);
+}
+
+/* ── Body cells ───────────────────────────────────────────────────────── */
+.atlas-table tbody td {
+  padding: 11px 14px;
+  color: var(--app-text);
+  vertical-align: middle;
+  text-align: start;              /* logical: LTR=left, RTL=right */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Footer row ───────────────────────────────────────────────────────── */
+.atlas-table tfoot tr {
+  background: var(--app-surface-muted);
+  border-top: 2px solid var(--app-border);
+}
+
+.atlas-table tfoot td,
+.atlas-table tfoot th {
+  padding: 10px 14px;
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--app-text);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   COLUMN TYPE MODIFIERS
+   Apply to both <th> and <td> in each column (or to <col> for layout only)
+═══════════════════════════════════════════════════════════════════════ */
+
+/* Numeric — right-aligned, tabular figures */
+.atlas-table .col-num {
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+  font-family: var(--font-mono);
+}
+
+/* Currency — right-aligned, mono, fixed width */
+.atlas-table .col-currency {
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+  font-family: var(--font-mono);
+  width: 130px;
+  min-width: 110px;
+}
+
+/* Date — no-wrap, mono, fixed width */
+.atlas-table .col-date {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  width: 110px;
+  min-width: 100px;
+}
+
+/* Code / ID — mono, muted, fixed */
+.atlas-table .col-code {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--app-text-muted);
+  width: 110px;
+  min-width: 90px;
+}
+
+/* Status / Badge — centered */
+.atlas-table .col-badge {
+  text-align: center;
+  width: 100px;
+  min-width: 80px;
+}
+
+/* Actions — end-aligned, fixed narrow */
+.atlas-table .col-actions {
+  text-align: end;
+  width: 80px;
+  min-width: 72px;
+}
+
+/* Checkbox column */
+.atlas-table .col-check {
+  width: 40px;
+  min-width: 40px;
+  text-align: center;
+}
+
+/* Entity — primary name/title column, slightly bolder */
+.atlas-table th.col-entity,
+.atlas-table td.col-entity {
+  font-weight: 600;
+}
+
+/* Text — plain text that truncates (default td already truncates) */
+/* .col-text is a semantic marker; no extra styles needed */
+
+/* Expands to fill remaining space */
+.atlas-table .col-flex {
+  min-width: 120px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   FIXED WIDTH HELPERS  (apply to <col> or first-row <th>)
+═══════════════════════════════════════════════════════════════════════ */
+.atlas-table .col-w-40  { width:  40px; min-width:  40px; }
+.atlas-table .col-w-72  { width:  72px; min-width:  72px; }
+.atlas-table .col-w-80  { width:  80px; min-width:  80px; }
+.atlas-table .col-w-90  { width:  90px; min-width:  90px; }
+.atlas-table .col-w-100 { width: 100px; min-width: 100px; }
+.atlas-table .col-w-110 { width: 110px; min-width: 100px; }
+.atlas-table .col-w-120 { width: 120px; min-width: 110px; }
+.atlas-table .col-w-130 { width: 130px; min-width: 110px; }
+.atlas-table .col-w-140 { width: 140px; min-width: 120px; }
+.atlas-table .col-w-160 { width: 160px; min-width: 140px; }
+.atlas-table .col-w-200 { width: 200px; min-width: 160px; }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   SPECIAL ROW STATES
+═══════════════════════════════════════════════════════════════════════ */
+
+/* Selected row */
+.atlas-table tbody tr.is-selected {
+  background: rgba(37, 99, 235, 0.05);
+}
+
+/* Empty-state cell */
+.atlas-table tbody tr.is-empty td {
+  text-align: center;
+  padding: 48px 16px;
+  color: var(--app-text-muted);
+  font-size: 14px;
+  white-space: normal;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   SORTABLE HEADER
+═══════════════════════════════════════════════════════════════════════ */
+.atlas-table th.is-sortable {
+  cursor: pointer;
+}
+.atlas-table th.is-sortable:hover {
+  color: var(--app-text);
+}
+.atlas-table th.sort-asc::after  { content: " ↑"; }
+.atlas-table th.sort-desc::after { content: " ↓"; }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   TRUNCATION HELPER
+═══════════════════════════════════════════════════════════════════════ */
+.atlas-table td.col-truncate {
+  max-width: 0;           /* combined with overflow:hidden for ellipsis */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   RESPONSIVE  (below 680px tighten padding)
+═══════════════════════════════════════════════════════════════════════ */
+@media (max-width: 680px) {
+  .atlas-table thead th,
+  .atlas-table tbody td,
+  .atlas-table tfoot td {
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   DARK MODE
+═══════════════════════════════════════════════════════════════════════ */
+[data-theme="dark"] .atlas-table thead tr {
+  background: var(--app-surface-muted);
+}
+[data-theme="dark"] .atlas-table tbody tr {
+  border-bottom-color: var(--app-border);
+}
+[data-theme="dark"] .atlas-table tbody td {
+  color: var(--app-text);
+}

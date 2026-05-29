@@ -7,6 +7,7 @@ import "./foundation.css";
 import "./responsive.css";
 import "./enterprise-redesign.css";
 import "./pages-normalize.css";
+import "./styles/tables.css";
 import { AuthProvider } from "./context/AuthContext";
 import { AIProvider } from "./context/AIContext";
 import { SettingsProvider } from "./context/SettingsContext";
