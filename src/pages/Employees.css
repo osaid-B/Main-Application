@@ -1770,8 +1770,9 @@ textarea.modal-input:focus {
 .emp-monthly-day-btn.is-late     { background:#fffbeb; }
 .emp-monthly-day-btn.is-absent   { background:#fff5f5; }
 .emp-monthly-day-btn.is-half-day { background:#f5f3ff; }
-.emp-monthly-day-btn.is-leave    { background:#f8fafc; }
-.emp-monthly-day-btn.is-empty    { background:transparent; }
+.emp-monthly-day-btn.is-leave         { background:#dbeafe; }
+.emp-monthly-day-btn.is-leave-pending { background:#eff6ff; border:1px dashed #93c5fd; }
+.emp-monthly-day-btn.is-empty         { background:transparent; }
 .emp-day-dot   { width:7px; height:7px; border-radius:50%; }
 .emp-day-short { font-size:13px; font-weight:800; color:#374151; }
 .emp-day-hours { font-size:10px; color:#94a3b8; }

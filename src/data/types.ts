@@ -371,7 +371,8 @@ export type DailyAttendanceStatus =
   | "late"
   | "absent"
   | "half-day"
-  | "leave";
+  | "leave"
+  | "leave_pending";
 
 export type AttendanceRecord = {
   date: string;

@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { Button } from "../components/ui/Button";
 import { useData } from "../context/DataContext";
+import { getLeaveRequests } from "../data/storage";
 import type {
   Employee,
   EmployeeAdvance,
@@ -132,6 +133,22 @@ const EMPTY_FORM: EmployeeForm = {
 
 const DELETE_CONFIRMATION_CODE = "123";
 
+function getEffectiveStatus(
+  emp: Employee,
+  date: string,
+): DailyAttendanceStatus | null {
+  const leaves = getLeaveRequests();
+  const approved = leaves.find(
+    (l) => l.employeeId === emp.id && l.status === "approved" && date >= l.startDate && date <= l.endDate,
+  );
+  if (approved) return "leave";
+  const pending = leaves.find(
+    (l) => l.employeeId === emp.id && l.status === "pending" && date >= l.startDate && date <= l.endDate,
+  );
+  if (pending) return "leave_pending";
+  return null;
+}
+
 const DAILY_STATUS_OPTIONS: Array<{
   value: DailyAttendanceStatus;
   label: string;
@@ -141,6 +158,7 @@ const DAILY_STATUS_OPTIONS: Array<{
   { value: "absent", label: "Absent" },
   { value: "half-day", label: "Half Day" },
   { value: "leave", label: "Leave" },
+  { value: "leave_pending", label: "Leave (Pending)" },
 ];
 
 const DAILY_STATUS_SHORT_LABELS: Record<DailyAttendanceStatus, string> = {
@@ -148,7 +166,8 @@ const DAILY_STATUS_SHORT_LABELS: Record<DailyAttendanceStatus, string> = {
   late: "L",
   absent: "A",
   "half-day": "H",
-  leave: "V",
+  leave: "إج",
+  leave_pending: "معلق",
 };
 
 const DAILY_STATUS_CLASS_MAP: Record<DailyAttendanceStatus, string> = {
@@ -157,6 +176,7 @@ const DAILY_STATUS_CLASS_MAP: Record<DailyAttendanceStatus, string> = {
   absent: "is-absent",
   "half-day": "is-half-day",
   leave: "is-leave",
+  leave_pending: "is-leave-pending",
 };
 
 const EMP_AVATAR_COLORS = [
@@ -351,10 +371,6 @@ function getDefaultWorkedHours(employee: Employee, status: DailyAttendanceStatus
   if (status === "absent" || status === "leave") return 0;
   if (status === "half-day") return Number((fullShift / 2).toFixed(2));
   return Number(fullShift.toFixed(2));
-}
-
-function getStatusLabel(status: DailyAttendanceStatus) {
-  return DAILY_STATUS_OPTIONS.find((item) => item.value === status)?.label || status;
 }
 
 function upsertDailyAttendance(employee: Employee, entry: DailyAttendanceEntry): Employee {
@@ -792,11 +808,12 @@ function TodayAttendanceSection({
   const miniCalWeeks = useMemo(() => getMiniCalWeeks(selectedDate), [selectedDate]);
 
   const STATUS_BADGE_STYLE: Record<DailyAttendanceStatus, { bg: string; color: string }> = {
-    present:    { bg: "#dcfce7", color: "#15803d" },
-    late:       { bg: "#fef3c7", color: "#b45309" },
-    absent:     { bg: "#fee2e2", color: "#b91c1c" },
-    "half-day": { bg: "#ede9fe", color: "#6d28d9" },
-    leave:      { bg: "#f1f5f9", color: "#475569" },
+    present:       { bg: "#dcfce7", color: "#15803d" },
+    late:          { bg: "#fef3c7", color: "#b45309" },
+    absent:        { bg: "#fee2e2", color: "#b91c1c" },
+    "half-day":    { bg: "#ede9fe", color: "#6d28d9" },
+    leave:         { bg: "#dbeafe", color: "#1d4ed8" },
+    leave_pending: { bg: "#eff6ff", color: "#2563eb" },
   };
 
   return (
@@ -1392,23 +1409,27 @@ function MonthlyAttendanceSection({
                     </td>
                     {visibleDays.map((day) => {
                       const entry = getDailyAttendanceEntryByDate(emp, day.date);
-                      const dotColor = entry
-                        ? ({ present: "#16a34a", late: "#d97706", absent: "#dc2626", "half-day": "#7c3aed", leave: "#94a3b8" }[entry.status] || "#94a3b8")
-                        : undefined;
-                      const hoursStr = entry ? `${Math.floor(Number(entry.workedHours))}h ${String(Math.round((Number(entry.workedHours) % 1) * 60)).padStart(2, "0")}m` : "";
+                      const leaveStatus = getEffectiveStatus(emp, day.date);
+                      const displayStatus: DailyAttendanceStatus | null = leaveStatus ?? entry?.status ?? null;
+                      const DOT_COLORS: Record<DailyAttendanceStatus, string> = {
+                        present: "#16a34a", late: "#d97706", absent: "#dc2626",
+                        "half-day": "#7c3aed", leave: "#2563eb", leave_pending: "#93c5fd",
+                      };
+                      const dotColor = displayStatus ? DOT_COLORS[displayStatus] : undefined;
+                      const hoursStr = (entry && !leaveStatus) ? `${Math.floor(Number(entry.workedHours))}h ${String(Math.round((Number(entry.workedHours) % 1) * 60)).padStart(2, "0")}m` : "";
                       return (
                         <td key={day.date} className={isPalestinianWeekend(day.dow) ? "emp-day-weekend" : ""}>
                           <button
                             type="button"
-                            className={`emp-monthly-day-btn ${entry ? DAILY_STATUS_CLASS_MAP[entry.status] : "is-empty"}`}
-                            onClick={() => onOpenEditor(emp, day.date)}
-                            title={entry ? `${getStatusLabel(entry.status)} – ${day.date}` : day.date}
+                            className={`emp-monthly-day-btn ${displayStatus ? DAILY_STATUS_CLASS_MAP[displayStatus] : "is-empty"}`}
+                            onClick={() => !leaveStatus && onOpenEditor(emp, day.date)}
+                            title={displayStatus ? `${DAILY_STATUS_SHORT_LABELS[displayStatus]} – ${day.date}` : day.date}
                           >
-                            {entry && dotColor && (
+                            {displayStatus && dotColor && (
                               <span className="emp-day-dot" style={{ background: dotColor }} />
                             )}
                             <span className="emp-day-short">
-                              {entry ? DAILY_STATUS_SHORT_LABELS[entry.status] : "-"}
+                              {displayStatus ? DAILY_STATUS_SHORT_LABELS[displayStatus] : "-"}
                             </span>
                             {hoursStr && <span className="emp-day-hours">{hoursStr}</span>}
                           </button>
