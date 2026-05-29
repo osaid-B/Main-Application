@@ -174,12 +174,12 @@ export default function PosProducts() {
                   return (
                     <tr key={p.id}>
                       <td><span>{p.name}</span></td>
-                      <td><span className={styles.mono}>{p.id}</span></td>
+                      <td className="col-code"><span className={styles.mono}>{p.id}</span></td>
                       <td><span className={styles.catTag}>{p.category}</span></td>
-                      <td className={`${styles.numEnd} ${styles.mono}`}>{formatCurrency(p.price)}</td>
-                      <td className={`${styles.numEnd} ${styles.mono} ${st === "outOfStock" ? styles.stockZero : st === "low" ? styles.stockLow : ""}`}>{p.stock}</td>
-                      <td><Badge variant={STATUS_VARIANT[st]} size="sm">{tc.status[st]}</Badge></td>
-                      <td>
+                      <td className={`${styles.numEnd} ${styles.mono} col-num`}>{formatCurrency(p.price)}</td>
+                      <td className={`${styles.numEnd} ${styles.mono} col-num ${st === "outOfStock" ? styles.stockZero : st === "low" ? styles.stockLow : ""}`}>{p.stock}</td>
+                      <td className="col-badge"><Badge variant={STATUS_VARIANT[st]} size="sm">{tc.status[st]}</Badge></td>
+                      <td className="col-actions">
                         <button type="button" className={styles.actionBtn} onClick={() => { setEditTarget(p); setNewPrice(String(p.price)); }}>
                           {tc.actions.edit}
                         </button>

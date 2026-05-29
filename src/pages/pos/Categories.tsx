@@ -198,10 +198,10 @@ export default function Categories() {
                       {filteredProducts.map((p) => (
                         <tr key={p.id}>
                           <td><span className={styles.catName}>{p.name}</span></td>
-                          <td><span className={styles.mono}>{p.id}</span></td>
-                          <td className={`${styles.numEnd} ${styles.mono}`}>{formatCurrency(p.price)}</td>
-                          <td className={`${styles.numEnd} ${styles.mono}`}>{p.stock}</td>
-                          <td>
+                          <td className="col-code"><span className={styles.mono}>{p.id}</span></td>
+                          <td className={`${styles.numEnd} ${styles.mono} col-num`}>{formatCurrency(p.price)}</td>
+                          <td className={`${styles.numEnd} ${styles.mono} col-num`}>{p.stock}</td>
+                          <td className="col-badge">
                             <Badge variant={p.stock > 0 ? "success" : "danger"} size="sm">
                               {p.stock > 0 ? t.common.active : t.common.inactive}
                             </Badge>

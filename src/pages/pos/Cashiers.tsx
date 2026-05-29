@@ -147,17 +147,17 @@ export default function Cashiers() {
                       <span className={styles.cashierName}>{c.name}</span>
                     </div>
                   </td>
-                  <td><span className={styles.mono}>{c.code}</span></td>
-                  <td>
+                  <td className="col-code"><span className={styles.mono}>{c.code}</span></td>
+                  <td className="col-badge">
                     <Badge variant={STATUS_VARIANT[c.status]} size="sm">
                       {tc.status[c.status === "on-break" ? "onBreak" : c.status]}
                     </Badge>
                   </td>
                   <td>{tc.shift[c.shift]}</td>
-                  <td className={`${styles.numEnd} ${styles.mono}`}>{formatCurrency(c.todaySales)}</td>
-                  <td className={`${styles.numEnd} ${styles.mono}`}>{c.transactions}</td>
-                  <td className={styles.mono}>{new Date(c.lastActive).toLocaleDateString()}</td>
-                  <td>
+                  <td className={`${styles.numEnd} ${styles.mono} col-num`}>{formatCurrency(c.todaySales)}</td>
+                  <td className={`${styles.numEnd} ${styles.mono} col-num`}>{c.transactions}</td>
+                  <td className={`${styles.mono} col-date`}>{new Date(c.lastActive).toLocaleDateString()}</td>
+                  <td className="col-actions">
                     <OverflowMenu
                       onEdit={() => setEditing(c)}
                       onToggle={() => toggleStatus(c.id)}

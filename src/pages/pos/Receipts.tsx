@@ -188,22 +188,22 @@ export default function Receipts() {
             <tbody>
               {filtered.map((r) => (
                 <tr key={r.id}>
-                  <td><span className={styles.receiptId}>{r.id}</span></td>
-                  <td className={styles.mono}>{r.date} {r.time}</td>
+                  <td className="col-code"><span className={styles.receiptId}>{r.id}</span></td>
+                  <td className={`${styles.mono} col-date`}>{r.date} {r.time}</td>
                   <td>{r.cashierName}</td>
-                  <td>{r.lines.length}</td>
-                  <td className={`${styles.numEnd} ${styles.mono}`}>{formatCurrency(r.total)}</td>
-                  <td>
+                  <td className={`${styles.numEnd} ${styles.mono} col-num`}>{r.lines.length}</td>
+                  <td className={`${styles.numEnd} ${styles.mono} col-num`}>{formatCurrency(r.total)}</td>
+                  <td className="col-badge">
                     <Badge variant={METHOD_VARIANT[r.paymentMethod]} size="sm">
                       {tc.method[r.paymentMethod]}
                     </Badge>
                   </td>
-                  <td>
+                  <td className="col-badge">
                     <Badge variant={STATUS_VARIANT[r.status]} size="sm">
                       {tc.status[r.status]}
                     </Badge>
                   </td>
-                  <td>
+                  <td className="col-actions">
                     <button
                       type="button"
                       className={styles.viewBtn}

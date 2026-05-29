@@ -132,16 +132,16 @@ export default function StockCounts() {
             <tbody>
               {filtered.map((c) => (
                 <tr key={c.id}>
-                  <td><span className={styles.mono}>{c.id}</span></td>
-                  <td className={styles.mono}>{c.date}</td>
+                  <td className="col-code"><span className={styles.mono}>{c.id}</span></td>
+                  <td className={`${styles.mono} col-date`}>{c.date}</td>
                   <td>{c.location}</td>
-                  <td>
+                  <td className="col-badge">
                     <Badge variant={STATUS_VARIANT[c.status]} size="sm">
                       {tc.status[c.status === "in-progress" ? "inProgress" : c.status]}
                     </Badge>
                   </td>
-                  <td className={`${styles.numEnd} ${styles.mono}`}>{c.itemsCount}</td>
-                  <td className={`${styles.numEnd} ${styles.mono}`}>
+                  <td className={`${styles.numEnd} ${styles.mono} col-num`}>{c.itemsCount}</td>
+                  <td className={`${styles.numEnd} ${styles.mono} col-num`}>
                     {c.status === "completed" ? (
                       <span className={c.varianceValue < 0 ? styles.varNeg : c.varianceValue > 0 ? styles.varPos : styles.varZero}>
                         {c.varianceValue === 0 ? "—" : formatCurrency(Math.abs(c.varianceValue))}
@@ -149,7 +149,7 @@ export default function StockCounts() {
                     ) : "—"}
                   </td>
                   <td>{c.countedBy}</td>
-                  <td>
+                  <td className="col-actions">
                     <button type="button" className={styles.viewBtn} onClick={() => setDetail(c)}>
                       {tc.actions.view}
                     </button>

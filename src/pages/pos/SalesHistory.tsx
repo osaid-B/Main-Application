@@ -153,19 +153,19 @@ export default function SalesHistory() {
             <tbody>
               {filtered.map((tx) => (
                 <tr key={tx.id} onClick={() => setSelected(tx)} className={styles.clickRow}>
-                  <td><span className={styles.mono}>{tx.id}</span></td>
-                  <td className={styles.mono}>{tx.date} {tx.time}</td>
+                  <td className="col-code"><span className={styles.mono}>{tx.id}</span></td>
+                  <td className={`${styles.mono} col-date`}>{tx.date} {tx.time}</td>
                   <td>{tx.cashierName}</td>
                   <td>{tx.customerName ?? <span className={styles.walkin}>—</span>}</td>
-                  <td className={`${styles.numEnd} ${styles.mono}`}>{tx.lines.length}</td>
-                  <td className={`${styles.numEnd} ${styles.mono}`}>{formatCurrency(tx.total)}</td>
-                  <td>
+                  <td className={`${styles.numEnd} ${styles.mono} col-num`}>{tx.lines.length}</td>
+                  <td className={`${styles.numEnd} ${styles.mono} col-num`}>{formatCurrency(tx.total)}</td>
+                  <td className="col-badge">
                     <Badge variant={METHOD_VARIANT[tx.paymentMethod]} size="sm">{tc.method[tx.paymentMethod]}</Badge>
                   </td>
-                  <td>
+                  <td className="col-badge">
                     <Badge variant={STATUS_VARIANT[tx.status]} size="sm">{tc.status[tx.status]}</Badge>
                   </td>
-                  <td>
+                  <td className="col-actions">
                     <button type="button" className={styles.viewBtn} onClick={(e) => { e.stopPropagation(); setSelected(tx); }}>
                       {t.common.view}
                     </button>

@@ -153,17 +153,17 @@ export default function SalesRefunds() {
             <tbody>
               {filtered.map((r) => (
                 <tr key={r.id}>
-                  <td><span className={styles.mono}>{r.id}</span></td>
-                  <td><span className={styles.mono}>{r.originalTxId}</span></td>
-                  <td className={styles.mono}>{r.date}</td>
+                  <td className="col-code"><span className={styles.mono}>{r.id}</span></td>
+                  <td className="col-code"><span className={styles.mono}>{r.originalTxId}</span></td>
+                  <td className={`${styles.mono} col-date`}>{r.date}</td>
                   <td>{r.cashierName}</td>
                   <td>{r.customerName ?? "—"}</td>
-                  <td className={`${styles.numEnd} ${styles.mono}`}>{formatCurrency(r.refundAmount)}</td>
+                  <td className={`${styles.numEnd} ${styles.mono} col-num`}>{formatCurrency(r.refundAmount)}</td>
                   <td><span className={styles.reasonTag}>{tc.reason[r.reason]}</span></td>
-                  <td>
+                  <td className="col-badge">
                     <Badge variant={STATUS_VARIANT[r.status]} size="sm">{tc.status[r.status]}</Badge>
                   </td>
-                  <td>
+                  <td className="col-actions">
                     <div className={styles.rowActions}>
                       <button type="button" className={styles.actionBtn} onClick={() => setDetailTarget(r)}>{tc.actions.view}</button>
                       {r.status === "pending" && (
