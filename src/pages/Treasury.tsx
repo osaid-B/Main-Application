@@ -528,16 +528,16 @@ export default function Treasury() {
           {/* ── Overview / unified table ── */}
           {activeTab === "overview" && (
             <div className="trs-table-card">
-              <div className="trs-table-wrap">
-                <table className="trs-table">
+              <div className="trs-table-wrap atlas-table-wrapper">
+                <table className="trs-table atlas-table">
                   <colgroup>
-                    <col style={{ width: "22%" }} />
-                    <col style={{ width: "10%" }} />
-                    <col style={{ width: "18%" }} />
-                    <col style={{ width: "13%" }} />
-                    <col style={{ width: "16%" }} />
-                    <col style={{ width: "12%" }} />
-                    <col style={{ width: "9%" }} />
+                    <col className="col-w-160" />
+                    <col className="col-w-80" />
+                    <col />
+                    <col className="col-w-100" />
+                    <col className="col-date" />
+                    <col className="col-currency" />
+                    <col className="col-actions" />
                   </colgroup>
                   <thead>
                     <tr>
@@ -545,9 +545,9 @@ export default function Treasury() {
                       <th>{t.common.type}</th>
                       <th>{t.treasury.cols.party}</th>
                       <th>{t.treasury.cols.status}</th>
-                      <th>{t.treasury.cols.date}</th>
-                      <th>{t.treasury.cols.amount}</th>
-                      <th>{t.treasury.cols.actions}</th>
+                      <th className="col-date">{t.treasury.cols.date}</th>
+                      <th className="col-num">{t.treasury.cols.amount}</th>
+                      <th className="col-actions">{t.treasury.cols.actions}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -639,12 +639,21 @@ export default function Treasury() {
                 <strong>{t.treasury.tabs.incoming}</strong>
                 <span className="trs-table-sub">{t.treasury.pageSubtitle}</span>
               </div>
-              <div className="trs-table-wrap">
-                <table className="trs-table">
+              <div className="trs-table-wrap atlas-table-wrapper">
+                <table className="trs-table atlas-table">
+                  <colgroup>
+                    <col className="col-w-130" />
+                    <col />
+                    <col className="col-date" />
+                    <col className="col-currency" />
+                    <col className="col-w-90" />
+                    <col className="col-w-80" />
+                    <col className="col-w-100" />
+                  </colgroup>
                   <thead>
                     <tr>
-                      <th>{t.treasury.cols.reference}</th><th>{t.common.customer}</th><th>{t.treasury.cols.dueDate}</th>
-                      <th>{t.treasury.cols.amount}</th><th>{t.treasury.cols.status}</th><th>OCR</th><th>{t.treasury.cols.actions}</th>
+                      <th>{t.treasury.cols.reference}</th><th>{t.common.customer}</th><th className="col-date">{t.treasury.cols.dueDate}</th>
+                      <th className="col-num">{t.treasury.cols.amount}</th><th>{t.treasury.cols.status}</th><th>OCR</th><th className="col-actions">{t.treasury.cols.actions}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -690,12 +699,21 @@ export default function Treasury() {
                 <strong>{t.treasury.tabs.outgoing}</strong>
                 <span className="trs-table-sub">{t.treasury.pageSubtitle}</span>
               </div>
-              <div className="trs-table-wrap">
-                <table className="trs-table">
+              <div className="trs-table-wrap atlas-table-wrapper">
+                <table className="trs-table atlas-table">
+                  <colgroup>
+                    <col className="col-w-130" />
+                    <col />
+                    <col className="col-date" />
+                    <col className="col-currency" />
+                    <col className="col-w-90" />
+                    <col className="col-w-120" />
+                    <col className="col-w-100" />
+                  </colgroup>
                   <thead>
                     <tr>
-                      <th>{t.treasury.cols.reference}</th><th>{t.common.supplier}</th><th>{t.treasury.cols.dueDate}</th>
-                      <th>{t.treasury.cols.amount}</th><th>{t.treasury.cols.status}</th><th>{t.common.notes}</th><th>{t.treasury.cols.actions}</th>
+                      <th>{t.treasury.cols.reference}</th><th>{t.common.supplier}</th><th className="col-date">{t.treasury.cols.dueDate}</th>
+                      <th className="col-num">{t.treasury.cols.amount}</th><th>{t.treasury.cols.status}</th><th>{t.common.notes}</th><th className="col-actions">{t.treasury.cols.actions}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -736,12 +754,21 @@ export default function Treasury() {
                 <strong>{t.treasury.tabs.transfers}</strong>
                 <span className="trs-table-sub">{t.treasury.pageSubtitle}</span>
               </div>
-              <div className="trs-table-wrap">
-                <table className="trs-table">
+              <div className="trs-table-wrap atlas-table-wrapper">
+                <table className="trs-table atlas-table">
+                  <colgroup>
+                    <col className="col-w-130" />
+                    <col />
+                    <col className="col-date" />
+                    <col className="col-currency" />
+                    <col className="col-w-90" />
+                    <col className="col-w-80" />
+                    <col className="col-w-100" />
+                  </colgroup>
                   <thead>
                     <tr>
-                      <th>{t.treasury.form.transfer.reference}</th><th>{t.treasury.form.transfer.from}</th><th>{t.treasury.cols.date}</th>
-                      <th>{t.treasury.cols.amount}</th><th>{t.treasury.cols.status}</th><th>OCR</th><th>{t.treasury.cols.actions}</th>
+                      <th>{t.treasury.form.transfer.reference}</th><th>{t.treasury.form.transfer.from}</th><th className="col-date">{t.treasury.cols.date}</th>
+                      <th className="col-num">{t.treasury.cols.amount}</th><th>{t.treasury.cols.status}</th><th>OCR</th><th className="col-actions">{t.treasury.cols.actions}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -791,11 +818,19 @@ export default function Treasury() {
                   {t.treasury.reconciliation.match}
                 </Button>
               </div>
-              <div className="trs-table-wrap">
-                <table className="trs-table">
+              <div className="trs-table-wrap atlas-table-wrapper">
+                <table className="trs-table atlas-table">
+                  <colgroup>
+                    <col className="col-w-130" />
+                    <col className="col-date" />
+                    <col className="col-currency" />
+                    <col className="col-w-90" />
+                    <col />
+                    <col />
+                  </colgroup>
                   <thead>
                     <tr>
-                      <th>{t.treasury.cols.reference}</th><th>{t.treasury.cols.date}</th><th>{t.treasury.cols.amount}</th>
+                      <th>{t.treasury.cols.reference}</th><th className="col-date">{t.treasury.cols.date}</th><th className="col-num">{t.treasury.cols.amount}</th>
                       <th>{t.treasury.cols.status}</th><th>{t.treasury.reconciliation.match}</th><th>{t.common.notes}</th>
                     </tr>
                   </thead>
