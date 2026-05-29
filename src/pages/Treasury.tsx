@@ -264,12 +264,12 @@ export default function Treasury() {
       const customer = customers.find((c) => c.id === r.customerId);
       rows.push({
         id: r.id,
-        avatarLabel: "CHQ",
+        avatarLabel: t.treasury.types.cheque.slice(0, 3).toUpperCase(),
         avatarBg: "#dbeafe",
         avatarColor: "#1d4ed8",
         reference: r.chequeNumber,
-        subLabel: "Cheque",
-        typeLabel: "Incoming",
+        subLabel: t.treasury.types.cheque,
+        typeLabel: t.treasury.types.incoming,
         typeBg: "#dbeafe",
         typeColor: "#1d4ed8",
         party: customer?.name ?? r.accountHolder,
@@ -285,12 +285,12 @@ export default function Treasury() {
       const supplier = suppliers.find((s) => s.id === r.supplierId);
       rows.push({
         id: r.id,
-        avatarLabel: "CHQ",
+        avatarLabel: t.treasury.types.cheque.slice(0, 3).toUpperCase(),
         avatarBg: "#ffedd5",
         avatarColor: "#ea580c",
         reference: r.chequeNumber,
-        subLabel: "Cheque",
-        typeLabel: "Outgoing",
+        subLabel: t.treasury.types.cheque,
+        typeLabel: t.treasury.types.outgoing,
         typeBg: "#ffedd5",
         typeColor: "#ea580c",
         party: supplier?.name ?? r.accountHolder,
@@ -309,8 +309,8 @@ export default function Treasury() {
         avatarBg: "#dcfce7",
         avatarColor: "#16a34a",
         reference: r.transferReference,
-        subLabel: "Bank Transfer",
-        typeLabel: r.direction === "incoming" ? "Incoming" : "Outgoing",
+        subLabel: t.treasury.types.transfer,
+        typeLabel: r.direction === "incoming" ? t.treasury.types.incoming : t.treasury.types.outgoing,
         typeBg: r.direction === "incoming" ? "#dbeafe" : "#ffedd5",
         typeColor: r.direction === "incoming" ? "#1d4ed8" : "#ea580c",
         party: r.senderOrReceiver,
@@ -329,12 +329,12 @@ export default function Treasury() {
         avatarBg: "#f1f5f9",
         avatarColor: "#64748b",
         reference: r.id,
-        subLabel: "Instrument",
-        typeLabel: "Review",
+        subLabel: t.treasury.types.instrument,
+        typeLabel: t.treasury.types.review,
         typeBg: "#f1f5f9",
         typeColor: "#64748b",
-        party: "Manual review",
-        status: "Pending",
+        party: t.treasury.types.manualReview,
+        status: t.treasury.status.pending,
         date: r.capturedAt,
         amount: null,
         currency: "USD",
@@ -600,7 +600,7 @@ export default function Treasury() {
                     ))}
                     {pagedRows.length === 0 && (
                       <tr>
-                        <td colSpan={7} className="trs-empty-row">No instruments match your search.</td>
+                        <td colSpan={7} className="trs-empty-row">{t.treasury.noRows}</td>
                       </tr>
                     )}
                   </tbody>
@@ -608,7 +608,10 @@ export default function Treasury() {
               </div>
               <div className="trs-pagination">
                 <span className="trs-pg-meta">
-                  Showing {unifiedRows.length === 0 ? 0 : (page - 1) * rowsPerPage + 1} to {Math.min(page * rowsPerPage, unifiedRows.length)} of {unifiedRows.length} items
+                  {t.treasury.showingOf
+                    .replace("{{from}}", String(unifiedRows.length === 0 ? 0 : (page - 1) * rowsPerPage + 1))
+                    .replace("{{to}}", String(Math.min(page * rowsPerPage, unifiedRows.length)))
+                    .replace("{{total}}", String(unifiedRows.length))}
                 </span>
                 <div className="trs-pg-controls">
                   <Button type="button" variant="ghost" className="trs-pg-btn" onClick={() => setPage((p) => p - 1)} disabled={page === 1}>
@@ -656,7 +659,7 @@ export default function Treasury() {
                               <div><strong>{record.chequeNumber}</strong><span className="trs-sub-label">{record.bankName}</span></div>
                             </div>
                           </td>
-                          <td><div><strong>{customer?.name ?? record.accountHolder}</strong><span className="trs-sub-label">{record.invoiceId ? `Invoice ${record.invoiceId}` : "Unapplied"}</span></div></td>
+                          <td><div><strong>{customer?.name ?? record.accountHolder}</strong><span className="trs-sub-label">{record.invoiceId ? `${t.treasury.types.invoice} ${record.invoiceId}` : t.treasury.types.unapplied}</span></div></td>
                           <td><div><strong>{formatDate(record.dueDate)}</strong><span className={`trs-sub-label${new Date(record.dueDate) < new Date(TODAY) ? " trs-danger-text" : ""}`}>{urgencyLabel(record.dueDate)}</span></div></td>
                           <td><strong className="trs-amount">{money(record.amount, record.currency)}</strong></td>
                           <td><Badge variant={statusTone(record.status) as "success" | "warning" | "danger" | "neutral"} className={`trs-status-badge trs-status--${statusTone(record.status)}`}>{record.status}</Badge></td>

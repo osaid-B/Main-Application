@@ -123,12 +123,12 @@ export default function CompanyOverview() {
 
         {/* 6 KPIs (3x2) — live from DataContext */}
         <Grid cols={3} gap="md" responsive>
-          <KpiCard kpi={{ label: "REVENUE",      value: formatCurrency(totalRevenue),    trend: 0, color: "green"  }} />
-          <KpiCard kpi={{ label: "RECEIVABLES",  value: formatCurrency(receivablesTotal), trend: 0, color: "orange", subtitle: `${openInvoicesCount} invoices open` }} />
-          <KpiCard kpi={{ label: "PAYABLES",     value: formatCurrency(payablesDue),     trend: 0, color: "blue"   }} />
-          <KpiCard kpi={{ label: "CUSTOMERS",    value: String(customers.filter((c) => !c.isDeleted).length), trend: 0, color: "purple" }} />
-          <KpiCard kpi={{ label: "HEADCOUNT",    value: String(headcount), trend: 0, color: "purple" }} />
-          <KpiCard kpi={{ label: "OPEN INVOICES", value: String(openInvoicesCount), trend: 0, color: "orange" }} />
+          <KpiCard kpi={{ label: t.company.kpis.revenue,      value: formatCurrency(totalRevenue),    trend: 0, color: "green"  }} />
+          <KpiCard kpi={{ label: t.company.kpis.receivables,  value: formatCurrency(receivablesTotal), trend: 0, color: "orange", subtitle: `${openInvoicesCount} ${t.company.kpis.invoicesOpen}` }} />
+          <KpiCard kpi={{ label: t.company.kpis.payables,     value: formatCurrency(payablesDue),     trend: 0, color: "blue"   }} />
+          <KpiCard kpi={{ label: t.company.kpis.customers,    value: String(customers.filter((c) => !c.isDeleted).length), trend: 0, color: "purple" }} />
+          <KpiCard kpi={{ label: t.company.kpis.headcount,    value: String(headcount), trend: 0, color: "purple" }} />
+          <KpiCard kpi={{ label: t.company.kpis.openInvoices, value: String(openInvoicesCount), trend: 0, color: "orange" }} />
         </Grid>
 
         {/* Cash flow + Revenue donut */}
@@ -224,7 +224,7 @@ export default function CompanyOverview() {
                       amount: Number(inv.remainingAmount ?? inv.total ?? inv.amount ?? 0),
                       status: inv.status === "Partial" ? "due-soon" : "due-soon",
                     };
-                    return <InvoiceRow key={inv.id} inv={liveInv} />;
+                    return <InvoiceRow key={inv.id} inv={liveInv} overdueLabel={t.company.kpis.overdue} dueSoonLabel={t.company.kpis.dueSoon} />;
                   })}
               </tbody>
             </table>
@@ -272,7 +272,7 @@ function KpiCard({ kpi }: { kpi: CompanyKPI }) {
   );
 }
 
-function InvoiceRow({ inv }: { inv: OpenInvoice }) {
+function InvoiceRow({ inv, overdueLabel, dueSoonLabel }: { inv: OpenInvoice; overdueLabel: string; dueSoonLabel: string }) {
   return (
     <tr>
       <td><code className={styles.invCode}>{inv.invoice}</code></td>
@@ -281,7 +281,7 @@ function InvoiceRow({ inv }: { inv: OpenInvoice }) {
       <td className={styles.invAmount}>${inv.amount.toLocaleString()}</td>
       <td>
         <Badge variant={inv.status === "overdue" ? "danger" : "warning"} size="sm">
-          {inv.status === "overdue" ? "Overdue" : "Due soon"}
+          {inv.status === "overdue" ? overdueLabel : dueSoonLabel}
         </Badge>
       </td>
     </tr>

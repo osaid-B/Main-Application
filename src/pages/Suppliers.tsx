@@ -708,7 +708,7 @@ function statusTone(status: SupplierStatus) {
 }
 
 export default function Suppliers() {
-  const { t } = useSettings();
+  const { t, isArabic } = useSettings();
   const navigate = useNavigate();
   const { suppliers, addSupplier, updateSupplier, deleteSupplier: deleteSupplierCtx } = useData();
   const [purchases] = useState<Purchase[]>(() => getPurchases());
@@ -1398,7 +1398,7 @@ export default function Suppliers() {
                   <div className="supplier-filter-popover-head">
                     <div>
                       <strong>{t.suppliers.filterBtn}</strong>
-                      <span>Keep the list focused with essential supplier fields.</span>
+                      <span>{t.suppliers.filters.filtersDesc}</span>
                     </div>
                     <Button
                       variant="icon"
@@ -1413,7 +1413,7 @@ export default function Suppliers() {
 
                   <div className="supplier-filter-popover-grid">
                     <div className="supplier-field">
-                      <span>Status</span>
+                      <span>{t.suppliers.filters.statusLabel}</span>
                       <Select
                         size="md"
                         fullWidth
@@ -1425,17 +1425,17 @@ export default function Suppliers() {
                           }))
                         }
                         options={[
-                          { value: "", label: "All statuses" },
-                          { value: "Active", label: "Active" },
-                          { value: "Inactive", label: "Inactive" },
-                          { value: "Preferred", label: "Preferred" },
-                          { value: "Blocked", label: "Blocked" },
+                          { value: "", label: t.suppliers.filters.allStatuses },
+                          { value: "Active", label: t.suppliers.filters.active },
+                          { value: "Inactive", label: t.suppliers.filters.inactive },
+                          { value: "Preferred", label: t.suppliers.filters.preferred },
+                          { value: "Blocked", label: t.suppliers.filters.blocked },
                         ]}
                       />
                     </div>
 
                     <div className="supplier-field">
-                      <span>Category</span>
+                      <span>{t.suppliers.filters.categoryLabel}</span>
                       <Select
                         size="md"
                         fullWidth
@@ -1447,7 +1447,7 @@ export default function Suppliers() {
                           }))
                         }
                         options={[
-                          { value: "", label: "All categories" },
+                          { value: "", label: t.suppliers.filters.allCategories },
                           ...categoryOptions.map((category) => ({
                             value: category,
                             label: category,
@@ -1457,7 +1457,7 @@ export default function Suppliers() {
                     </div>
 
                     <div className="supplier-field">
-                      <span>Balance</span>
+                      <span>{t.suppliers.filters.balanceLabel}</span>
                       <Select
                         size="md"
                         fullWidth
@@ -1469,9 +1469,9 @@ export default function Suppliers() {
                           }))
                         }
                         options={[
-                          { value: "", label: "All balances" },
-                          { value: "open", label: "Outstanding only" },
-                          { value: "high", label: "High balance" },
+                          { value: "", label: t.suppliers.filters.allBalances },
+                          { value: "open", label: t.suppliers.filters.outstandingOnly },
+                          { value: "high", label: t.suppliers.filters.highBalance },
                         ]}
                       />
                     </div>
@@ -1534,7 +1534,7 @@ export default function Suppliers() {
               ) : viewError ? (
                 <div className="supplier-empty-state">
                   <AlertTriangle size={28} />
-                  <h3>Something went wrong</h3>
+                  <h3>{t.suppliers.empty.errorTitle}</h3>
                   <p>{viewError}</p>
                 </div>
               ) : filteredSuppliers.length === 0 ? (
@@ -1542,13 +1542,13 @@ export default function Suppliers() {
                   <Building2 size={28} />
                   <h3>
                     {searchTerm || activeFilterEntries.length > 0 || quickFilters.length > 0
-                      ? "No results found"
-                      : "No suppliers yet"}
+                      ? t.suppliers.empty.noResults
+                      : t.suppliers.empty.noSuppliersYet}
                   </h3>
                   <p>
                     {searchTerm || activeFilterEntries.length > 0 || quickFilters.length > 0
-                      ? "Try changing your filters or search."
-                      : "Create your first supplier profile to start procurement workflows."}
+                      ? t.suppliers.empty.noResultsDesc
+                      : t.suppliers.empty.noSuppliersDesc}
                   </p>
 
                   {searchTerm || activeFilterEntries.length > 0 || quickFilters.length > 0 ? (
@@ -1558,7 +1558,7 @@ export default function Suppliers() {
                       type="button"
                       onClick={clearFilters}
                     >
-                      Clear Filters
+                      {t.suppliers.empty.clearFilters}
                     </Button>
                   ) : (
                     <Button
@@ -1651,7 +1651,11 @@ export default function Suppliers() {
 
                           <td>
                             <div className="supplier-table-cell location-stack">
-                              <strong>{supplier.city || "—"}</strong>
+                              <strong>
+                                {supplier.city
+                                  ? (isArabic ? (LOCATION_AR_LABELS[supplier.city] ?? supplier.city) : supplier.city)
+                                  : "—"}
+                              </strong>
                             </div>
                           </td>
 
@@ -1681,7 +1685,7 @@ export default function Suppliers() {
                                   supplier.status
                                 )}`}
                               >
-                                {supplier.status}
+                                {t.suppliers.status[supplier.status.toLowerCase() as keyof typeof t.suppliers.status] ?? supplier.status}
                               </Badge>
 
                             </div>
@@ -1780,7 +1784,7 @@ export default function Suppliers() {
             style={{ top: menuState.top, left: menuState.left }}
           >
             <div className="supplier-action-menu-head">
-              <strong>Supplier Actions</strong>
+              <strong>{t.suppliers.menu.title}</strong>
               <span>{menuSupplier.supplierName}</span>
             </div>
 
@@ -1796,7 +1800,7 @@ export default function Suppliers() {
                 setMenuState(null);
               }}
             >
-              View Supplier
+              {t.suppliers.menu.view}
             </Button>
 
             <Button
@@ -1807,7 +1811,7 @@ export default function Suppliers() {
               leftIcon={<FileText size={15} />}
               onClick={() => openEditModal(menuSupplier.supplierId)}
             >
-              Edit Supplier
+              {t.suppliers.menu.edit}
             </Button>
 
             <Button
@@ -1824,7 +1828,7 @@ export default function Suppliers() {
                 setMenuState(null);
               }}
             >
-              Archive Supplier
+              {t.suppliers.menu.archive}
             </Button>
 
             <Button
@@ -1841,7 +1845,7 @@ export default function Suppliers() {
                 setMenuState(null);
               }}
             >
-              Delete Supplier
+              {t.suppliers.menu.delete}
             </Button>
           </div>,
           document.body
