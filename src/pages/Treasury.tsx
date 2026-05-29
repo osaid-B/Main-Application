@@ -348,7 +348,7 @@ export default function Treasury() {
     });
 
     return rows;
-  }, [filteredIncoming, filteredOutgoing, filteredTransfers, ocrQueue, customers, suppliers, incomingCheques, bankTransfers]);
+  }, [filteredIncoming, filteredOutgoing, filteredTransfers, ocrQueue, customers, suppliers, incomingCheques, bankTransfers, t]);
 
   const totalPages = Math.ceil(unifiedRows.length / rowsPerPage);
   const pagedRows  = unifiedRows.slice((page - 1) * rowsPerPage, page * rowsPerPage);
