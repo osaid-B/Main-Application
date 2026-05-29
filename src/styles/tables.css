@@ -143,6 +143,15 @@
   text-align: center;
 }
 
+/* Entity — primary name/title column, slightly bolder */
+.atlas-table th.col-entity,
+.atlas-table td.col-entity {
+  font-weight: 600;
+}
+
+/* Text — plain text that truncates (default td already truncates) */
+/* .col-text is a semantic marker; no extra styles needed */
+
 /* Expands to fill remaining space */
 .atlas-table .col-flex {
   min-width: 120px;
