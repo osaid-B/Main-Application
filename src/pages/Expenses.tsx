@@ -207,7 +207,7 @@ export default function Expenses() {
             <tbody>
               {pagedRows.map((expense) => (
                 <tr key={expense.id} className={selected.has(expense.id) ? styles.rowSelected : ""}>
-                  <td>
+                  <td className="col-check">
                     <input
                       type="checkbox"
                       checked={selected.has(expense.id)}
@@ -220,15 +220,15 @@ export default function Expenses() {
                       <span className={styles.expenseId}>{expense.id}</span>
                     </div>
                   </td>
-                  <td>
+                  <td className="col-badge">
                     <span className={styles.catTag}>{expense.category}</span>
                   </td>
                   <td className={styles.payeeCell}>{expense.payee ?? expense.vendor ?? "—"}</td>
-                  <td className={styles.mono}>{expense.date}</td>
-                  <td className={`${styles.numEnd} ${styles.mono} ${styles.amountCell}`}>
+                  <td className={`${styles.mono} col-date`}>{expense.date}</td>
+                  <td className={`${styles.numEnd} ${styles.mono} ${styles.amountCell} col-num`}>
                     {formatCurrency(expense.amount)}
                   </td>
-                  <td>
+                  <td className="col-badge">
                     <Badge
                       variant={STATUS_VARIANT[expense.status ?? "pending"]}
                       size="sm"
@@ -236,7 +236,7 @@ export default function Expenses() {
                       {tc.status[expense.status ?? "pending"]}
                     </Badge>
                   </td>
-                  <td>
+                  <td className="col-actions">
                     <div className={styles.rowActions}>
                       <button
                         type="button"

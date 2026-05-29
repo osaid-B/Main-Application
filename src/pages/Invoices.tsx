@@ -1339,13 +1339,13 @@ export default function Invoices() {
                 </colgroup>
                 <thead>
                   <tr>
-                    <th>{t.invoices.cols.invoice}</th>
+                    <th className="col-code">{t.invoices.cols.invoice}</th>
                     <th>{getPartyLabel(activeTab, t)}</th>
                     <th>{t.invoices.cols.product}</th>
                     <th className="col-date">{t.invoices.cols.issueDate}</th>
                     <th className="col-num">{t.invoices.cols.total}</th>
                     <th className="col-num">{t.invoices.cols.amountDue}</th>
-                    <th>{activeTab === "internal" ? t.invoices.cols.approval : t.invoices.cols.status}</th>
+                    <th className="col-badge">{activeTab === "internal" ? t.invoices.cols.approval : t.invoices.cols.status}</th>
                     <th className="col-actions">{t.invoices.cols.actions}</th>
                   </tr>
                 </thead>
@@ -1361,7 +1361,7 @@ export default function Invoices() {
                           key={invoice.id}
                           className={`${late ? "is-overdue" : ""} row-clickable`}
                         >
-                          <td>
+                          <td className="col-code">
                             <div className="invoice-id-cell app-cell-stack">
                               <strong>{invoice.id}</strong>
                             </div>
@@ -1379,25 +1379,25 @@ export default function Invoices() {
                             </div>
                           </td>
 
-                          <td>
+                          <td className="col-date">
                             <div className="due-date-cell">
                               <strong>{formatDate(invoice.issueDate)}</strong>
                             </div>
                           </td>
 
-                          <td>
+                          <td className="col-num">
                             <div className="amount-cell">
                               <strong>{money(invoice.totalAmount, invoice.currency)}</strong>
                             </div>
                           </td>
 
-                          <td>
+                          <td className="col-num">
                             <div className="amount-cell amount-cell-emphasis">
                               <strong>{money(invoice.remainingAmount, invoice.currency)}</strong>
                             </div>
                           </td>
 
-                          <td>
+                          <td className="col-badge">
                             {activeTab === "internal" ? (
                               <div className="status-stack">
                                 <Badge
@@ -1425,7 +1425,7 @@ export default function Invoices() {
                             )}
                           </td>
 
-                          <td>
+                          <td className="col-actions">
                             <div className="row-actions">
                               <Button
                                 variant="icon"

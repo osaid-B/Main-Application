@@ -1004,12 +1004,12 @@ export default function Payments() {
                       <th className="col-check">
                         <input type="checkbox" checked={allVisibleSelected} onChange={(e) => toggleAllRows(e.target.checked)} />
                       </th>
-                      <th><button type="button" className="sortable-head" onClick={() => requestSort("paymentId")}>{t.payments.cols.paymentId} <ArrowUpDown size={13} /></button></th>
-                      <th><button type="button" className="sortable-head" onClick={() => requestSort("invoiceNumber")}>{t.payments.cols.invoice} <ArrowUpDown size={13} /></button></th>
+                      <th className="col-code"><button type="button" className="sortable-head" onClick={() => requestSort("paymentId")}>{t.payments.cols.paymentId} <ArrowUpDown size={13} /></button></th>
+                      <th className="col-code"><button type="button" className="sortable-head" onClick={() => requestSort("invoiceNumber")}>{t.payments.cols.invoice} <ArrowUpDown size={13} /></button></th>
                       <th>{t.payments.cols.customer}</th>
-                      <th className="col-num align-right"><button type="button" className="sortable-head align-right" onClick={() => requestSort("amount")}>{t.payments.cols.amount} <ArrowUpDown size={13} /></button></th>
-                      <th><button type="button" className="sortable-head" onClick={() => requestSort("method")}>{t.payments.cols.method} <ArrowUpDown size={13} /></button></th>
-                      <th><button type="button" className="sortable-head" onClick={() => requestSort("status")}>{t.payments.cols.status} <ArrowUpDown size={13} /></button></th>
+                      <th className="col-num"><button type="button" className="sortable-head align-right" onClick={() => requestSort("amount")}>{t.payments.cols.amount} <ArrowUpDown size={13} /></button></th>
+                      <th className="col-badge"><button type="button" className="sortable-head" onClick={() => requestSort("method")}>{t.payments.cols.method} <ArrowUpDown size={13} /></button></th>
+                      <th className="col-badge"><button type="button" className="sortable-head" onClick={() => requestSort("status")}>{t.payments.cols.status} <ArrowUpDown size={13} /></button></th>
                       <th className="col-date"><button type="button" className="sortable-head" onClick={() => requestSort("date")}>{t.payments.cols.date} <ArrowUpDown size={13} /></button></th>
                       <th>{t.payments.cols.reference}</th>
                       <th className="col-actions">{t.payments.cols.actions}</th>
@@ -1018,32 +1018,32 @@ export default function Payments() {
                   <tbody>
                     {paginatedPayments.map((p) => (
                       <tr key={p.paymentId} onClick={() => { setDetailsPayment(p); setDrawerTab("overview"); }}>
-                        <td onClick={(e) => e.stopPropagation()}>
+                        <td className="col-check" onClick={(e) => e.stopPropagation()}>
                           <input type="checkbox" checked={selectedRows.includes(p.paymentId)}
                             onChange={(e) => setSelectedRows((c) => e.target.checked ? [...c, p.paymentId] : c.filter((id) => id !== p.paymentId))} />
                         </td>
-                        <td>
+                        <td className="col-code">
                           <div className="primary-cell">
                             <strong>{p.paymentId}</strong>
                             <span>{p.receiptId}</span>
                           </div>
                         </td>
-                        <td>
+                        <td className="col-code">
                           <div className="primary-cell app-cell-stack">
                             <button type="button" className="text-link-btn" onClick={(e) => { e.stopPropagation(); setDetailsPayment(p); setDrawerTab("invoice"); }}>{p.invoiceNumber}</button>
                             <small>{p.linkState}</small>
                           </div>
                         </td>
                         <td>{p.customerName}</td>
-                        <td className="align-right">
+                        <td className="col-num">
                           <div className="amount-cell">
                             <strong>{formatMoney(p.amount)}</strong>
                             <span>Balance after {formatMoney(p.remainingAfterPayment)}</span>
                           </div>
                         </td>
-                        <td><span className="method-badge">{getMethodIcon(p.method)}{formatMethod(p.method)}</span></td>
-                        <td><span className={`status-pill ${getStatusTone(p.status)}`}>{formatStatus(p.status)}</span></td>
-                        <td>
+                        <td className="col-badge"><span className="method-badge">{getMethodIcon(p.method)}{formatMethod(p.method)}</span></td>
+                        <td className="col-badge"><span className={`status-pill ${getStatusTone(p.status)}`}>{formatStatus(p.status)}</span></td>
+                        <td className="col-date">
                           <div className="primary-cell">
                             <strong>{formatDate(p.date)}</strong>
                             <span>{p.relativeDate}</span>
@@ -1054,7 +1054,7 @@ export default function Payments() {
                             <strong>{p.referenceNumber}</strong>
                           </div>
                         </td>
-                        <td onClick={(e) => e.stopPropagation()}>
+                        <td className="col-actions" onClick={(e) => e.stopPropagation()}>
                           <div className="row-actions">
                             <button type="button" className="pay-action-btn" title={t.common.view} onClick={() => { setDetailsPayment(p); setDrawerTab("overview"); }}><Eye size={14} /></button>
                             <button type="button" className="pay-action-btn" title={t.common.edit} onClick={() => openEditModal(p)}><Pencil size={14} /></button>
