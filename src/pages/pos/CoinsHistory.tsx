@@ -166,7 +166,7 @@ export default function CoinsHistory() {
             <tbody>
               {filtered.map((tx) => (
                 <tr key={tx.id}>
-                  <td className={styles.mono}>{tx.timestamp}</td>
+                  <td className={`${styles.mono} col-date`}>{tx.timestamp}</td>
                   <td>
                     {tx.customerName ? (
                       <div className={styles.custCell}>
@@ -180,19 +180,19 @@ export default function CoinsHistory() {
                       <span className={styles.walkIn}>{tc.walkIn}</span>
                     )}
                   </td>
-                  <td>
+                  <td className="col-badge">
                     <Badge variant={ACTION_VARIANT[tx.action]} size="sm">
                       {tc.actions[tx.action]}
                     </Badge>
                   </td>
-                  <td className={styles.mono}>{tx.invoice ?? "—"}</td>
+                  <td className={`${styles.mono} col-code`}>{tx.invoice ?? "—"}</td>
                   <td className={styles.reasonCell}>{tx.reason}</td>
                   <td>{tx.user}</td>
                   <td className={styles.branchCell}>{tx.branch}</td>
-                  <td className={`${styles.numCol} ${styles.mono} ${tx.delta >= 0 ? styles.gain : styles.loss}`}>
+                  <td className={`${styles.numCol} ${styles.mono} col-num ${tx.delta >= 0 ? styles.gain : styles.loss}`}>
                     {tx.delta >= 0 ? `+${tx.delta}` : tx.delta}
                   </td>
-                  <td className={`${styles.numCol} ${styles.mono}`}>{tx.balanceAfter.toLocaleString()}</td>
+                  <td className={`${styles.numCol} ${styles.mono} col-num`}>{tx.balanceAfter.toLocaleString()}</td>
                 </tr>
               ))}
               {filtered.length === 0 && (

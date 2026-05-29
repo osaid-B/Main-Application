@@ -173,17 +173,17 @@ export default function LoyaltyProfile() {
               <tbody>
                 {txSlice.map((tx: LoyaltyProfileTransaction) => (
                   <tr key={tx.id}>
-                    <td className={styles.mono}>{tx.date}</td>
-                    <td>
+                    <td className={`${styles.mono} col-date`}>{tx.date}</td>
+                    <td className="col-badge">
                       <Badge variant={ACTION_VARIANT[tx.action] ?? "neutral"} size="sm">
                         {tc.actions[tx.action] ?? tx.action}
                       </Badge>
                     </td>
-                    <td className={`${styles.numEnd} ${styles.mono} ${tx.coins >= 0 ? styles.coinPos : styles.coinNeg}`}>
+                    <td className={`${styles.numEnd} ${styles.mono} col-num ${tx.coins >= 0 ? styles.coinPos : styles.coinNeg}`}>
                       {tx.coins >= 0 ? `+${tx.coins}` : String(tx.coins)}
                     </td>
                     <td className={styles.triggerCell}>{tx.trigger}</td>
-                    <td className={`${styles.numEnd} ${styles.mono}`}>{tx.balanceAfter.toLocaleString()}</td>
+                    <td className={`${styles.numEnd} ${styles.mono} col-num`}>{tx.balanceAfter.toLocaleString()}</td>
                   </tr>
                 ))}
               </tbody>

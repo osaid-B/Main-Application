@@ -156,17 +156,17 @@ export default function CoinsReports() {
                       {tx.customerCode && <div className={styles.custCode}>{tx.customerCode}</div>}
                     </div>
                   </td>
-                  <td className={styles.mono}>{tx.timestamp.slice(0, 10)}</td>
-                  <td>
+                  <td className={`${styles.mono} col-date`}>{tx.timestamp.slice(0, 10)}</td>
+                  <td className="col-badge">
                     <Badge variant={ACTION_VARIANT[tx.action]} size="sm">
                       {t.pos.coinsHistory.actions[tx.action]}
                     </Badge>
                   </td>
-                  <td className={`${styles.numEnd} ${styles.mono} ${tx.delta >= 0 ? styles.pos : styles.neg}`}>
+                  <td className={`${styles.numEnd} ${styles.mono} col-num ${tx.delta >= 0 ? styles.pos : styles.neg}`}>
                     {tx.delta >= 0 ? `+${tx.delta}` : String(tx.delta)}
                   </td>
                   <td className={styles.reasonCell}>{tx.reason}</td>
-                  <td className={`${styles.numEnd} ${styles.mono}`}>{tx.balanceAfter.toLocaleString()}</td>
+                  <td className={`${styles.numEnd} ${styles.mono} col-num`}>{tx.balanceAfter.toLocaleString()}</td>
                 </tr>
               ))}
               {filteredTx.length === 0 && (
