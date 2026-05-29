@@ -105,10 +105,11 @@ export const COMPANY_SECTIONS: NavSection[] = [
   {
     title: "ADMIN",            titleAr: "الإدارة",
     items: [
-      { icon: Bell,          label: "Notifications", labelAr: "التنبيهات",   path: "/notifications" },
-      { icon: Shield,        label: "Permissions",   labelAr: "الصلاحيات",   path: "/permissions" },
-      { icon: ClipboardList, label: "Audit Log",     labelAr: "سجل التدقيق", path: "/audit-log" },
-      { icon: Settings,      label: "Settings",      labelAr: "الإعدادات",   path: "/settings" },
+      { icon: Bell,          label: "Notifications",    labelAr: "التنبيهات",       path: "/notifications" },
+      { icon: Shield,        label: "Permissions",      labelAr: "الصلاحيات",       path: "/permissions" },
+      { icon: ClipboardList, label: "Audit Log",         labelAr: "سجل التدقيق",     path: "/audit-log" },
+      { icon: Settings,      label: "Settings",          labelAr: "الإعدادات",       path: "/settings" },
+      { icon: Building2,     label: "Company Settings",  labelAr: "إعدادات الشركة",  path: "/settings/company" },
     ],
   },
 ];

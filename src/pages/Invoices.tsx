@@ -8,6 +8,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent, FormEvent, ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useSettings } from "../context/SettingsContext";
+import { useCompanySettings } from "../context/CompanySettingsContext";
 import {
   Building2,
   Check,
@@ -600,6 +601,7 @@ function seedInvoices(
 export default function Invoices() {
   const { t } = useSettings();
   const { products } = useData();
+  const { settings: companySettings } = useCompanySettings();
 
   const TAB_CONFIG: Record<TabKey, { label: string; tableTitle: string; icon: typeof Users }> = {
     customer: { label: t.invoices.tabs.customer, tableTitle: t.invoices.tabs.customer, icon: Users },
@@ -907,8 +909,10 @@ export default function Invoices() {
       title: getDefaultTitle(type, t),
       issueDate: TODAY,
       dueDate: TODAY,
-      currency: "ILS",
+      currency: (companySettings.defaultCurrency as "ILS" | "JOD" | "USD") ?? "ILS",
       paymentMethod: "Bank Transfer",
+      vatRate: String(companySettings.defaultTaxRate ?? 16),
+      vatEnabled: !companySettings.taxExempt,
     });
 
     setCustomerSearch("");

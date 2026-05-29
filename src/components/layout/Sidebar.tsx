@@ -17,6 +17,7 @@ import {
 import { useAuth } from "../../context/AuthContext";
 import { useSidebarPreferences } from "../../context/SidebarPreferencesContext";
 import { useSettings } from "../../context/SettingsContext";
+import { useCompanySettings } from "../../context/CompanySettingsContext";
 import { Avatar } from "../ui/Avatar";
 import { useWorkspace, type Workspace } from "../../contexts/WorkspaceContext";
 import {
@@ -127,7 +128,9 @@ export default function Sidebar({
   const { workspace } = useWorkspace();
   const prefs = useSidebarPreferences();
   const { t, isArabic } = useSettings();
+  const { settings: companySettings } = useCompanySettings();
   const ts = t.sidebar;
+  const companyName = isArabic ? (companySettings.nameAr || "Atlas ERP") : (companySettings.nameEn || "Atlas ERP");
   const [editMode, setEditMode] = useState(false);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [undoToast, setUndoToast] = useState<{ path: string; label: string } | null>(null);
@@ -180,11 +183,16 @@ export default function Sidebar({
       aria-hidden={mobile ? !isOpen : undefined}
     >
       <header className="atlas-brand">
-        <div className="atlas-brand-logo" aria-hidden>A</div>
+        <div className="atlas-brand-logo" aria-hidden>
+          {companySettings.logoBase64
+            ? <img src={companySettings.logoBase64} alt="logo" style={{ width: "100%", height: "100%", objectFit: "contain", borderRadius: 4 }} />
+            : companyName[0]?.toUpperCase() ?? "A"
+          }
+        </div>
         {(!collapsed || mobile) && (
           <div className="atlas-brand-info">
             <h3>Atlas ERP</h3>
-            <p>Northwind Holdings</p>
+            <p>{companyName}</p>
           </div>
         )}
         {!mobile ? (

@@ -9,6 +9,7 @@ import { DataProvider } from "./context/DataContext";
 import { FactoryProvider } from "./context/FactoryContext";
 import { NotificationsProvider } from "./context/NotificationsContext";
 import { SidebarPreferencesProvider } from "./context/SidebarPreferencesContext";
+import { CompanySettingsProvider } from "./context/CompanySettingsContext";
 
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
@@ -24,6 +25,7 @@ import Treasury from "./pages/Treasury";
 import Employees from "./pages/Employees";
 import AddEmployee from "./pages/AddEmployee";
 import Leaves from "./pages/Leaves";
+import CompanySettingsPage from "./pages/CompanySettings";
 import Settings from "./pages/Settings";
 import DataImport from "./pages/DataImport";
 import Preview from "./pages/Preview";
@@ -98,6 +100,7 @@ function AppRoutes() {
           <Route path="/employees/new" element={<ErrorBoundary fallback={(_, reset) => <PageCrashFallback onReset={reset} />}><AddEmployee /></ErrorBoundary>} />
           <Route path="/leaves" element={<Leaves />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/settings/company" element={<CompanySettingsPage />} />
           <Route path="/data-import" element={<DataImport />} />
           <Route path="/preview" element={<Preview />} />
 
@@ -172,16 +175,18 @@ function AppRoutes() {
 
 export default function App() {
   return (
-    <DataProvider>
-      <FactoryProvider>
-        <NotificationsProvider>
-          <SidebarPreferencesProvider>
-            <ErrorBoundary>
-              <AppRoutes />
-            </ErrorBoundary>
-          </SidebarPreferencesProvider>
-        </NotificationsProvider>
-      </FactoryProvider>
-    </DataProvider>
+    <CompanySettingsProvider>
+      <DataProvider>
+        <FactoryProvider>
+          <NotificationsProvider>
+            <SidebarPreferencesProvider>
+              <ErrorBoundary>
+                <AppRoutes />
+              </ErrorBoundary>
+            </SidebarPreferencesProvider>
+          </NotificationsProvider>
+        </FactoryProvider>
+      </DataProvider>
+    </CompanySettingsProvider>
   );
 }
