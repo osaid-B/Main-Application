@@ -396,3 +396,33 @@ export function resetAllStorage() {
   writeStorage(DEPOSIT_BATCHES_KEY, depositBatchesData);
   writeStorage(RECONCILIATION_ITEMS_KEY, reconciliationItemsData);
 }
+
+/* Leave Management */
+import type { LeaveRequest, LeaveBalance, LeavePolicy } from "./types";
+
+const LEAVE_REQUESTS_KEY = "dashboard_leave_requests";
+const LEAVE_BALANCES_KEY = "dashboard_leave_balances";
+const LEAVE_POLICY_KEY = "dashboard_leave_policy";
+
+import { leaveRequestsMock, leaveBalancesMock, leavePolicyDefault } from "./leavesMock";
+
+export function getLeaveRequests(): LeaveRequest[] {
+  return readStorage<LeaveRequest[]>(LEAVE_REQUESTS_KEY, leaveRequestsMock);
+}
+export function saveLeaveRequests(items: LeaveRequest[]) {
+  writeStorage(LEAVE_REQUESTS_KEY, items);
+}
+
+export function getLeaveBalances(): LeaveBalance[] {
+  return readStorage<LeaveBalance[]>(LEAVE_BALANCES_KEY, leaveBalancesMock);
+}
+export function saveLeaveBalances(items: LeaveBalance[]) {
+  writeStorage(LEAVE_BALANCES_KEY, items);
+}
+
+export function getLeavePolicy(): LeavePolicy {
+  return readStorage<LeavePolicy>(LEAVE_POLICY_KEY, leavePolicyDefault);
+}
+export function saveLeavePolicy(policy: LeavePolicy) {
+  writeStorage(LEAVE_POLICY_KEY, policy);
+}

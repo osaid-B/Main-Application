@@ -1,5 +1,6 @@
 import {
   ArrowLeftRight,
+  CalendarDays,
   BarChart3,
   Bell,
   BookOpen,
@@ -69,7 +70,8 @@ export const COMPANY_SECTIONS: NavSection[] = [
       { icon: Users,      label: "Customers",   labelAr: "العملاء",          path: "/customers",  badge: "4.2k" },
       { icon: FileCheck2, label: "Quotes",       labelAr: "عروض الأسعار",     path: "/quotes" },
       { icon: Truck,      label: "Suppliers",   labelAr: "الموردون",         path: "/suppliers" },
-      { icon: UserCircle, label: "Employees",   labelAr: "الموظفون",         path: "/employees" },
+      { icon: UserCircle,  label: "Employees",   labelAr: "الموظفون",         path: "/employees" },
+      { icon: CalendarDays, label: "Leaves",    labelAr: "الإجازات",         path: "/leaves" },
       { icon: Briefcase,  label: "Departments", labelAr: "الأقسام",          path: "/departments" },
     ],
   },

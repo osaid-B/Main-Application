@@ -23,6 +23,7 @@ import Payments from "./pages/Payments";
 import Treasury from "./pages/Treasury";
 import Employees from "./pages/Employees";
 import AddEmployee from "./pages/AddEmployee";
+import Leaves from "./pages/Leaves";
 import Settings from "./pages/Settings";
 import DataImport from "./pages/DataImport";
 import Preview from "./pages/Preview";
@@ -95,6 +96,7 @@ function AppRoutes() {
           <Route path="/treasury" element={<Treasury />} />
           <Route path="/employees" element={<Employees />} />
           <Route path="/employees/new" element={<ErrorBoundary fallback={(_, reset) => <PageCrashFallback onReset={reset} />}><AddEmployee /></ErrorBoundary>} />
+          <Route path="/leaves" element={<Leaves />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/data-import" element={<DataImport />} />
           <Route path="/preview" element={<Preview />} />
