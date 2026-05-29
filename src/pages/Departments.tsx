@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Plus, Search, Briefcase } from "lucide-react";
 import { Container } from "../components/layout/Container";
 import { Stack } from "../components/layout/Stack";
@@ -28,17 +28,18 @@ export default function Departments() {
   const [editing, setEditing] = useState<Department | null>(null);
   const [detailDept, setDetailDept] = useState<Department | null>(null);
 
-  const filtered = departments.filter((d) => {
+  const activeEmployees = useMemo(() => employees.filter((e) => !e.isDeleted), [employees]);
+
+  const filtered = useMemo(() => departments.filter((d) => {
     if (!query) return true;
     const q = query.toLowerCase();
     return d.name.toLowerCase().includes(q) || d.nameAr.includes(q) || (d.headName ?? "").toLowerCase().includes(q);
-  });
+  }), [departments, query]);
 
   const isLoading = useLoadingDelay();
-  const activeEmployees = employees.filter((e) => !e.isDeleted);
   const totalDepts    = departments.length;
-  const totalHead     = activeEmployees.filter((e) => departments.some((d) => d.id === e.departmentId)).length;
-  const totalOpen     = departments.reduce((s, d) => s + d.openPositions, 0);
+  const totalHead     = useMemo(() => activeEmployees.filter((e) => departments.some((d) => d.id === e.departmentId)).length, [activeEmployees, departments]);
+  const totalOpen     = useMemo(() => departments.reduce((s, d) => s + d.openPositions, 0), [departments]);
   const avgSize       = totalDepts > 0 ? (activeEmployees.length / totalDepts).toFixed(1) : "0";
 
   function parentName(parentId?: string) {
@@ -200,7 +201,7 @@ export default function Departments() {
       {detailDept && (
         <DeptDetailDrawer
           dept={detailDept}
-          members={employees.filter((e) => !e.isDeleted && e.departmentId === detailDept.id).map((e) => e.name)}
+          members={activeEmployees.filter((e) => e.departmentId === detailDept.id).map((e) => e.name)}
           onClose={() => setDetailDept(null)}
         />
       )}

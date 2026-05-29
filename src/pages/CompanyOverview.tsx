@@ -8,7 +8,6 @@ import { Stack } from "../components/layout/Stack";
 import { Grid } from "../components/layout/Grid";
 import {
   CASH_FLOW,
-  COMPANY_KPIS,
   DEPARTMENTS,
   REVENUE_BY_DEPT,
   type CompanyKPI,
@@ -62,8 +61,9 @@ export default function CompanyOverview() {
     payablesDue,
     openInvoicesCount,
     headcount,
-    customers,
+    totalCustomers,
     invoices,
+    customers,
   } = useData();
 
   const cashFlowData = useMemo(
@@ -103,8 +103,15 @@ export default function CompanyOverview() {
               onClick={() =>
                 downloadCsv(
                   "atlas-company-kpis.csv",
-                  ["Label", "Value", "Trend %"],
-                  COMPANY_KPIS.map((k) => [k.label, k.value, k.trend])
+                  ["Label", "Value"],
+                  [
+                    [t.company.kpis.revenue,      formatCurrency(totalRevenue)],
+                    [t.company.kpis.receivables,  formatCurrency(receivablesTotal)],
+                    [t.company.kpis.payables,     formatCurrency(payablesDue)],
+                    [t.company.kpis.customers,    String(totalCustomers)],
+                    [t.company.kpis.headcount,    String(headcount)],
+                    [t.company.kpis.openInvoices, String(openInvoicesCount)],
+                  ]
                 )
               }
             >
@@ -126,7 +133,7 @@ export default function CompanyOverview() {
           <KpiCard kpi={{ label: t.company.kpis.revenue,      value: formatCurrency(totalRevenue),    trend: 0, color: "green"  }} />
           <KpiCard kpi={{ label: t.company.kpis.receivables,  value: formatCurrency(receivablesTotal), trend: 0, color: "orange", subtitle: `${openInvoicesCount} ${t.company.kpis.invoicesOpen}` }} />
           <KpiCard kpi={{ label: t.company.kpis.payables,     value: formatCurrency(payablesDue),     trend: 0, color: "blue"   }} />
-          <KpiCard kpi={{ label: t.company.kpis.customers,    value: String(customers.filter((c) => !c.isDeleted).length), trend: 0, color: "purple" }} />
+          <KpiCard kpi={{ label: t.company.kpis.customers,    value: String(totalCustomers), trend: 0, color: "purple" }} />
           <KpiCard kpi={{ label: t.company.kpis.headcount,    value: String(headcount), trend: 0, color: "purple" }} />
           <KpiCard kpi={{ label: t.company.kpis.openInvoices, value: String(openInvoicesCount), trend: 0, color: "orange" }} />
         </Grid>

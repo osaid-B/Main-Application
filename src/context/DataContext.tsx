@@ -413,19 +413,24 @@ export function DataProvider({ children }: { children: ReactNode }) {
     [payments]
   );
 
-  const receivablesTotal = useMemo(
-    () =>
-      roundMoney(
-        invoices
-          .filter((inv) => inv.status !== "Paid")
-          .reduce((sum, inv) => sum + Number(inv.remainingAmount ?? inv.amount ?? 0), 0)
-      ),
+  const activeInvoices = useMemo(
+    () => invoices.filter((inv) => !inv.isDeleted),
     [invoices]
   );
 
+  const receivablesTotal = useMemo(
+    () =>
+      roundMoney(
+        activeInvoices
+          .filter((inv) => inv.status !== "Paid")
+          .reduce((sum, inv) => sum + Number(inv.remainingAmount ?? inv.amount ?? 0), 0)
+      ),
+    [activeInvoices]
+  );
+
   const openInvoicesCount = useMemo(
-    () => invoices.filter((inv) => inv.status !== "Paid").length,
-    [invoices]
+    () => activeInvoices.filter((inv) => inv.status !== "Paid").length,
+    [activeInvoices]
   );
 
   const totalCustomers = useMemo(() => activeCustomers.length, [activeCustomers]);
@@ -460,22 +465,22 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const customerBalanceMap = useMemo(() => {
     const map = new Map<string, number>();
-    invoices.forEach((inv) => {
+    activeInvoices.forEach((inv) => {
       if (inv.status === "Paid") return;
       const amount = Number(inv.remainingAmount ?? inv.amount ?? 0);
       map.set(inv.customerId, (map.get(inv.customerId) ?? 0) + amount);
     });
     return map;
-  }, [invoices]);
+  }, [activeInvoices]);
 
   const customerLastOrderMap = useMemo(() => {
     const map = new Map<string, string>();
-    invoices.forEach((inv) => {
+    activeInvoices.forEach((inv) => {
       const existing = map.get(inv.customerId);
       if (!existing || inv.date > existing) map.set(inv.customerId, inv.date);
     });
     return map;
-  }, [invoices]);
+  }, [activeInvoices]);
 
   const value: DataContextValue = {
     customers,

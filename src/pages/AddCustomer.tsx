@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { KeyboardEvent as ReactKeyboardEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { useData } from "../context/DataContext";
 import { useSettings } from "../context/SettingsContext";
 import type { Customer } from "../data/types";
@@ -103,12 +103,45 @@ function blockNonDecimal(e: ReactKeyboardEvent<HTMLInputElement>) {
 
 export default function AddCustomer() {
   const navigate = useNavigate();
-  const { addCustomer, customers } = useData();
+  const { id: editId } = useParams<{ id: string }>();
+  const isEditMode = !!editId;
+  const { addCustomer, updateCustomer, customers } = useData();
   const { t } = useSettings();
-  const [form, setForm] = useState<FormState>(() => ({
-    ...INITIAL,
-    code: generateCustomerId(customers),
-  }));
+
+  const existingCustomer = isEditMode
+    ? customers.find((c) => (c.id === editId || c.code === editId) && !c.isDeleted) ?? null
+    : null;
+
+  // Redirect to list if edit ID was given but customer doesn't exist
+  useEffect(() => {
+    if (isEditMode && !existingCustomer) {
+      navigate("/customers", { replace: true });
+    }
+  }, [isEditMode, existingCustomer, navigate]);
+
+  const [form, setForm] = useState<FormState>(() => {
+    if (existingCustomer) {
+      return {
+        name: existingCustomer.name,
+        type: (existingCustomer.type as FormState["type"]) ?? "company",
+        code: existingCustomer.code ?? existingCustomer.id,
+        taxId: existingCustomer.taxId ?? "",
+        phonePrimary: existingCustomer.phone,
+        phoneSecondary: "",
+        email: existingCustomer.email ?? "",
+        governorate: existingCustomer.governorate ?? "",
+        city: existingCustomer.city ?? "",
+        paymentTerms: (existingCustomer.paymentTerms as FormState["paymentTerms"]) ?? "net30",
+        currency: (existingCustomer.currency as FormState["currency"]) ?? "ILS",
+        creditLimit: existingCustomer.creditLimit != null ? String(existingCustomer.creditLimit) : "",
+        salesRep: existingCustomer.salesRep ?? SALES_REPS[0],
+        classification: (existingCustomer.classification as FormState["classification"]) ?? "standard",
+        defaultDiscount: "",
+        alerts: existingCustomer.alerts ?? [],
+      };
+    }
+    return { ...INITIAL, code: generateCustomerId(customers) };
+  });
   const [savedAt, setSavedAt] = useState<Date | null>(null);
   const autosaveRef = useRef<number | null>(null);
   const [phoneErrors, setPhoneErrors] = useState<{ primary?: string; secondary?: string }>({});
@@ -117,8 +150,9 @@ export default function AddCustomer() {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
-  // Autosave indicator (drafts persisted in localStorage)
+  // Autosave for create mode only
   useEffect(() => {
+    if (isEditMode) return;
     if (autosaveRef.current) window.clearTimeout(autosaveRef.current);
     autosaveRef.current = window.setTimeout(() => {
       try {
@@ -127,14 +161,13 @@ export default function AddCustomer() {
       } catch { /* ignore quota */ }
     }, 800);
     return () => { if (autosaveRef.current) window.clearTimeout(autosaveRef.current); };
-  }, [form]);
+  }, [form, isEditMode]);
 
   // Cmd/Ctrl+S to save
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "s") {
         e.preventDefault();
-        // In a real app: persist + navigate.
         setSavedAt(new Date());
       }
     };
@@ -181,6 +214,29 @@ export default function AddCustomer() {
     setPhoneErrors({});
 
     const today = new Date().toISOString().split("T")[0];
+
+    if (isEditMode && existingCustomer) {
+      const updated: Customer = {
+        ...existingCustomer,
+        name: form.name.trim(),
+        phone: form.phonePrimary.trim(),
+        email: form.email.trim() || undefined,
+        taxId: form.taxId.trim() || undefined,
+        type: form.type,
+        classification: form.classification,
+        governorate: form.governorate,
+        city: form.city,
+        paymentTerms: form.paymentTerms,
+        currency: form.currency,
+        creditLimit: form.creditLimit ? Number(form.creditLimit) : undefined,
+        salesRep: form.salesRep || undefined,
+        alerts: form.alerts.length > 0 ? [...form.alerts] : [],
+      };
+      updateCustomer(updated);
+      navigate("/customers");
+      return;
+    }
+
     const id = form.code;
     const newCustomer: Customer = {
       id,
@@ -217,8 +273,12 @@ export default function AddCustomer() {
           <button type="button" className={styles.backLink} onClick={() => navigate("/customers")}>
             <ArrowLeft size={14} /> {t.addCustomer.backLink}
           </button>
-          <h1 className={styles.title}>{t.addCustomer.pageTitle}</h1>
-          <p className={styles.subtitle}>{t.addCustomer.pageSubtitle}</p>
+          <h1 className={styles.title}>
+            {isEditMode ? t.common.edit : t.addCustomer.pageTitle}
+          </h1>
+          <p className={styles.subtitle}>
+            {isEditMode ? (existingCustomer?.name ?? "") : t.addCustomer.pageSubtitle}
+          </p>
         </div>
       </header>
 
@@ -436,9 +496,9 @@ export default function AddCustomer() {
         </span>
         <div className={styles.saveBarActions}>
           <Button variant="secondary" size="sm" onClick={() => navigate("/customers")}>{t.addCustomer.cancel}</Button>
-          <Button variant="secondary" size="sm">{t.addCustomer.saveAsDraft}</Button>
+          {!isEditMode && <Button variant="secondary" size="sm">{t.addCustomer.saveAsDraft}</Button>}
           <Button variant="primary" size="sm" leftIcon={<Save size={14} />} disabled={!canSave} onClick={handleSave}>
-            {t.addCustomer.saveCustomer} <kbd className={styles.kbd}>⌘S</kbd>
+            {isEditMode ? t.common.saveChanges : t.addCustomer.saveCustomer} <kbd className={styles.kbd}>⌘S</kbd>
           </Button>
         </div>
       </div>

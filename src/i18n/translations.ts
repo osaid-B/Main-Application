@@ -1955,6 +1955,8 @@ export const translations = {
         },
         memberSince: "Member since",
         coins: "coins",
+        prev: "‹ Prev",
+        next: "Next ›",
       },
 
       payment: {
@@ -5447,6 +5449,8 @@ export const translations = {
         },
         memberSince: "عضو منذ",
         coins: "نقطة",
+        prev: "‹ السابق",
+        next: "التالي ›",
       },
 
       payment: {

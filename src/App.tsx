@@ -88,6 +88,8 @@ function AppRoutes() {
           <Route path="/company" element={<CompanyOverview />} />
           <Route path="/customers" element={<Customers />} />
           <Route path="/customers/new" element={<ErrorBoundary fallback={(_, reset) => <PageCrashFallback onReset={reset} />}><AddCustomer /></ErrorBoundary>} />
+          <Route path="/customers/:id/edit" element={<ErrorBoundary fallback={(_, reset) => <PageCrashFallback onReset={reset} />}><AddCustomer /></ErrorBoundary>} />
+          <Route path="/customers/:id" element={<Navigate to="/customers" replace />} />
           <Route path="/products" element={<Products />} />
           <Route path="/products/barcode/:code" element={<BarcodeProduct />} />
           <Route path="/purchases" element={<Purchases />} />
