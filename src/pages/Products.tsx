@@ -966,8 +966,19 @@ export default function Products() {
 
 
         {viewMode === "table" ? (
-          <div className="table-wrapper compact-table-wrapper">
-            <table className="dashboard-table compact-dashboard-table" role="grid">
+          <div className="table-wrapper compact-table-wrapper atlas-table-wrapper">
+            <table className="dashboard-table compact-dashboard-table atlas-table" role="grid">
+              <colgroup>
+                <col />
+                <col className="col-w-110" />
+                <col className="col-w-110" />
+                <col className="col-w-72" />
+                <col className="col-currency" />
+                <col className="col-currency" />
+                <col className="col-currency" />
+                <col className="col-w-90" />
+                <col className="col-actions" />
+              </colgroup>
               <thead>
                 <tr>
                   <th className="col-product">

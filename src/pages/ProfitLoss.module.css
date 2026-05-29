@@ -56,13 +56,13 @@
 .statementTitle { margin: 4px 0 0; font-size: 18px; font-weight: 700; color: var(--app-text); }
 .statementPeriod { margin: 4px 0 0; font-size: 12px; color: var(--app-text-muted); }
 
-.statTable { width: 100%; border-collapse: collapse; }
+.statTable { width: 100%; border-collapse: collapse; table-layout: fixed; }
 .statTable td { padding: 9px 24px; font-size: 13.5px; }
-.statTable td:not(:first-child) { text-align: end; min-width: 130px; }
+.statTable td:not(:first-child) { text-align: end; min-width: 130px; font-variant-numeric: tabular-nums; font-family: var(--font-mono); }
 
-.sectionHeader td { background: var(--app-surface-raised, #f8f9fb); font-weight: 700; font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--app-text-muted); padding-block: 10px; border-top: 1px solid var(--app-border); border-bottom: 1px solid var(--app-border); }
+.sectionHeader td { background: var(--app-surface-muted); font-weight: 700; font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--app-text-muted); padding-block: 10px; border-top: 1px solid var(--app-border); border-bottom: 1px solid var(--app-border); }
 
-.dataRow td { border-bottom: 1px solid var(--app-border-light, #f0f0f0); color: var(--app-text); }
+.dataRow td { border-bottom: 1px solid var(--app-border); color: var(--app-text); }
 .dataRow td:first-child { padding-inline-start: 40px; color: var(--app-text-muted); }
 .dataRow:hover td { background: var(--app-hover); }
 
