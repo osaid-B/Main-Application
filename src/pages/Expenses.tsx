@@ -174,8 +174,8 @@ export default function Expenses() {
         {isLoading ? (
           <Skeleton variant="rect" height={300} />
         ) : (
-        <div className={styles.tableWrap}>
-          <table className={styles.table}>
+        <div className={`${styles.tableWrap} atlas-table-wrapper`}>
+          <table className={`${styles.table} atlas-table`}>
             <colgroup>
               <col className="col-check" />
               <col />
@@ -183,7 +183,7 @@ export default function Expenses() {
               <col className="col-w-120" />
               <col className="col-date" />
               <col className="col-currency" />
-              <col className="col-w-90" />
+              <col className="col-w-100" />
               <col className="col-actions" />
             </colgroup>
             <thead>
@@ -195,12 +195,12 @@ export default function Expenses() {
                     onChange={toggleSelectAll}
                   />
                 </th>
-                <th>{tc.cols.description}</th>
-                <th>{tc.cols.category}</th>
+                <th className="col-entity">{tc.cols.description}</th>
+                <th className="col-badge">{tc.cols.category}</th>
                 <th>{tc.cols.payee}</th>
                 <th className="col-date">{tc.cols.date}</th>
-                <th className={styles.numEnd}>{tc.cols.amount}</th>
-                <th>{tc.cols.status}</th>
+                <th className="col-num">{tc.cols.amount}</th>
+                <th className="col-badge">{tc.cols.status}</th>
                 <th className="col-actions">{tc.cols.actions}</th>
               </tr>
             </thead>
