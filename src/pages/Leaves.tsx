@@ -18,6 +18,7 @@ import {
 import { Button } from "../components/ui/Button";
 import { useSettings } from "../context/SettingsContext";
 import { useData } from "../context/DataContext";
+import { useNotifications } from "../context/NotificationsContext";
 import type { LeaveBalance, LeavePolicy, LeaveRequest, LeaveStatus, LeaveType } from "../data/types";
 import {
   getLeaveBalances,
@@ -649,6 +650,7 @@ function LeaveRequestModal({
 export default function Leaves() {
   const { t, isArabic, locale } = useSettings();
   const { employees } = useData();
+  const { addNotification } = useNotifications();
 
   const [activeTab, setActiveTab] = useState<LeaveTab>("requests");
   const [requests, setRequests] = useState<LeaveRequest[]>(() => getLeaveRequests());
@@ -673,7 +675,6 @@ export default function Leaves() {
     const ts = new Date().toISOString();
     const next = requests.map((r) => r.id === id ? { ...r, status: "approved" as LeaveStatus, reviewedAt: ts, reviewedBy: "المدير العام" } : r);
     setRequests(next); saveLeaveRequests(next);
-    // Update balance
     const req = next.find((r) => r.id === id);
     if (req) {
       const nextBal = balances.map((b) => {
@@ -682,6 +683,15 @@ export default function Leaves() {
         return { ...b, [req.leaveType]: { ...entry, used: entry.used + req.totalDays, pending: Math.max(0, entry.pending - req.totalDays) } };
       });
       setBalances(nextBal); saveLeaveBalances(nextBal);
+      const emp = employees.find((e) => e.id === req.employeeId);
+      addNotification({
+        title: "Leave Approved", titleAr: t.leaves.notify.approved,
+        body: `${emp?.name ?? req.employeeId} — ${req.startDate} → ${req.endDate}`,
+        bodyAr: `${emp?.name ?? req.employeeId} — ${req.startDate} → ${req.endDate}`,
+        category: "hr", severity: "success",
+        actionLabel: "View", actionLabelAr: t.leaves.actions.view,
+        actionRoute: "/leaves", entityId: req.id,
+      });
     }
     showToast(t.leaves.toast.approved);
   };
@@ -690,7 +700,6 @@ export default function Leaves() {
     const ts = new Date().toISOString();
     const next = requests.map((r) => r.id === id ? { ...r, status: "rejected" as LeaveStatus, reviewedAt: ts, reviewedBy: "المدير العام", rejectionReason: reason } : r);
     setRequests(next); saveLeaveRequests(next);
-    // Remove pending from balance
     const req = requests.find((r) => r.id === id);
     if (req) {
       const nextBal = balances.map((b) => {
@@ -699,6 +708,15 @@ export default function Leaves() {
         return { ...b, [req.leaveType]: { ...entry, pending: Math.max(0, entry.pending - req.totalDays) } };
       });
       setBalances(nextBal); saveLeaveBalances(nextBal);
+      const emp = employees.find((e) => e.id === req.employeeId);
+      addNotification({
+        title: "Leave Rejected", titleAr: t.leaves.notify.rejected,
+        body: `${emp?.name ?? req.employeeId} — ${reason}`,
+        bodyAr: `${emp?.name ?? req.employeeId} — ${reason}`,
+        category: "hr", severity: "warning",
+        actionLabel: "View", actionLabelAr: t.leaves.actions.view,
+        actionRoute: "/leaves", entityId: req.id,
+      });
     }
     showToast(t.leaves.toast.rejected);
   };
@@ -723,13 +741,37 @@ export default function Leaves() {
     const newReq: LeaveRequest = { ...payload, id, status: "pending", createdAt: new Date().toISOString() };
     const next = [newReq, ...requests];
     setRequests(next); saveLeaveRequests(next);
-    // Add to pending balance
     const nextBal = balances.map((b) => {
       if (b.employeeId !== payload.employeeId) return b;
       const entry = b[payload.leaveType];
       return { ...b, [payload.leaveType]: { ...entry, pending: entry.pending + payload.totalDays } };
     });
     setBalances(nextBal); saveLeaveBalances(nextBal);
+    // Check low balance after submission
+    const updatedBal = nextBal.find((b) => b.employeeId === payload.employeeId);
+    if (updatedBal) {
+      const entry = updatedBal[payload.leaveType];
+      const remaining = Math.max(0, entry.entitled - entry.used - entry.pending);
+      if (payload.leaveType === "annual" && remaining < 3 && entry.entitled > 0) {
+        const emp = employees.find((e) => e.id === payload.employeeId);
+        addNotification({
+          title: "Low Leave Balance", titleAr: t.leaves.notify.balanceLow,
+          body: `${emp?.name ?? payload.employeeId} — ${remaining} days remaining`,
+          bodyAr: `${emp?.name ?? payload.employeeId} — ${remaining} ${t.leaves.balances.remaining}`,
+          category: "hr", severity: "warning",
+          actionRoute: "/leaves", entityId: payload.employeeId,
+        });
+      }
+    }
+    const emp = employees.find((e) => e.id === payload.employeeId);
+    addNotification({
+      title: "New Leave Request", titleAr: t.leaves.notify.newRequest,
+      body: `${emp?.name ?? payload.employeeId} — ${payload.totalDays} days ${payload.leaveType}`,
+      bodyAr: `${emp?.name ?? payload.employeeId} — ${payload.totalDays} ${t.leaves.balances.remaining.replace("متبقي", "أيام")} ${t.leaves.types[payload.leaveType]}`,
+      category: "hr", severity: "info",
+      actionLabel: "Review", actionLabelAr: t.leaves.actions.approve,
+      actionRoute: "/leaves", entityId: id,
+    });
     setShowModal(false);
     showToast(t.leaves.toast.submitted);
   };

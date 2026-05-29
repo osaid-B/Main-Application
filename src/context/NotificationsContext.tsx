@@ -5,7 +5,7 @@ import { useFactory } from "./FactoryContext";
 import { POS_REFUNDS, LOYALTY_PROFILES, LOYALTY_SETTINGS_DEFAULT } from "../data/posMock";
 
 export type NotificationSeverity = "info" | "warning" | "error" | "success";
-export type NotificationCategory = "invoice" | "inventory" | "factory" | "pos" | "loyalty" | "system";
+export type NotificationCategory = "invoice" | "inventory" | "factory" | "pos" | "loyalty" | "system" | "hr";
 
 export interface Notification {
   id: string;
@@ -30,12 +30,25 @@ interface NotificationsContextValue {
   markAllAsRead: () => void;
   dismiss: (id: string) => void;
   clearAll: () => void;
+  addNotification: (n: Omit<Notification, "id" | "timestamp" | "read">) => void;
 }
 
 const NotificationsContext = createContext<NotificationsContextValue | null>(null);
 
 const STORAGE_KEY = "atlas-notif-state-v1";
+const MANUAL_KEY = "atlas-notif-manual-v1";
 interface NotifState { read: string[]; dismissed: string[] }
+
+function loadManual(): Omit<Notification, "read">[] {
+  try {
+    const raw = localStorage.getItem(MANUAL_KEY);
+    if (raw) {
+      const arr = JSON.parse(raw) as Array<Omit<Notification, "read"> & { timestamp: string }>;
+      return arr.map((n) => ({ ...n, timestamp: new Date(n.timestamp) }));
+    }
+  } catch { /* ignore */ }
+  return [];
+}
 
 function loadState(): NotifState {
   try {
@@ -52,6 +65,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
   const { rawMaterials, batches, factoryOrders } = useFactory();
 
   const [state, setState] = useState<NotifState>(loadState);
+  const [manual, setManual] = useState<Omit<Notification, "read">[]>(loadManual);
 
   const generated = useMemo((): Omit<Notification, "read">[] => {
     const today = new Date();
@@ -215,15 +229,16 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
   const readSet = useMemo(() => new Set(state.read), [state.read]);
 
   const notifications = useMemo((): Notification[] => {
-    const visible = generated
+    const allGenerated = [...generated, ...manual];
+    const visible = allGenerated
       .filter((n) => !dismissedSet.has(n.id))
       .map((n) => ({ ...n, read: readSet.has(n.id) }));
     // unread first within same severity bucket
     return visible.sort((a, b) => {
       if (a.read !== b.read) return a.read ? 1 : -1;
-      return SEV_RANK[a.severity] - SEV_RANK[b.severity];
+      return SEV_RANK[a.severity] - SEV_RANK[b.severity] || b.timestamp.getTime() - a.timestamp.getTime();
     });
-  }, [generated, dismissedSet, readSet]);
+  }, [generated, manual, dismissedSet, readSet]);
 
   const unreadCount = useMemo(() => notifications.filter((n) => !n.read).length, [notifications]);
 
@@ -259,7 +274,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
 
   const clearAll = useCallback(() => {
     setState((prev) => {
-      const allIds = generated.map((n) => n.id);
+      const allIds = [...generated, ...manual].map((n) => n.id);
       const next = {
         read: [...new Set([...prev.read, ...allIds])],
         dismissed: [...new Set([...prev.dismissed, ...allIds])],
@@ -267,13 +282,23 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
       return next;
     });
-  }, [generated]);
+  }, [generated, manual]);
+
+  const addNotification = useCallback((n: Omit<Notification, "id" | "timestamp" | "read">) => {
+    const id = `notif:manual:${Date.now()}:${Math.random().toString(36).slice(2)}`;
+    const entry: Omit<Notification, "read"> = { ...n, id, timestamp: new Date() };
+    setManual((prev) => {
+      const next = [entry, ...prev].slice(0, 100); // keep latest 100
+      localStorage.setItem(MANUAL_KEY, JSON.stringify(next));
+      return next;
+    });
+  }, []);
 
   // suppress unused warning on persist (used in clearAll/dismiss before refactor)
   void persist;
 
   return (
-    <NotificationsContext.Provider value={{ notifications, unreadCount, markAsRead, markAllAsRead, dismiss, clearAll }}>
+    <NotificationsContext.Provider value={{ notifications, unreadCount, markAsRead, markAllAsRead, dismiss, clearAll, addNotification }}>
       {children}
     </NotificationsContext.Provider>
   );

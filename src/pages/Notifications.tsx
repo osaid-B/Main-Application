@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Bell, CheckCheck, Factory, FileText, Package, ShoppingCart, Star, Trash2, X } from "lucide-react";
+import { Bell, CheckCheck, Factory, FileText, Package, ShoppingCart, Star, Trash2, UserCheck, X } from "lucide-react";
 import { Container } from "../components/layout/Container";
 import { Stack } from "../components/layout/Stack";
 import { Button } from "../components/ui/Button";
@@ -19,6 +19,7 @@ const CAT_ICON: Record<NotificationCategory, typeof FileText> = {
   pos:       ShoppingCart,
   loyalty:   Star,
   system:    Bell,
+  hr:        UserCheck,
 };
 
 const SEV_VARIANT: Record<NotificationSeverity, "danger" | "warning" | "info" | "success"> = {

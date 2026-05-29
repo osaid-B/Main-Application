@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Bell, Check, CheckCheck, Factory, FileText, Package, ShoppingCart, Star, X } from "lucide-react";
+import { Bell, Check, CheckCheck, Factory, FileText, Package, ShoppingCart, Star, UserCheck, X } from "lucide-react";
 import { useNotifications } from "../../context/NotificationsContext";
 import type { Notification, NotificationCategory, NotificationSeverity } from "../../context/NotificationsContext";
 import { useSettings } from "../../context/SettingsContext";
@@ -15,6 +15,7 @@ const CAT_ICON: Record<NotificationCategory, typeof FileText> = {
   pos:       ShoppingCart,
   loyalty:   Star,
   system:    Bell,
+  hr:        UserCheck,
 };
 
 const SEV_CLASS: Record<NotificationSeverity, string> = {
