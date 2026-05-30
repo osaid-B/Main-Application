@@ -22,7 +22,7 @@ export interface CustomerRow {
   email: Nullable<string>;
   city: Nullable<string>;
   governorate: Nullable<string>;
-  payment_terms: Nullable<"cash" | "net30" | "net60" | "net90">;
+  payment_terms: Nullable<"cash" | "net7" | "net15" | "net30" | "net45" | "net60" | "net90" | "half" | "custom">;
   currency: string;
   credit_limit: number;
   outstanding_balance: number;

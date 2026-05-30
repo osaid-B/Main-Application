@@ -9,6 +9,7 @@ import { Avatar } from "../components/ui/Avatar";
 import { Modal } from "../components/ui/Modal";
 import { Container } from "../components/layout/Container";
 import { Stack } from "../components/layout/Stack";
+import { EditCustomerDrawer } from "../components/customers/EditCustomerDrawer";
 import {
   CLASSIFICATION_LABELS,
   PAYMENT_TERMS_LABELS,
@@ -42,6 +43,7 @@ export default function Customers() {
   const [statusFilter, setStatusFilter] = useState("");
   const [showFilters, setShowFilters] = useState(true);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const [editTarget, setEditTarget] = useState<Customer | null>(null);
 
   const active = useMemo(
     () => customers.filter((c) => !c.isDeleted),
@@ -194,7 +196,7 @@ export default function Customers() {
                   liveBalance={customerBalanceMap.get(c.id)}
                   liveLastOrder={customerLastOrderMap.get(c.id)}
                   onView={() => navigate(`/customers/${c.id}`)}
-                  onEdit={() => navigate(`/customers/${c.id}/edit`)}
+                  onEdit={() => setEditTarget(c)}
                   onDelete={() => setDeleteTarget(c.id)}
                   onLoyalty={() => navigate(`/pos/loyalty/profile?id=${c.id}`)}
                 />
@@ -212,6 +214,13 @@ export default function Customers() {
           <span>{t.customers.showing} {filtered.length} {t.customers.of} {stats.total.toLocaleString()}</span>
         </footer>
       </Stack>
+
+      {editTarget && (
+        <EditCustomerDrawer
+          customer={editTarget}
+          onClose={() => setEditTarget(null)}
+        />
+      )}
 
       {deleteTarget && (
         <Modal
@@ -325,7 +334,11 @@ function CustomerRow({
           <span>{c.governorate ?? ""}</span>
         </div>
       </td>
-      <td>{c.paymentTerms ? PAYMENT_TERMS_LABELS[c.paymentTerms] : <span className={styles.zeroBalance}>—</span>}</td>
+      <td>
+        {c.paymentTerms
+          ? (PAYMENT_TERMS_LABELS[c.paymentTerms as keyof typeof PAYMENT_TERMS_LABELS] ?? c.paymentTerms)
+          : <span className={styles.zeroBalance}>—</span>}
+      </td>
       <td className="col-num">
         <span className={`${styles.balance} ${styles[`bal_${balanceTone}`]}`}>
           {balance > 0

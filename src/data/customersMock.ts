@@ -6,7 +6,7 @@
 export type CustomerType = "individual" | "company" | "institution";
 export type CustomerClassification = "standard" | "vip" | "risk";
 export type CustomerStatus = "active" | "inactive" | "archived";
-export type PaymentTerms = "cash" | "net30" | "net60" | "net90";
+export type PaymentTerms = "cash" | "net7" | "net15" | "net30" | "net45" | "net60" | "net90" | "half" | "custom";
 export type Currency = "ILS" | "USD" | "JOD";
 
 export interface MockCustomer {
@@ -101,10 +101,15 @@ export const CUSTOMERS_TOTAL = 4218; // displayed total in header
 export const SALES_REPS = ["محمد سعيد", "رنا حسين", "خالد يوسف", "فاطمة العلي", "أحمد قاسم"];
 
 export const PAYMENT_TERMS_LABELS: Record<PaymentTerms, string> = {
-  cash: "نقداً",
+  cash:  "نقداً",
+  net7:  "آجل 7 أيام",
+  net15: "آجل 15 يوم",
   net30: "آجل 30 يوم",
+  net45: "آجل 45 يوم",
   net60: "آجل 60 يوم",
   net90: "آجل 90 يوم",
+  half:  "نصف ونصف",
+  custom:"مخصص",
 };
 
 export const TYPE_LABELS: Record<CustomerType, string> = {

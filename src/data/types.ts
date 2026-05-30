@@ -23,7 +23,8 @@ export type Customer = {
   type?: "individual" | "company" | "institution";
   customerType?: "Individual" | "Business" | "VIP";
   classification?: "standard" | "vip" | "risk";
-  paymentTerms?: "cash" | "net30" | "net60" | "net90";
+  paymentTerms?: "cash" | "net7" | "net15" | "net30" | "net45" | "net60" | "net90" | "half" | "custom";
+  paymentTermsCustom?: string;
   status?: "Active" | "Inactive" | "VIP" | "Blocked" | "New" | "active" | "inactive" | "archived";
   preferredContactMethod?: "Phone" | "Email" | "WhatsApp";
   openingBalance?: number;
