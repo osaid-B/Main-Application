@@ -66,6 +66,7 @@ import ChartOfAccounts from "./pages/ChartOfAccounts";
 import InventoryOverview from "./pages/InventoryOverview";
 import InventoryMovements from "./pages/InventoryMovements";
 import BarcodeProduct from "./pages/BarcodeProduct";
+import AuditLog from "./pages/AuditLog";
 
 function AppRoutes() {
   const { isAuthenticated } = useAuth();
@@ -121,7 +122,7 @@ function AppRoutes() {
           {/* Inventory & Operations */}
           <Route path="/inventory" element={<InventoryOverview />} />
           <Route path="/inventory/movements" element={<InventoryMovements />} />
-          <Route path="/manufacturing" element={<ComingSoon title="Manufacturing" />} />
+          <Route path="/manufacturing" element={<Navigate to="/factory/dashboard" replace />} />
 
           {/* Sales */}
           <Route path="/quotes" element={<ComingSoon title="عروض الأسعار" />} />
@@ -134,7 +135,7 @@ function AppRoutes() {
 
           {/* System */}
           <Route path="/notifications" element={<Notifications />} />
-          <Route path="/audit-log" element={<ComingSoon title="Audit Log" />} />
+          <Route path="/audit-log" element={<AuditLog />} />
 
           {/* Factory workspace — Factory role + Admin */}
           <Route path="/factory" element={<Navigate to="/factory/dashboard" replace />} />
