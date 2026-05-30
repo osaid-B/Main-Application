@@ -45,7 +45,7 @@
 
 /* ─── Dialog variant ────────────────────────────────────────────────────── */
 .dialog {
-  border-radius: var(--app-radius-xl);
+  border-radius: var(--app-radius-lg);
   width: 100%;
   animation: dialog-in var(--app-transition-med) ease-out;
 }
@@ -117,7 +117,7 @@
 .alert {
   max-width: 480px;
   width: 100%;
-  border-radius: var(--app-radius-xl);
+  border-radius: var(--app-radius-lg);
   animation: dialog-in var(--app-transition-med) ease-out;
 }
 .alert.closing {

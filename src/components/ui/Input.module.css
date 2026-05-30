@@ -28,7 +28,7 @@
   width: 100%;
   background: var(--app-surface);
   border: 1px solid var(--app-border-strong);
-  border-radius: var(--app-radius-sm);
+  border-radius: var(--app-radius-md);
   color: var(--app-text);
   transition:
     border-color var(--app-transition),

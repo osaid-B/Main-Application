@@ -22,9 +22,9 @@
   height: 3px;
 }
 
-.tone_blue   { background: linear-gradient(180deg, var(--atlas-blue-50)   0%, var(--app-surface) 55%); }
-.tone_green  { background: linear-gradient(180deg, var(--atlas-green-50)  0%, var(--app-surface) 55%); }
-.tone_purple { background: linear-gradient(180deg, var(--atlas-purple-50) 0%, var(--app-surface) 55%); }
+.tone_blue   { background: linear-gradient(180deg, var(--atlas-blue-50) 0%, var(--app-surface) 55%); }
+.tone_green  { background: linear-gradient(180deg, var(--atlas-blue-50) 0%, var(--app-surface) 55%); }
+.tone_purple { background: linear-gradient(180deg, var(--atlas-blue-50) 0%, var(--app-surface) 55%); }
 
 .tone_blue   .accentBar { background: var(--atlas-blue); }
 .tone_green  .accentBar { background: var(--atlas-green); }

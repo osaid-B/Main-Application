@@ -107,7 +107,7 @@
 .systemBadge {
   display: inline-block;
   padding: 1px 6px;
-  border-radius: 999px;
+  border-radius: var(--app-radius-full);
   background: var(--app-surface-muted);
   border: 1px solid var(--app-border);
   font-size: 10px;

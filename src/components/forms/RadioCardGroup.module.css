@@ -86,7 +86,7 @@
   padding: 1px 6px;
   background: var(--app-surface-muted);
   color: var(--app-text-muted);
-  border-radius: 9999px;
+  border-radius: var(--app-radius-full);
 }
 
 .description {

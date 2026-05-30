@@ -364,7 +364,7 @@ body {
 .status-badge {
   min-height: 20px !important;
   padding: 0 7px !important;
-  border-radius: 999px !important;
+  border-radius: var(--app-radius-full) !important;
   font-size: 11px !important;
   font-weight: 600 !important;
   border: 1px solid transparent !important;
@@ -413,7 +413,7 @@ body {
   min-width: 18px !important;
   height: 18px !important;
   padding: 0 5px !important;
-  border-radius: 999px !important;
+  border-radius: var(--app-radius-full) !important;
   font-size: 10px !important;
   font-weight: 700 !important;
   background: rgba(37, 99, 235, 0.1) !important;
@@ -549,7 +549,7 @@ body {
 .modal-eyebrow {
   min-height: 20px !important;
   padding: 0 7px !important;
-  border-radius: 999px !important;
+  border-radius: var(--app-radius-full) !important;
   font-size: 10px !important;
   font-weight: 600 !important;
   letter-spacing: 0.06em !important;
@@ -808,7 +808,7 @@ body {
 .quick-filter-chip {
   min-height: 24px !important;
   padding: 0 8px !important;
-  border-radius: 999px !important;
+  border-radius: var(--app-radius-full) !important;
   font-size: 11px !important;
   font-weight: 600 !important;
   border: 1px solid var(--app-border) !important;
@@ -961,7 +961,7 @@ body {
   justify-content: center !important;
   min-height: 20px !important;
   padding: 0 8px !important;
-  border-radius: 999px !important;
+  border-radius: var(--app-radius-full) !important;
   border: 1px solid transparent !important;
   font-size: 11px !important;
   font-weight: 600 !important;
@@ -1067,7 +1067,7 @@ body {
 .page-badge {
   min-height: 20px !important;
   padding: 0 8px !important;
-  border-radius: 999px !important;
+  border-radius: var(--app-radius-full) !important;
   font-size: 11px !important;
   font-weight: 600 !important;
   background: var(--app-accent-subtle) !important;
