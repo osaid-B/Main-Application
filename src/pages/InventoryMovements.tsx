@@ -143,20 +143,26 @@ export default function InventoryMovements() {
             <input className={styles.filterInput} style={{ width: "100%" }} placeholder={tc.searchPlaceholder}
               value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} />
           </div>
-          <input type="date" className={styles.filterInput} value={dateFrom}
-            onChange={(e) => { setDateFrom(e.target.value); setPage(1); }} />
-          <input type="date" className={styles.filterInput} value={dateTo}
-            onChange={(e) => { setDateTo(e.target.value); setPage(1); }} />
+          <div className={styles.dateGroup}>
+            <label className={styles.dateLabel}>من</label>
+            <input type="date" className={styles.filterInput} value={dateFrom}
+              onChange={(e) => { setDateFrom(e.target.value); setPage(1); }} />
+          </div>
+          <div className={styles.dateGroup}>
+            <label className={styles.dateLabel}>إلى</label>
+            <input type="date" className={styles.filterInput} value={dateTo}
+              onChange={(e) => { setDateTo(e.target.value); setPage(1); }} />
+          </div>
           <select className={styles.filterSelect} value={typeFilter}
             onChange={(e) => { setTypeFilter(e.target.value as "" | MovementType); setPage(1); }}>
-            <option value="">{tc.allTypes}</option>
+            <option value="">نوع الحركة</option>
             {(["receive","issue","adjustment","damage","transfer"] as MovementType[]).map(tp => (
               <option key={tp} value={tp}>{tc.types[tp]}</option>
             ))}
           </select>
           <select className={styles.filterSelect} value={productFilter}
             onChange={(e) => { setProductFilter(e.target.value); setPage(1); }}>
-            <option value="">{tc.allProducts}</option>
+            <option value="">المنتج</option>
             {products.filter(p => !p.isDeleted).map(p => (
               <option key={p.id} value={p.id}>{p.name}</option>
             ))}
@@ -197,7 +203,7 @@ export default function InventoryMovements() {
                     {m.quantityIn > 0 ? <span className={styles.qtyIn}>+{m.quantityIn}</span> : "—"}
                   </td>
                   <td className={styles.numEnd}>
-                    {m.quantityOut > 0 ? <span className={styles.qtyOut}>-{m.quantityOut}</span> : "—"}
+                    {m.quantityOut > 0 ? <span className={styles.qtyOut} dir="ltr">−{m.quantityOut}</span> : "—"}
                   </td>
                   <td className={`${styles.numEnd} ${styles.qtyAfter}`}>{m.stockAfter}</td>
                   <td>{m.reason ?? "—"}</td>
@@ -209,6 +215,9 @@ export default function InventoryMovements() {
               )}
             </tbody>
           </table>
+          <div className={styles.paginationRow}>
+            عرض {Math.min(page * PAGE_SIZE, filtered.length)} من {filtered.length} حركة
+          </div>
           {pageCount > 1 && (
             <div className={styles.pagination}>
               <span>{(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} / {filtered.length}</span>

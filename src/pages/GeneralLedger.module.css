@@ -22,6 +22,8 @@
 .filterSelect { padding: 7px 10px; border: 1px solid var(--app-border); border-radius: var(--app-radius); background: var(--app-surface); color: var(--app-text); font-size: 13px; }
 .searchWrap { flex: 1; min-width: 200px; max-width: 320px; }
 .exportBtn { margin-inline-start: auto; }
+.dateGroup { display: flex; align-items: center; gap: var(--app-space-1); }
+.dateLabel { font-size: 12px; font-weight: 600; color: var(--app-text-muted); white-space: nowrap; }
 
 /* Table */
 .tableWrap { background: var(--app-surface); border: 1px solid var(--app-border); border-radius: var(--app-radius-lg); overflow: hidden; box-shadow: var(--app-shadow-soft); }
