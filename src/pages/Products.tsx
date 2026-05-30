@@ -1,9 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  AlertTriangle,
-  Barcode,
   Bell,
-  CheckCircle2,
   ChevronDown,
   Cpu,
   Eye,
@@ -11,7 +8,10 @@ import {
   Keyboard,
   Laptop,
   Layers,
+  LayoutGrid,
+  List,
   Monitor,
+  MoreHorizontal,
   Mouse,
   Package,
   Pencil,
@@ -24,7 +24,6 @@ import {
   Trash2,
   Wifi,
   X,
-  XCircle,
 } from "lucide-react";
 import { BarcodeModal } from "../components/ui/BarcodeModal";
 import "./Products.css";
@@ -91,6 +90,19 @@ type CategoryDeleteTarget = {
 const DELETE_CONFIRMATION_CODE = "123";
 const UNCATEGORIZED = "Uncategorized";
 
+const CATEGORY_AR: Record<string, string> = {
+  "Electronics":   "إلكترونيات",
+  "Accessories":   "إكسسوارات",
+  "Food":          "مواد غذائية",
+  "Beverages":     "مشروبات",
+  "Dairy":         "ألبان",
+  "Cleaning":      "منظفات",
+  "Personal Care": "عناية شخصية",
+};
+function localizeCat(name: string, isArabic: boolean): string {
+  return isArabic ? (CATEGORY_AR[name] ?? name) : name;
+}
+
 const emptyForm: ProductForm = {
   code: "",
   name: "",
@@ -110,9 +122,9 @@ function normalizeCategoryName(value: string) {
 }
 
 function formatMoney(value: number) {
-  return new Intl.NumberFormat("en-US", {
+  return new Intl.NumberFormat("he-IL", {
     style: "currency",
-    currency: "USD",
+    currency: "ILS",
     minimumFractionDigits: 2,
   }).format(Number(value || 0));
 }
@@ -232,7 +244,7 @@ function SortButton({
 }
 
 export default function Products() {
-  const { t } = useSettings();
+  const { t, isArabic } = useSettings();
   const {
     products,
     addProduct,
@@ -767,7 +779,6 @@ export default function Products() {
       {/* KPI stat cards */}
       <section className="products-stats-grid">
         <article className="products-stat-card">
-          <div className="kpi-icon blue"><Package size={20} /></div>
           <div>
             <span>{t.common?.total || "Total"}</span>
             <strong>{stats.total}</strong>
@@ -775,7 +786,6 @@ export default function Products() {
           </div>
         </article>
         <article className="products-stat-card">
-          <div className="kpi-icon green"><CheckCircle2 size={20} /></div>
           <div>
             <span>{t.products?.inStock || "In Stock"}</span>
             <strong>{stats.inStock}</strong>
@@ -783,7 +793,6 @@ export default function Products() {
           </div>
         </article>
         <article className="products-stat-card">
-          <div className="kpi-icon amber"><AlertTriangle size={20} /></div>
           <div>
             <span>{t.products?.low || "Low Stock"}</span>
             <strong>{stats.lowStock}</strong>
@@ -791,7 +800,6 @@ export default function Products() {
           </div>
         </article>
         <article className="products-stat-card">
-          <div className="kpi-icon red"><XCircle size={20} /></div>
           <div>
             <span>{t.products?.out || "Out of Stock"}</span>
             <strong>{stats.outOfStock}</strong>
@@ -954,10 +962,11 @@ export default function Products() {
               onClick={() =>
                 setViewMode((current) => (current === "table" ? "cards" : "table"))
               }
-            >
-              {viewMode === "table"
+              aria-label={viewMode === "table"
                 ? t.products?.viewToggleCards || "Card View"
                 : t.products?.viewToggleTable || "Table View"}
+            >
+              {viewMode === "table" ? <LayoutGrid size={16} /> : <List size={16} />}
             </button>
           </div>
         </div>
@@ -1059,7 +1068,7 @@ export default function Products() {
                           </div>
                         </td>
 
-                        <td>{product.category || "—"}</td>
+                        <td>{localizeCat(product.category || "", isArabic) || "—"}</td>
                         <td>{supplierName}</td>
 
                         <td>
@@ -1095,18 +1104,6 @@ export default function Products() {
                             type="button"
                             variant="icon"
                             size="sm"
-                            className="product-action-icon view"
-                            title="View product"
-                            aria-label="View product"
-                            onClick={() => setViewProduct(product)}
-                          >
-                            <Eye size={15} />
-                          </Button>
-
-                          <Button
-                            type="button"
-                            variant="icon"
-                            size="sm"
                             className="product-action-icon edit"
                             title="Edit product"
                             aria-label="Edit product"
@@ -1120,23 +1117,11 @@ export default function Products() {
                             variant="icon"
                             size="sm"
                             className="product-action-icon"
-                            title="Barcode"
-                            aria-label="Show barcode"
-                            onClick={() => setBarcodeProduct(product)}
+                            title="More actions"
+                            aria-label="More actions"
+                            onClick={() => setViewProduct(product)}
                           >
-                            <Barcode size={15} />
-                          </Button>
-
-                          <Button
-                            type="button"
-                            variant="danger"
-                            size="sm"
-                            className="product-action-icon delete"
-                            title="Delete product"
-                            aria-label="Delete product"
-                            onClick={() => requestDeleteProduct(product)}
-                          >
-                            <Trash2 size={15} />
+                            <MoreHorizontal size={15} />
                           </Button>
                         </td>
                       </tr>
@@ -1157,7 +1142,7 @@ export default function Products() {
         {viewMode === "table" && filteredProducts.length > 0 ? (
           <div className="prod-pagination-footer">
             <span className="prod-pagination-info">
-              Showing {(safePage - 1) * rowsPerPage + 1} to {Math.min(safePage * rowsPerPage, filteredProducts.length)} of {filteredProducts.length} results
+              {`عرض ${(safePage - 1) * rowsPerPage + 1}–${Math.min(safePage * rowsPerPage, filteredProducts.length)} من ${filteredProducts.length} منتج`}
             </span>
             <div className="prod-pagination-controls">
               <Button
@@ -1233,7 +1218,7 @@ export default function Products() {
                     </span>
                   </div>
 
-                  <div className="mini-meta">{product.category || "—"}</div>
+                  <div className="mini-meta">{localizeCat(product.category || "", isArabic) || "—"}</div>
 
                   <div className="mini-metrics">
                     <div>
@@ -1425,7 +1410,7 @@ export default function Products() {
                   <div className="prod-field">
                     <label className="prod-label">{t.products?.purchasePrice || "Purchase Price"}</label>
                     <div className="prod-icon-input">
-                      <span className="prod-icon-prefix">$</span>
+                      <span className="prod-icon-prefix">₪</span>
                       <input
                         className="prod-input with-prefix"
                         type="number" min="0" step="0.01"
@@ -1438,7 +1423,7 @@ export default function Products() {
                   <div className="prod-field">
                     <label className="prod-label">{t.products?.salePrice || "Sale Price"}</label>
                     <div className="prod-icon-input">
-                      <span className="prod-icon-prefix">$</span>
+                      <span className="prod-icon-prefix">₪</span>
                       <input
                         className="prod-input with-prefix"
                         type="number" min="0" step="0.01"
