@@ -7,6 +7,7 @@ import ModuleLayout from "./components/layout/ModuleLayout";
 import { PageCrashFallback } from "./components/ui/PageCrashFallback";
 import { useAuth } from "./context/AuthContext";
 import { DataProvider } from "./context/DataContext";
+import { TreasuryProvider } from "./context/TreasuryContext";
 import { FactoryProvider } from "./context/FactoryContext";
 import { NotificationsProvider } from "./context/NotificationsContext";
 import { SidebarPreferencesProvider } from "./context/SidebarPreferencesContext";
@@ -132,7 +133,7 @@ function AppRoutes() {
           <Route path="/suppliers/new" element={<ErrorBoundary fallback={(_, reset) => <PageCrashFallback onReset={reset} />}><AddSupplier /></ErrorBoundary>} />
           <Route path="/invoices" element={<Invoices />} />
           <Route path="/payments" element={<Payments />} />
-          <Route path="/treasury" element={<Treasury />} />
+          <Route path="/treasury" element={<TreasuryProvider><Treasury /></TreasuryProvider>} />
           <Route path="/employees" element={<Employees />} />
           <Route path="/employees/new" element={<ErrorBoundary fallback={(_, reset) => <PageCrashFallback onReset={reset} />}><AddEmployee /></ErrorBoundary>} />
           <Route path="/leaves" element={<Leaves />} />
