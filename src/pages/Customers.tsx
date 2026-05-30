@@ -6,6 +6,7 @@ import { Input } from "../components/ui/Input";
 import { Select } from "../components/ui/Select";
 import { Badge } from "../components/ui/Badge";
 import { Avatar } from "../components/ui/Avatar";
+import { Modal } from "../components/ui/Modal";
 import { Container } from "../components/layout/Container";
 import { Stack } from "../components/layout/Stack";
 import {
@@ -27,8 +28,8 @@ function relativeDate(iso: string): string {
   return `قبل ${Math.floor(days / 30)} شهور`;
 }
 
-function formatBalance(n: number, currency: string): string {
-  return new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(n) + " " + currency;
+function formatBalance(n: number): string {
+  return "₪" + new Intl.NumberFormat("ar-SA", { maximumFractionDigits: 0 }).format(n);
 }
 
 export default function Customers() {
@@ -40,6 +41,7 @@ export default function Customers() {
   const [classFilter, setClassFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [showFilters, setShowFilters] = useState(true);
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
   const active = useMemo(
     () => customers.filter((c) => !c.isDeleted),
@@ -77,10 +79,7 @@ export default function Customers() {
         {/* Header */}
         <header className={styles.header}>
           <div>
-            <h1 className={styles.title}>
-              {t.customers.pageTitle} <span className={styles.titleCount}>· {stats.total.toLocaleString()}</span>
-            </h1>
-            <p className={styles.subtitle}>{t.customers.pageSubtitle}</p>
+            <p className={styles.subtitle}>{t.customers.pageSubtitle} <span className={styles.titleCount}>· {stats.total.toLocaleString()}</span></p>
           </div>
           <div className={styles.actions}>
             <Button variant="secondary" size="sm" leftIcon={<Filter size={14} />} onClick={() => setShowFilters((v) => !v)}>{t.customers.filter}</Button>
@@ -196,7 +195,7 @@ export default function Customers() {
                   liveLastOrder={customerLastOrderMap.get(c.id)}
                   onView={() => navigate(`/customers/${c.id}`)}
                   onEdit={() => navigate(`/customers/${c.id}/edit`)}
-                  onDelete={() => deleteCustomer(c.id)}
+                  onDelete={() => setDeleteTarget(c.id)}
                   onLoyalty={() => navigate(`/pos/loyalty/profile?id=${c.id}`)}
                 />
               ))}
@@ -213,6 +212,27 @@ export default function Customers() {
           <span>{t.customers.showing} {filtered.length} {t.customers.of} {stats.total.toLocaleString()}</span>
         </footer>
       </Stack>
+
+      {deleteTarget && (
+        <Modal
+          isOpen
+          onClose={() => setDeleteTarget(null)}
+          title={t.common.confirmDelete}
+          size="sm"
+          footer={
+            <div style={{ display: "flex", gap: "var(--app-space-2)", justifyContent: "flex-end" }}>
+              <Button variant="ghost" onClick={() => setDeleteTarget(null)}>{t.common.cancel}</Button>
+              <Button variant="primary" onClick={() => { deleteCustomer(deleteTarget); setDeleteTarget(null); }}>
+                {t.common.delete}
+              </Button>
+            </div>
+          }
+        >
+          <p style={{ margin: 0, fontSize: 14 }}>
+            {t.customers.rowMenu.delete} — {t.common.confirmDelete}?
+          </p>
+        </Modal>
+      )}
     </Container>
   );
 }
@@ -309,7 +329,7 @@ function CustomerRow({
       <td className="col-num">
         <span className={`${styles.balance} ${styles[`bal_${balanceTone}`]}`}>
           {balance > 0
-            ? formatBalance(balance, c.currency ?? "ILS")
+            ? formatBalance(balance)
             : <span className={styles.zeroBalance}>—</span>}
           {alerts.length > 0 && <AlertTriangle size={12} className={styles.alertIcon} aria-hidden />}
         </span>
@@ -358,7 +378,7 @@ function CustomerRow({
                 role="menuitem"
                 onClick={() => { setMenuOpen(false); onLoyalty(); }}
               >
-                {t.customers.rowMenu.loyalty ?? "Loyalty Profile"}
+                {t.customers.rowMenu.loyalty}
               </button>
               <button
                 type="button"

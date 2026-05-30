@@ -9,6 +9,7 @@ import {
   X,
 } from "lucide-react";
 import type { ShortcutDef } from "../../hooks/useKeyboardShortcuts";
+import { useSettings } from "../../context/SettingsContext";
 import "./ShortcutsOverlay.css";
 
 type Props = {
@@ -17,17 +18,11 @@ type Props = {
   isDark?: boolean;
 };
 
-const GROUP_META: Record<string, { label: string; icon: React.ReactNode }> = {
-  nav:        { label: "Navigate",   icon: <Compass size={13} /> },
-  create:     { label: "Create",     icon: <FilePlus size={13} /> },
-  general:    { label: "General",    icon: <Settings2 size={13} /> },
-  appearance: { label: "Appearance", icon: <Moon size={13} /> },
-  system:     { label: "System",     icon: <LogOut size={13} /> },
-};
-
 const GROUP_ORDER = ["general", "nav", "create", "appearance", "system"];
 
 export default function ShortcutsOverlay({ shortcuts, onClose, isDark }: Props) {
+  const { isArabic } = useSettings();
+
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -36,9 +31,32 @@ export default function ShortcutsOverlay({ shortcuts, onClose, isDark }: Props) 
     return () => window.removeEventListener("keydown", handler);
   }, [onClose]);
 
+  const groupMeta: Record<string, { label: string; icon: React.ReactNode }> = {
+    nav: {
+      label: isArabic ? "التنقل" : "Navigate",
+      icon: <Compass size={13} />,
+    },
+    create: {
+      label: isArabic ? "الإنشاء" : "Create",
+      icon: <FilePlus size={13} />,
+    },
+    general: {
+      label: isArabic ? "عام" : "General",
+      icon: <Settings2 size={13} />,
+    },
+    appearance: {
+      label: isArabic ? "المظهر" : "Appearance",
+      icon: <Moon size={13} />,
+    },
+    system: {
+      label: isArabic ? "النظام" : "System",
+      icon: <LogOut size={13} />,
+    },
+  };
+
   const grouped = GROUP_ORDER.map((groupKey) => ({
     key: groupKey,
-    meta: GROUP_META[groupKey],
+    meta: groupMeta[groupKey],
     items: shortcuts.filter((s) => (s.group ?? "general") === groupKey),
   })).filter((g) => g.items.length > 0);
 
@@ -48,20 +66,22 @@ export default function ShortcutsOverlay({ shortcuts, onClose, isDark }: Props) 
         type="button"
         className="shortcuts-overlay-backdrop"
         onClick={onClose}
-        aria-label="Close shortcuts"
+        aria-label={isArabic ? "إغلاق الاختصارات" : "Close shortcuts"}
       />
       <div
         className="shortcuts-overlay-panel"
         role="dialog"
-        aria-label="Keyboard shortcuts"
+        aria-label={isArabic ? "اختصارات لوحة المفاتيح" : "Keyboard shortcuts"}
         aria-modal="true"
       >
         <div className="shortcuts-overlay-head">
           <div className="shortcuts-overlay-title">
-            <strong>Keyboard Shortcuts</strong>
+            <strong>{isArabic ? "اختصارات لوحة المفاتيح" : "Keyboard Shortcuts"}</strong>
             {isDark !== undefined && (
               <span className="shortcuts-theme-badge">
-                {isDark ? "Dark" : "Light"} mode
+                {isDark
+                  ? (isArabic ? "الوضع الداكن" : "Dark mode")
+                  : (isArabic ? "الوضع الفاتح" : "Light mode")}
               </span>
             )}
           </div>
@@ -69,7 +89,7 @@ export default function ShortcutsOverlay({ shortcuts, onClose, isDark }: Props) 
             type="button"
             className="shortcuts-close-btn"
             onClick={onClose}
-            aria-label="Close"
+            aria-label={isArabic ? "إغلاق" : "Close"}
           >
             <X size={15} />
             <kbd>Esc</kbd>

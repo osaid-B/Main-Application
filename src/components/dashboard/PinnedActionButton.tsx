@@ -1,4 +1,4 @@
-import { FileText, Hammer, ShoppingCart, UserPlus } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import type { PinnedAction } from "../../data/dashboardMock";
 import { useSettings } from "../../context/SettingsContext";
@@ -8,18 +8,10 @@ interface Props {
   action: PinnedAction;
 }
 
-const ICONS = {
-  FileText,
-  Hammer,
-  ShoppingCart,
-  UserPlus,
-} as const;
-
-/** Tile-style quick-action button. Icon in a colored circle + label. */
+/** Tile-style quick-action button — text label + directional arrow, no icon. */
 export function PinnedActionButton({ action }: Props) {
   const navigate = useNavigate();
   const { isArabic } = useSettings();
-  const Icon = ICONS[action.icon];
 
   return (
     <button
@@ -27,10 +19,8 @@ export function PinnedActionButton({ action }: Props) {
       className={`${styles.tile} ${styles[`tone_${action.color}`]}`}
       onClick={() => navigate(action.path)}
     >
-      <span className={styles.iconCircle} aria-hidden>
-        <Icon size={16} />
-      </span>
       <span className={styles.label}>{isArabic ? action.labelAr : action.label}</span>
+      <ArrowLeft size={13} className={styles.arrow} aria-hidden />
     </button>
   );
 }

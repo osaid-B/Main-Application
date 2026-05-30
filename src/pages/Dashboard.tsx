@@ -86,10 +86,7 @@ export default function Dashboard() {
         {/* 1 · Header */}
         <header className={styles.header}>
           <div>
-            <div className={styles.breadcrumb}>
-              {t.dashboard.breadcrumb}
-            </div>
-            <h1 className={styles.pageTitle}>{t.dashboard.pageTitle}</h1>
+            <div className={styles.breadcrumb}>{t.dashboard.breadcrumb}</div>
             <p className={styles.pageSubtitle}>{t.dashboard.pageSubtitle}</p>
           </div>
           <div className={styles.headerActions}>

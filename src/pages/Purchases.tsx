@@ -919,7 +919,6 @@ export default function Purchases() {
               <ShoppingCart size={16} />
               {t.purchases.pageTitle}
             </div>
-            <h1>{t.purchases.pageTitle}</h1>
             <p>{t.purchases.pageSubtitle}</p>
           </div>
 

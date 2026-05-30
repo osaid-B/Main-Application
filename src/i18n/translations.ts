@@ -687,7 +687,7 @@ export const translations = {
       pageTitle: "Invoice Management",
       pageSubtitle: "Create, track, and manage all your customer, supplier, and internal invoices.",
       newInvoice: "New Invoice",
-      searchPlaceholder: "Search invoice, name, product, or status",
+      searchPlaceholder: "Search by invoice # or customer name",
       filterBtn: "Filter",
       addInvoice: "Add Invoice",
       noInvoices: "No invoices found",
@@ -1955,6 +1955,8 @@ export const translations = {
         },
         memberSince: "Member since",
         coins: "coins",
+        prev: "‹ Prev",
+        next: "Next ›",
       },
 
       payment: {
@@ -4179,7 +4181,7 @@ export const translations = {
       pageTitle: "إدارة الفواتير",
       pageSubtitle: "أنشئ وتابع وادر جميع فواتير الزباين والموردين والداخلية.",
       newInvoice: "فاتورة جديدة",
-      searchPlaceholder: "ابحث بالفاتورة أو الاسم أو المنتج أو الحالة",
+      searchPlaceholder: "ابحث برقم الفاتورة أو اسم العميل",
       filterBtn: "فلتر",
       addInvoice: "أضف فاتورة",
       noInvoices: "ما في فواتير",
@@ -5447,6 +5449,8 @@ export const translations = {
         },
         memberSince: "عضو منذ",
         coins: "نقطة",
+        prev: "‹ السابق",
+        next: "التالي ›",
       },
 
       payment: {

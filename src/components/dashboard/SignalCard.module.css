@@ -1,7 +1,7 @@
 .card {
-  position: relative;
   background: var(--app-surface);
   border: 1px solid var(--app-border);
+  border-inline-start: 3px solid transparent;
   border-radius: var(--app-radius-lg);
   padding: var(--app-space-4);
   display: flex;
@@ -13,25 +13,9 @@
 
 .card:hover { box-shadow: var(--app-shadow-strong); }
 
-.card::before {
-  content: "";
-  position: absolute;
-  inset-block: 0;
-  inset-inline-start: 0;
-  width: 3px;
-  border-start-start-radius: var(--app-radius-lg);
-  border-end-start-radius: var(--app-radius-lg);
-}
-
-.tone_critical::before   { background: var(--atlas-danger); }
-.tone_operations::before { background: var(--atlas-orange); }
-.tone_finance::before    { background: var(--atlas-blue); }
-
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
+.tone_critical   { border-inline-start-color: var(--app-danger); }
+.tone_operations { border-inline-start-color: var(--app-warning); }
+.tone_finance    { border-inline-start-color: var(--app-info); }
 
 .title {
   margin: 0;
@@ -40,6 +24,10 @@
   color: var(--app-text);
   line-height: 1.4;
 }
+
+.tone_critical   .title { color: var(--app-danger); }
+.tone_operations .title { color: var(--app-warning); }
+.tone_finance    .title { color: var(--app-info); }
 
 .desc {
   margin: 0;

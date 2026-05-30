@@ -99,9 +99,9 @@
   height: 3px;
 }
 
-.ws_blue   { background: linear-gradient(180deg, #eff6ff 0%, var(--app-surface) 55%); }
-.ws_green  { background: linear-gradient(180deg, #ecfdf5 0%, var(--app-surface) 55%); }
-.ws_purple { background: linear-gradient(180deg, #f5f3ff 0%, var(--app-surface) 55%); }
+.ws_blue   { background: linear-gradient(180deg, var(--atlas-blue-50) 0%, var(--app-surface) 55%); }
+.ws_green  { background: linear-gradient(180deg, var(--atlas-blue-50) 0%, var(--app-surface) 55%); }
+.ws_purple { background: linear-gradient(180deg, var(--atlas-blue-50) 0%, var(--app-surface) 55%); }
 
 .ws_blue   .wsAccentBar { background: var(--atlas-blue); }
 .ws_green  .wsAccentBar { background: var(--atlas-green); }

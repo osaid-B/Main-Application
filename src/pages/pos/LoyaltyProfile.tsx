@@ -104,7 +104,6 @@ export default function LoyaltyProfile() {
         <header className={styles.header}>
           <div>
             <div className={styles.breadcrumb}>{tc.breadcrumb}</div>
-            <h1 className={styles.title}>{tc.pageTitle}</h1>
             <p className={styles.subtitle}>{tc.pageSubtitle}</p>
           </div>
         </header>
@@ -196,7 +195,7 @@ export default function LoyaltyProfile() {
                   onClick={() => setPage((p) => Math.max(0, p - 1))}
                   disabled={page === 0}
                 >
-                  ‹ Prev
+                  {tc.prev ?? "‹ Prev"}
                 </button>
                 <span className={styles.pageInfo}>{page + 1} / {totalPages}</span>
                 <button
@@ -205,7 +204,7 @@ export default function LoyaltyProfile() {
                   onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
                   disabled={page === totalPages - 1}
                 >
-                  Next ›
+                  {tc.next ?? "Next ›"}
                 </button>
               </div>
             )}

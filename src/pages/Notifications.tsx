@@ -36,6 +36,13 @@ const SEV_BORDER: Record<NotificationSeverity, string> = {
   success: styles.sevSuccess,
 };
 
+const SEVERITY_AR: Record<string, string> = {
+  error:   "خطأ",
+  warning: "تحذير",
+  info:    "معلومة",
+  success: "نجاح",
+};
+
 type T = ReturnType<typeof useSettings>["t"];
 
 function relTime(ts: Date, t: T): string {
@@ -49,7 +56,10 @@ function relTime(ts: Date, t: T): string {
   const diffD = Math.floor(diffH / 24);
   if (diffD === 1) return rl.yesterday;
   if (diffD < 7) return `${rl.prefix}${diffD}${rl.dAgo}`;
-  return ts.toLocaleDateString();
+  const d = ts.getDate().toString().padStart(2, "0");
+  const m = (ts.getMonth() + 1).toString().padStart(2, "0");
+  const y = ts.getFullYear();
+  return `${d}/${m}/${y}`;
 }
 
 function dateGroup(ts: Date, t: T): string {
@@ -113,7 +123,6 @@ export default function Notifications() {
         {/* Header */}
         <header className={styles.header}>
           <div>
-            <h1 className={styles.title}>{tn.pageTitle}</h1>
             <p className={styles.subtitle}>{tn.pageSubtitle}</p>
           </div>
           <div className={styles.headerActions}>
@@ -180,7 +189,7 @@ export default function Notifications() {
                           <div className={styles.cardTop}>
                             <div className={styles.cardMeta}>
                               <span className={styles.cardTitle}>{title}</span>
-                              <Badge variant={SEV_VARIANT[n.severity]} size="sm">{n.severity}</Badge>
+                              <Badge variant={SEV_VARIANT[n.severity]} size="sm">{isArabic ? (SEVERITY_AR[n.severity] ?? n.severity) : n.severity}</Badge>
                             </div>
                             <div className={styles.cardRight}>
                               <span className={styles.cardTime}>{relTime(n.timestamp, t)}</span>
@@ -188,6 +197,7 @@ export default function Notifications() {
                                 type="button"
                                 className={styles.dismissBtn}
                                 aria-label="Dismiss notification"
+                                style={{ minWidth: 32, minHeight: 32, display: "flex", alignItems: "center", justifyContent: "center" }}
                                 onClick={(e) => { e.stopPropagation(); dismiss(n.id); }}
                               >
                                 <X size={12} />

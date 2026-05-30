@@ -1,6 +1,29 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { USE_SUPABASE } from "../lib/supabase";
 import { useRealtimeSubscriptions } from "../hooks/useRealtimeSubscriptions";
-import type { FactoryOrderRow } from "../types/database";
+import {
+  fetchFactoryOrders,
+  fetchBoms,
+  fetchQualityChecks,
+  fetchBatches,
+  fetchRawMaterials,
+  fetchFinishedGoods,
+  fetchWarehouseLocations,
+  fetchImportOrders,
+  fetchCostingEntries,
+} from "../services/factory";
+import {
+  factoryOrderFromRow,
+  qualityCheckFromRow,
+  rawMaterialFromRow,
+  finishedGoodFromRow,
+  warehouseLocationFromRow,
+  importOrderFromRow,
+  productionBatchFromRow,
+  costingEntryFromRow,
+  bomTemplateFromRow,
+} from "../services/adapters";
+import type { FactoryOrderRow, ImportOrderLineRow, FactoryBomLineRow } from "../types/database";
 import type {
   ProductionOrder,
   ProductionOrderStatus,
@@ -63,16 +86,42 @@ export interface FactoryContextValue {
 const FactoryContext = createContext<FactoryContextValue | null>(null);
 
 export function FactoryProvider({ children }: { children: ReactNode }) {
-  const [factoryOrders, setFactoryOrders] = useState<ProductionOrder[]>(FACTORY_ORDERS);
-  const [qualityChecks]                   = useState<QualityCheck[]>(FACTORY_QC);
-  const [boms]                            = useState<BomTemplate[]>(FACTORY_BOMS);
-  const [rawMaterials, setRawMaterials]   = useState<RawMaterial[]>(RAW_MATERIALS);
-  const [finishedGoods, setFinishedGoods] = useState<FinishedGood[]>(FINISHED_GOODS);
-  const [warehouseLocations]              = useState<WarehouseLocation[]>(WAREHOUSE_LOCATIONS);
-  const [sourceRecords]                   = useState<SourceRecord[]>(SOURCE_RECORDS);
-  const [importOrders, setImportOrders]   = useState<ImportOrder[]>(IMPORT_ORDERS);
-  const [batches]                         = useState<ProductionBatch[]>(PRODUCTION_BATCHES);
-  const [costingEntries]                  = useState<CostingEntry[]>(COSTING_ENTRIES);
+  const [factoryOrders, setFactoryOrders]       = useState<ProductionOrder[]>(FACTORY_ORDERS);
+  const [qualityChecks, setQualityChecks]       = useState<QualityCheck[]>(FACTORY_QC);
+  const [boms, setBoms]                         = useState<BomTemplate[]>(FACTORY_BOMS);
+  const [rawMaterials, setRawMaterials]         = useState<RawMaterial[]>(RAW_MATERIALS);
+  const [finishedGoods, setFinishedGoods]       = useState<FinishedGood[]>(FINISHED_GOODS);
+  const [warehouseLocations, setWarehouseLocations] = useState<WarehouseLocation[]>(WAREHOUSE_LOCATIONS);
+  const [sourceRecords]                         = useState<SourceRecord[]>(SOURCE_RECORDS);
+  const [importOrders, setImportOrders]         = useState<ImportOrder[]>(IMPORT_ORDERS);
+  const [batches, setBatches]                   = useState<ProductionBatch[]>(PRODUCTION_BATCHES);
+  const [costingEntries, setCostingEntries]     = useState<CostingEntry[]>(COSTING_ENTRIES);
+
+  // ── Supabase bootstrap ───────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!USE_SUPABASE) return;
+    Promise.all([
+      fetchFactoryOrders(),
+      fetchBoms(),
+      fetchQualityChecks(),
+      fetchBatches(),
+      fetchRawMaterials(),
+      fetchFinishedGoods(),
+      fetchWarehouseLocations(),
+      fetchImportOrders(),
+      fetchCostingEntries(),
+    ]).then(([dbOrders, dbBoms, dbQc, dbBatches, dbRaw, dbFg, dbWh, dbImports, dbCosting]) => {
+      if (dbOrders.length)  setFactoryOrders(dbOrders.map(factoryOrderFromRow));
+      if (dbBoms.length)    setBoms(dbBoms.map((r) => bomTemplateFromRow(r as typeof r & { factory_bom_lines?: FactoryBomLineRow[] })));
+      if (dbQc.length)      setQualityChecks(dbQc.map(qualityCheckFromRow));
+      if (dbBatches.length) setBatches(dbBatches.map(productionBatchFromRow));
+      if (dbRaw.length)     setRawMaterials(dbRaw.map(rawMaterialFromRow));
+      if (dbFg.length)      setFinishedGoods(dbFg.map(finishedGoodFromRow));
+      if (dbWh.length)      setWarehouseLocations(dbWh.map(warehouseLocationFromRow));
+      if (dbImports.length) setImportOrders(dbImports.map((r) => importOrderFromRow(r as typeof r & { factory_import_lines?: ImportOrderLineRow[] })));
+      if (dbCosting.length) setCostingEntries(dbCosting.map(costingEntryFromRow));
+    }).catch((e) => console.warn("[FactoryContext] Supabase bootstrap failed, using mock data:", e));
+  }, []);
 
   // ── Realtime: keep factory orders in sync with DB changes ────────────────────
   const handleFactoryOrderChange = useCallback((row: FactoryOrderRow) => {

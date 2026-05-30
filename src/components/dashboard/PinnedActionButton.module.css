@@ -1,8 +1,9 @@
 .tile {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: var(--app-space-2);
-  padding: var(--app-space-3);
+  padding: var(--app-space-3) var(--app-space-4);
   background: var(--app-surface);
   border: 1px solid var(--app-border);
   border-radius: var(--app-radius-md);
@@ -10,6 +11,7 @@
   transition: var(--app-transition);
   text-align: start;
   font: inherit;
+  width: 100%;
 }
 
 .tile:hover {
@@ -24,21 +26,18 @@
   outline-offset: 2px;
 }
 
-.iconCircle {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  flex-shrink: 0;
-}
-
-.tone_blue   .iconCircle { background: var(--atlas-blue-100);   color: var(--atlas-blue-700); }
-.tone_green  .iconCircle { background: var(--atlas-green-100);  color: var(--atlas-green-700); }
-.tone_purple .iconCircle { background: var(--atlas-purple-100); color: var(--atlas-purple-700); }
-
 .label {
   font-size: 12px;
   font-weight: 600;
   color: var(--app-text);
+  line-height: 1.4;
 }
+
+.arrow {
+  color: var(--app-text-muted);
+  flex-shrink: 0;
+}
+
+.tone_blue   .arrow { color: var(--atlas-blue-600); }
+.tone_green  .arrow { color: var(--atlas-green-600); }
+.tone_purple .arrow { color: var(--atlas-purple-600); }

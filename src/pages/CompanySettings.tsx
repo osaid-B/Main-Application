@@ -145,7 +145,6 @@ export default function CompanySettings() {
     <div className="cs-page">
       <header className="cs-header">
         <div>
-          <h1>{tc.pageTitle}</h1>
           <p>{tc.pageSubtitle}</p>
         </div>
         <Building2 size={28} color="#2563eb" />

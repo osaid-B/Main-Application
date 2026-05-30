@@ -1,0 +1,30 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(Get-Content \"C:\\\\Users\\\\oseid\\\\OneDrive\\\\Desktop\\\\github\\\\Main-Application\\\\src\\\\i18n\\\\translations.ts\")",
+      "Bash(Measure-Object -Line)",
+      "PowerShell(Get-Content *)",
+      "Bash(git checkout *)",
+      "Bash(grep -v \"//\")",
+      "Bash(echo \"exit:$?\")",
+      "Bash(sed -n '1,35p' src/pages/Reports.tsx)",
+      "Bash(sed -n '285,380p' src/pages/Reports.tsx)",
+      "Bash(git merge *)",
+      "Bash(git push *)",
+      "Bash(grep -v \"noData\\\\|styles\\\\.\\\\|tc\\\\.\\\\|import\\\\|//\")",
+      "Bash(npx tsc *)",
+      "Bash(grep -v \"^$\")",
+      "Bash(Get-ChildItem src/data/)",
+      "Bash(Select-Object Name)",
+      "Bash(npm install *)",
+      "Bash(node -e \"require\\('@supabase/supabase-js'\\); console.log\\('ok'\\)\")",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\oseid\\\\OneDrive\\\\Desktop\\\\github\\\\Main-Application\\\\src\\\\pages\" -Recurse -File)",
+      "Bash(Select-Object -ExpandProperty FullName)",
+      "Bash(Sort-Object)",
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\oseid\\\\OneDrive\\\\Desktop\\\\github\\\\Main-Application\\\\src\\\\pages\" -File | Where-Object { $_.Extension -eq \".tsx\" -or $_.Extension -eq \".css\" } | Select-Object -ExpandProperty FullName | Sort-Object)"
+    ]
+  }
+}

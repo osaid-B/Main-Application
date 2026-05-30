@@ -803,7 +803,6 @@ export default function Leaves() {
       {/* Header */}
       <header className="lv-header">
         <div>
-          <h1>{t.leaves.pageTitle}</h1>
           <p>{t.leaves.pageSubtitle}</p>
         </div>
         <Button variant="primary" size="md" onClick={() => setShowModal(true)}>

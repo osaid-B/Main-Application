@@ -29,14 +29,6 @@ export default function AtlasHeader() {
   const [createOpen, setCreateOpen] = useState(false);
   const [activeIdx, setActiveIdx] = useState(0);
   const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
-  const [scrolled, setScrolled] = useState(false);
-
-  useEffect(() => {
-    function onScroll() { setScrolled(window.scrollY > 8); }
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
-
   const searchWrapRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const createBtnRef = useRef<HTMLButtonElement>(null);
@@ -203,7 +195,7 @@ export default function AtlasHeader() {
   }, [createOpen]);
 
   return (
-    <header className={`atlas-header${scrolled ? " is-scrolled" : ""}`} dir={isArabic ? "rtl" : "ltr"}>
+    <header className="atlas-header" dir={isArabic ? "rtl" : "ltr"}>
       {/* Left: logo + brand */}
       <div className="atlas-header-left">
         <button
@@ -309,7 +301,6 @@ export default function AtlasHeader() {
                 onClick={() => setWorkspace(id)}
                 title={`${wsName} (${info.shortcut})`}
               >
-                <span className={`status-dot status-dot--${info.color === "blue" ? "blue" : info.color === "green" ? "green" : "purple"}`} aria-hidden />
                 <span>{wsName}</span>
               </button>
             );

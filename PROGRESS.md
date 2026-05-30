@@ -147,3 +147,34 @@ errors introduced by task changes.
 ### Final STEP 1 build
 - npm run lint: ✅ 0 errors, 0 warnings
 - npm run build: ✅ clean (chunk size warning is pre-existing)
+
+---
+
+## SUPABASE ACTIVATION AUDIT — feat/supabase-activation-audit (2026-05-30)
+
+### B4–B9 — Supabase Integration Fixes
+
+| Item | Status | Notes |
+|------|--------|-------|
+| B4: `invoiceFromRow` isDeleted | ✅ | Added `isDeleted: r.is_deleted`; added `isDeleted?: boolean` to `Invoice` type |
+| B5: FactoryContext bootstrap | ✅ | 9 factory adapters created in adapters.ts; FactoryContext bootstraps from Supabase with mock fallback |
+| B6: AuthContext `onAuthStateChange` | ✅ | Token refresh + cross-tab sign-out wired via new useEffect |
+| B7: Service layer audit | ✅ | No changes needed — already correct |
+| B8: Realtime loyalty/POS callbacks | ⚠️ PARTIAL | `onLoyaltyTransaction` / `onPosSale` callbacks exist but no context calls them |
+| B9: Optimistic revert on mutations | ✅ | All 16 DataContext mutations capture prev → revert + console.warn on failure |
+| B1/B2/B3/B10 | 🔒 BLOCKED | Requires `.env.local` with `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY` from Supabase dashboard |
+
+### C1–C10 — Full Project Audit
+
+| Section | Status | Fix |
+|---------|--------|-----|
+| C1 Navigation | ✅ | Added `/customers/:id/edit` + `/customers/:id` routes; AddCustomer upgraded to full edit mode |
+| C2 Forms | ✅ | No critical issues — Input has proper aria-invalid/error props |
+| C3 Data integrity | ✅ | `activeInvoices` memo filters deleted invoices; downstream KPIs use it |
+| C4 RTL/i18n | ✅ | LoyaltyProfile pagination uses translation keys; stale fallback removed from Customers |
+| C5 Tables | ✅ | Already done in prior session (atlas-table col-* system) |
+| C6 Stat cards | ✅ | CompanyOverview CSV export aligned to live DataContext values (was using stale mock) |
+| C7 Error handling | ✅ | No window.alert/confirm; empty states present on all pages |
+| C8 Performance | ✅ | Departments.tsx: memoized activeEmployees, filtered, totalHead, totalOpen |
+| C9 Mobile | ✅ | No critical issues — tables have overflow-x: auto; responsive.css has @media rules |
+| C10 Verification | ✅ | lint + build clean |

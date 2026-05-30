@@ -32,10 +32,10 @@
 
 .productName { font-weight: 600; color: var(--app-text); }
 .skuChip { font-size: 11px; font-family: var(--font-mono); color: var(--app-text-muted); }
-.catChip { display: inline-block; background: var(--app-surface-muted); padding: 1px 8px; border-radius: 999px; font-size: 11px; color: var(--app-text-muted); }
+.catChip { display: inline-block; background: var(--app-surface-muted); padding: 1px 8px; border-radius: var(--app-radius-full); font-size: 11px; color: var(--app-text-muted); }
 .mono { font-variant-numeric: tabular-nums; }
 
-.statusBadge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; }
+.statusBadge { display: inline-block; padding: 2px 8px; border-radius: var(--app-radius-full); font-size: 11px; font-weight: 600; }
 .statusInStock  { background: #f0fdf4; color: #15803d; }
 .statusLow      { background: #fff7ed; color: #c2410c; }
 .statusOut      { background: #fef2f2; color: #b91c1c; }

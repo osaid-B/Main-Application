@@ -9,6 +9,19 @@ import { useData } from "../context/DataContext";
 import type { MovementType } from "../data/types";
 import styles from "./InventoryOverview.module.css";
 
+const CATEGORY_AR: Record<string, string> = {
+  "Electronics":   "إلكترونيات",
+  "Accessories":   "إكسسوارات",
+  "Food":          "مواد غذائية",
+  "Beverages":     "مشروبات",
+  "Dairy":         "ألبان",
+  "Cleaning":      "منظفات",
+  "Personal Care": "عناية شخصية",
+};
+function localizeCat(name: string, isArabic: boolean): string {
+  return isArabic ? (CATEGORY_AR[name] ?? name) : name;
+}
+
 type StockStatus = "inStock" | "low" | "outOfStock";
 
 function getStatus(stock: number, reorder: number): StockStatus {
@@ -103,7 +116,6 @@ export default function InventoryOverview() {
         <div className={styles.header}>
           <div className={styles.headerLeft}>
             <p className={styles.breadcrumb}>{isArabic ? "المخزون" : "Inventory"}</p>
-            <h1 className={styles.title}>{tc.pageTitle}</h1>
             <p className={styles.subtitle}>{tc.pageSubtitle}</p>
           </div>
           <div style={{ display: "flex", gap: "var(--app-space-2)" }}>
@@ -137,11 +149,11 @@ export default function InventoryOverview() {
               value={search} onChange={(e) => setSearch(e.target.value)} />
           </div>
           <select className={styles.filterSelect} value={catFilter} onChange={(e) => setCatFilter(e.target.value)}>
-            <option value="">{tc.statusAll}</option>
-            {productCategories.map(c => <option key={c} value={c}>{c}</option>)}
+            <option value="">{isArabic ? "الفئة" : tc.statusAll}</option>
+            {productCategories.map(c => <option key={c} value={c}>{localizeCat(c, isArabic)}</option>)}
           </select>
           <select className={styles.filterSelect} value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as "" | StockStatus)}>
-            <option value="">{tc.statusAll}</option>
+            <option value="">{isArabic ? "الحالة" : tc.statusAll}</option>
             <option value="inStock">{tc.statusInStock}</option>
             <option value="low">{tc.statusLow}</option>
             <option value="outOfStock">{tc.statusOut}</option>
@@ -183,7 +195,7 @@ export default function InventoryOverview() {
                   <tr key={p.id}>
                     <td className={styles.productName}>{p.name}</td>
                     <td><span className={styles.skuChip}>{p.id}</span></td>
-                    <td><span className={styles.catChip}>{p.category}</span></td>
+                    <td><span className={styles.catChip}>{localizeCat(p.category, isArabic)}</span></td>
                     <td className={`${styles.numEnd} ${styles.mono}`}>{p.stock}</td>
                     <td>{p.unit ?? "—"}</td>
                     <td className={`${styles.numEnd} ${styles.mono}`}>{formatCurrency(val, "ILS")}</td>
@@ -209,7 +221,7 @@ export default function InventoryOverview() {
           </table>
         </div>
 
-        <div className={styles.summaryBar}>
+        <div className={styles.summaryBar} style={{ borderTop: "2px solid var(--app-border-strong)" }}>
           <span className={styles.summaryLabel}>{tc.totalValue}:</span>
           <span className={styles.summaryValue}>{formatCurrency(totalValue, "ILS")}</span>
         </div>

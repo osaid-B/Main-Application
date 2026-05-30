@@ -65,7 +65,7 @@ const MODULE_LABELS: Record<string, { label: string; labelAr: string }> = {
 };
 
 export default function Permissions() {
-  const { t } = useSettings();
+  const { t, isArabic } = useSettings();
   const tc = t.permissions;
   const { toast } = useToast();
 
@@ -135,7 +135,6 @@ export default function Permissions() {
     <Container maxWidth="full" padding="md">
       <header className={styles.header}>
         <div>
-          <h1 className={styles.title}>{tc.pageTitle}</h1>
           <p className={styles.subtitle}>{tc.pageSubtitle}</p>
         </div>
       </header>
@@ -161,7 +160,7 @@ export default function Permissions() {
               <div className={styles.roleCardMain}>
                 <div className={styles.roleName}>{role.name}</div>
                 <div className={styles.roleNameAr}>{role.nameAr}</div>
-                <div className={styles.roleDesc}>{role.description}</div>
+                <div className={styles.roleDesc}>{isArabic ? role.descriptionAr : role.description}</div>
               </div>
               <div className={styles.roleCardMeta}>
                 <span className={styles.roleUserCount}>

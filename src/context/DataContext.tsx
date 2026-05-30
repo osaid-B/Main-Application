@@ -161,24 +161,27 @@ export function DataProvider({ children }: { children: ReactNode }) {
   // ── Customer CRUD ────────────────────────────────────────────────────────────
 
   function addCustomer(c: Customer) {
+    const prev = customers;
     const next = [...customers, c];
     setCustomers(next);
     saveCustomers(next);
-    if (USE_SUPABASE) sbCreateCustomer({ id: c.id, name: c.name, phone: c.phone ?? "", code: c.code ?? null, tax_id: c.taxId ?? null, email: c.email ?? null, city: c.city ?? null, governorate: c.governorate ?? null, type: c.type ?? null, classification: c.classification ?? null, payment_terms: c.paymentTerms ?? null, currency: c.currency ?? "ILS", credit_limit: c.creditLimit ?? 0, outstanding_balance: c.outstandingBalance ?? 0, status: (c.status as CustomerRow["status"]) ?? "active", sales_rep: c.salesRep ?? null, notes: c.notes ?? null, joined_at: c.joinedAt ?? null, last_order_date: c.lastOrderDate ?? null, is_deleted: false }).catch(console.error);
+    if (USE_SUPABASE) sbCreateCustomer({ id: c.id, name: c.name, phone: c.phone ?? "", code: c.code ?? null, tax_id: c.taxId ?? null, email: c.email ?? null, city: c.city ?? null, governorate: c.governorate ?? null, type: c.type ?? null, classification: c.classification ?? null, payment_terms: c.paymentTerms ?? null, currency: c.currency ?? "ILS", credit_limit: c.creditLimit ?? 0, outstanding_balance: c.outstandingBalance ?? 0, status: (c.status as CustomerRow["status"]) ?? "active", sales_rep: c.salesRep ?? null, notes: c.notes ?? null, joined_at: c.joinedAt ?? null, last_order_date: c.lastOrderDate ?? null, is_deleted: false }).catch((e) => { console.warn("[DataContext] addCustomer failed, reverting", e); setCustomers(prev); saveCustomers(prev); });
   }
 
   function updateCustomer(c: Customer) {
+    const prev = customers;
     const next = customers.map((x) => (x.id === c.id ? c : x));
     setCustomers(next);
     saveCustomers(next);
-    if (USE_SUPABASE) sbUpdateCustomer(c.id, { name: c.name, phone: c.phone ?? "", code: c.code ?? null, tax_id: c.taxId ?? null, email: c.email ?? null, city: c.city ?? null, governorate: c.governorate ?? null, type: c.type ?? null, classification: c.classification ?? null, payment_terms: c.paymentTerms ?? null, currency: c.currency ?? "ILS", credit_limit: c.creditLimit ?? 0, outstanding_balance: c.outstandingBalance ?? 0, status: (c.status as CustomerRow["status"]) ?? "active", sales_rep: c.salesRep ?? null, notes: c.notes ?? null }).catch(console.error);
+    if (USE_SUPABASE) sbUpdateCustomer(c.id, { name: c.name, phone: c.phone ?? "", code: c.code ?? null, tax_id: c.taxId ?? null, email: c.email ?? null, city: c.city ?? null, governorate: c.governorate ?? null, type: c.type ?? null, classification: c.classification ?? null, payment_terms: c.paymentTerms ?? null, currency: c.currency ?? "ILS", credit_limit: c.creditLimit ?? 0, outstanding_balance: c.outstandingBalance ?? 0, status: (c.status as CustomerRow["status"]) ?? "active", sales_rep: c.salesRep ?? null, notes: c.notes ?? null }).catch((e) => { console.warn("[DataContext] updateCustomer failed, reverting", e); setCustomers(prev); saveCustomers(prev); });
   }
 
   function deleteCustomer(id: string) {
+    const prev = customers;
     const next = customers.map((x) => (x.id === id ? { ...x, isDeleted: true } : x));
     setCustomers(next);
     saveCustomers(next);
-    if (USE_SUPABASE) sbDeleteCustomer(id).catch(console.error);
+    if (USE_SUPABASE) sbDeleteCustomer(id).catch((e) => { console.warn("[DataContext] deleteCustomer failed, reverting", e); setCustomers(prev); saveCustomers(prev); });
   }
 
   // ── Product CRUD ─────────────────────────────────────────────────────────────
@@ -209,24 +212,27 @@ export function DataProvider({ children }: { children: ReactNode }) {
   // ── Supplier CRUD ────────────────────────────────────────────────────────────
 
   function addSupplier(s: Supplier) {
+    const prev = suppliers;
     const next = [...suppliers, s];
     setSuppliers(next);
     saveSuppliers(next);
-    if (USE_SUPABASE) sbCreateSupplier({ id: s.id, name: s.name, phone: s.phone ?? null, email: s.email ?? null, address: s.address ?? null, notes: s.notes ?? null, is_deleted: false }).catch(console.error);
+    if (USE_SUPABASE) sbCreateSupplier({ id: s.id, name: s.name, phone: s.phone ?? null, email: s.email ?? null, address: s.address ?? null, notes: s.notes ?? null, is_deleted: false }).catch((e) => { console.warn("[DataContext] addSupplier failed, reverting", e); setSuppliers(prev); saveSuppliers(prev); });
   }
 
   function updateSupplier(s: Supplier) {
+    const prev = suppliers;
     const next = suppliers.map((x) => (x.id === s.id ? s : x));
     setSuppliers(next);
     saveSuppliers(next);
-    if (USE_SUPABASE) sbUpdateSupplier(s.id, { name: s.name, phone: s.phone ?? null, email: s.email ?? null, address: s.address ?? null, notes: s.notes ?? null }).catch(console.error);
+    if (USE_SUPABASE) sbUpdateSupplier(s.id, { name: s.name, phone: s.phone ?? null, email: s.email ?? null, address: s.address ?? null, notes: s.notes ?? null }).catch((e) => { console.warn("[DataContext] updateSupplier failed, reverting", e); setSuppliers(prev); saveSuppliers(prev); });
   }
 
   function deleteSupplier(id: string) {
+    const prev = suppliers;
     const next = suppliers.map((x) => (x.id === id ? { ...x, isDeleted: true } : x));
     setSuppliers(next);
     saveSuppliers(next);
-    if (USE_SUPABASE) sbDeleteSupplier(id).catch(console.error);
+    if (USE_SUPABASE) sbDeleteSupplier(id).catch((e) => { console.warn("[DataContext] deleteSupplier failed, reverting", e); setSuppliers(prev); saveSuppliers(prev); });
   }
 
   // ── Payment CRUD ─────────────────────────────────────────────────────────────
@@ -254,24 +260,27 @@ export function DataProvider({ children }: { children: ReactNode }) {
   // ── Employee CRUD ────────────────────────────────────────────────────────────
 
   function addEmployee(e: Employee) {
+    const prev = employees;
     const next = [...employees, e];
     setEmployees(next);
     saveEmployees(next);
-    if (USE_SUPABASE) sbCreateEmployee({ id: e.id, name: e.name, phone: e.phone, department_id: e.departmentId ?? null, work_start: e.workStart, work_end: e.workEnd, salary_type: e.salaryType, hourly_rate: e.hourlyRate ?? null, fixed_salary: e.fixedSalary ?? null, advance: e.advance, notes: e.notes ?? null, is_deleted: false }).catch(console.error);
+    if (USE_SUPABASE) sbCreateEmployee({ id: e.id, name: e.name, phone: e.phone, department_id: e.departmentId ?? null, work_start: e.workStart, work_end: e.workEnd, salary_type: e.salaryType, hourly_rate: e.hourlyRate ?? null, fixed_salary: e.fixedSalary ?? null, advance: e.advance, notes: e.notes ?? null, is_deleted: false }).catch((err) => { console.warn("[DataContext] addEmployee failed, reverting", err); setEmployees(prev); saveEmployees(prev); });
   }
 
   function updateEmployee(e: Employee) {
+    const prev = employees;
     const next = employees.map((x) => (x.id === e.id ? e : x));
     setEmployees(next);
     saveEmployees(next);
-    if (USE_SUPABASE) sbUpdateEmployee(e.id, { name: e.name, phone: e.phone, department_id: e.departmentId ?? null, work_start: e.workStart, work_end: e.workEnd, salary_type: e.salaryType, hourly_rate: e.hourlyRate ?? null, fixed_salary: e.fixedSalary ?? null, advance: e.advance, notes: e.notes ?? null }).catch(console.error);
+    if (USE_SUPABASE) sbUpdateEmployee(e.id, { name: e.name, phone: e.phone, department_id: e.departmentId ?? null, work_start: e.workStart, work_end: e.workEnd, salary_type: e.salaryType, hourly_rate: e.hourlyRate ?? null, fixed_salary: e.fixedSalary ?? null, advance: e.advance, notes: e.notes ?? null }).catch((err) => { console.warn("[DataContext] updateEmployee failed, reverting", err); setEmployees(prev); saveEmployees(prev); });
   }
 
   function deleteEmployee(id: string) {
+    const prev = employees;
     const next = employees.map((x) => (x.id === id ? { ...x, isDeleted: true } : x));
     setEmployees(next);
     saveEmployees(next);
-    if (USE_SUPABASE) sbDeleteEmployee(id).catch(console.error);
+    if (USE_SUPABASE) sbDeleteEmployee(id).catch((err) => { console.warn("[DataContext] deleteEmployee failed, reverting", err); setEmployees(prev); saveEmployees(prev); });
     // cascade: deactivate any cashier linked to this employee
     setCashiers((prev) =>
       prev.map((c) => (c.employeeId === id && c.status === "active" ? { ...c, status: "inactive" as const } : c))
@@ -291,40 +300,45 @@ export function DataProvider({ children }: { children: ReactNode }) {
   // ── Department CRUD ──────────────────────────────────────────────────────────
 
   function addDepartment(d: Department) {
+    const prev = departments;
     const next = [...departments, d];
     setDepartments(next);
     saveDepartments(next);
-    if (USE_SUPABASE) sbCreateDepartment({ id: d.id, name: d.name, name_ar: d.nameAr, head_id: d.headId ?? null, head_name: d.headName ?? null, parent_id: d.parentId ?? null, headcount: d.headcount, open_positions: d.openPositions, monthly_revenue: d.monthlyRevenue, status: d.status }).catch(console.error);
+    if (USE_SUPABASE) sbCreateDepartment({ id: d.id, name: d.name, name_ar: d.nameAr, head_id: d.headId ?? null, head_name: d.headName ?? null, parent_id: d.parentId ?? null, headcount: d.headcount, open_positions: d.openPositions, monthly_revenue: d.monthlyRevenue, status: d.status }).catch((e) => { console.warn("[DataContext] addDepartment failed, reverting", e); setDepartments(prev); saveDepartments(prev); });
   }
 
   function updateDepartment(d: Department) {
+    const prev = departments;
     const next = departments.map((x) => (x.id === d.id ? d : x));
     setDepartments(next);
     saveDepartments(next);
-    if (USE_SUPABASE) sbUpdateDepartment(d.id, { name: d.name, name_ar: d.nameAr, head_id: d.headId ?? null, head_name: d.headName ?? null, parent_id: d.parentId ?? null, headcount: d.headcount, open_positions: d.openPositions, monthly_revenue: d.monthlyRevenue, status: d.status }).catch(console.error);
+    if (USE_SUPABASE) sbUpdateDepartment(d.id, { name: d.name, name_ar: d.nameAr, head_id: d.headId ?? null, head_name: d.headName ?? null, parent_id: d.parentId ?? null, headcount: d.headcount, open_positions: d.openPositions, monthly_revenue: d.monthlyRevenue, status: d.status }).catch((e) => { console.warn("[DataContext] updateDepartment failed, reverting", e); setDepartments(prev); saveDepartments(prev); });
   }
 
   // ── Expense CRUD ─────────────────────────────────────────────────────────────
 
   function addExpense(e: Expense) {
+    const prev = expenses;
     const next = [...expenses, e];
     setExpenses(next);
     saveExpenses(next);
-    if (USE_SUPABASE) sbCreateExpense({ id: e.id, date: e.date, description: e.description ?? null, category: e.category, amount: e.amount, currency: e.currency, vendor: e.vendor ?? null, payee: e.payee ?? null, payment_method: e.paymentMethod, receipt_url: e.receiptUrl ?? null, notes: e.notes ?? null, status: e.status ?? "pending", is_deleted: false }).catch(console.error);
+    if (USE_SUPABASE) sbCreateExpense({ id: e.id, date: e.date, description: e.description ?? null, category: e.category, amount: e.amount, currency: e.currency, vendor: e.vendor ?? null, payee: e.payee ?? null, payment_method: e.paymentMethod, receipt_url: e.receiptUrl ?? null, notes: e.notes ?? null, status: e.status ?? "pending", is_deleted: false }).catch((err) => { console.warn("[DataContext] addExpense failed, reverting", err); setExpenses(prev); saveExpenses(prev); });
   }
 
   function updateExpense(e: Expense) {
+    const prev = expenses;
     const next = expenses.map((x) => (x.id === e.id ? e : x));
     setExpenses(next);
     saveExpenses(next);
-    if (USE_SUPABASE) sbUpdateExpense(e.id, { date: e.date, description: e.description ?? null, category: e.category, amount: e.amount, currency: e.currency, vendor: e.vendor ?? null, payee: e.payee ?? null, payment_method: e.paymentMethod, receipt_url: e.receiptUrl ?? null, notes: e.notes ?? null, status: e.status ?? "pending" }).catch(console.error);
+    if (USE_SUPABASE) sbUpdateExpense(e.id, { date: e.date, description: e.description ?? null, category: e.category, amount: e.amount, currency: e.currency, vendor: e.vendor ?? null, payee: e.payee ?? null, payment_method: e.paymentMethod, receipt_url: e.receiptUrl ?? null, notes: e.notes ?? null, status: e.status ?? "pending" }).catch((err) => { console.warn("[DataContext] updateExpense failed, reverting", err); setExpenses(prev); saveExpenses(prev); });
   }
 
   function deleteExpense(id: string) {
+    const prev = expenses;
     const next = expenses.map((x) => (x.id === id ? { ...x, isDeleted: true } : x));
     setExpenses(next);
     saveExpenses(next);
-    if (USE_SUPABASE) sbDeleteExpense(id).catch(console.error);
+    if (USE_SUPABASE) sbDeleteExpense(id).catch((err) => { console.warn("[DataContext] deleteExpense failed, reverting", err); setExpenses(prev); saveExpenses(prev); });
   }
 
   // ── Stock Movements ──────────────────────────────────────────────────────────
@@ -347,17 +361,19 @@ export function DataProvider({ children }: { children: ReactNode }) {
   // ── Invoice CRUD ─────────────────────────────────────────────────────────────
 
   function addInvoice(inv: Invoice) {
+    const prev = invoices;
     const next = [...invoices, inv];
     setInvoices(next);
     saveInvoices(next);
-    if (USE_SUPABASE) sbCreateInvoice({ id: inv.id, customer_id: inv.customerId, amount: inv.amount ?? inv.total ?? 0, remaining_amount: inv.remainingAmount ?? inv.amount ?? 0, status: inv.status ?? "Pending", date: inv.date, notes: inv.notes ?? null, is_deleted: false }, []).catch(console.error);
+    if (USE_SUPABASE) sbCreateInvoice({ id: inv.id, customer_id: inv.customerId, amount: inv.amount ?? inv.total ?? 0, remaining_amount: inv.remainingAmount ?? inv.amount ?? 0, status: inv.status ?? "Pending", date: inv.date, notes: inv.notes ?? null, is_deleted: false }, []).catch((e) => { console.warn("[DataContext] addInvoice failed, reverting", e); setInvoices(prev); saveInvoices(prev); });
   }
 
   function updateInvoice(inv: Invoice) {
+    const prev = invoices;
     const next = invoices.map((x) => (x.id === inv.id ? inv : x));
     setInvoices(next);
     saveInvoices(next);
-    if (USE_SUPABASE) sbUpdateInvoice(inv.id, { amount: inv.amount ?? inv.total ?? 0, remaining_amount: inv.remainingAmount ?? 0, status: inv.status ?? "Pending", date: inv.date, notes: inv.notes ?? null }).catch(console.error);
+    if (USE_SUPABASE) sbUpdateInvoice(inv.id, { amount: inv.amount ?? inv.total ?? 0, remaining_amount: inv.remainingAmount ?? 0, status: inv.status ?? "Pending", date: inv.date, notes: inv.notes ?? null }).catch((e) => { console.warn("[DataContext] updateInvoice failed, reverting", e); setInvoices(prev); saveInvoices(prev); });
   }
 
   // ── Purchase CRUD (internal) ─────────────────────────────────────────────────
@@ -397,19 +413,24 @@ export function DataProvider({ children }: { children: ReactNode }) {
     [payments]
   );
 
-  const receivablesTotal = useMemo(
-    () =>
-      roundMoney(
-        invoices
-          .filter((inv) => inv.status !== "Paid")
-          .reduce((sum, inv) => sum + Number(inv.remainingAmount ?? inv.amount ?? 0), 0)
-      ),
+  const activeInvoices = useMemo(
+    () => invoices.filter((inv) => !inv.isDeleted),
     [invoices]
   );
 
+  const receivablesTotal = useMemo(
+    () =>
+      roundMoney(
+        activeInvoices
+          .filter((inv) => inv.status !== "Paid")
+          .reduce((sum, inv) => sum + Number(inv.remainingAmount ?? inv.amount ?? 0), 0)
+      ),
+    [activeInvoices]
+  );
+
   const openInvoicesCount = useMemo(
-    () => invoices.filter((inv) => inv.status !== "Paid").length,
-    [invoices]
+    () => activeInvoices.filter((inv) => inv.status !== "Paid").length,
+    [activeInvoices]
   );
 
   const totalCustomers = useMemo(() => activeCustomers.length, [activeCustomers]);
@@ -444,22 +465,22 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const customerBalanceMap = useMemo(() => {
     const map = new Map<string, number>();
-    invoices.forEach((inv) => {
+    activeInvoices.forEach((inv) => {
       if (inv.status === "Paid") return;
       const amount = Number(inv.remainingAmount ?? inv.amount ?? 0);
       map.set(inv.customerId, (map.get(inv.customerId) ?? 0) + amount);
     });
     return map;
-  }, [invoices]);
+  }, [activeInvoices]);
 
   const customerLastOrderMap = useMemo(() => {
     const map = new Map<string, string>();
-    invoices.forEach((inv) => {
+    activeInvoices.forEach((inv) => {
       const existing = map.get(inv.customerId);
       if (!existing || inv.date > existing) map.set(inv.customerId, inv.date);
     });
     return map;
-  }, [invoices]);
+  }, [activeInvoices]);
 
   const value: DataContextValue = {
     customers,

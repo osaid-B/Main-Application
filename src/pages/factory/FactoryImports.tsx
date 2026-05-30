@@ -51,7 +51,6 @@ export default function FactoryImports() {
         <header className={styles.header}>
           <div>
             <div className={styles.breadcrumb}>{tc.breadcrumb}</div>
-            <h1 className={styles.title}>{tc.pageTitle}</h1>
             <p className={styles.subtitle}>{tc.pageSubtitle}</p>
           </div>
           <Button variant="primary" size="sm" leftIcon={<Plus size={14} />} onClick={() => setShowNewForm(true)}>{tc.newImport}</Button>

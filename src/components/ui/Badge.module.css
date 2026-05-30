@@ -17,14 +17,14 @@
   height: 20px;
   padding: 0 var(--app-space-2);
   font-size: 11px;
-  border-radius: var(--app-radius-xs);
+  border-radius: var(--app-radius-full);
 }
 
 .size_md {
   height: 24px;
   padding: 0 10px;
   font-size: 12px;
-  border-radius: var(--app-radius-sm);
+  border-radius: var(--app-radius-full);
 }
 
 /* Variants — soft (subtle bg + main color) */

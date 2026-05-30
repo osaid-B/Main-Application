@@ -131,7 +131,6 @@ export default function GeneralLedger() {
         <div className={styles.header}>
           <div className={styles.headerLeft}>
             <p className={styles.breadcrumb}>{isArabic ? "المالية / دفتر الأستاذ" : "Finance / General Ledger"}</p>
-            <h1 className={styles.title}>{tc.pageTitle}</h1>
             <p className={styles.subtitle}>{tc.pageSubtitle}</p>
           </div>
           <Button variant="secondary" size="sm" leftIcon={<Download size={13} />} onClick={exportCsv}>
@@ -163,10 +162,16 @@ export default function GeneralLedger() {
             <input className={styles.filterInput} style={{ width: "100%" }} placeholder={tc.searchPlaceholder}
               value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} />
           </div>
-          <input type="date" className={styles.filterInput} value={dateFrom}
-            onChange={(e) => { setDateFrom(e.target.value); setPage(1); }} />
-          <input type="date" className={styles.filterInput} value={dateTo}
-            onChange={(e) => { setDateTo(e.target.value); setPage(1); }} />
+          <div className={styles.dateGroup}>
+            <label className={styles.dateLabel}>من</label>
+            <input type="date" className={styles.filterInput} value={dateFrom}
+              onChange={(e) => { setDateFrom(e.target.value); setPage(1); }} />
+          </div>
+          <div className={styles.dateGroup}>
+            <label className={styles.dateLabel}>إلى</label>
+            <input type="date" className={styles.filterInput} value={dateTo}
+              onChange={(e) => { setDateTo(e.target.value); setPage(1); }} />
+          </div>
           <select className={styles.filterSelect} value={typeFilter}
             onChange={(e) => { setTypeFilter(e.target.value as "" | EntryType); setPage(1); }}>
             <option value="">{tc.typeAll}</option>

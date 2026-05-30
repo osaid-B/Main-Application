@@ -169,7 +169,7 @@
   padding: 6px 12px;
   background: var(--app-surface);
   border: 1px solid var(--app-border);
-  border-radius: 9999px;
+  border-radius: var(--app-radius-full);
   font: inherit;
   font-size: 12px;
   font-weight: 600;

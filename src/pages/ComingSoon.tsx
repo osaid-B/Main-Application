@@ -35,7 +35,7 @@ export default function ComingSoon({ title }: Props) {
         {title}
       </h1>
       <p style={{ margin: 0, maxWidth: 340, lineHeight: 1.6 }}>
-        هذه الصفحة قيد الإنشاء وستكون متاحة قريباً.
+        هذه الصفحة قيد التجهيز وستكون متاحة قريباً.
       </p>
     </div>
   );

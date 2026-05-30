@@ -32,11 +32,17 @@ import styles from "./Reports.module.css";
 
 type TabId = "overview" | "sales" | "expenses" | "pl" | "custom" | "vat";
 
+const MONTH_AR: Record<string, string> = {
+  "Jan": "يناير", "Feb": "فبراير", "Mar": "مارس", "Apr": "أبريل",
+  "May": "مايو",  "Jun": "يونيو", "Jul": "يوليو", "Aug": "أغسطس",
+  "Sep": "سبتمبر","Oct": "أكتوبر","Nov": "نوفمبر","Dec": "ديسمبر",
+};
+
 // Previous month baseline for delta calculations
 const PREV = MONTHLY_FINANCIALS[MONTHLY_FINANCIALS.length - 2];
 
 export default function Reports() {
-  const { t, formatCurrency } = useSettings();
+  const { t, formatCurrency, isArabic } = useSettings();
   const tc = t.reports;
   const { totalRevenue, expenses } = useData();
 
@@ -95,7 +101,6 @@ export default function Reports() {
       <Stack gap="lg">
         <header className={styles.header}>
           <div>
-            <h1 className={styles.title}>{tc.pageTitle}</h1>
             <p className={styles.subtitle}>{tc.pageSubtitle}</p>
           </div>
           <Button variant="secondary" size="sm" onClick={() => exportTabCSV(tab)}>
@@ -159,13 +164,13 @@ export default function Reports() {
         ) : (
           <>
             {tab === "overview" && (
-              <OverviewTab tc={tc} formatCurrency={formatCurrency} />
+              <OverviewTab tc={tc} formatCurrency={formatCurrency} isArabic={isArabic} />
             )}
             {tab === "sales" && (
               <SalesTab tc={tc} formatCurrency={formatCurrency} />
             )}
             {tab === "expenses" && (
-              <ExpensesTableTab tc={tc} formatCurrency={formatCurrency} />
+              <ExpensesTableTab tc={tc} formatCurrency={formatCurrency} isArabic={isArabic} />
             )}
             {tab === "pl" && (
               <PLTab tc={tc} formatCurrency={formatCurrency} />
@@ -196,9 +201,11 @@ export default function Reports() {
 function OverviewTab({
   tc,
   formatCurrency,
+  isArabic,
 }: {
   tc: ReturnType<typeof useSettings>["t"]["reports"];
   formatCurrency: (n: number) => string;
+  isArabic: boolean;
 }) {
   return (
     <Stack gap="lg">
@@ -209,7 +216,7 @@ function OverviewTab({
           <ResponsiveContainer width="100%" height={280}>
             <LineChart data={MONTHLY_FINANCIALS} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--app-border)" />
-              <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+              <XAxis dataKey="month" tick={{ fontSize: 11 }} tickFormatter={(val: string) => isArabic ? (MONTH_AR[val.slice(0, 3)] ?? val) : val} />
               <YAxis tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 11 }} width={48} />
               <Tooltip formatter={(v) => formatCurrency(Number(v))} />
               <Legend />
@@ -245,9 +252,10 @@ function OverviewTab({
           <tbody>
             {[...MONTHLY_FINANCIALS].reverse().map((row) => {
               const m = row.revenue > 0 ? ((row.netProfit / row.revenue) * 100).toFixed(1) : "0";
+              const monthLabel = isArabic ? (MONTH_AR[row.month.slice(0, 3)] ?? row.month) : row.month;
               return (
                 <tr key={row.month}>
-                  <td className={styles.mono}>{row.month}</td>
+                  <td className={styles.mono}>{monthLabel}</td>
                   <td className={`${styles.numEnd} ${styles.mono}`}>{formatCurrency(row.revenue)}</td>
                   <td className={`${styles.numEnd} ${styles.mono}`}>{formatCurrency(row.expenses)}</td>
                   <td className={`${styles.numEnd} ${styles.mono}`}>{formatCurrency(row.grossProfit)}</td>
@@ -346,9 +354,11 @@ function BreakdownTable({
 function ExpensesTableTab({
   tc,
   formatCurrency,
+  isArabic,
 }: {
   tc: ReturnType<typeof useSettings>["t"]["reports"];
   formatCurrency: (n: number) => string;
+  isArabic: boolean;
 }) {
   return (
     <Stack gap="lg">
@@ -358,7 +368,7 @@ function ExpensesTableTab({
           <ResponsiveContainer width="100%" height={260}>
             <BarChart data={MONTHLY_FINANCIALS} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--app-border)" />
-              <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+              <XAxis dataKey="month" tick={{ fontSize: 11 }} tickFormatter={(val: string) => isArabic ? (MONTH_AR[val.slice(0, 3)] ?? val) : val} />
               <YAxis tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 11 }} width={48} />
               <Tooltip formatter={(v) => formatCurrency(Number(v))} />
               <Bar dataKey="expenses" name={tc.chart.expenses} fill="var(--atlas-orange)" radius={[4, 4, 0, 0]} />
@@ -386,9 +396,10 @@ function ExpensesTableTab({
           <tbody>
             {[...MONTHLY_FINANCIALS].reverse().map((row) => {
               const ratio = row.revenue > 0 ? ((row.expenses / row.revenue) * 100).toFixed(1) : "0";
+              const monthLabel = isArabic ? (MONTH_AR[row.month.slice(0, 3)] ?? row.month) : row.month;
               return (
                 <tr key={row.month}>
-                  <td className={styles.mono}>{row.month}</td>
+                  <td className={styles.mono}>{monthLabel}</td>
                   <td className={`${styles.numEnd} ${styles.mono}`}>{formatCurrency(row.revenue)}</td>
                   <td className={`${styles.numEnd} ${styles.mono}`}>{formatCurrency(row.expenses)}</td>
                   <td className={`${styles.numEnd} ${styles.mono}`}>{ratio}%</td>

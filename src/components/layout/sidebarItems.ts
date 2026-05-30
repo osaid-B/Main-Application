@@ -68,7 +68,7 @@ export const COMPANY_SECTIONS: NavSection[] = [
     title: "RELATIONS",        titleAr: "العلاقات التجارية",
     items: [
       { icon: Users,      label: "Customers",   labelAr: "العملاء",          path: "/customers",  badge: "4.2k" },
-      { icon: FileCheck2, label: "Quotes",       labelAr: "عروض الأسعار",     path: "/quotes" },
+      { icon: FileCheck2, label: "Quotes",       labelAr: "عروض الأسعار",     path: "/quotes", comingSoon: true },
       { icon: Truck,      label: "Suppliers",   labelAr: "الموردون",         path: "/suppliers" },
       { icon: UserCircle,  label: "Employees",   labelAr: "الموظفون",         path: "/employees" },
       { icon: CalendarDays, label: "Leaves",    labelAr: "الإجازات",         path: "/leaves" },
@@ -80,7 +80,7 @@ export const COMPANY_SECTIONS: NavSection[] = [
     items: [
       { icon: BookOpen,  label: "General Ledger",    labelAr: "دفتر الأستاذ",     path: "/general-ledger" },
       { icon: ListTree,  label: "Chart of Accounts", labelAr: "دليل الحسابات",    path: "/chart-of-accounts" },
-      { icon: FileText,  label: "Invoices",          labelAr: "الفواتير",         path: "/invoices",  dot: true },
+      { icon: FileText,  label: "Invoices",          labelAr: "الفواتير",         path: "/invoices" },
       { icon: Receipt,   label: "Expenses",          labelAr: "المصروفات",        path: "/expenses" },
       { icon: CreditCard,label: "Payments",          labelAr: "المدفوعات",        path: "/payments" },
     ],

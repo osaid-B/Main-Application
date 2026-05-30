@@ -140,6 +140,7 @@ export type Invoice = {
   date: string;
   notes?: string;
   items?: InvoiceItem[];
+  isDeleted?: boolean;
 };
 
 export type PaymentMethod =

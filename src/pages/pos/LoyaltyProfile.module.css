@@ -273,7 +273,7 @@
 .progressBar {
   height: 10px;
   background: var(--app-surface-muted);
-  border-radius: 999px;
+  border-radius: var(--app-radius-full);
   overflow: hidden;
   margin-bottom: 4px;
 }
@@ -281,7 +281,7 @@
 .progressFill {
   height: 100%;
   background: var(--atlas-blue);
-  border-radius: 999px;
+  border-radius: var(--app-radius-full);
   transition: width 0.3s ease;
 }
 

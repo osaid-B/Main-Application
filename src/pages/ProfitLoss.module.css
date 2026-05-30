@@ -30,7 +30,7 @@
 .compareToggle { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--app-text-muted); cursor: pointer; user-select: none; }
 .toggleSwitch { position: relative; width: 34px; height: 18px; }
 .toggleSwitch input { opacity: 0; width: 0; height: 0; }
-.toggleTrack { position: absolute; inset: 0; background: var(--app-border-strong); border-radius: 9px; transition: background 0.2s; cursor: pointer; }
+.toggleTrack { position: absolute; inset: 0; background: var(--app-border-strong); border-radius: var(--app-radius-full); transition: background 0.2s; cursor: pointer; }
 .toggleTrack::after { content: ""; position: absolute; width: 14px; height: 14px; inset-block-start: 2px; inset-inline-start: 2px; background: #fff; border-radius: 50%; transition: inset-inline-start 0.2s; }
 .toggleChecked .toggleTrack { background: var(--atlas-blue, #2563eb); }
 .toggleChecked .toggleTrack::after { inset-inline-start: 18px; }

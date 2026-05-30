@@ -8,11 +8,9 @@ import { Stack } from "../components/layout/Stack";
 import { Grid } from "../components/layout/Grid";
 import {
   CASH_FLOW,
-  COMPANY_KPIS,
   DEPARTMENTS,
   REVENUE_BY_DEPT,
   type CompanyKPI,
-  type DepartmentRow,
   type OpenInvoice,
 } from "../data/companyMock";
 import { useSettings } from "../context/SettingsContext";
@@ -26,13 +24,42 @@ const KPI_BAR_COLOR: Record<CompanyKPI["color"], string> = {
   orange: "var(--atlas-orange)",
 };
 
-const DEPT_DOT: Record<DepartmentRow["color"], string> = {
-  blue: "status-dot--blue",
-  green: "status-dot--green",
-  purple: "status-dot--purple",
-  gray: "status-dot--gray",
-  orange: "status-dot--orange",
+const KPI_LABELS = {
+  revenue: { en: "Revenue", ar: "الإيرادات" },
+  receivables: { en: "Receivables", ar: "المدينون" },
+  payables: { en: "Payables", ar: "الدائنون" },
+  customers: { en: "Customers", ar: "العملاء" },
+  headcount: { en: "Headcount", ar: "عدد الموظفين" },
+  openInvoices: { en: "Open invoices", ar: "فواتير مفتوحة" },
+} as const;
+
+const REVENUE_SLICE_AR: Record<string, string> = {
+  Wholesale: "الجملة",
+  Supermarkets: "السوبرماركت",
+  Manufacturing: "التصنيع",
+  "Other / royalties": "أخرى / عوائد",
 };
+
+const DEPARTMENT_NAME_AR: Record<string, string> = {
+  Operations: "العمليات",
+  "Sales & Wholesale": "المبيعات والجملة",
+  Manufacturing: "التصنيع",
+  "Finance & Accounting": "المالية والمحاسبة",
+  "IT & Systems": "الأنظمة وتقنية المعلومات",
+  Procurement: "المشتريات",
+};
+
+function localizeDepartmentName(name: string, isArabic: boolean) {
+  return isArabic ? (DEPARTMENT_NAME_AR[name] ?? name) : name;
+}
+
+function localizeRevenueSlice(name: string, isArabic: boolean) {
+  return isArabic ? (REVENUE_SLICE_AR[name] ?? name) : name;
+}
+
+function formatCompactCurrency(value: number) {
+  return `$${(value / 1000).toFixed(0)}k`;
+}
 
 function downloadCsv(filename: string, headers: string[], rows: (string | number)[][]) {
   const csv = [headers, ...rows]
@@ -48,28 +75,95 @@ function downloadCsv(filename: string, headers: string[], rows: (string | number
 
 export default function CompanyOverview() {
   const [dateRange, setDateRange] = useState<"month" | "6months">("6months");
-  const { t, formatCurrency } = useSettings();
-
-  const deptNameMap: Record<string, string> = {
-    "Wholesale": t.company.revenueDeptNames.wholesale,
-    "Supermarkets": t.company.revenueDeptNames.supermarkets,
-    "Manufacturing": t.company.revenueDeptNames.manufacturing,
-    "Other / royalties": t.company.revenueDeptNames.other,
-  };
+  const { t, isArabic, formatCurrency } = useSettings();
   const {
     totalRevenue,
     receivablesTotal,
     payablesDue,
     openInvoicesCount,
     headcount,
-    customers,
+    totalCustomers,
     invoices,
+    customers,
   } = useData();
 
   const cashFlowData = useMemo(
     () => (dateRange === "month" ? CASH_FLOW.slice(-1) : CASH_FLOW),
     [dateRange]
   );
+
+  const companyKpis = useMemo<CompanyKPI[]>(
+    () => [
+      {
+        label: isArabic ? KPI_LABELS.revenue.ar : KPI_LABELS.revenue.en,
+        value: formatCurrency(totalRevenue),
+        trend: 0,
+        color: "green",
+      },
+      {
+        label: isArabic ? KPI_LABELS.receivables.ar : KPI_LABELS.receivables.en,
+        value: formatCurrency(receivablesTotal),
+        trend: 0,
+        color: "orange",
+        subtitle: isArabic
+          ? `${openInvoicesCount} فواتير مفتوحة`
+          : `${openInvoicesCount} invoices open`,
+      },
+      {
+        label: isArabic ? KPI_LABELS.payables.ar : KPI_LABELS.payables.en,
+        value: formatCurrency(payablesDue),
+        trend: 0,
+        color: "blue",
+      },
+      {
+        label: isArabic ? KPI_LABELS.customers.ar : KPI_LABELS.customers.en,
+        value: String(customers.filter((c) => !c.isDeleted).length),
+        trend: 0,
+        color: "purple",
+      },
+      {
+        label: isArabic ? KPI_LABELS.headcount.ar : KPI_LABELS.headcount.en,
+        value: String(headcount),
+        trend: 0,
+        color: "purple",
+      },
+      {
+        label: isArabic ? KPI_LABELS.openInvoices.ar : KPI_LABELS.openInvoices.en,
+        value: String(openInvoicesCount),
+        trend: 0,
+        color: "orange",
+      },
+    ],
+    [
+      customers,
+      formatCurrency,
+      headcount,
+      isArabic,
+      openInvoicesCount,
+      payablesDue,
+      receivablesTotal,
+      totalRevenue,
+    ]
+  );
+
+  const revenueSlices = useMemo(
+    () =>
+      REVENUE_BY_DEPT.map((slice) => ({
+        ...slice,
+        displayName: localizeRevenueSlice(slice.name, isArabic),
+      })),
+    [isArabic]
+  );
+
+  const departmentRows = useMemo(() => {
+    const totalDeptRevenue = DEPARTMENTS.reduce((sum, department) => sum + department.revenue, 0) || 1;
+
+    return DEPARTMENTS.map((department) => ({
+      ...department,
+      displayName: localizeDepartmentName(department.name, isArabic),
+      contribution: Math.round((department.revenue / totalDeptRevenue) * 100),
+    }));
+  }, [isArabic]);
 
   return (
     <Container maxWidth="full" padding="md">
@@ -78,7 +172,6 @@ export default function CompanyOverview() {
         <header className={styles.header}>
           <div>
             <div className={styles.breadcrumb}>{t.company.breadcrumb}</div>
-            <h1 className={styles.title}>{t.company.pageTitle}</h1>
             <p className={styles.subtitle}>{t.company.pageSubtitle}</p>
           </div>
           <div className={styles.actions}>
@@ -103,8 +196,15 @@ export default function CompanyOverview() {
               onClick={() =>
                 downloadCsv(
                   "atlas-company-kpis.csv",
-                  ["Label", "Value", "Trend %"],
-                  COMPANY_KPIS.map((k) => [k.label, k.value, k.trend])
+                  ["Label", "Value"],
+                  [
+                    [t.company.kpis.revenue,      formatCurrency(totalRevenue)],
+                    [t.company.kpis.receivables,  formatCurrency(receivablesTotal)],
+                    [t.company.kpis.payables,     formatCurrency(payablesDue)],
+                    [t.company.kpis.customers,    String(totalCustomers)],
+                    [t.company.kpis.headcount,    String(headcount)],
+                    [t.company.kpis.openInvoices, String(openInvoicesCount)],
+                  ]
                 )
               }
             >
@@ -123,12 +223,9 @@ export default function CompanyOverview() {
 
         {/* 6 KPIs (3x2) — live from DataContext */}
         <Grid cols={3} gap="md" responsive>
-          <KpiCard kpi={{ label: t.company.kpis.revenue,      value: formatCurrency(totalRevenue),    trend: 0, color: "green"  }} />
-          <KpiCard kpi={{ label: t.company.kpis.receivables,  value: formatCurrency(receivablesTotal), trend: 0, color: "orange", subtitle: `${openInvoicesCount} ${t.company.kpis.invoicesOpen}` }} />
-          <KpiCard kpi={{ label: t.company.kpis.payables,     value: formatCurrency(payablesDue),     trend: 0, color: "blue"   }} />
-          <KpiCard kpi={{ label: t.company.kpis.customers,    value: String(customers.filter((c) => !c.isDeleted).length), trend: 0, color: "purple" }} />
-          <KpiCard kpi={{ label: t.company.kpis.headcount,    value: String(headcount), trend: 0, color: "purple" }} />
-          <KpiCard kpi={{ label: t.company.kpis.openInvoices, value: String(openInvoicesCount), trend: 0, color: "orange" }} />
+          {companyKpis.map((kpi) => (
+            <KpiCard key={kpi.label} kpi={kpi} />
+          ))}
         </Grid>
 
         {/* Cash flow + Revenue donut */}
@@ -163,16 +260,16 @@ export default function CompanyOverview() {
               <ResponsiveContainer width="100%" height={200}>
                 <PieChart>
                   <Pie
-                    data={REVENUE_BY_DEPT}
+                    data={revenueSlices}
                     dataKey="value"
-                    nameKey="name"
+                    nameKey="displayName"
                     innerRadius={50}
                     outerRadius={80}
                     paddingAngle={2}
                     stroke="var(--app-surface)"
                     strokeWidth={2}
                   >
-                    {REVENUE_BY_DEPT.map((s) => <Cell key={s.name} fill={s.color} />)}
+                    {revenueSlices.map((s) => <Cell key={s.name} fill={s.color} />)}
                   </Pie>
                   <Tooltip
                     contentStyle={{ background: "var(--app-surface)", border: "1px solid var(--app-border)", borderRadius: 8, fontSize: 12 }}
@@ -181,11 +278,11 @@ export default function CompanyOverview() {
                 </PieChart>
               </ResponsiveContainer>
               <ul className={styles.donutLegend}>
-                {REVENUE_BY_DEPT.map((s) => (
+                {revenueSlices.map((s) => (
                   <li key={s.name}>
                     <span className={styles.legendSwatch} style={{ background: s.color }} />
-                    <span className={styles.legendName}>{deptNameMap[s.name] ?? s.name}</span>
-                    <strong>{s.percent}%</strong>
+                    <span className={styles.legendName}>{s.displayName}</span>
+                    <strong className="numeric-cell">{s.percent}%</strong>
                   </li>
                 ))}
               </ul>
@@ -224,7 +321,7 @@ export default function CompanyOverview() {
                       amount: Number(inv.remainingAmount ?? inv.total ?? inv.amount ?? 0),
                       status: inv.status === "Partial" ? "due-soon" : "due-soon",
                     };
-                    return <InvoiceRow key={inv.id} inv={liveInv} overdueLabel={t.company.kpis.overdue} dueSoonLabel={t.company.kpis.dueSoon} />;
+                    return <InvoiceRow key={inv.id} inv={liveInv} />;
                   })}
               </tbody>
             </table>
@@ -236,14 +333,19 @@ export default function CompanyOverview() {
               <span className={styles.cardSub}>{t.company.departments.subtitle}</span>
             </header>
             <ul className={styles.deptList}>
-              {DEPARTMENTS.map((d) => (
-                <li key={d.name} className={styles.deptRow}>
-                  <span className={`status-dot ${DEPT_DOT[d.color]}`} aria-hidden />
+              {departmentRows.map((department) => (
+                <li key={department.name} className={styles.deptRow}>
                   <div className={styles.deptText}>
-                    <strong>{d.name}</strong>
-                    <span>{d.count} {t.company.departments.people}</span>
+                    <strong>{department.displayName}</strong>
+                    <span>
+                      {department.count} {t.company.departments.people}
+                      {isArabic ? " · " : " · "}
+                      {department.contribution}% {isArabic ? "من الإيرادات" : "of revenue"}
+                    </span>
                   </div>
-                  <span className={styles.deptRevenue}>${(d.revenue / 1000).toFixed(0)}k</span>
+                  <span className={`${styles.deptRevenue} numeric-cell`}>
+                    {formatCompactCurrency(department.revenue)}
+                  </span>
                 </li>
               ))}
             </ul>
@@ -272,16 +374,21 @@ function KpiCard({ kpi }: { kpi: CompanyKPI }) {
   );
 }
 
-function InvoiceRow({ inv, overdueLabel, dueSoonLabel }: { inv: OpenInvoice; overdueLabel: string; dueSoonLabel: string }) {
+function InvoiceRow({ inv }: { inv: OpenInvoice }) {
+  const { isArabic } = useSettings();
+
+
   return (
     <tr>
-      <td><code className={styles.invCode}>{inv.invoice}</code></td>
+      <td><code className={`${styles.invCode} numeric-cell`}>{inv.invoice}</code></td>
       <td>{inv.customer}</td>
       <td className={styles.invDue}>{inv.due}</td>
-      <td className={styles.invAmount}>${inv.amount.toLocaleString()}</td>
+      <td className={`${styles.invAmount} numeric-cell`}>${inv.amount.toLocaleString()}</td>
       <td>
         <Badge variant={inv.status === "overdue" ? "danger" : "warning"} size="sm">
-          {inv.status === "overdue" ? overdueLabel : dueSoonLabel}
+          {inv.status === "overdue"
+            ? (isArabic ? "متأخرة" : "Overdue")
+            : (isArabic ? "مستحقة قريباً" : "Due soon")}
         </Badge>
       </td>
     </tr>

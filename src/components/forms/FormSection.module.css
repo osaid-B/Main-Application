@@ -67,7 +67,7 @@
   color: var(--atlas-success);
   background: var(--atlas-green-50, #ecfdf5);
   padding: 3px 8px;
-  border-radius: 9999px;
+  border-radius: var(--app-radius-full);
   white-space: nowrap;
 }
 

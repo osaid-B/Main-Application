@@ -247,7 +247,7 @@ function statusFromAmounts(paidAmount: number, totalAmount: number): InvoiceStat
 function buildInvoiceId(type: TabKey) {
   const prefix =
     type === "customer"
-      ? "CINV"
+      ? "FAT"
       : type === "supplier"
       ? "SINV"
       : "IINV";
@@ -392,7 +392,7 @@ function seedInvoices(
 
   return [
     {
-      id: "CINV-2401",
+      id: "FAT-2401",
       type: "customer",
       title: "Customer Invoice",
       partyName: customerA ? getCustomerName(customerA) : "Osid Barakat",
@@ -413,19 +413,19 @@ function seedInvoices(
         {
           id: "line-customer-1",
           productId: firstProduct ? getProductId(firstProduct, 0) : "",
-          label: firstProduct ? getProductName(firstProduct) : "Laptop",
+          label: firstProduct ? getProductName(firstProduct) : "لا يوجد منتج",
           quantity: 1,
           unitPrice: firstPrice,
           total: firstPrice,
         },
       ],
       notes: "Awaiting payment.",
-      linkedRecord: buildLinkedRecord("customer", "CINV-2401"),
+      linkedRecord: buildLinkedRecord("customer", "FAT-2401"),
       createdAt: "2026-04-08T09:00:00.000Z",
       updatedAt: "2026-04-21T09:40:00.000Z",
     },
     {
-      id: "CINV-2402",
+      id: "FAT-2402",
       type: "customer",
       title: "Customer Invoice",
       partyName: customerB ? getCustomerName(customerB) : "Mahmoud Kharouf",
@@ -453,7 +453,7 @@ function seedInvoices(
         },
       ],
       notes: "Not paid yet.",
-      linkedRecord: buildLinkedRecord("customer", "CINV-2402"),
+      linkedRecord: buildLinkedRecord("customer", "FAT-2402"),
       createdAt: "2026-03-28T11:00:00.000Z",
       updatedAt: "2026-04-20T13:10:00.000Z",
     },
@@ -1159,7 +1159,6 @@ export default function Invoices() {
               <FileText size={22} />
             </div>
             <div className="inv-header-copy">
-              <h1>{t.invoices.pageTitle}</h1>
               <p>{t.invoices.pageSubtitle}</p>
             </div>
           </div>
