@@ -9,17 +9,10 @@
   -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid color-mix(in srgb, var(--app-border) 80%, transparent);
   box-shadow: none;
-  position: sticky;
-  inset-block-start: 0;
-  z-index: 50;
+  position: relative;
+  z-index: 1;
   font-family: var(--font-arabic);
   transition: background 200ms ease, box-shadow 200ms ease, border-color 200ms ease;
-}
-
-.atlas-header.is-scrolled {
-  background: color-mix(in srgb, var(--app-surface) 98%, transparent);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 8px rgba(0, 0, 0, 0.04);
-  border-bottom-color: var(--app-border);
 }
 
 .atlas-header-left {
@@ -156,8 +149,6 @@
 .atlas-ws-tab--blue.is-active   { color: var(--atlas-blue-700); }
 .atlas-ws-tab--green.is-active  { color: var(--atlas-green-700); }
 .atlas-ws-tab--purple.is-active { color: var(--atlas-purple-700); }
-
-.atlas-ws-tab .status-dot { width: 6px; height: 6px; }
 
 /* Icon buttons */
 .atlas-icon-btn {
@@ -341,7 +332,7 @@
 /* Responsive */
 @media (max-width: 1024px) {
   .atlas-header-center { display: none; }
-  .atlas-workspace-tabs .atlas-ws-tab span:not(.status-dot) { display: none; }
+  .atlas-workspace-tabs .atlas-ws-tab { padding-inline: 8px; }
 }
 
 @media (max-width: 700px) {

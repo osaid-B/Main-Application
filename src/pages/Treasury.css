@@ -241,11 +241,11 @@
 
 /* ── Table card ───────────────────────────────────── */
 .trs-table-card {
-  background: var(--app-surface);
-  border: 1px solid var(--app-border);
-  border-radius: var(--app-radius-lg);
+  background: #fff;
+  border: 1px solid rgba(226, 232, 240, 0.92);
+  border-radius: 20px;
   overflow: hidden;
-  box-shadow: var(--app-shadow-soft);
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04);
 }
 
 .trs-table-inner-head {
@@ -258,13 +258,13 @@
 
 .trs-table-inner-head strong {
   font-size: 14px;
-  font-weight: 700;
-  color: var(--app-text);
+  font-weight: 800;
+  color: #0f172a;
 }
 
 .trs-table-sub {
   font-size: 12px;
-  color: var(--app-text-subtle);
+  color: #94a3b8;
 }
 
 .trs-table-wrap {
@@ -276,24 +276,23 @@
   width: 100%;
   min-width: 680px;
   border-collapse: collapse;
-  table-layout: fixed;
 }
 
 .trs-table th,
 .trs-table td {
-  padding: 10px 14px;
-  border-bottom: 1px solid var(--app-border);
+  padding: 11px 14px;
+  border-bottom: 1px solid #f1f5f9;
   text-align: start;
   vertical-align: middle;
 }
 
 .trs-table th {
-  background: var(--app-surface-muted);
-  color: var(--app-text-muted);
+  background: #f8fafc;
+  color: #64748b;
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
 }
 
 .trs-table tbody tr:last-child td {
@@ -301,7 +300,7 @@
 }
 
 .trs-table tbody tr:hover {
-  background: var(--app-surface-hover);
+  background: #fafbff;
 }
 
 /* ── Table cell helpers ───────────────────────────── */
@@ -658,8 +657,16 @@
   border-radius: 10px;
   background: transparent;
   cursor: pointer;
-  text-align: left;
+  text-align: start;
   transition: background 0.15s;
+}
+
+html[dir="rtl"] .trs-kpi-value,
+html[dir="rtl"] .trs-amount,
+html[dir="rtl"] .trs-account-balance {
+  direction: ltr;
+  unicode-bidi: isolate;
+  display: inline-block;
 }
 
 .trs-signal-row:hover { background: #f8fafc; }

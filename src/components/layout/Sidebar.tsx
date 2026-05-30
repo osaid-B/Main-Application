@@ -137,7 +137,7 @@ export default function Sidebar({
   const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const userName = user?.username ?? "Sara Halim";
-  const userRole = "Owner";
+  const userRole = isArabic ? "المالك" : "Owner";
 
   const sections = SECTIONS_BY_WORKSPACE[workspace];
 
@@ -219,7 +219,11 @@ export default function Sidebar({
       {(!collapsed || mobile) && (
         <div className="atlas-sidebar-search">
           <Search size={13} aria-hidden />
-          <input type="search" placeholder="Search…" aria-label="Search" />
+          <input
+            type="search"
+            placeholder={isArabic ? "ابحث…" : "Search…"}
+            aria-label={isArabic ? "ابحث" : "Search"}
+          />
         </div>
       )}
 
@@ -335,8 +339,7 @@ export default function Sidebar({
                             <>
                               <span className="atlas-nav-label">{isArabic ? (item.labelAr ?? item.label) : item.label}</span>
                               {item.badge && <span className="atlas-nav-badge">{item.badge}</span>}
-                              {item.dot && <span className="atlas-nav-dot" aria-hidden />}
-                              {item.comingSoon && <span className="atlas-nav-soon">soon</span>}
+                              {item.comingSoon && <span className="atlas-nav-soon">{ts.comingSoon}</span>}
                             </>
                           )}
                         </NavLink>
@@ -408,10 +411,10 @@ export default function Sidebar({
           type="button"
           className="atlas-shortcuts-hint"
           onClick={onShowShortcuts}
-          aria-label="Keyboard shortcuts"
+          aria-label={isArabic ? "اختصارات لوحة المفاتيح" : "Keyboard shortcuts"}
         >
           <Keyboard size={13} aria-hidden />
-          <span>Keyboard shortcuts</span>
+          <span>{isArabic ? "اختصارات لوحة المفاتيح" : "Keyboard shortcuts"}</span>
           <kbd>?</kbd>
         </button>
       )}
@@ -431,8 +434,8 @@ export default function Sidebar({
                 if (mobile && onClose) onClose();
                 logout();
               }}
-              aria-label="Sign out"
-              title="Sign out"
+              aria-label={isArabic ? "تسجيل الخروج" : "Sign out"}
+              title={isArabic ? "تسجيل الخروج" : "Sign out"}
             >
               <LogOut size={14} />
             </button>
