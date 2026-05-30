@@ -37,7 +37,54 @@
 
 .actionBtn { background: transparent; border: 0; padding: 3px 8px; border-radius: var(--app-radius); font-size: 12px; color: var(--app-text-muted); cursor: pointer; }
 .actionBtn:hover { background: var(--app-surface-hover); color: var(--app-text); }
-.actionsCell { display: flex; gap: 2px; }
+.actionsCell { display: flex; gap: 2px; align-items: center; }
+
+/* Icon action buttons (32×32) */
+.iconBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: var(--app-radius-sm);
+  background: transparent;
+  color: var(--app-text-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.12s, color 0.12s;
+}
+.iconBtn:hover { background: var(--app-surface-hover); color: var(--app-text); }
+
+/* Row overflow menu */
+.rowMenu {
+  position: absolute;
+  inset-inline-end: 0;
+  top: calc(100% + 4px);
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-md);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.10);
+  z-index: 200;
+  min-width: 140px;
+  overflow: hidden;
+}
+.rowMenuItem {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  text-align: start;
+  font: inherit;
+  font-size: 13px;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  color: var(--app-text);
+  white-space: nowrap;
+}
+.rowMenuItem:hover { background: var(--app-surface-hover); }
+.rowMenuItemDanger { color: #b91c1c; }
+.rowMenuItemDanger:hover { background: #fef2f2; }
 
 .empty { text-align: center; padding: var(--app-space-10); color: var(--app-text-muted); font-size: 13px; }
 

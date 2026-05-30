@@ -12,11 +12,10 @@ import { useData } from "../context/DataContext";
 import { Skeleton } from "../components/ui/Skeleton";
 import { EmptyState } from "../components/ui/EmptyState";
 import { useLoadingDelay } from "../hooks/useLoadingDelay";
-import { type Department } from "../data/types";
+import { type Department, type Employee } from "../data/types";
 import styles from "./Departments.module.css";
 
 type ViewMode = "table" | "orgChart";
-
 
 export default function Departments() {
   const { t, formatCurrency } = useSettings();
@@ -37,10 +36,10 @@ export default function Departments() {
   }), [departments, query]);
 
   const isLoading = useLoadingDelay();
-  const totalDepts    = departments.length;
-  const totalHead     = useMemo(() => activeEmployees.filter((e) => departments.some((d) => d.id === e.departmentId)).length, [activeEmployees, departments]);
-  const totalOpen     = useMemo(() => departments.reduce((s, d) => s + d.openPositions, 0), [departments]);
-  const avgSize       = totalDepts > 0 ? (activeEmployees.length / totalDepts).toFixed(1) : "0";
+  const totalDepts = departments.length;
+  const totalHead  = useMemo(() => activeEmployees.filter((e) => departments.some((d) => d.id === e.departmentId)).length, [activeEmployees, departments]);
+  const totalOpen  = useMemo(() => departments.reduce((s, d) => s + d.openPositions, 0), [departments]);
+  const avgSize    = totalDepts > 0 ? (activeEmployees.length / totalDepts).toFixed(1) : "0";
 
   function parentName(parentId?: string) {
     if (!parentId) return null;
@@ -90,18 +89,10 @@ export default function Departments() {
             />
           </div>
           <div className={styles.viewToggle}>
-            <button
-              type="button"
-              className={`${styles.viewBtn} ${view === "table" ? styles.viewBtnActive : ""}`}
-              onClick={() => setView("table")}
-            >
+            <button type="button" className={`${styles.viewBtn} ${view === "table" ? styles.viewBtnActive : ""}`} onClick={() => setView("table")}>
               {tc.views.table}
             </button>
-            <button
-              type="button"
-              className={`${styles.viewBtn} ${view === "orgChart" ? styles.viewBtnActive : ""}`}
-              onClick={() => setView("orgChart")}
-            >
+            <button type="button" className={`${styles.viewBtn} ${view === "orgChart" ? styles.viewBtnActive : ""}`} onClick={() => setView("orgChart")}>
               {tc.views.orgChart}
             </button>
           </div>
@@ -114,7 +105,7 @@ export default function Departments() {
             <table className={`${styles.table} atlas-table`}>
               <colgroup>
                 <col />
-                <col className="col-w-130" />
+                <col className="col-w-160" />
                 <col className="col-w-90" />
                 <col className="col-currency" />
                 <col className="col-w-110" />
@@ -153,9 +144,7 @@ export default function Departments() {
                         {d.monthlyRevenue > 0 ? formatCurrency(d.monthlyRevenue) : "—"}
                       </td>
                       <td className={`${styles.numEnd} ${styles.mono} col-num`}>
-                        {d.openPositions > 0 ? (
-                          <span className={styles.openPos}>{d.openPositions}</span>
-                        ) : "—"}
+                        {d.openPositions > 0 ? <span className={styles.openPos}>{d.openPositions}</span> : "—"}
                       </td>
                       <td className="col-badge">
                         <Badge variant={d.status === "active" ? "success" : "neutral"} size="sm">
@@ -187,32 +176,41 @@ export default function Departments() {
         )}
       </Stack>
 
-      {/* Add/Edit modal */}
       {(isAdding || editing !== null) && (
         <DepartmentFormModal
           initial={editing ?? undefined}
           allDepts={departments}
+          employees={activeEmployees}
           onSave={saveDepartment}
           onClose={() => { setIsAdding(false); setEditing(null); }}
         />
       )}
 
-      {/* Detail drawer */}
       {detailDept && (
         <DeptDetailDrawer
           dept={detailDept}
           members={activeEmployees.filter((e) => e.departmentId === detailDept.id).map((e) => e.name)}
           onClose={() => setDetailDept(null)}
+          onEdit={() => { setDetailDept(null); setEditing(detailDept); }}
         />
       )}
     </Container>
   );
 }
 
+// ─── Org Chart ────────────────────────────────────────────────────────────────
+
+const ORG_LEVEL_STYLES = [
+  { bg: "#eff6ff", border: "#2563eb", nameColor: "#1e3a8a" },  // level 0 — module blue
+  { bg: "#f0fdf4", border: "#16a34a", nameColor: "#14532d" },  // level 1 — green
+  { bg: "#f8fafc", border: "#94a3b8", nameColor: "#334155" },  // level 2 — neutral
+] as const;
+
 function OrgChart({ departments }: { departments: Department[] }) {
   const { t } = useSettings();
   const staffLabel = t.departments.orgNodeStaff;
   const topLevel = departments.filter((d) => !d.parentId);
+  const maxHead = Math.max(...departments.map((d) => d.headcount), 1);
 
   return (
     <div className={styles.orgRoot}>
@@ -220,30 +218,69 @@ function OrgChart({ departments }: { departments: Department[] }) {
         <OrgNode
           key={dept.id}
           dept={dept}
+          level={0}
           staffLabel={staffLabel}
-          children={departments.filter((d) => d.parentId === dept.id)}
+          maxHead={maxHead}
+          children={departments.filter((d) => d.parentId === dept.id).map(child => ({
+            ...child,
+            _children: departments.filter((d) => d.parentId === child.id),
+          }))}
+          allDepts={departments}
         />
       ))}
     </div>
   );
 }
 
-function OrgNode({ dept, children, staffLabel }: { dept: Department; children: Department[]; staffLabel: string }) {
+type OrgNodeChild = Department & { _children: Department[] };
+
+function OrgNode({
+  dept,
+  level,
+  children,
+  staffLabel,
+  maxHead,
+  allDepts,
+}: {
+  dept: Department;
+  level: number;
+  children: OrgNodeChild[];
+  staffLabel: string;
+  maxHead: number;
+  allDepts: Department[];
+}) {
+  const ls = ORG_LEVEL_STYLES[Math.min(level, ORG_LEVEL_STYLES.length - 1)];
+  const sizeScale = 1 + (dept.headcount / maxHead) * 0.4;
+  const minW = Math.round(130 * sizeScale);
+
   return (
     <div className={styles.orgBranch}>
-      <div className={styles.orgNode}>
-        <div className={styles.orgNodeName}>{dept.nameAr || dept.name}</div>
+      <div
+        className={styles.orgNode}
+        style={{
+          background: ls.bg,
+          borderColor: ls.border,
+          minWidth: minW,
+        }}
+      >
+        <div className={styles.orgNodeName} style={{ color: ls.nameColor }}>{dept.nameAr || dept.name}</div>
         <div className={styles.orgNodeMeta}>{dept.headcount} {staffLabel}</div>
       </div>
       {children.length > 0 && (
         <div className={styles.orgChildren}>
           {children.map((child) => (
-            <div key={child.id} className={styles.orgChildNode}>
-              <div className={styles.orgNode}>
-                <div className={styles.orgNodeName}>{child.nameAr || child.name}</div>
-                <div className={styles.orgNodeMeta}>{child.headcount} {staffLabel}</div>
-              </div>
-            </div>
+            <OrgNode
+              key={child.id}
+              dept={child}
+              level={level + 1}
+              staffLabel={staffLabel}
+              maxHead={maxHead}
+              children={child._children.map(gc => ({
+                ...gc,
+                _children: allDepts.filter((d) => d.parentId === gc.id),
+              }))}
+              allDepts={allDepts}
+            />
           ))}
         </div>
       )}
@@ -251,40 +288,50 @@ function OrgNode({ dept, children, staffLabel }: { dept: Department; children: D
   );
 }
 
+// ─── Department Form Modal ────────────────────────────────────────────────────
+
 function DepartmentFormModal({
   initial,
   allDepts,
+  employees,
   onSave,
   onClose,
 }: {
   initial?: Department;
   allDepts: Department[];
+  employees: Employee[];
   onSave: (data: Omit<Department, "id">) => void;
   onClose: () => void;
 }) {
   const { t } = useSettings();
   const tc = t.departments;
 
-  const [name,     setName]     = useState(initial?.name        ?? "");
   const [nameAr,   setNameAr]   = useState(initial?.nameAr      ?? "");
-  const [head,     setHead]     = useState(initial?.headName     ?? "");
-  const [parentId, setParentId] = useState(initial?.parentId     ?? "");
+  const [name,     setName]     = useState(initial?.name        ?? "");
+  const [headId,   setHeadId]   = useState(initial?.headId      ?? "");
+  const [parentId, setParentId] = useState(initial?.parentId    ?? "");
   const [status,   setStatus]   = useState<"active" | "inactive">(initial?.status ?? "active");
+  const [desc,     setDesc]     = useState(initial?.description  ?? "");
+
+  const selectedEmployee = employees.find((e) => e.id === headId);
 
   function handleSave() {
-    if (!name.trim()) return;
+    if (!nameAr.trim() && !name.trim()) return;
     onSave({
-      name: name.trim(),
-      nameAr: nameAr.trim(),
-      headName: head.trim() || undefined,
-      headId: undefined,
-      parentId: parentId || undefined,
-      headcount: initial?.headcount ?? 0,
-      openPositions: initial?.openPositions ?? 0,
-      monthlyRevenue: initial?.monthlyRevenue ?? 0,
+      name:         name.trim() || nameAr.trim(),
+      nameAr:       nameAr.trim() || name.trim(),
+      headId:       headId || undefined,
+      headName:     selectedEmployee?.name ?? undefined,
+      parentId:     parentId || undefined,
+      headcount:    initial?.headcount    ?? 0,
+      openPositions:initial?.openPositions ?? 0,
+      monthlyRevenue:initial?.monthlyRevenue ?? 0,
       status,
+      description:  desc.trim() || undefined,
     });
   }
+
+  const canSave = nameAr.trim().length > 0 || name.trim().length > 0;
 
   return (
     <Modal
@@ -295,49 +342,98 @@ function DepartmentFormModal({
       footer={
         <div className={styles.formFooter}>
           <Button variant="ghost" onClick={onClose}>{t.common.cancel}</Button>
-          <Button variant="primary" onClick={handleSave} disabled={!name.trim()}>
+          <Button variant="primary" onClick={handleSave} disabled={!canSave}>
             {initial ? t.common.saveChanges : tc.addDept}
           </Button>
         </div>
       }
     >
       <div className={styles.formGrid}>
-        <div className={styles.formRow}>
-          <Input label={tc.form.name}   value={name}   onChange={(e) => setName(e.target.value)}   required />
-          <Input label={tc.form.nameAr} value={nameAr} onChange={(e) => setNameAr(e.target.value)} />
+        {/* Arabic name — primary */}
+        <div className={styles.formField} style={{ gridColumn: "1 / -1" }}>
+          <label className={styles.formLabel}>اسم القسم بالعربية *</label>
+          <Input value={nameAr} onChange={(e) => setNameAr(e.target.value)} fullWidth required />
         </div>
-        <Input label={tc.form.head} value={head} onChange={(e) => setHead(e.target.value)} placeholder="e.g. Ahmad Qasim" />
-        <div className={styles.formRow}>
-          <div>
-            <label className={styles.formLabel}>{tc.form.parent}</label>
-            <select className={styles.formSelect} value={parentId} onChange={(e) => setParentId(e.target.value)}>
-              <option value="">{tc.form.none}</option>
-              {allDepts.filter((d) => !initial || d.id !== initial.id).map((d) => (
-                <option key={d.id} value={d.id}>{d.nameAr || d.name}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className={styles.formLabel}>{tc.form.status}</label>
-            <select className={styles.formSelect} value={status} onChange={(e) => setStatus(e.target.value as "active" | "inactive")}>
-              <option value="active">{t.common.active}</option>
-              <option value="inactive">{t.common.inactive}</option>
-            </select>
-          </div>
+
+        {/* English name */}
+        <div className={styles.formField} style={{ gridColumn: "1 / -1" }}>
+          <label className={styles.formLabel}>اسم القسم بالإنجليزية</label>
+          <Input value={name} onChange={(e) => setName(e.target.value)} fullWidth />
+        </div>
+
+        {/* Head — employee select */}
+        <div className={styles.formField} style={{ gridColumn: "1 / -1" }}>
+          <label className={styles.formLabel}>المسؤول</label>
+          <select
+            className={styles.formSelect}
+            value={headId}
+            onChange={(e) => setHeadId(e.target.value)}
+          >
+            <option value="">— بدون مسؤول —</option>
+            {employees.map((e) => (
+              <option key={e.id} value={e.id}>{e.name}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Parent + Status */}
+        <div className={styles.formField}>
+          <label className={styles.formLabel}>{tc.form.parent}</label>
+          <select className={styles.formSelect} value={parentId} onChange={(e) => setParentId(e.target.value)}>
+            <option value="">{tc.form.none}</option>
+            {allDepts.filter((d) => !initial || d.id !== initial.id).map((d) => (
+              <option key={d.id} value={d.id}>{d.nameAr || d.name}</option>
+            ))}
+          </select>
+        </div>
+        <div className={styles.formField}>
+          <label className={styles.formLabel}>{tc.form.status}</label>
+          <select className={styles.formSelect} value={status} onChange={(e) => setStatus(e.target.value as "active" | "inactive")}>
+            <option value="active">{t.common.active}</option>
+            <option value="inactive">{t.common.inactive}</option>
+          </select>
+        </div>
+
+        {/* Description */}
+        <div className={styles.formField} style={{ gridColumn: "1 / -1" }}>
+          <label className={styles.formLabel}>الوصف</label>
+          <textarea
+            value={desc}
+            onChange={(e) => setDesc(e.target.value)}
+            rows={2}
+            placeholder="وصف مختصر للقسم..."
+            style={{
+              width: "100%",
+              padding: "8px 10px",
+              border: "1px solid var(--app-border)",
+              borderRadius: "var(--app-radius-sm)",
+              font: "inherit",
+              fontSize: 13,
+              color: "var(--app-text)",
+              background: "var(--app-surface)",
+              resize: "vertical",
+              outline: "none",
+              boxSizing: "border-box",
+            }}
+          />
         </div>
       </div>
     </Modal>
   );
 }
 
+// ─── Dept Detail Drawer ───────────────────────────────────────────────────────
+
 function DeptDetailDrawer({
   dept,
   members,
   onClose,
+  onEdit,
 }: {
   dept: Department;
   members: string[];
   onClose: () => void;
+  onEdit: () => void;
 }) {
   const { t, formatCurrency } = useSettings();
   const tc = t.departments;
@@ -346,18 +442,28 @@ function DeptDetailDrawer({
     <div className={styles.drawerOverlay} onClick={onClose}>
       <aside className={styles.drawer} onClick={(e) => e.stopPropagation()}>
         <div className={styles.drawerHeader}>
-          <div>
+          <div style={{ flex: 1 }}>
             <div className={styles.drawerTitle}>{dept.nameAr || dept.name}</div>
             <div className={styles.drawerSub}>{dept.name}</div>
+            {dept.description && (
+              <div style={{ marginTop: 4, fontSize: 12, color: "var(--app-text-muted)" }}>{dept.description}</div>
+            )}
           </div>
           <button type="button" className={styles.drawerClose} onClick={onClose}>✕</button>
         </div>
         <div className={styles.drawerBody}>
+          {dept.headName && (
+            <section className={styles.drawerSection}>
+              <div className={styles.drawerSectionTitle}>المسؤول</div>
+              <div className={styles.drawerValue}>{dept.headName}</div>
+              {dept.headId && <div style={{ fontSize: 11, color: "var(--app-text-muted)", fontFamily: "var(--font-mono)" }}>{dept.headId}</div>}
+            </section>
+          )}
           <section className={styles.drawerSection}>
             <div className={styles.drawerSectionTitle}>{tc.detail.members}</div>
-            {members.map((m) => (
-              <div key={m} className={styles.memberRow}>{m}</div>
-            ))}
+            {members.length > 0
+              ? members.map((m) => <div key={m} className={styles.memberRow}>{m}</div>)
+              : <div style={{ fontSize: 12, color: "var(--app-text-muted)" }}>لا يوجد موظفون مرتبطون</div>}
           </section>
           {dept.monthlyRevenue > 0 && (
             <section className={styles.drawerSection}>
@@ -367,18 +473,19 @@ function DeptDetailDrawer({
           )}
           <section className={styles.drawerSection}>
             <div className={styles.drawerSectionTitle}>{tc.detail.openPositions}</div>
-            <div className={styles.drawerValue}>
-              {dept.openPositions > 0 ? dept.openPositions : "—"}
-            </div>
+            <div className={styles.drawerValue}>{dept.openPositions > 0 ? dept.openPositions : "—"}</div>
           </section>
         </div>
-        <div className={styles.drawerFooter}>
+        <div className={styles.drawerFooter} style={{ justifyContent: "space-between" }}>
           <Button variant="ghost" onClick={onClose}>{t.common.close}</Button>
+          <Button variant="primary" size="sm" onClick={onEdit}>{t.common.edit}</Button>
         </div>
       </aside>
     </div>
   );
 }
+
+// ─── KPI card ─────────────────────────────────────────────────────────────────
 
 function Kpi({ label, value, sub, tone }: { label: string; value: string; sub: string; tone: "success" | "info" | "warning" | "neutral" }) {
   return (

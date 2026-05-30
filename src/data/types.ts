@@ -597,6 +597,7 @@ export interface Department {
   openPositions: number;
   monthlyRevenue: number;
   status: "active" | "inactive";
+  description?: string;
 }
 
 // ─── Permissions ──────────────────────────────────────────────────────────────

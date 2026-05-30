@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from "react";
-import { Plus, Download } from "lucide-react";
+import React, { useEffect, useRef, useMemo, useState } from "react";
+import { Plus, Download, Eye, Pencil, PlusCircle, MoreHorizontal } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Container } from "../components/layout/Container";
 import { Button } from "../components/ui/Button";
@@ -11,6 +11,8 @@ import { CHART_OF_ACCOUNTS } from "../data/chartOfAccountsMock";
 import type { ChartAccount, AccountType, NormalBalance } from "../data/types";
 import styles from "./ChartOfAccounts.module.css";
 
+void Badge;
+
 function nextCode(accounts: ChartAccount[], type: AccountType): string {
   const prefixes: Record<AccountType, number> = { asset: 1000, liability: 2000, equity: 3000, revenue: 4000, expense: 5000 };
   const base = prefixes[type];
@@ -18,6 +20,80 @@ function nextCode(accounts: ChartAccount[], type: AccountType): string {
   const max = existing.length ? Math.max(...existing) : base;
   return String(max + 10);
 }
+
+// ─── Overflow menu for a single row ──────────────────────────────────────────
+
+function RowMenu({
+  items,
+}: {
+  items: { label: string; danger?: boolean; onClick: () => void }[];
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function onOut(e: MouseEvent) {
+      if (!ref.current?.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", onOut);
+    return () => document.removeEventListener("mousedown", onOut);
+  }, [open]);
+
+  if (items.length === 0) return null;
+
+  return (
+    <div ref={ref} style={{ position: "relative" }}>
+      <button
+        type="button"
+        className={styles.iconBtn}
+        onClick={(e) => { e.stopPropagation(); setOpen((v) => !v); }}
+        aria-label="المزيد"
+      >
+        <MoreHorizontal size={13} />
+      </button>
+      {open && (
+        <div className={styles.rowMenu}>
+          {items.map((item) => (
+            <button
+              key={item.label}
+              type="button"
+              className={`${styles.rowMenuItem} ${item.danger ? styles.rowMenuItemDanger : ""}`}
+              onClick={(e) => { e.stopPropagation(); setOpen(false); item.onClick(); }}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Tree-indent prefix ───────────────────────────────────────────────────────
+
+function TreePrefix({ level }: { level: number }) {
+  if (level === 0) return null;
+  return (
+    <span
+      aria-hidden
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        marginInlineEnd: 6,
+        color: "var(--app-border)",
+        fontFamily: "var(--font-mono)",
+        fontSize: 12,
+        lineHeight: 1,
+        userSelect: "none",
+      }}
+    >
+      {level === 1 ? "└─" : "  └─"}
+    </span>
+  );
+}
+
+// ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function ChartOfAccounts() {
   const { t, formatCurrency, isArabic } = useSettings();
@@ -29,7 +105,9 @@ export default function ChartOfAccounts() {
   const [search, setSearch] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [editTarget, setEditTarget] = useState<ChartAccount | null>(null);
-  const [form, setForm] = useState({ code: "", nameAr: "", nameEn: "", type: "asset" as AccountType, parentId: "", normalBalance: "debit" as NormalBalance });
+  const [form, setForm] = useState({
+    code: "", nameAr: "", nameEn: "", type: "asset" as AccountType, parentId: "", normalBalance: "debit" as NormalBalance,
+  });
 
   const computedBalances = useMemo(() => {
     const map = new Map<string, number>();
@@ -50,17 +128,13 @@ export default function ChartOfAccounts() {
   const filtered = useMemo(() => {
     if (!search) return accounts;
     const q = search.toLowerCase();
-    return accounts.filter(a =>
-      a.code.includes(q) || a.nameAr.includes(q) || a.nameEn.toLowerCase().includes(q)
-    );
+    return accounts.filter(a => a.code.includes(q) || a.nameAr.includes(q) || a.nameEn.toLowerCase().includes(q));
   }, [accounts, search]);
 
   const parents = accounts.filter(a => a.isParent || !a.parentId);
 
   function openAdd(parentId?: string) {
-    const type: AccountType = parentId
-      ? (accounts.find(a => a.id === parentId)?.type ?? "asset")
-      : "asset";
+    const type: AccountType = parentId ? (accounts.find(a => a.id === parentId)?.type ?? "asset") : "asset";
     const nb: NormalBalance = type === "asset" || type === "expense" ? "debit" : "credit";
     setEditTarget(null);
     setForm({ code: nextCode(accounts, type), nameAr: "", nameEn: "", type, parentId: parentId ?? "", normalBalance: nb });
@@ -79,8 +153,7 @@ export default function ChartOfAccounts() {
       setAccounts(prev => prev.map(a => a.id === editTarget.id ? { ...a, ...form } : a));
     } else {
       const id = `ACC-${Date.now()}`;
-      const newAcc: ChartAccount = { id, ...form, parentId: form.parentId || undefined, isActive: true };
-      setAccounts(prev => [...prev, newAcc]);
+      setAccounts(prev => [...prev, { id, ...form, parentId: form.parentId || undefined, isActive: true }]);
     }
     setShowModal(false);
   }
@@ -104,58 +177,107 @@ export default function ChartOfAccounts() {
   function renderRows() {
     const rows: React.ReactElement[] = [];
     const topLevel = filtered.filter(a => !a.parentId);
+
     topLevel.forEach(parent => {
       const children = filtered.filter(a => a.parentId === parent.id);
       const grandChildren = children.flatMap(c => filtered.filter(a => a.parentId === c.id));
       const isParent = parent.isParent || children.length > 0;
+
       rows.push(
-        <tr key={parent.id} className={`${styles.parentRow} ${!parent.parentId && !parent.isParent ? "" : ""}`}>
+        <tr key={parent.id} className={styles.parentRow}>
           <td><span className={styles.codeChip}>{parent.code}</span></td>
-          <td style={{ fontWeight: 700 }}>{isArabic ? parent.nameAr : parent.nameEn}</td>
+          <td>
+            <span style={{ fontWeight: 700 }}>
+              {isArabic ? parent.nameAr : parent.nameEn}
+            </span>
+            {isArabic ? (
+              <span style={{ fontSize: 11, color: "var(--app-text-muted)", display: "block" }}>{parent.nameEn}</span>
+            ) : (
+              <span style={{ fontSize: 11, color: "var(--app-text-muted)", display: "block" }}>{parent.nameAr}</span>
+            )}
+          </td>
           <td><span className={`${styles.typeBadge} ${typeBadge[parent.type]}`}>{tc.types[parent.type]}</span></td>
-          <td className={styles.numEnd + " " + styles.mono}>{isParent ? "—" : formatCurrency(getBalance(parent), "ILS")}</td>
+          <td className={`${styles.numEnd} ${styles.mono}`}>{isParent ? "—" : formatCurrency(getBalance(parent), "ILS")}</td>
           <td className={styles.normalBalance}>{parent.normalBalance === "debit" ? tc.normalDebit : tc.normalCredit}</td>
           <td>
             <div className={styles.actionsCell}>
-              {isParent && <button className={styles.actionBtn} onClick={() => openAdd(parent.id)}>{tc.addSubAccount}</button>}
-              <button className={styles.actionBtn} onClick={() => openEdit(parent)}>{tc.editAccount}</button>
-              {!isParent && parent.isActive && <button className={styles.actionBtn} onClick={() => deactivateAccount(parent.id)}>{tc.deactivate}</button>}
-              {!isParent && <button className={styles.actionBtn} onClick={() => navigate(`/general-ledger?account=${parent.code}`)}>{tc.viewTransactions}</button>}
+              {isParent && (
+                <button type="button" className={styles.iconBtn} title={tc.addSubAccount} onClick={(e) => { e.stopPropagation(); openAdd(parent.id); }}>
+                  <PlusCircle size={14} />
+                </button>
+              )}
+              <button type="button" className={styles.iconBtn} title={tc.editAccount} onClick={(e) => { e.stopPropagation(); openEdit(parent); }}>
+                <Pencil size={13} />
+              </button>
+              {!isParent && (
+                <button type="button" className={styles.iconBtn} title={tc.viewTransactions} onClick={(e) => { e.stopPropagation(); navigate(`/general-ledger?account=${parent.code}`); }}>
+                  <Eye size={13} />
+                </button>
+              )}
+              <RowMenu items={[
+                ...(!isParent && parent.isActive ? [{ label: tc.deactivate, danger: true, onClick: () => deactivateAccount(parent.id) }] : []),
+              ]} />
             </div>
           </td>
         </tr>
       );
+
       children.forEach(child => {
         const childChildren = grandChildren.filter(a => a.parentId === child.id);
         rows.push(
           <tr key={child.id} className={styles.level1Row}>
             <td><span className={styles.codeChip}>{child.code}</span></td>
-            <td>{isArabic ? child.nameAr : child.nameEn}</td>
+            <td>
+              <TreePrefix level={1} />
+              {isArabic ? child.nameAr : child.nameEn}
+              <span style={{ fontSize: 11, color: "var(--app-text-muted)", display: "block", paddingInlineStart: 26 }}>
+                {isArabic ? child.nameEn : child.nameAr}
+              </span>
+            </td>
             <td><span className={`${styles.typeBadge} ${typeBadge[child.type]}`}>{tc.types[child.type]}</span></td>
-            <td className={styles.numEnd + " " + styles.mono}>{childChildren.length > 0 ? "—" : formatCurrency(getBalance(child), "ILS")}</td>
+            <td className={`${styles.numEnd} ${styles.mono}`}>{childChildren.length > 0 ? "—" : formatCurrency(getBalance(child), "ILS")}</td>
             <td className={styles.normalBalance}>{child.normalBalance === "debit" ? tc.normalDebit : tc.normalCredit}</td>
             <td>
               <div className={styles.actionsCell}>
-                <button className={styles.actionBtn} onClick={() => openAdd(child.id)}>{tc.addSubAccount}</button>
-                <button className={styles.actionBtn} onClick={() => openEdit(child)}>{tc.editAccount}</button>
-                <button className={styles.actionBtn} onClick={() => navigate(`/general-ledger?account=${child.code}`)}>{tc.viewTransactions}</button>
+                <button type="button" className={styles.iconBtn} title={tc.addSubAccount} onClick={(e) => { e.stopPropagation(); openAdd(child.id); }}>
+                  <PlusCircle size={14} />
+                </button>
+                <button type="button" className={styles.iconBtn} title={tc.editAccount} onClick={(e) => { e.stopPropagation(); openEdit(child); }}>
+                  <Pencil size={13} />
+                </button>
+                <button type="button" className={styles.iconBtn} title={tc.viewTransactions} onClick={(e) => { e.stopPropagation(); navigate(`/general-ledger?account=${child.code}`); }}>
+                  <Eye size={13} />
+                </button>
               </div>
             </td>
           </tr>
         );
+
         childChildren.forEach(leaf => {
           rows.push(
             <tr key={leaf.id} className={styles.level2Row}>
               <td><span className={styles.codeChip}>{leaf.code}</span></td>
-              <td>{isArabic ? leaf.nameAr : leaf.nameEn}</td>
+              <td>
+                <TreePrefix level={2} />
+                {isArabic ? leaf.nameAr : leaf.nameEn}
+                <span style={{ fontSize: 11, color: "var(--app-text-muted)", display: "block", paddingInlineStart: 30 }}>
+                  {isArabic ? leaf.nameEn : leaf.nameAr}
+                </span>
+              </td>
               <td><span className={`${styles.typeBadge} ${typeBadge[leaf.type]}`}>{tc.types[leaf.type]}</span></td>
-              <td className={styles.numEnd + " " + styles.mono}>{formatCurrency(getBalance(leaf), "ILS")}</td>
+              <td className={`${styles.numEnd} ${styles.mono}`}>{formatCurrency(getBalance(leaf), "ILS")}</td>
               <td className={styles.normalBalance}>{leaf.normalBalance === "debit" ? tc.normalDebit : tc.normalCredit}</td>
               <td>
                 <div className={styles.actionsCell}>
-                  <button className={styles.actionBtn} onClick={() => openEdit(leaf)}>{tc.editAccount}</button>
-                  {leaf.isActive && <button className={styles.actionBtn} onClick={() => deactivateAccount(leaf.id)}>{tc.deactivate}</button>}
-                  <button className={styles.actionBtn} onClick={() => navigate(`/general-ledger?account=${leaf.code}`)}>{tc.viewTransactions}</button>
+                  <button type="button" className={styles.iconBtn} title={tc.editAccount} onClick={(e) => { e.stopPropagation(); openEdit(leaf); }}>
+                    <Pencil size={13} />
+                  </button>
+                  <button type="button" className={styles.iconBtn} title={tc.viewTransactions} onClick={(e) => { e.stopPropagation(); navigate(`/general-ledger?account=${leaf.code}`); }}>
+                    <Eye size={13} />
+                  </button>
+                  <RowMenu items={[
+                    ...(leaf.isActive ? [{ label: tc.deactivate, danger: true, onClick: () => deactivateAccount(leaf.id) }] : []),
+                  ]} />
                 </div>
               </td>
             </tr>
@@ -165,8 +287,6 @@ export default function ChartOfAccounts() {
     });
     return rows;
   }
-
-  void Badge;
 
   return (
     <Container maxWidth="full" padding="md">
@@ -184,8 +304,13 @@ export default function ChartOfAccounts() {
 
         <div className={styles.filters}>
           <div className={styles.searchWrap}>
-            <input className={styles.filterInput} style={{ width: "100%" }} placeholder={tc.searchPlaceholder}
-              value={search} onChange={(e) => setSearch(e.target.value)} />
+            <input
+              className={styles.filterInput}
+              style={{ width: "100%" }}
+              placeholder={tc.searchPlaceholder}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
           </div>
         </div>
 
@@ -197,7 +322,7 @@ export default function ChartOfAccounts() {
               <col className="col-w-120" />
               <col className="col-currency" />
               <col className="col-w-110" />
-              <col className="col-actions" />
+              <col style={{ width: 112 }} />
             </colgroup>
             <thead>
               <tr>
@@ -219,8 +344,11 @@ export default function ChartOfAccounts() {
         </div>
       </div>
 
-      <Modal isOpen={showModal} onClose={() => setShowModal(false)}
-        title={editTarget ? tc.form.editTitle : tc.form.createTitle} size="md"
+      <Modal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        title={editTarget ? tc.form.editTitle : tc.form.createTitle}
+        size="md"
         footer={
           <div className={styles.modalFooter}>
             <Button variant="ghost" onClick={() => setShowModal(false)}>{t.common.cancel}</Button>
@@ -235,10 +363,9 @@ export default function ChartOfAccounts() {
           </div>
           <div className={styles.formField}>
             <label className={styles.formLabel}>{tc.form.type}</label>
-            <select className={styles.formSelect} value={form.type}
-              onChange={e => setForm(f => ({ ...f, type: e.target.value as AccountType }))}>
-              {(["asset","liability","equity","revenue","expense"] as AccountType[]).map(t => (
-                <option key={t} value={t}>{tc.types[t]}</option>
+            <select className={styles.formSelect} value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value as AccountType }))}>
+              {(["asset","liability","equity","revenue","expense"] as AccountType[]).map(tp => (
+                <option key={tp} value={tp}>{tc.types[tp]}</option>
               ))}
             </select>
           </div>
@@ -261,8 +388,7 @@ export default function ChartOfAccounts() {
           </div>
           <div className={styles.formField}>
             <label className={styles.formLabel}>{tc.form.normalBalance}</label>
-            <select className={styles.formSelect} value={form.normalBalance}
-              onChange={e => setForm(f => ({ ...f, normalBalance: e.target.value as NormalBalance }))}>
+            <select className={styles.formSelect} value={form.normalBalance} onChange={e => setForm(f => ({ ...f, normalBalance: e.target.value as NormalBalance }))}>
               <option value="debit">{tc.normalDebit}</option>
               <option value="credit">{tc.normalCredit}</option>
             </select>
