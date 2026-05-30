@@ -1,7 +1,6 @@
 ﻿import { createPortal } from "react-dom";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  AlertCircle,
   ArrowUpDown,
   BarChart2,
   Banknote,
@@ -21,9 +20,6 @@ import {
   Receipt,
   RotateCcw,
   Search,
-  Sparkles,
-  TrendingDown,
-  TrendingUp,
   Trash2,
   Wallet,
   X,
@@ -136,10 +132,12 @@ function formatMoney(value: number) {
 }
 
 function formatDate(value: string) {
-  if (!value) return "No date";
+  if (!value) return "—";
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) return value;
-  return new Intl.DateTimeFormat("en-US", { day: "2-digit", month: "short", year: "numeric" }).format(parsed);
+  const d = String(parsed.getDate()).padStart(2, "0");
+  const m = String(parsed.getMonth() + 1).padStart(2, "0");
+  return `${d}/${m}/${parsed.getFullYear()}`;
 }
 
 function getRelativeDateLabel(value: string) {
@@ -151,11 +149,34 @@ function getRelativeDateLabel(value: string) {
   const target = new Date(date);
   target.setHours(0, 0, 0, 0);
   const diffDays = Math.round((target.getTime() - today.getTime()) / 86400000);
-  if (diffDays === 0) return "Today";
-  if (diffDays === -1) return "Yesterday";
-  if (diffDays === 1) return "Tomorrow";
-  if (diffDays < 0) return `${Math.abs(diffDays)} days ago`;
-  return `In ${diffDays} days`;
+  if (diffDays === 0) return "اليوم";
+  if (diffDays === -1) return "أمس";
+  if (diffDays === 1) return "غداً";
+  if (diffDays < 0) return `منذ ${Math.abs(diffDays)} أيام`;
+  return `بعد ${diffDays} أيام`;
+}
+
+function formatLinkState(ls: ExtendedPayment["linkState"]): string {
+  switch (ls) {
+    case "Fully applied":     return "مطبّقة بالكامل";
+    case "Partially applied": return "مطبّقة جزئياً";
+    case "Not applied":       return "غير مطبّقة";
+    case "Unlinked":          return "غير مرتبطة";
+    default:                  return ls;
+  }
+}
+
+function quickChipLabel(f: QuickFilter): string {
+  switch (f) {
+    case "completed": return "مكتملة";
+    case "pending":   return "معلقة";
+    case "failed":    return "فاشلة";
+    case "refunded":  return "مُستردة";
+    case "partial":   return "جزئية";
+    case "today":     return "اليوم";
+    case "week":      return "هذا الأسبوع";
+    default:          return f;
+  }
 }
 
 function formatStatus(status: PaymentStatus) {
@@ -771,52 +792,6 @@ export default function Payments() {
     };
   }, [payments]);
 
-  const trendData = useMemo(() => {
-    return Array.from({ length: 7 }, (_, i) => {
-      const date = new Date(); date.setDate(date.getDate() - (6 - i)); date.setHours(0, 0, 0, 0);
-      const next = new Date(date); next.setDate(next.getDate() + 1);
-      const dayTotal = payments.filter((p) => {
-        const d = new Date(p.date);
-        return d >= date && d < next && isSuccessfulPaymentStatus(p.status);
-      }).reduce((s, p) => s + p.amount, 0);
-      return { label: date.toLocaleDateString("en-US", { month: "short", day: "numeric" }), value: dayTotal };
-    });
-  }, [payments]);
-
-  const methodBreakdown = useMemo(() => {
-    const map: Record<string, number> = {};
-    payments.forEach((p) => { if (!isSuccessfulPaymentStatus(p.status)) return; map[p.method] = (map[p.method] || 0) + p.amount; });
-    const total = Object.values(map).reduce((s, v) => s + v, 0) || 1;
-    const colors: Record<string, string> = { Cash: "#2563eb", "Bank Transfer": "#16a34a", Cheque: "#7c3aed", Card: "#f59e0b", Wallet: "#f97316" };
-    return Object.entries(map).map(([method, amount]) => ({ method, amount, pct: amount / total, color: colors[method] ?? "#94a3b8" }));
-  }, [payments]);
-
-  const aiInsights = useMemo(() => {
-    const weekAmount = metrics.weekAmount;
-    const prevWeekAmount = trendData.slice(0, 3).reduce((s, d) => s + d.value, 0);
-    const trend = prevWeekAmount > 0 ? ((weekAmount - prevWeekAmount) / prevWeekAmount) * 100 : 0;
-    return [
-      {
-        icon: trend >= 0 ? TrendingUp : TrendingDown,
-        color: trend >= 0 ? "green" : "red",
-        title: trend >= 0 ? "Collections improving" : "Collections declining",
-        desc: `Your collection rate is ${trend >= 0 ? "up" : "down"} ${Math.abs(trend).toFixed(1)}% vs last 7 days.`,
-      },
-      {
-        icon: AlertCircle,
-        color: metrics.pendingCount > 0 ? "amber" : "green",
-        title: metrics.pendingCount > 0 ? `${metrics.pendingCount} payments pending` : "No pending payments",
-        desc: metrics.pendingCount > 0 ? `Total amount ${formatMoney(metrics.pendingAmount)} requires your attention.` : "All payments are processed.",
-      },
-      {
-        icon: metrics.failedRefundedCount === 0 ? CheckCircle2 : XCircle,
-        color: metrics.failedRefundedCount === 0 ? "green" : "red",
-        title: metrics.failedRefundedCount === 0 ? "No failed payments" : `${metrics.failedRefundedCount} failed/refunded`,
-        desc: metrics.failedRefundedCount === 0 ? "No failed payments in the last 7 days." : `${formatMoney(metrics.failedRefundedAmount)} affected.`,
-      },
-    ];
-  }, [metrics, trendData]);
-
   const customerOptions = useMemo(() => customers.map((c) => ({ value: c.id, label: c.name })), [customers]);
 
   const openCreateModal = () => { setEditorMode("create"); setEditingPaymentId(null); setFormState(EMPTY_FORM); setFormErrors({}); setShowEditor(true); };
@@ -915,7 +890,7 @@ export default function Payments() {
           <div className="pay-ops-header">
             <div className="pay-ops-title-block">
               <h2>عمليات الدفع الأخيرة</h2>
-              <span className="pay-ops-count-badge">{filteredPayments.length} payment{filteredPayments.length === 1 ? "" : "s"}</span>
+              <span className="pay-ops-count-badge">{filteredPayments.length} دفعة</span>
             </div>
             <div className="pay-ops-toolbar">
               <div className="search-input-wrap">
@@ -964,7 +939,7 @@ export default function Payments() {
               <div className="quick-chip-row">
                 {(["completed", "pending", "failed", "refunded", "partial", "today", "week"] as QuickFilter[]).map((f) => (
                   <button key={f} type="button" className={`quick-chip ${quickFilters.includes(f) ? "active" : ""}`} onClick={() => toggleQuickFilter(f)}>
-                    {f.charAt(0).toUpperCase() + f.slice(1)}
+                    {quickChipLabel(f)}
                   </button>
                 ))}
                 {activeFilterCount > 0 && <button type="button" className="clear-link-btn" onClick={clearFilters}>{t.common.reset}</button>}
@@ -1036,14 +1011,14 @@ export default function Payments() {
                         <td className="col-code">
                           <div className="primary-cell app-cell-stack">
                             <button type="button" className="text-link-btn" onClick={(e) => { e.stopPropagation(); setDetailsPayment(p); setDrawerTab("invoice"); }}>{p.invoiceNumber}</button>
-                            <small>{p.linkState}</small>
+                            <small>{formatLinkState(p.linkState)}</small>
                           </div>
                         </td>
                         <td>{p.customerName}</td>
                         <td className="col-num">
                           <div className="amount-cell">
                             <strong>{formatMoney(p.amount)}</strong>
-                            <span>Balance after {formatMoney(p.remainingAfterPayment)}</span>
+                            <span>الرصيد بعد {formatMoney(p.remainingAfterPayment)}</span>
                           </div>
                         </td>
                         <td className="col-badge"><span className="method-badge">{getMethodIcon(p.method)}{formatMethod(p.method)}</span></td>
@@ -1100,7 +1075,7 @@ export default function Payments() {
                 </div>
                 <div className="pay-footer-rpp">
                   <select value={rowsPerPage} onChange={(e) => { setRowsPerPage(Number(e.target.value)); setPage(1); }}>
-                    {[10, 25, 50].map((n) => <option key={n} value={n}>{n} / page</option>)}
+                    {[10, 25, 50].map((n) => <option key={n} value={n}>{n} / صفحة</option>)}
                   </select>
                 </div>
               </div>
@@ -1113,76 +1088,6 @@ export default function Payments() {
           )}
         </div>
 
-        {/* ── Sidebar ── */}
-        <aside className="pay-sidebar">
-          {/* Payment Summary */}
-          <div className="pay-sidebar-card">
-            <h3 className="pay-sidebar-heading">ملخص الدفعات</h3>
-            <p className="pay-sidebar-subheading">طرق الدفع</p>
-            <ul className="pay-sidebar-methods">
-              {[
-                { key: "Cash", label: "نقداً", color: "#2563eb" },
-                { key: "Bank Transfer", label: "تحويل بنكي", color: "#16a34a" },
-                { key: "Card", label: "بطاقة", color: "#f59e0b" },
-                { key: "Cheque", label: "شيك", color: "#7c3aed" },
-                { key: "Other", label: "أخرى", color: "#94a3b8" },
-              ].map((m) => {
-                const found = methodBreakdown.find((b) => b.method === m.key);
-                const pct = found ? (found.pct * 100).toFixed(1) : "0";
-                const amt = found ? formatMoney(found.amount) : formatMoney(0);
-                return (
-                  <li key={m.key} className="pay-method-row">
-                    <span className="pay-method-dot" style={{ background: m.color }} />
-                    <span className="pay-method-name">{m.label}</span>
-                    <span className="pay-method-amount">{amt} ({pct}%)</span>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-
-          {/* Quick Actions */}
-          <div className="pay-sidebar-card">
-            <h3 className="pay-sidebar-heading">Quick Actions</h3>
-            <ul className="pay-sidebar-actions">
-              {[
-                { icon: Plus, label: "سجّل دفعة", action: openCreateModal },
-                { icon: FileText, label: "ربط بفاتورة", action: () => setToast({ type: "info", message: "Open an invoice to apply a payment." }) },
-              ].map((item) => {
-                const Icon = item.icon;
-                return (
-                  <li key={item.label}>
-                    <button type="button" className="pay-sidebar-action-btn" onClick={item.action}>
-                      <span className="pay-sidebar-action-icon"><Icon size={15} /></span>
-                      <span>{item.label}</span>
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-
-          {/* AI Insights */}
-          <div className="pay-sidebar-card">
-            <h3 className="pay-sidebar-heading">
-              <Sparkles size={14} className="insights-star" /> AI Insights
-            </h3>
-            <ul className="pay-sidebar-insights">
-              {aiInsights.map((ins, i) => {
-                const Icon = ins.icon;
-                return (
-                  <li key={i} className="pay-sidebar-insight-item">
-                    <div className={`pay-insight-icon ${ins.color}`}><Icon size={15} /></div>
-                    <div>
-                      <strong>{ins.title}</strong>
-                      <p>{ins.desc}</p>
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        </aside>
 
         </div>{/* end pay-body-layout */}
       </div>

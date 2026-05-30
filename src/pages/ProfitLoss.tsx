@@ -13,6 +13,13 @@ type VarResult = { diff: number; pct: string; positive: boolean } | null;
 type FmtFn = (v: number, c: string) => string;
 type VarFn = (cur: number, pr: number | undefined) => VarResult;
 
+function fmtIsoDate(iso: string): string {
+  if (!iso) return iso;
+  const parts = iso.split("-");
+  if (parts.length !== 3) return iso;
+  return `${parts[2]}/${parts[1]}/${parts[0]}`;
+}
+
 function getDefaultDates(period: Period): { from: string; to: string } {
   const now = new Date();
   const to = now.toISOString().slice(0, 10);
@@ -27,6 +34,7 @@ function getDefaultDates(period: Period): { from: string; to: string } {
 }
 
 function formatPLAmount(value: number, fmt: FmtFn): { text: string; negative: boolean } {
+  if (value === 0) return { text: "—", negative: false };
   const abs = Math.abs(value);
   const formatted = fmt(abs, "ILS");
   return { text: value < 0 ? `(${formatted})` : formatted, negative: value < 0 };
@@ -37,14 +45,19 @@ function PLRow({ label, cur, pr, isTotal = false, isNet = false, isSub = false, 
   compare: boolean; fmt: FmtFn; varFn: VarFn;
 }) {
   const v = varFn(cur, pr);
-  const cls = isNet ? styles.netIncomeRow : isTotal ? styles.totalRow : isSub ? styles.subtotalRow : styles.dataRow;
+  const netSignCls = isNet ? (cur > 0 ? styles.netIncomeRowPositive : cur < 0 ? styles.netIncomeRowNegative : "") : "";
+  const cls = `${isNet ? styles.netIncomeRow : isTotal ? styles.totalRow : isSub ? styles.subtotalRow : styles.dataRow} ${netSignCls}`.trim();
   const curFmt = formatPLAmount(cur, fmt);
   const prFmt = pr !== undefined ? formatPLAmount(pr, fmt) : null;
   return (
     <tr className={cls}>
-      <td>{label}</td>
+      <td style={isNet ? { color: cur > 0 ? "#15803d" : cur < 0 ? "#b91c1c" : undefined } : undefined}>{label}</td>
       <td className={styles.mono}>
-        <span style={curFmt.negative ? { color: "var(--app-danger, var(--atlas-red, #dc2626))" } : undefined}>
+        <span style={
+          curFmt.negative
+            ? { color: "var(--app-danger, var(--atlas-red, #dc2626))" }
+            : (isNet && cur > 0 ? { color: "#15803d" } : undefined)
+        }>
           {curFmt.text}
         </span>
       </td>
@@ -183,7 +196,7 @@ export default function ProfitLoss() {
           <div className={styles.statementHeader}>
             <p className={styles.companyName}>{companyName}</p>
             <h2 className={styles.statementTitle}>{tc.pageTitle}</h2>
-            <p className={styles.statementPeriod}>{dates.from} — {dates.to}</p>
+            <p className={styles.statementPeriod}>{fmtIsoDate(dates.from)} — {fmtIsoDate(dates.to)}</p>
           </div>
           <table className={styles.statTable}>
             <thead>

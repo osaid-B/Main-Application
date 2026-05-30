@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Search, Receipt } from "lucide-react";
+import { Plus, Search, Receipt, Pencil, Trash2 } from "lucide-react";
 import { Container } from "../components/layout/Container";
 import { Stack } from "../components/layout/Stack";
 import { Grid } from "../components/layout/Grid";
@@ -25,6 +25,43 @@ const STATUS_VARIANT: Record<ExpenseStatus, "success" | "warning" | "danger" | "
   rejected: "danger",
 };
 
+const CATEGORY_LABELS: Record<string, string> = {
+  "Rent":                   "إيجار",
+  "Utilities":              "كهرباء ومياه",
+  "Office Supplies":        "مستلزمات مكتبية",
+  "Travel":                 "مواصلات",
+  "Marketing":              "تسويق",
+  "Maintenance":            "صيانة",
+  "Internet & Telecom":     "إنترنت واتصالات",
+  "Insurance":              "تأمين",
+  "Software Subscriptions": "اشتراكات برامج",
+  "Cleaning":               "تنظيف",
+  "Salaries":               "رواتب",
+  "Other":                  "أخرى",
+};
+
+const CATEGORY_CLASS: Record<string, string> = {
+  "Rent":                   styles.catRent,
+  "Utilities":              styles.catUtilities,
+  "Office Supplies":        styles.catOffice,
+  "Travel":                 styles.catTravel,
+  "Marketing":              styles.catMarketing,
+  "Maintenance":            styles.catMaintenance,
+  "Internet & Telecom":     styles.catTelecom,
+  "Insurance":              styles.catInsurance,
+  "Software Subscriptions": styles.catSoftware,
+  "Cleaning":               styles.catCleaning,
+  "Salaries":               styles.catSalaries,
+  "Other":                  styles.catOther,
+};
+
+function fmtDate(iso: string): string {
+  if (!iso) return "—";
+  const parts = iso.split("-");
+  if (parts.length !== 3) return iso;
+  return `${parts[2]}/${parts[1]}/${parts[0]}`;
+}
+
 export default function Expenses() {
   const { t, formatCurrency } = useSettings();
   const tc = t.expenses;
@@ -49,7 +86,8 @@ export default function Expenses() {
       if (
         !(e.description ?? "").toLowerCase().includes(q) &&
         !(e.payee ?? e.vendor ?? "").toLowerCase().includes(q) &&
-        !e.category.toLowerCase().includes(q)
+        !e.category.toLowerCase().includes(q) &&
+        !(CATEGORY_LABELS[e.category] ?? "").includes(q)
       ) return false;
     }
     return !e.isDeleted;
@@ -150,7 +188,9 @@ export default function Expenses() {
             onChange={(e) => setFilterCat(e.target.value)}
           >
             <option value="">{tc.filters.allCategories}</option>
-            {EXPENSE_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+            {EXPENSE_CATEGORIES.map((c) => (
+              <option key={c} value={c}>{CATEGORY_LABELS[c] ?? c}</option>
+            ))}
           </select>
           <select
             className={styles.filterSelect}
@@ -178,7 +218,7 @@ export default function Expenses() {
             <colgroup>
               <col className="col-check" />
               <col />
-              <col className="col-w-110" />
+              <col className="col-w-130" />
               <col className="col-w-120" />
               <col className="col-date" />
               <col className="col-currency" />
@@ -220,10 +260,12 @@ export default function Expenses() {
                     </div>
                   </td>
                   <td className="col-badge">
-                    <span className={styles.catTag}>{expense.category}</span>
+                    <span className={`${styles.catTag} ${CATEGORY_CLASS[expense.category] ?? styles.catOther}`}>
+                      {CATEGORY_LABELS[expense.category] ?? expense.category}
+                    </span>
                   </td>
                   <td className={styles.payeeCell}>{expense.payee ?? expense.vendor ?? "—"}</td>
-                  <td className={`${styles.mono} col-date`}>{expense.date}</td>
+                  <td className={`${styles.mono} col-date`}>{fmtDate(expense.date)}</td>
                   <td className={`${styles.numEnd} ${styles.mono} ${styles.amountCell} col-num`}>
                     {formatCurrency(expense.amount)}
                   </td>
@@ -239,17 +281,19 @@ export default function Expenses() {
                     <div className={styles.rowActions}>
                       <button
                         type="button"
-                        className={styles.actionBtn}
+                        className={styles.iconBtn}
+                        title={t.common.edit}
                         onClick={() => setEditing(expense)}
                       >
-                        {t.common.edit}
+                        <Pencil size={13} />
                       </button>
                       <button
                         type="button"
-                        className={`${styles.actionBtn} ${styles.actionBtnDanger}`}
+                        className={`${styles.iconBtn} ${styles.iconBtnDanger}`}
+                        title={t.common.delete}
                         onClick={() => deleteExpense(expense.id)}
                       >
-                        {t.common.delete}
+                        <Trash2 size={13} />
                       </button>
                     </div>
                   </td>
@@ -320,18 +364,20 @@ function ExpenseFormModal({
   const [step, setStep] = useState<StepId>(1);
 
   // Step 1 fields
-  const [description, setDescription] = useState(initial?.description ?? "");
-  const [category,    setCategory]    = useState(initial?.category    ?? "");
-  const [amount,      setAmount]      = useState(String(initial?.amount ?? ""));
-  const [date,        setDate]        = useState(initial?.date         ?? "");
+  const [description,    setDescription]    = useState(initial?.description ?? "");
+  const [category,       setCategory]       = useState(initial?.category    ?? "");
+  const [amount,         setAmount]         = useState(String(initial?.amount ?? ""));
+  const [date,           setDate]           = useState(initial?.date         ?? "");
 
   // Step 2 fields
-  const [payee,  setPayee]  = useState(initial?.payee ?? initial?.vendor ?? "");
-  const [notes,  setNotes]  = useState(initial?.notes ?? "");
-  const [status, setStatus] = useState<ExpenseStatus>(initial?.status ?? "pending");
+  const [payee,          setPayee]          = useState(initial?.payee ?? initial?.vendor ?? "");
+  const [notes,          setNotes]          = useState(initial?.notes ?? "");
+  const [status,         setStatus]         = useState<ExpenseStatus>(initial?.status ?? "pending");
+  const [paymentMethod,  setPaymentMethod]  = useState<string>(initial?.paymentMethod ?? "bank");
+  const [reference,      setReference]      = useState("");
 
   const canStep1 = description.trim() && category && amount && date;
-  const canStep2 = true; // payee & notes optional
+  const canStep2 = true;
 
   function handleSubmit() {
     onSave({
@@ -344,8 +390,9 @@ function ExpenseFormModal({
       notes: notes.trim() || undefined,
       status,
       currency: "ILS",
-      paymentMethod: "bank",
-    });
+      paymentMethod: paymentMethod as Expense["paymentMethod"],
+      referenceNumber: reference.trim() || undefined,
+    } as Omit<Expense, "id">);
   }
 
   const STEPS = [tc.form.step1, tc.form.step2, tc.form.step3];
@@ -390,7 +437,7 @@ function ExpenseFormModal({
         ))}
       </div>
 
-      {/* Step 1 */}
+      {/* Step 1 — Basic info */}
       {step === 1 && (
         <div className={styles.formGrid}>
           <Input
@@ -407,7 +454,9 @@ function ExpenseFormModal({
               onChange={(e) => setCategory(e.target.value)}
             >
               <option value="" disabled>{tc.form.category}</option>
-              {EXPENSE_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+              {EXPENSE_CATEGORIES.map((c) => (
+                <option key={c} value={c}>{CATEGORY_LABELS[c] ?? c}</option>
+              ))}
             </select>
           </div>
           <Input
@@ -427,7 +476,7 @@ function ExpenseFormModal({
         </div>
       )}
 
-      {/* Step 2 */}
+      {/* Step 2 — Details */}
       {step === 2 && (
         <div className={styles.formGrid}>
           <Input
@@ -448,6 +497,25 @@ function ExpenseFormModal({
             </select>
           </div>
           <div>
+            <label className={styles.formLabel}>طريقة الدفع</label>
+            <select
+              className={styles.formSelect}
+              value={paymentMethod}
+              onChange={(e) => setPaymentMethod(e.target.value)}
+            >
+              <option value="cash">نقداً</option>
+              <option value="bank">تحويل بنكي</option>
+              <option value="card">بطاقة</option>
+              <option value="cheque">شيك</option>
+            </select>
+          </div>
+          <Input
+            label="رقم المرجع"
+            value={reference}
+            onChange={(e) => setReference(e.target.value)}
+            placeholder="اختياري"
+          />
+          <div style={{ gridColumn: "1 / -1" }}>
             <label className={styles.formLabel}>{tc.form.notes}</label>
             <textarea
               className={styles.formTextarea}
@@ -455,10 +523,6 @@ function ExpenseFormModal({
               onChange={(e) => setNotes(e.target.value)}
               rows={3}
             />
-          </div>
-          <div className={styles.receiptNote}>
-            <span className={styles.receiptNoteLabel}>{tc.form.receipt}</span>
-            <span className={styles.receiptNoteText}>{tc.form.receiptNote}</span>
           </div>
         </div>
       )}
@@ -468,9 +532,9 @@ function ExpenseFormModal({
         <div className={styles.review}>
           <p className={styles.reviewSub}>{tc.form.reviewSub}</p>
           <ReviewRow label={tc.form.description} value={description || "—"} />
-          <ReviewRow label={tc.form.category}    value={category || "—"}    />
+          <ReviewRow label={tc.form.category}    value={(CATEGORY_LABELS[category] ?? category) || "—"} />
           <ReviewRow label={tc.form.amount}       value={formatCurrency(parseFloat(amount) || 0)} />
-          <ReviewRow label={tc.form.date}         value={date || "—"} />
+          <ReviewRow label={tc.form.date}         value={fmtDate(date) || "—"} />
           <ReviewRow label={tc.form.payee}        value={payee || "—"} />
           <ReviewRow label={tc.form.status}       value={status} />
           {notes && <ReviewRow label={tc.form.notes} value={notes} />}

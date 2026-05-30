@@ -144,9 +144,24 @@
   background: var(--app-surface-muted);
   border: 1px solid var(--app-border);
   font-size: 11px;
+  font-weight: 600;
   color: var(--app-text-soft);
   white-space: nowrap;
 }
+
+/* Category color variants */
+.catRent        { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+.catUtilities   { background: #fefce8; color: #a16207; border-color: #fde68a; }
+.catOffice      { background: var(--app-surface-muted); color: var(--app-text-soft); border-color: var(--app-border); }
+.catTravel      { background: #f0fdfa; color: #0f766e; border-color: #99f6e4; }
+.catMarketing   { background: #faf5ff; color: #7c3aed; border-color: #ddd6fe; }
+.catMaintenance { background: #fff7ed; color: #c2410c; border-color: #fed7aa; }
+.catTelecom     { background: #f0f9ff; color: #0369a1; border-color: #bae6fd; }
+.catInsurance   { background: var(--app-surface-muted); color: var(--app-text-soft); border-color: var(--app-border); }
+.catSoftware    { background: #eef2ff; color: #4338ca; border-color: #c7d2fe; }
+.catCleaning    { background: #f0fdf4; color: #15803d; border-color: #bbf7d0; }
+.catSalaries    { background: #f0fdf4; color: #15803d; border-color: #bbf7d0; }
+.catOther       { background: var(--app-surface-muted); color: var(--app-text-muted); border-color: var(--app-border); }
 
 .payeeCell { color: var(--app-text); font-size: 12px; }
 .mono { font-family: var(--font-mono); font-size: 11px; }
@@ -170,6 +185,25 @@
 .actionBtn:hover { border-color: var(--app-text-muted); color: var(--app-text); background: var(--app-surface-hover); }
 .actionBtnDanger { color: var(--atlas-red, #e53e3e); border-color: transparent; }
 .actionBtnDanger:hover { background: color-mix(in srgb, var(--atlas-red, #e53e3e) 8%, transparent); border-color: var(--atlas-red, #e53e3e); }
+
+/* Icon action buttons */
+.iconBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: var(--app-radius-sm);
+  background: transparent;
+  color: var(--app-text-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.12s, color 0.12s;
+}
+.iconBtn:hover { background: var(--app-surface-hover); color: var(--app-text); }
+.iconBtnDanger { color: var(--atlas-red, #e53e3e); }
+.iconBtnDanger:hover { background: color-mix(in srgb, var(--atlas-red, #e53e3e) 8%, transparent); color: var(--atlas-red, #e53e3e); }
 
 .empty {
   text-align: center;

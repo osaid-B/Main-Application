@@ -18,12 +18,16 @@
 .table tbody tr:last-child td { border-bottom: 0; }
 .table tbody tr:hover td { background: var(--app-surface-hover); }
 
+/* Root (parent) rows — muted bg, bold */
 .parentRow td { background: var(--app-surface-muted); font-weight: 700; font-size: 13px; color: var(--app-text); }
-.level1Row td { padding-inline-start: 28px; }
-.level2Row td { padding-inline-start: 44px; font-size: 13px; }
-.level2Row td:first-child { color: var(--app-text-muted); }
 
-.codeChip { font-family: var(--font-mono); font-size: 12px; background: var(--app-surface-muted); padding: 1px 6px; border-radius: 4px; }
+/* Level 1 and Level 2 — no forced padding; padding applied inline on name cell only */
+.level1Row td { }
+.level2Row td { font-size: 13px; }
+
+/* Code chips */
+.codeChip { font-family: var(--font-mono); font-size: 12px; background: var(--app-surface-muted); padding: 1px 6px; border-radius: 4px; color: var(--app-text-muted); }
+.rootCodeChip { font-family: var(--font-mono); font-size: 13px; font-weight: 700; background: #eff6ff; color: #1d4ed8; padding: 2px 8px; border-radius: 4px; }
 
 .typeBadge { display: inline-block; padding: 2px 8px; border-radius: var(--app-radius-full); font-size: 11px; font-weight: 600; }
 .typeAsset    { background: #eff6ff; color: #1d4ed8; }
@@ -39,7 +43,7 @@
 .actionBtn:hover { background: var(--app-surface-hover); color: var(--app-text); }
 .actionsCell { display: flex; gap: 2px; align-items: center; }
 
-/* Icon action buttons (32×32) */
+/* Icon action buttons (28×28) */
 .iconBtn {
   display: inline-flex;
   align-items: center;
@@ -98,3 +102,18 @@
 .formSelect { padding: 8px 10px; border: 1px solid var(--app-border); border-radius: var(--app-radius); background: var(--app-surface); color: var(--app-text); font-size: 13px; }
 
 .modalFooter { display: flex; justify-content: flex-end; gap: var(--app-space-2); }
+
+/* Sub-account parent info banner */
+.parentInfoBox {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--app-space-2) var(--app-space-4);
+  padding: var(--app-space-3) var(--app-space-4);
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: var(--app-radius);
+  margin-bottom: var(--app-space-4);
+  font-size: 13px;
+}
+.parentInfoRow { display: flex; align-items: center; gap: var(--app-space-2); }
+.parentInfoLabel { font-size: 11px; font-weight: 600; color: #1d4ed8; text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap; }

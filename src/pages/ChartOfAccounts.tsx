@@ -21,6 +21,18 @@ function nextCode(accounts: ChartAccount[], type: AccountType): string {
   return String(max + 10);
 }
 
+function formatBalance(
+  balance: number,
+  type: AccountType,
+  fmt: (v: number, c: string) => string,
+): React.ReactNode {
+  if (balance === 0) return <span style={{ color: "var(--app-text-muted)" }}>—</span>;
+  const formatted = fmt(Math.abs(balance), "ILS");
+  if (balance < 0) return <span style={{ color: "#b91c1c" }}>({formatted})</span>;
+  if (type === "asset" || type === "equity") return <span style={{ color: "#15803d" }}>{formatted}</span>;
+  return <>{formatted}</>;
+}
+
 // ─── Overflow menu for a single row ──────────────────────────────────────────
 
 function RowMenu({
@@ -70,7 +82,7 @@ function RowMenu({
   );
 }
 
-// ─── Tree-indent prefix ───────────────────────────────────────────────────────
+// ─── Tree-indent prefix (│─) ─────────────────────────────────────────────────
 
 function TreePrefix({ level }: { level: number }) {
   if (level === 0) return null;
@@ -80,15 +92,17 @@ function TreePrefix({ level }: { level: number }) {
       style={{
         display: "inline-flex",
         alignItems: "center",
-        marginInlineEnd: 6,
+        marginInlineEnd: 5,
         color: "var(--app-border)",
         fontFamily: "var(--font-mono)",
-        fontSize: 12,
+        fontSize: 11,
         lineHeight: 1,
         userSelect: "none",
+        verticalAlign: "middle",
+        flexShrink: 0,
       }}
     >
-      {level === 1 ? "└─" : "  └─"}
+      │─
     </span>
   );
 }
@@ -131,13 +145,26 @@ export default function ChartOfAccounts() {
     return accounts.filter(a => a.code.includes(q) || a.nameAr.includes(q) || a.nameEn.toLowerCase().includes(q));
   }, [accounts, search]);
 
-  const parents = accounts.filter(a => a.isParent || !a.parentId);
+  const topLevelParents = accounts.filter(a => a.isParent || !a.parentId);
 
   function openAdd(parentId?: string) {
-    const type: AccountType = parentId ? (accounts.find(a => a.id === parentId)?.type ?? "asset") : "asset";
+    const parentAcc = parentId ? accounts.find(a => a.id === parentId) : null;
+    const type: AccountType = parentAcc?.type ?? "asset";
     const nb: NormalBalance = type === "asset" || type === "expense" ? "debit" : "credit";
+    let code: string;
+    if (parentAcc) {
+      const siblings = accounts
+        .filter(a => a.parentId === parentId)
+        .map(a => Number(a.code))
+        .filter(n => !isNaN(n));
+      code = siblings.length > 0
+        ? String(Math.max(...siblings) + 10)
+        : String(Number(parentAcc.code) + 10);
+    } else {
+      code = nextCode(accounts, type);
+    }
     setEditTarget(null);
-    setForm({ code: nextCode(accounts, type), nameAr: "", nameEn: "", type, parentId: parentId ?? "", normalBalance: nb });
+    setForm({ code, nameAr: "", nameEn: "", type, parentId: parentId ?? "", normalBalance: nb });
     setShowModal(true);
   }
 
@@ -185,27 +212,27 @@ export default function ChartOfAccounts() {
 
       rows.push(
         <tr key={parent.id} className={styles.parentRow}>
-          <td><span className={styles.codeChip}>{parent.code}</span></td>
+          <td><span className={styles.rootCodeChip}>{parent.code}</span></td>
           <td>
-            <span style={{ fontWeight: 700 }}>
+            <span style={{ fontWeight: 700, fontSize: 14 }}>
               {isArabic ? parent.nameAr : parent.nameEn}
             </span>
-            {isArabic ? (
-              <span style={{ fontSize: 11, color: "var(--app-text-muted)", display: "block" }}>{parent.nameEn}</span>
-            ) : (
-              <span style={{ fontSize: 11, color: "var(--app-text-muted)", display: "block" }}>{parent.nameAr}</span>
-            )}
+            <span style={{ fontSize: 11, color: "var(--app-text-muted)", display: "block" }}>
+              {isArabic ? parent.nameEn : parent.nameAr}
+            </span>
           </td>
           <td><span className={`${styles.typeBadge} ${typeBadge[parent.type]}`}>{tc.types[parent.type]}</span></td>
-          <td className={`${styles.numEnd} ${styles.mono}`}>{isParent ? "—" : formatCurrency(getBalance(parent), "ILS")}</td>
+          <td className={`${styles.numEnd} ${styles.mono}`}>
+            {isParent
+              ? <span style={{ color: "var(--app-text-muted)" }}>—</span>
+              : formatBalance(getBalance(parent), parent.type, formatCurrency)}
+          </td>
           <td className={styles.normalBalance}>{parent.normalBalance === "debit" ? tc.normalDebit : tc.normalCredit}</td>
           <td>
             <div className={styles.actionsCell}>
-              {isParent && (
-                <button type="button" className={styles.iconBtn} title={tc.addSubAccount} onClick={(e) => { e.stopPropagation(); openAdd(parent.id); }}>
-                  <PlusCircle size={14} />
-                </button>
-              )}
+              <button type="button" className={styles.iconBtn} title={tc.addSubAccount} onClick={(e) => { e.stopPropagation(); openAdd(parent.id); }}>
+                <PlusCircle size={14} />
+              </button>
               <button type="button" className={styles.iconBtn} title={tc.editAccount} onClick={(e) => { e.stopPropagation(); openEdit(parent); }}>
                 <Pencil size={13} />
               </button>
@@ -227,15 +254,23 @@ export default function ChartOfAccounts() {
         rows.push(
           <tr key={child.id} className={styles.level1Row}>
             <td><span className={styles.codeChip}>{child.code}</span></td>
-            <td>
-              <TreePrefix level={1} />
-              {isArabic ? child.nameAr : child.nameEn}
-              <span style={{ fontSize: 11, color: "var(--app-text-muted)", display: "block", paddingInlineStart: 26 }}>
-                {isArabic ? child.nameEn : child.nameAr}
+            <td style={{ paddingInlineStart: 20 }}>
+              <span style={{ display: "inline-flex", alignItems: "center" }}>
+                <TreePrefix level={1} />
+                <span>
+                  {isArabic ? child.nameAr : child.nameEn}
+                  <span style={{ fontSize: 11, color: "var(--app-text-muted)", display: "block" }}>
+                    {isArabic ? child.nameEn : child.nameAr}
+                  </span>
+                </span>
               </span>
             </td>
             <td><span className={`${styles.typeBadge} ${typeBadge[child.type]}`}>{tc.types[child.type]}</span></td>
-            <td className={`${styles.numEnd} ${styles.mono}`}>{childChildren.length > 0 ? "—" : formatCurrency(getBalance(child), "ILS")}</td>
+            <td className={`${styles.numEnd} ${styles.mono}`}>
+              {childChildren.length > 0
+                ? <span style={{ color: "var(--app-text-muted)" }}>—</span>
+                : formatBalance(getBalance(child), child.type, formatCurrency)}
+            </td>
             <td className={styles.normalBalance}>{child.normalBalance === "debit" ? tc.normalDebit : tc.normalCredit}</td>
             <td>
               <div className={styles.actionsCell}>
@@ -257,15 +292,21 @@ export default function ChartOfAccounts() {
           rows.push(
             <tr key={leaf.id} className={styles.level2Row}>
               <td><span className={styles.codeChip}>{leaf.code}</span></td>
-              <td>
-                <TreePrefix level={2} />
-                {isArabic ? leaf.nameAr : leaf.nameEn}
-                <span style={{ fontSize: 11, color: "var(--app-text-muted)", display: "block", paddingInlineStart: 30 }}>
-                  {isArabic ? leaf.nameEn : leaf.nameAr}
+              <td style={{ paddingInlineStart: 40 }}>
+                <span style={{ display: "inline-flex", alignItems: "center" }}>
+                  <TreePrefix level={2} />
+                  <span>
+                    {isArabic ? leaf.nameAr : leaf.nameEn}
+                    <span style={{ fontSize: 11, color: "var(--app-text-muted)", display: "block" }}>
+                      {isArabic ? leaf.nameEn : leaf.nameAr}
+                    </span>
+                  </span>
                 </span>
               </td>
               <td><span className={`${styles.typeBadge} ${typeBadge[leaf.type]}`}>{tc.types[leaf.type]}</span></td>
-              <td className={`${styles.numEnd} ${styles.mono}`}>{formatCurrency(getBalance(leaf), "ILS")}</td>
+              <td className={`${styles.numEnd} ${styles.mono}`}>
+                {formatBalance(getBalance(leaf), leaf.type, formatCurrency)}
+              </td>
               <td className={styles.normalBalance}>{leaf.normalBalance === "debit" ? tc.normalDebit : tc.normalCredit}</td>
               <td>
                 <div className={styles.actionsCell}>
@@ -287,6 +328,9 @@ export default function ChartOfAccounts() {
     });
     return rows;
   }
+
+  const isSubAccount = editTarget === null && form.parentId !== "";
+  const parentAcc = isSubAccount ? accounts.find(a => a.id === form.parentId) : null;
 
   return (
     <Container maxWidth="full" padding="md">
@@ -347,7 +391,7 @@ export default function ChartOfAccounts() {
       <Modal
         isOpen={showModal}
         onClose={() => setShowModal(false)}
-        title={editTarget ? tc.form.editTitle : tc.form.createTitle}
+        title={editTarget ? tc.form.editTitle : isSubAccount ? "إضافة حساب فرعي" : tc.form.createTitle}
         size="md"
         footer={
           <div className={styles.modalFooter}>
@@ -356,43 +400,89 @@ export default function ChartOfAccounts() {
           </div>
         }
       >
+        {/* Sub-account parent info banner */}
+        {isSubAccount && parentAcc && (
+          <div className={styles.parentInfoBox}>
+            <div className={styles.parentInfoRow}>
+              <span className={styles.parentInfoLabel}>الحساب الأب</span>
+              <span><strong>{parentAcc.code}</strong> — {isArabic ? parentAcc.nameAr : parentAcc.nameEn}</span>
+            </div>
+            <div className={styles.parentInfoRow}>
+              <span className={styles.parentInfoLabel}>النوع</span>
+              <span className={`${styles.typeBadge} ${typeBadge[parentAcc.type]}`}>{tc.types[parentAcc.type]}</span>
+            </div>
+            <div className={styles.parentInfoRow}>
+              <span className={styles.parentInfoLabel}>الرصيد الطبيعي</span>
+              <span>{parentAcc.normalBalance === "debit" ? tc.normalDebit : tc.normalCredit}</span>
+            </div>
+          </div>
+        )}
+
         <div className={styles.formGrid}>
+          {/* Code */}
           <div className={styles.formField}>
             <label className={styles.formLabel}>{tc.form.code}</label>
             <input className={styles.formInput} value={form.code} onChange={e => setForm(f => ({ ...f, code: e.target.value }))} />
           </div>
-          <div className={styles.formField}>
-            <label className={styles.formLabel}>{tc.form.type}</label>
-            <select className={styles.formSelect} value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value as AccountType }))}>
-              {(["asset","liability","equity","revenue","expense"] as AccountType[]).map(tp => (
-                <option key={tp} value={tp}>{tc.types[tp]}</option>
-              ))}
-            </select>
-          </div>
+
+          {/* Type — select in full mode, readonly in sub-account mode */}
+          {!isSubAccount ? (
+            <div className={styles.formField}>
+              <label className={styles.formLabel}>{tc.form.type}</label>
+              <select className={styles.formSelect} value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value as AccountType }))}>
+                {(["asset","liability","equity","revenue","expense"] as AccountType[]).map(tp => (
+                  <option key={tp} value={tp}>{tc.types[tp]}</option>
+                ))}
+              </select>
+            </div>
+          ) : (
+            <div className={styles.formField}>
+              <label className={styles.formLabel}>{tc.form.type}</label>
+              <input className={styles.formInput} value={tc.types[form.type]} readOnly style={{ color: "var(--app-text-muted)", cursor: "default", background: "var(--app-surface-muted)" }} />
+            </div>
+          )}
+
+          {/* Arabic name */}
           <div className={styles.formField}>
             <label className={styles.formLabel}>{tc.form.nameAr}</label>
             <input className={styles.formInput} value={form.nameAr} onChange={e => setForm(f => ({ ...f, nameAr: e.target.value }))} dir="rtl" />
           </div>
+
+          {/* English name */}
           <div className={styles.formField}>
             <label className={styles.formLabel}>{tc.form.nameEn}</label>
             <input className={styles.formInput} value={form.nameEn} onChange={e => setForm(f => ({ ...f, nameEn: e.target.value }))} />
           </div>
-          <div className={styles.formField}>
-            <label className={styles.formLabel}>{tc.form.parent}</label>
-            <select className={styles.formSelect} value={form.parentId} onChange={e => setForm(f => ({ ...f, parentId: e.target.value }))}>
-              <option value="">{tc.form.noParent}</option>
-              {parents.map(p => (
-                <option key={p.id} value={p.id}>{p.code} — {isArabic ? p.nameAr : p.nameEn}</option>
-              ))}
-            </select>
-          </div>
-          <div className={styles.formField}>
-            <label className={styles.formLabel}>{tc.form.normalBalance}</label>
-            <select className={styles.formSelect} value={form.normalBalance} onChange={e => setForm(f => ({ ...f, normalBalance: e.target.value as NormalBalance }))}>
-              <option value="debit">{tc.normalDebit}</option>
-              <option value="credit">{tc.normalCredit}</option>
-            </select>
-          </div>
+
+          {/* Parent + Normal Balance — full mode only */}
+          {!isSubAccount && (
+            <>
+              <div className={styles.formField}>
+                <label className={styles.formLabel}>{tc.form.parent}</label>
+                <select className={styles.formSelect} value={form.parentId} onChange={e => setForm(f => ({ ...f, parentId: e.target.value }))}>
+                  <option value="">{tc.form.noParent}</option>
+                  {topLevelParents.map(p => (
+                    <option key={p.id} value={p.id}>{p.code} — {isArabic ? p.nameAr : p.nameEn}</option>
+                  ))}
+                </select>
+              </div>
+              <div className={styles.formField}>
+                <label className={styles.formLabel}>{tc.form.normalBalance}</label>
+                <select className={styles.formSelect} value={form.normalBalance} onChange={e => setForm(f => ({ ...f, normalBalance: e.target.value as NormalBalance }))}>
+                  <option value="debit">{tc.normalDebit}</option>
+                  <option value="credit">{tc.normalCredit}</option>
+                </select>
+              </div>
+            </>
+          )}
+
+          {/* Normal Balance — readonly in sub-account mode */}
+          {isSubAccount && (
+            <div className={styles.formField}>
+              <label className={styles.formLabel}>{tc.form.normalBalance}</label>
+              <input className={styles.formInput} value={form.normalBalance === "debit" ? tc.normalDebit : tc.normalCredit} readOnly style={{ color: "var(--app-text-muted)", cursor: "default", background: "var(--app-surface-muted)" }} />
+            </div>
+          )}
         </div>
       </Modal>
     </Container>
