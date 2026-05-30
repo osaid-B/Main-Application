@@ -56,7 +56,10 @@ function relTime(ts: Date, t: T): string {
   const diffD = Math.floor(diffH / 24);
   if (diffD === 1) return rl.yesterday;
   if (diffD < 7) return `${rl.prefix}${diffD}${rl.dAgo}`;
-  return ts.toLocaleDateString();
+  const d = ts.getDate().toString().padStart(2, "0");
+  const m = (ts.getMonth() + 1).toString().padStart(2, "0");
+  const y = ts.getFullYear();
+  return `${d}/${m}/${y}`;
 }
 
 function dateGroup(ts: Date, t: T): string {

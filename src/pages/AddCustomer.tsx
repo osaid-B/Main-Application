@@ -106,7 +106,7 @@ export default function AddCustomer() {
   const { id: editId } = useParams<{ id: string }>();
   const isEditMode = !!editId;
   const { addCustomer, updateCustomer, customers } = useData();
-  const { t } = useSettings();
+  const { t, isArabic } = useSettings();
 
   const existingCustomer = isEditMode
     ? customers.find((c) => (c.id === editId || c.code === editId) && !c.isDeleted) ?? null
@@ -474,7 +474,9 @@ export default function AddCustomer() {
               value={form.alerts}
               onChange={(v) => update("alerts", v)}
               hint={t.addCustomer.fields.alertsHint}
-              suggestions={["High balance", "Overdue", "Credit warning", "New account"]}
+              suggestions={isArabic
+                ? ["رصيد مرتفع", "متأخر الدفع", "تحذير ائتماني", "حساب جديد"]
+                : ["High balance", "Overdue", "Credit warning", "New account"]}
             />
           </FormSection>
         </div>
