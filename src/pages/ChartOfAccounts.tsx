@@ -174,7 +174,6 @@ export default function ChartOfAccounts() {
         <div className={styles.header}>
           <div className={styles.headerLeft}>
             <p className={styles.breadcrumb}>{isArabic ? "المالية / دليل الحسابات" : "Finance / Chart of Accounts"}</p>
-            <h1 className={styles.title}>{tc.pageTitle}</h1>
             <p className={styles.subtitle}>{tc.pageSubtitle}</p>
           </div>
           <div style={{ display: "flex", gap: "var(--app-space-2)" }}>

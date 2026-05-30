@@ -111,7 +111,6 @@ export default function InventoryMovements() {
         <div className={styles.header}>
           <div className={styles.headerLeft}>
             <p className={styles.breadcrumb}>{isArabic ? "المخزون / الحركات" : "Inventory / Movements"}</p>
-            <h1 className={styles.title}>{tc.pageTitle}</h1>
             <p className={styles.subtitle}>{tc.pageSubtitle}</p>
           </div>
           <div style={{ display: "flex", gap: "var(--app-space-2)" }}>

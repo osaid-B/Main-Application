@@ -2082,7 +2082,6 @@ export default function Employees() {
         <div className="employees-header employees-lux-header">
           <div>
             <p className="dashboard-badge">Employee Management</p>
-            <h1 className="dashboard-title">{t.employees.pageTitle}</h1>
             <p className="dashboard-subtitle employees-hero-text">
               {t.employees.pageSubtitle}
             </p>

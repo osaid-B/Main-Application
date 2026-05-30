@@ -172,7 +172,6 @@ export default function CompanyOverview() {
         <header className={styles.header}>
           <div>
             <div className={styles.breadcrumb}>{t.company.breadcrumb}</div>
-            <h1 className={styles.title}>{t.company.pageTitle}</h1>
             <p className={styles.subtitle}>{t.company.pageSubtitle}</p>
           </div>
           <div className={styles.actions}>

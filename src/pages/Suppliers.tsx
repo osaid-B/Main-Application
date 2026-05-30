@@ -1397,7 +1397,6 @@ export default function Suppliers() {
               <Truck size={16} />
               {t.suppliers.pageTitle}
             </div>
-            <h1>{t.suppliers.pageTitle}</h1>
             <p>{t.suppliers.pageSubtitle}</p>
           </div>
 

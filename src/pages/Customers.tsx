@@ -77,10 +77,7 @@ export default function Customers() {
         {/* Header */}
         <header className={styles.header}>
           <div>
-            <h1 className={styles.title}>
-              {t.customers.pageTitle} <span className={styles.titleCount}>· {stats.total.toLocaleString()}</span>
-            </h1>
-            <p className={styles.subtitle}>{t.customers.pageSubtitle}</p>
+            <p className={styles.subtitle}>{t.customers.pageSubtitle} <span className={styles.titleCount}>· {stats.total.toLocaleString()}</span></p>
           </div>
           <div className={styles.actions}>
             <Button variant="secondary" size="sm" leftIcon={<Filter size={14} />} onClick={() => setShowFilters((v) => !v)}>{t.customers.filter}</Button>

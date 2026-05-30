@@ -113,7 +113,6 @@ export default function Notifications() {
         {/* Header */}
         <header className={styles.header}>
           <div>
-            <h1 className={styles.title}>{tn.pageTitle}</h1>
             <p className={styles.subtitle}>{tn.pageSubtitle}</p>
           </div>
           <div className={styles.headerActions}>

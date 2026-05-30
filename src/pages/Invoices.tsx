@@ -1159,7 +1159,6 @@ export default function Invoices() {
               <FileText size={22} />
             </div>
             <div className="inv-header-copy">
-              <h1>{t.invoices.pageTitle}</h1>
               <p>{t.invoices.pageSubtitle}</p>
             </div>
           </div>

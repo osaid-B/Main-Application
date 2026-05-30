@@ -95,7 +95,6 @@ export default function Reports() {
       <Stack gap="lg">
         <header className={styles.header}>
           <div>
-            <h1 className={styles.title}>{tc.pageTitle}</h1>
             <p className={styles.subtitle}>{tc.pageSubtitle}</p>
           </div>
           <Button variant="secondary" size="sm" onClick={() => exportTabCSV(tab)}>

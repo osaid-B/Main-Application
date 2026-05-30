@@ -506,7 +506,6 @@ export default function Treasury() {
           <Landmark size={14} />
           {t.treasury.pageTitle}
         </div>
-        <h1 className="trs-header-title">{t.treasury.pageTitle}</h1>
         <p className="trs-header-sub">{t.treasury.pageSubtitle}</p>
       </header>
 

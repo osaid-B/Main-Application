@@ -131,7 +131,6 @@ export default function GeneralLedger() {
         <div className={styles.header}>
           <div className={styles.headerLeft}>
             <p className={styles.breadcrumb}>{isArabic ? "المالية / دفتر الأستاذ" : "Finance / General Ledger"}</p>
-            <h1 className={styles.title}>{tc.pageTitle}</h1>
             <p className={styles.subtitle}>{tc.pageSubtitle}</p>
           </div>
           <Button variant="secondary" size="sm" leftIcon={<Download size={13} />} onClick={exportCsv}>

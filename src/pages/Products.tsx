@@ -749,7 +749,6 @@ export default function Products() {
     closeCategoryDeleteModal();
   }
 
-  const productTitle = t.products?.pageTitle || "Products";
   const addProductLabel = t.products?.addProduct || "Add Product";
   const searchPlaceholder =
     t.products?.searchPlaceholder || "Search products, SKU, category...";
@@ -759,7 +758,6 @@ export default function Products() {
       {/* Title + description */}
       <div className="products-topbar">
         <div>
-          <h1 className="products-page-title">{productTitle}</h1>
           <p className="products-page-desc">
             {t.layout.sectionSubtitles.products}
           </p>

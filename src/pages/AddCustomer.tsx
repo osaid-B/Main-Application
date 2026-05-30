@@ -273,9 +273,6 @@ export default function AddCustomer() {
           <button type="button" className={styles.backLink} onClick={() => navigate("/customers")}>
             <ArrowLeft size={14} /> {t.addCustomer.backLink}
           </button>
-          <h1 className={styles.title}>
-            {isEditMode ? t.common.edit : t.addCustomer.pageTitle}
-          </h1>
           <p className={styles.subtitle}>
             {isEditMode ? (existingCustomer?.name ?? "") : t.addCustomer.pageSubtitle}
           </p>

@@ -866,7 +866,6 @@ export default function Payments() {
           <div className="pay-header-left">
             <div className="pay-header-icon"><BarChart2 size={22} /></div>
             <div>
-              <h1>{t.payments.pageTitle}</h1>
               <p>{t.payments.pageSubtitle}</p>
             </div>
           </div>

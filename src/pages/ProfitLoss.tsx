@@ -126,7 +126,6 @@ export default function ProfitLoss() {
       <div className={styles.page}>
         <div className={styles.header}>
           <div className={styles.breadcrumb}>{tc.breadcrumb}</div>
-          <h1 className={styles.title}>{tc.pageTitle}</h1>
           <p className={styles.subtitle}>{tc.pageSubtitle}</p>
         </div>
 

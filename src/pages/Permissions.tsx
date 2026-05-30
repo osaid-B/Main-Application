@@ -135,7 +135,6 @@ export default function Permissions() {
     <Container maxWidth="full" padding="md">
       <header className={styles.header}>
         <div>
-          <h1 className={styles.title}>{tc.pageTitle}</h1>
           <p className={styles.subtitle}>{tc.pageSubtitle}</p>
         </div>
       </header>

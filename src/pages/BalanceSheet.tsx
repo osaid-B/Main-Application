@@ -85,7 +85,6 @@ export default function BalanceSheet() {
     <Container maxWidth="full" padding="md">
       <div className={styles.page}>
         <div className={styles.breadcrumb}>{tc.breadcrumb}</div>
-        <h1 className={styles.title}>{tc.pageTitle}</h1>
         <p className={styles.subtitle}>{tc.pageSubtitle}</p>
 
         <div className={styles.controls}>
