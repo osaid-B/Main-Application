@@ -15,6 +15,7 @@ import { SettingsProvider } from "./context/SettingsContext";
 import { ToastProvider } from "./components/ui/Toast";
 import { WorkspaceProvider } from "./contexts/WorkspaceContext";
 import { ModuleProvider } from "./context/ModuleContext";
+import { TreasuryProvider } from "./context/TreasuryContext";
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>
@@ -25,7 +26,9 @@ ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
             <AIProvider>
               <WorkspaceProvider>
                 <ModuleProvider>
+                <TreasuryProvider>
                   <App />
+                </TreasuryProvider>
                 </ModuleProvider>
               </WorkspaceProvider>
             </AIProvider>

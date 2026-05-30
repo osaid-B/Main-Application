@@ -26,7 +26,10 @@ const COMPANY_NAV: NavSection[] = [
   },
   {
     header: "المحاسبة",
-    items: [{ label: "المصروفات", path: "/company/expenses" }],
+    items: [
+      { label: "المصروفات", path: "/company/expenses" },
+      { label: "الخزينة والبنوك", path: "/company/treasury" },
+    ],
   },
   {
     header: "الموارد البشرية",

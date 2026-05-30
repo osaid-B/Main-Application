@@ -72,6 +72,8 @@ import ModuleSelector from "./pages/ModuleSelector";
 
 // Company module pages
 import CompanyDashboard from "./modules/company/Dashboard";
+import TreasuryHub from "./modules/company/TreasuryHub";
+import BankAccountsPage from "./modules/company/BankAccountsPage";
 import CompanyCustomers from "./modules/company/Customers";
 import CompanySuppliers from "./modules/company/Suppliers";
 import CompanyInvoices from "./modules/company/Invoices";
@@ -217,6 +219,8 @@ function AppRoutes() {
           <Route path="/company/expenses" element={<CompanyExpenses />} />
           <Route path="/company/employees" element={<CompanyEmployees />} />
           <Route path="/company/reports" element={<CompanyReports />} />
+          <Route path="/company/treasury" element={<TreasuryHub />} />
+          <Route path="/company/treasury/accounts" element={<BankAccountsPage />} />
         </Route>
 
         {/* Factory module */}
