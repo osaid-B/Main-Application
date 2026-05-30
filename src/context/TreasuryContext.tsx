@@ -25,10 +25,24 @@ interface TreasuryContextValue {
 
 const TreasuryContext = createContext<TreasuryContextValue | null>(null);
 
+const LS_KEY = 'atlas-treasury-instruments';
+
+function loadInstruments(): TreasuryInstrument[] {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (raw) return JSON.parse(raw) as TreasuryInstrument[];
+  } catch { /* ignore */ }
+  return TREASURY_INSTRUMENTS;
+}
+
+function persistInstruments(list: TreasuryInstrument[]) {
+  try { localStorage.setItem(LS_KEY, JSON.stringify(list)); } catch { /* ignore */ }
+}
+
 let idCounter = 16;
 
 export function TreasuryProvider({ children }: { children: ReactNode }) {
-  const [instruments, setInstruments] = useState<TreasuryInstrument[]>(TREASURY_INSTRUMENTS);
+  const [instruments, setInstruments] = useState<TreasuryInstrument[]>(loadInstruments);
   const [bankAccounts, setBankAccounts] = useState<TreasuryBankAccount[]>(TREASURY_BANK_ACCOUNTS);
 
   const canTransition = useCallback((current: InstrumentStatus, next: InstrumentStatus): boolean => {
@@ -46,27 +60,35 @@ export function TreasuryProvider({ children }: { children: ReactNode }) {
       updatedAt: now,
       statusHistory: [{ status: data.status, changedAt: now, changedBy: 'admin' }],
     };
-    setInstruments(prev => [instrument, ...prev]);
+    setInstruments(prev => {
+      const next = [instrument, ...prev];
+      persistInstruments(next);
+      return next;
+    });
     return instrument;
   }, []);
 
   const updateInstrumentStatus = useCallback((id: string, status: InstrumentStatus, note?: string): void => {
     const now = new Date().toISOString();
-    setInstruments(prev => prev.map(inst => {
-      if (inst.id !== id) return inst;
-      if (!canTransition(inst.status, status)) return inst;
-      return {
-        ...inst,
-        status,
-        updatedAt: now,
-        depositedDate: status === 'deposited' ? now.slice(0, 10) : inst.depositedDate,
-        clearedDate:   status === 'cleared'   ? now.slice(0, 10) : inst.clearedDate,
-        statusHistory: [
-          ...inst.statusHistory,
-          { status, changedAt: now, changedBy: 'admin', note },
-        ],
-      };
-    }));
+    setInstruments(prev => {
+      const next = prev.map(inst => {
+        if (inst.id !== id) return inst;
+        if (!canTransition(inst.status, status)) return inst;
+        return {
+          ...inst,
+          status,
+          updatedAt: now,
+          depositedDate: status === 'deposited' ? now.slice(0, 10) : inst.depositedDate,
+          clearedDate:   status === 'cleared'   ? now.slice(0, 10) : inst.clearedDate,
+          statusHistory: [
+            ...inst.statusHistory,
+            { status, changedAt: now, changedBy: 'admin', note },
+          ],
+        };
+      });
+      persistInstruments(next);
+      return next;
+    });
   }, [canTransition]);
 
   const updateInstrumentNotes = useCallback((id: string, notes: string): void => {
