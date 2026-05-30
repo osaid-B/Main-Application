@@ -373,7 +373,7 @@ export const employeesData: Employee[] = [
     salaryType: "fixed",
     fixedSalary: 2200,
     advance: 0,
-    notes: "خدمة الزبائن — استقبال",
+    notes: "خدمة العملاء — الاستقبال",
     isDeleted: false,
   },
 ];

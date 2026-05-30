@@ -58,7 +58,7 @@ export const COMPANY_SECTIONS: NavSection[] = [
   {
     title: "OVERVIEW",         titleAr: "نظرة عامة",
     items: [
-      { icon: LayoutDashboard, label: "Main Dashboard",    labelAr: "لوحة القيادة",         path: "/dashboard" },
+      { icon: LayoutDashboard, label: "Main Dashboard",    labelAr: "لوحة التحكم",          path: "/dashboard" },
       { icon: Building2,       label: "Company",           labelAr: "الشركة",               path: "/company" },
       { icon: DollarSign,      label: "Finance",           labelAr: "المالية",              path: "/treasury" },
     ],
@@ -76,7 +76,7 @@ export const COMPANY_SECTIONS: NavSection[] = [
   {
     title: "ACCOUNTING",       titleAr: "المحاسبة",
     items: [
-      { icon: BookOpen,  label: "General Ledger",    labelAr: "دفتر الأستاذ",     path: "/general-ledger" },
+      { icon: BookOpen,  label: "General Ledger",    labelAr: "دفتر الأستاذ العام", path: "/general-ledger" },
       { icon: ListTree,  label: "Chart of Accounts", labelAr: "دليل الحسابات",    path: "/chart-of-accounts" },
       { icon: FileText,  label: "Invoices",          labelAr: "الفواتير",         path: "/invoices" },
       { icon: Receipt,   label: "Expenses",          labelAr: "المصروفات",        path: "/expenses" },
@@ -113,7 +113,7 @@ export const COMPANY_SECTIONS: NavSection[] = [
 
 export const POS_SECTIONS: NavSection[] = [
   {
-    title: "REGISTER",         titleAr: "الكاشير",
+    title: "REGISTER",         titleAr: "نقطة البيع",
     items: [
       { icon: ShoppingCart, label: "Checkout",      labelAr: "نقطة البيع",    path: "/pos/checkout" },
       { icon: History,      label: "Sales History", labelAr: "سجل المبيعات",  path: "/pos/history" },
@@ -140,7 +140,7 @@ export const POS_SECTIONS: NavSection[] = [
   {
     title: "ADMIN",            titleAr: "الإدارة",
     items: [
-      { icon: Users,   label: "Cashiers", labelAr: "الكاشيرون",   path: "/pos/cashiers" },
+      { icon: Users,   label: "Cashiers", labelAr: "أمناء الصندوق", path: "/pos/cashiers" },
       { icon: Receipt, label: "Receipts", labelAr: "الإيصالات",   path: "/pos/receipts" },
     ],
   },
@@ -159,7 +159,7 @@ export const FACTORY_SECTIONS: NavSection[] = [
   {
     title: "INVENTORY",        titleAr: "المخزون",
     items: [
-      { icon: Globe,     label: "Local vs Imported", labelAr: "محلي مقابل مستورد", path: "/factory/inventory/sources" },
+      { icon: Globe,     label: "Local vs Imported", labelAr: "المواد المحلية والمستوردة", path: "/factory/inventory/sources" },
       { icon: Boxes,     label: "Raw Materials",     labelAr: "المواد الخام",       path: "/factory/inventory/raw" },
       { icon: Package,   label: "Finished Goods",    labelAr: "البضائع الجاهزة",   path: "/factory/inventory/finished" },
       { icon: Warehouse, label: "Warehouse",         labelAr: "المستودع",          path: "/factory/inventory/warehouse" },

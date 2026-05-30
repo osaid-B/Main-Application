@@ -37,7 +37,7 @@ const TIER_VARIANT: Record<string, "warning" | "neutral" | "success"> = {
 const PAGE_SIZE = 10;
 
 export default function LoyaltyProfile() {
-  const { t } = useSettings();
+  const { t, formatNumber } = useSettings();
   const tc = t.pos.loyaltyProfile;
 
   const [searchParams] = useSearchParams();
@@ -121,16 +121,16 @@ export default function LoyaltyProfile() {
             <Badge variant={TIER_VARIANT[localProfile.tier]} size="md">{localProfile.tier}</Badge>
           </div>
           <div className={styles.balanceDisplay}>
-            <span className={styles.balanceValue}>{localProfile.coinsBalance.toLocaleString()}</span>
+            <span className={styles.balanceValue}>{formatNumber(localProfile.coinsBalance)}</span>
             <span className={styles.balanceLabel}>{tc.coins ?? "coins"}</span>
           </div>
         </div>
 
         {/* Stats row */}
         <Grid cols={4} gap="md" responsive>
-          <Kpi label={tc.stats.earned}       value={localProfile.totalEarned.toLocaleString()}    tone="success" />
-          <Kpi label={tc.stats.redeemed}     value={localProfile.totalRedeemed.toLocaleString()}  tone="info"    />
-          <Kpi label={tc.stats.expired}      value={localProfile.totalExpired.toLocaleString()}   tone="neutral" />
+          <Kpi label={tc.stats.earned}       value={formatNumber(localProfile.totalEarned)}       tone="success" />
+          <Kpi label={tc.stats.redeemed}     value={formatNumber(localProfile.totalRedeemed)}     tone="info"    />
+          <Kpi label={tc.stats.expired}      value={formatNumber(localProfile.totalExpired)}      tone="neutral" />
           <Kpi label={tc.stats.transactions} value={String(localProfile.transactions.length)}     tone="warning" />
         </Grid>
 
@@ -176,7 +176,7 @@ export default function LoyaltyProfile() {
                       {tx.coins >= 0 ? `+${tx.coins}` : String(tx.coins)}
                     </td>
                     <td className={styles.triggerCell}>{tx.trigger}</td>
-                    <td className={`${styles.numEnd} ${styles.mono}`}>{tx.balanceAfter.toLocaleString()}</td>
+                    <td className={`${styles.numEnd} ${styles.mono}`}>{formatNumber(tx.balanceAfter)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -225,7 +225,7 @@ export default function LoyaltyProfile() {
               <div className={styles.progressFill} style={{ width: `${progressPct}%` }} />
             </div>
             <div className={styles.progressMeta}>
-              {profile.coinsBalance.toLocaleString()} / {nextTier ? nextTier.minCoins.toLocaleString() : "MAX"} coins ({progressPct}%)
+              {formatNumber(profile.coinsBalance)} / {nextTier ? formatNumber(nextTier.minCoins) : "MAX"} coins ({progressPct}%)
             </div>
             <div className={styles.benefitsTitle}>{tc.tier.benefits}</div>
             <div className={styles.tiersGrid}>
@@ -236,7 +236,7 @@ export default function LoyaltyProfile() {
                 >
                   <div className={styles.tierBenefitName}>{tier.name}</div>
                   <div className={styles.tierBenefitMultiplier}>{tier.multiplier}x</div>
-                  <div className={styles.tierBenefitMin}>{tier.minCoins.toLocaleString()}+ coins</div>
+                  <div className={styles.tierBenefitMin}>{formatNumber(tier.minCoins)}+ coins</div>
                 </div>
               ))}
             </div>

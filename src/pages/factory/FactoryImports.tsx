@@ -24,7 +24,7 @@ const STATUS_VARIANT: Record<ImportOrderStatus, "info" | "warning" | "neutral" |
 };
 
 export default function FactoryImports() {
-  const { t, formatCurrency } = useSettings();
+  const { t, formatCurrency, formatNumber } = useSettings();
   const tc = t.factory.imports;
   const { importOrders: IMPORT_ORDERS, addImportOrder, receiveImport } = useFactory();
   const { toast } = useToast();
@@ -182,7 +182,7 @@ export default function FactoryImports() {
               {detailTarget.items.map((item, idx) => (
                 <tr key={idx}>
                   <td>{item.name}</td>
-                  <td className={`${styles.numEnd} ${styles.mono}`}>{item.quantity.toLocaleString()}</td>
+                  <td className={`${styles.numEnd} ${styles.mono}`}>{formatNumber(item.quantity)}</td>
                   <td>{item.unit}</td>
                   <td className={`${styles.numEnd} ${styles.mono}`}>{formatCurrency(item.unitCost)}</td>
                   <td className={`${styles.numEnd} ${styles.mono}`}>{formatCurrency(item.quantity * item.unitCost)}</td>

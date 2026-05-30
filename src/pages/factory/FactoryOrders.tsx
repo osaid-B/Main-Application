@@ -23,7 +23,7 @@ const STATUS_VARIANT: Record<ProductionOrderStatus, "success" | "warning" | "inf
 };
 
 export default function FactoryOrders() {
-  const { t, isArabic } = useSettings();
+  const { t, formatNumber, isArabic } = useSettings();
   const tc = t.factory.orders;
   const { toast } = useToast();
   const { factoryOrders, boms, factoryProducts, updateOrderStatus } = useFactory();
@@ -107,7 +107,7 @@ export default function FactoryOrders() {
                   <tr key={o.id}>
                     <td><span className={styles.mono}>{o.id}</span></td>
                     <td>{getProductName(o.productId)}</td>
-                    <td className={`${styles.numEnd} ${styles.mono}`}>{o.quantity.toLocaleString()}</td>
+                    <td className={`${styles.numEnd} ${styles.mono}`}>{formatNumber(o.quantity)}</td>
                     <td className={styles.mono}>{o.startDate}</td>
                     <td className={styles.mono}>{o.dueDate}</td>
                     <td><Badge variant={STATUS_VARIANT[o.status]} size="sm">{tc.status[o.status]}</Badge></td>
@@ -138,7 +138,7 @@ export default function FactoryOrders() {
           footer={<Button variant="secondary" onClick={() => setDetail(null)}>{tc.drawer.close}</Button>}>
           <div className={styles.drawerMeta}>
             <span>{tc.cols.product}</span><span>{getProductName(detailTarget.productId)}</span>
-            <span>{tc.cols.quantity}</span><span className={styles.mono}>{detailTarget.quantity.toLocaleString()}</span>
+            <span>{tc.cols.quantity}</span><span className={styles.mono}>{formatNumber(detailTarget.quantity)}</span>
             <span>{tc.cols.startDate}</span><span className={styles.mono}>{detailTarget.startDate}</span>
             <span>{tc.cols.dueDate}</span><span className={styles.mono}>{detailTarget.dueDate}</span>
             <span>{tc.cols.status}</span><span><Badge variant={STATUS_VARIANT[detailTarget.status]} size="sm">{tc.status[detailTarget.status]}</Badge></span>

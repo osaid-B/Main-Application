@@ -16,6 +16,7 @@ import {
 import { useData } from "../context/DataContext";
 import { useSettings } from "../context/SettingsContext";
 import type { Customer } from "../data/types";
+import { formatNumberValue } from "../utils/displayFormatters";
 import styles from "./Customers.module.css";
 
 function relativeDate(iso: string): string {
@@ -28,13 +29,13 @@ function relativeDate(iso: string): string {
 }
 
 function formatBalance(n: number, currency: string): string {
-  return new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(n) + " " + currency;
+  return `${formatNumberValue(n, { maximumFractionDigits: 0 })} ${currency}`;
 }
 
 export default function Customers() {
   const navigate = useNavigate();
   const { customers, deleteCustomer, customerBalanceMap, customerLastOrderMap } = useData();
-  const { t } = useSettings();
+  const { t, formatNumber } = useSettings();
   const [query, setQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
   const [classFilter, setClassFilter] = useState("");
@@ -78,7 +79,7 @@ export default function Customers() {
         <header className={styles.header}>
           <div>
             <h1 className={styles.title}>
-              {t.customers.pageTitle} <span className={styles.titleCount}>· {stats.total.toLocaleString()}</span>
+              {t.customers.pageTitle} <span className={styles.titleCount}>· {formatNumber(stats.total)}</span>
             </h1>
             <p className={styles.subtitle}>{t.customers.pageSubtitle}</p>
           </div>
@@ -111,7 +112,7 @@ export default function Customers() {
 
         {/* Quick stats */}
         <div className={styles.statsRow}>
-          <StatPill label={t.customers.stats.total}       value={stats.total.toLocaleString()} tone="default" />
+          <StatPill label={t.customers.stats.total}       value={formatNumber(stats.total)} tone="default" />
           <StatPill label={t.customers.stats.vip}         value={String(stats.vip)}            tone="warning" />
           <StatPill label={t.customers.stats.active}      value={String(stats.active)}         tone="success" />
           <StatPill label={t.customers.stats.withBalance} value={String(stats.withBalance)}    tone="info" />
@@ -200,7 +201,7 @@ export default function Customers() {
         </div>
 
         <footer className={styles.pagination}>
-          <span>{t.customers.showing} {filtered.length} {t.customers.of} {stats.total.toLocaleString()}</span>
+          <span>{t.customers.showing} {formatNumber(filtered.length)} {t.customers.of} {formatNumber(stats.total)}</span>
         </footer>
       </Stack>
     </Container>

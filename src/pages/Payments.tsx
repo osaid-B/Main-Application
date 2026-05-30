@@ -35,6 +35,7 @@ import { Input } from "../components/ui/Input";
 import { Select } from "../components/ui/Select";
 import { Modal } from "../components/ui/Modal";
 import { useData } from "../context/DataContext";
+import { formatCurrencyValue, formatDateValue } from "../utils/displayFormatters";
 import {
   calculateInvoiceRemainingAmount,
   getCustomerById,
@@ -132,14 +133,14 @@ function normalizeStatus(status?: string): PaymentStatus {
 }
 
 function formatMoney(value: number) {
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2 }).format(roundMoney(value));
+  return formatCurrencyValue(roundMoney(value), "USD");
 }
 
 function formatDate(value: string) {
   if (!value) return "No date";
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) return value;
-  return new Intl.DateTimeFormat("en-US", { day: "2-digit", month: "short", year: "numeric" }).format(parsed);
+  return formatDateValue(parsed, { day: "2-digit", month: "short", year: "numeric" }, "en-US");
 }
 
 function getRelativeDateLabel(value: string) {
@@ -773,7 +774,7 @@ export default function Payments() {
         const d = new Date(p.date);
         return d >= date && d < next && isSuccessfulPaymentStatus(p.status);
       }).reduce((s, p) => s + p.amount, 0);
-      return { label: date.toLocaleDateString("en-US", { month: "short", day: "numeric" }), value: dayTotal };
+      return { label: formatDateValue(date, { month: "short", day: "numeric" }, "en-US"), value: dayTotal };
     });
   }, [payments]);
 

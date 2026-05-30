@@ -25,7 +25,7 @@ const ACTION_VARIANT: Record<CoinAction, "success" | "danger" | "warning" | "inf
 };
 
 export default function CoinsReports() {
-  const { t } = useSettings();
+  const { t, formatNumber } = useSettings();
   const tc = t.pos.coinsReports;
 
   const [actionFilter, setActionFilter] = useState<CoinAction | "">("");
@@ -68,8 +68,8 @@ export default function CoinsReports() {
         </header>
 
         <Grid cols={4} gap="md" responsive>
-          <Kpi label={tc.kpi.issued}   value={totalIssued.toLocaleString()}   sub={tc.kpi.issuedSub}   tone="info"    />
-          <Kpi label={tc.kpi.redeemed} value={totalRedeemed.toLocaleString()} sub={tc.kpi.redeemedSub} tone="success" />
+          <Kpi label={tc.kpi.issued}   value={formatNumber(totalIssued)}      sub={tc.kpi.issuedSub}   tone="info"    />
+          <Kpi label={tc.kpi.redeemed} value={formatNumber(totalRedeemed)}    sub={tc.kpi.redeemedSub} tone="success" />
           <Kpi label={tc.kpi.members}  value={String(uniqueMembers)}          sub={tc.kpi.membersSub}  tone="warning" />
           <Kpi label={tc.kpi.rate}     value={redemptionRate}                 sub={tc.kpi.rateSub}     tone="danger"  />
         </Grid>
@@ -158,7 +158,7 @@ export default function CoinsReports() {
                     {tx.delta >= 0 ? `+${tx.delta}` : String(tx.delta)}
                   </td>
                   <td className={styles.reasonCell}>{tx.reason}</td>
-                  <td className={`${styles.numEnd} ${styles.mono}`}>{tx.balanceAfter.toLocaleString()}</td>
+                  <td className={`${styles.numEnd} ${styles.mono}`}>{formatNumber(tx.balanceAfter)}</td>
                 </tr>
               ))}
               {filteredTx.length === 0 && (

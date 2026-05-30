@@ -19,7 +19,7 @@ const ZONE_VARIANT: Record<WarehouseZone, "info" | "success" | "warning" | "dang
 };
 
 export default function FactoryWarehouse() {
-  const { t } = useSettings();
+  const { t, formatNumber } = useSettings();
   const tc = t.factory.warehouse;
   const { warehouseLocations: WAREHOUSE_LOCATIONS } = useFactory();
 
@@ -41,9 +41,9 @@ export default function FactoryWarehouse() {
         </header>
 
         <Grid cols={4} gap="md" responsive>
-          <Kpi label={tc.kpi.totalCapacity} value={totalCapacity.toLocaleString()} tone="info"    />
-          <Kpi label={tc.kpi.usedCapacity}  value={totalUsed.toLocaleString()}     tone="warning" />
-          <Kpi label={tc.kpi.freeCapacity}  value={totalFree.toLocaleString()}     tone="success" />
+          <Kpi label={tc.kpi.totalCapacity} value={formatNumber(totalCapacity)}    tone="info"    />
+          <Kpi label={tc.kpi.usedCapacity}  value={formatNumber(totalUsed)}        tone="warning" />
+          <Kpi label={tc.kpi.freeCapacity}  value={formatNumber(totalFree)}        tone="success" />
           <Kpi label={tc.kpi.utilisation}   value={`${utilPct}%`}                 tone="neutral" />
         </Grid>
 
@@ -77,9 +77,9 @@ export default function FactoryWarehouse() {
                       <td><span className={styles.mono}>{loc.id}</span></td>
                       <td>{loc.name}</td>
                       <td><Badge variant={ZONE_VARIANT[loc.zone]} size="sm">{tc.zones[loc.zone]}</Badge></td>
-                      <td className={`${styles.numEnd} ${styles.mono}`}>{loc.capacity.toLocaleString()}</td>
-                      <td className={`${styles.numEnd} ${styles.mono}`}>{loc.used.toLocaleString()}</td>
-                      <td className={`${styles.numEnd} ${styles.mono}`}>{free.toLocaleString()}</td>
+                      <td className={`${styles.numEnd} ${styles.mono}`}>{formatNumber(loc.capacity)}</td>
+                      <td className={`${styles.numEnd} ${styles.mono}`}>{formatNumber(loc.used)}</td>
+                      <td className={`${styles.numEnd} ${styles.mono}`}>{formatNumber(free)}</td>
                       <td style={{ minWidth: 100 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                           <div className={styles.utilBar} style={{ width: 60 }}>

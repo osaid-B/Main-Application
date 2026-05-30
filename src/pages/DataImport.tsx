@@ -43,6 +43,7 @@ import {
   savePurchases,
   saveSuppliers,
 } from "../data/storage";
+import { formatDateValue } from "../utils/displayFormatters";
 
 type ImportEntity =
   | "customers"
@@ -295,13 +296,13 @@ function parseCsv(text: string): ParsedCsv {
 }
 
 function formatDateTime(value: string) {
-  return new Intl.DateTimeFormat("en-GB", {
+  return formatDateValue(new Date(value), {
     day: "2-digit",
     month: "short",
     year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
-  }).format(new Date(value));
+  }, "en-GB");
 }
 
 function isValidEmail(value: string) {

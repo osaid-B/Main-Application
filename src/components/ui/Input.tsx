@@ -55,6 +55,8 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
     disabled,
     id,
     className,
+    lang,
+    dir,
     ...rest
   },
   ref,
@@ -76,6 +78,10 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
     : variant;
   const hasError = Boolean(error);
   const effectivelyDisabled = Boolean(disabled || isDisabled);
+  const shouldForceWesternDigits =
+    resolvedType === "number" ||
+    resolvedType === "date" ||
+    resolvedType === "tel";
 
   return (
     <div
@@ -107,6 +113,8 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
           ref={ref}
           id={inputId}
           type={resolvedType}
+          lang={shouldForceWesternDigits ? "en" : lang}
+          dir={shouldForceWesternDigits ? "ltr" : dir}
           disabled={effectivelyDisabled}
           aria-invalid={hasError || undefined}
           aria-describedby={describedById}

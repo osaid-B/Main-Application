@@ -27,7 +27,7 @@ const QC_VARIANT: Record<QcStatus, "success" | "danger" | "warning" | "info"> = 
 };
 
 export default function FactoryBatches() {
-  const { t, formatCurrency } = useSettings();
+  const { t, formatCurrency, formatNumber } = useSettings();
   const tc = t.factory.batches;
   const { batches: PRODUCTION_BATCHES } = useFactory();
 
@@ -104,7 +104,7 @@ export default function FactoryBatches() {
                     <td><span className={styles.mono}>{b.id}</span></td>
                     <td><span className={styles.mono}>{b.productionOrderId}</span></td>
                     <td>{b.productName}</td>
-                    <td className={`${styles.numEnd} ${styles.mono}`}>{b.quantity > 0 ? b.quantity.toLocaleString() : "—"}</td>
+                    <td className={`${styles.numEnd} ${styles.mono}`}>{b.quantity > 0 ? formatNumber(b.quantity) : "—"}</td>
                     <td className={styles.mono}>{b.producedDate || "—"}</td>
                     <td className={styles.mono}>{b.expiryDate || "—"}</td>
                     <td><Badge variant={BATCH_STATUS_VARIANT[b.status]} size="sm">{tc.status[b.status]}</Badge></td>

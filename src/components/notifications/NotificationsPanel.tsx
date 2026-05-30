@@ -4,6 +4,7 @@ import { Bell, Check, CheckCheck, Factory, FileText, Package, ShoppingCart, Star
 import { useNotifications } from "../../context/NotificationsContext";
 import type { Notification, NotificationCategory, NotificationSeverity } from "../../context/NotificationsContext";
 import { useSettings } from "../../context/SettingsContext";
+import { formatDateValue } from "../../utils/displayFormatters";
 import styles from "./NotificationsPanel.module.css";
 
 type T = ReturnType<typeof useSettings>["t"];
@@ -37,7 +38,7 @@ function relTime(ts: Date, t: T): string {
   const diffD = Math.floor(diffH / 24);
   if (diffD === 1) return rl.yesterday;
   if (diffD < 7) return `${rl.prefix}${diffD}${rl.dAgo}`;
-  return ts.toLocaleDateString();
+  return formatDateValue(ts);
 }
 
 export default function NotificationsPanel() {

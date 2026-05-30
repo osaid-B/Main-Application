@@ -10,7 +10,7 @@ type ModuleKey = typeof MODULES[number];
 
 const MODULE_LABELS: Record<ModuleKey, { label: string; labelAr: string }> = {
   pos:       { label: "POS",       labelAr: "نقطة البيع" },
-  customers: { label: "Customers", labelAr: "الزبائن"   },
+  customers: { label: "Customers", labelAr: "العملاء"   },
   invoices:  { label: "Invoices",  labelAr: "الفواتير"  },
   inventory: { label: "Inventory", labelAr: "المخزون"   },
   reports:   { label: "Reports",   labelAr: "التقارير"  },
@@ -40,7 +40,7 @@ export const ROLES: Role[] = [
     permissions: makePerms({ pos: ALL_ON, customers: NO_DELETE, invoices: NO_DELETE, inventory: NO_DELETE, reports: VIEW_EXPORT, employees: VIEW_ONLY, settings: VIEW_ONLY }),
   },
   {
-    id: "role-cashier", name: "Cashier", nameAr: "كاشير",
+    id: "role-cashier", name: "Cashier", nameAr: "أمين الصندوق",
     description: "POS access only.", descriptionAr: "صلاحية POS فقط.",
     userCount: 8, isSystem: false,
     permissions: makePerms({

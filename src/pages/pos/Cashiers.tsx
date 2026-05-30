@@ -24,7 +24,7 @@ const STATUS_VARIANT: Record<CashierStatus, "success" | "neutral" | "warning"> =
 };
 
 export default function Cashiers() {
-  const { t, formatCurrency } = useSettings();
+  const { t, formatCurrency, formatDate } = useSettings();
   const tc = t.pos.cashiers;
   const { cashiers, addCashier, updateCashier } = useData();
 
@@ -146,7 +146,7 @@ export default function Cashiers() {
                   <td>{tc.shift[c.shift]}</td>
                   <td className={`${styles.numEnd} ${styles.mono}`}>{formatCurrency(c.todaySales)}</td>
                   <td className={`${styles.numEnd} ${styles.mono}`}>{c.transactions}</td>
-                  <td className={styles.mono}>{new Date(c.lastActive).toLocaleDateString()}</td>
+                  <td className={styles.mono}>{formatDate(c.lastActive)}</td>
                   <td>
                     <OverflowMenu
                       onEdit={() => setEditing(c)}

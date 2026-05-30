@@ -34,6 +34,7 @@ import type {
   DailyAttendanceEntry,
   DailyAttendanceStatus,
 } from "../data/types";
+import { formatDateValue } from "../utils/displayFormatters";
 
 type EmployeeForm = {
   name: string;
@@ -228,7 +229,7 @@ function getMonthDays(baseDate: string) {
   });
 
   return {
-    monthLabel: ref.toLocaleDateString("en-US", { month: "long", year: "numeric" }),
+    monthLabel: formatDateValue(ref, { month: "long", year: "numeric" }, "en-US"),
     days,
   };
 }
@@ -681,9 +682,9 @@ function TodayAttendanceSection({
   const total = employees.length;
   const pct = (n: number) => total > 0 ? `${Math.round((n / total) * 100)}%` : "0%";
 
-  const dateLabel = new Date(`${selectedDate}T00:00:00`).toLocaleDateString("en-US", {
+  const dateLabel = formatDateValue(new Date(`${selectedDate}T00:00:00`), {
     month: "long", day: "numeric", year: "numeric",
-  });
+  }, "en-US");
 
   const miniCalWeeks = useMemo(() => getMiniCalWeeks(selectedDate), [selectedDate]);
 
@@ -993,7 +994,7 @@ function TodayAttendanceSection({
             </select>
           </div>
           <div className="emp-mini-cal-month">
-            {new Date(`${selectedDate}T00:00:00`).toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+            {formatDateValue(new Date(`${selectedDate}T00:00:00`), { month: "long", year: "numeric" }, "en-US")}
           </div>
           <div className="emp-mini-cal">
             <div className="emp-mini-cal-header">
@@ -1159,7 +1160,11 @@ function MonthlyAttendanceSection({
     if (!visibleDays.length) return "";
     const first = visibleDays[0].date;
     const last = visibleDays[visibleDays.length - 1].date;
-    const fmt = (d: string) => new Date(`${d}T00:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+    const fmt = (d: string) => formatDateValue(new Date(`${d}T00:00:00`), {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    }, "en-US");
     return `Week ${safeWeekIndex + 1} (${fmt(first)} – ${fmt(last)})`;
   })();
 
@@ -1180,7 +1185,7 @@ function MonthlyAttendanceSection({
                 return d.toISOString().slice(0, 7);
               }).map((ym) => (
                 <option key={ym} value={ym}>
-                  {new Date(`${ym}-01`).toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+                  {formatDateValue(new Date(`${ym}-01`), { month: "long", year: "numeric" }, "en-US")}
                 </option>
               ))}
             </select>
@@ -1256,9 +1261,9 @@ function MonthlyAttendanceSection({
                 {visibleDays.map((day) => (
                   <th key={day.date} className={`emp-monthly-day-th ${day.dow === 0 ? "emp-day-sunday" : ""}`}>
                     <span className="emp-day-dow">
-                      {new Date(`${day.date}T00:00:00`).toLocaleDateString("en-US", { weekday: "short" })}
+                      {formatDateValue(new Date(`${day.date}T00:00:00`), { weekday: "short" }, "en-US")}
                     </span>
-                    <span className="emp-day-num">{new Date(`${day.date}T00:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
+                    <span className="emp-day-num">{formatDateValue(new Date(`${day.date}T00:00:00`), { month: "short", day: "numeric" }, "en-US")}</span>
                   </th>
                 ))}
                 <th className="emp-monthly-pct-th">%</th>

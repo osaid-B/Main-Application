@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { useData } from "./DataContext";
 import { useFactory } from "./FactoryContext";
 import { POS_REFUNDS, LOYALTY_PROFILES, LOYALTY_SETTINGS_DEFAULT } from "../data/posMock";
+import { formatCurrencyValue, formatIntegerValue } from "../utils/displayFormatters";
 
 export type NotificationSeverity = "info" | "warning" | "error" | "success";
 export type NotificationCategory = "invoice" | "inventory" | "factory" | "pos" | "loyalty" | "system";
@@ -67,7 +68,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     for (const inv of invoices) {
       if (!inv.date || inv.status === "Paid") continue;
       const customerName = customers.find((c) => c.id === inv.customerId)?.name ?? inv.customerId;
-      const amount = (inv.amount ?? inv.total ?? 0).toLocaleString();
+      const amount = formatCurrencyValue(inv.amount ?? inv.total ?? 0);
 
       if (inv.date < todayStr) {
         list.push({
@@ -77,8 +78,8 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
           severity: "error",
           title: "Overdue Invoice",
           titleAr: "فاتورة متأخرة",
-          body: `${customerName} — ₪${amount} overdue since ${inv.date}`,
-          bodyAr: `${customerName} — ₪${amount} متأخرة منذ ${inv.date}`,
+          body: `${customerName} — ${amount} overdue since ${inv.date}`,
+          bodyAr: `${customerName} — ${amount} متأخرة منذ ${inv.date}`,
           timestamp: new Date(inv.date),
           actionLabel: "View Invoice",
           actionLabelAr: "عرض الفاتورة",
@@ -92,8 +93,8 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
           severity: "warning",
           title: "Invoice Due Soon",
           titleAr: "فاتورة تستحق قريباً",
-          body: `${customerName} — ₪${amount} due on ${inv.date}`,
-          bodyAr: `${customerName} — ₪${amount} تستحق بتاريخ ${inv.date}`,
+          body: `${customerName} — ${amount} due on ${inv.date}`,
+          bodyAr: `${customerName} — ${amount} تستحق بتاريخ ${inv.date}`,
           timestamp: new Date(inv.date),
           actionLabel: "View Invoice",
           actionLabelAr: "عرض الفاتورة",
@@ -197,8 +198,8 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
             severity: "info",
             title: "Coins Expiring Soon",
             titleAr: "نقاط الولاء على وشك الانتهاء",
-            body: `${profile.customerName} — ${profile.coinsBalance.toLocaleString()} coins expire in ${daysLeft} day${daysLeft !== 1 ? "s" : ""}`,
-            bodyAr: `${profile.customerName} — ${profile.coinsBalance.toLocaleString()} نقطة تنتهي خلال ${daysLeft} يوم`,
+            body: `${profile.customerName} — ${formatIntegerValue(profile.coinsBalance)} coins expire in ${daysLeft} day${daysLeft !== 1 ? "s" : ""}`,
+            bodyAr: `${profile.customerName} — ${formatIntegerValue(profile.coinsBalance)} نقطة تنتهي خلال ${daysLeft} يوم`,
             timestamp: expiryDate,
             actionLabel: "View Profile",
             actionLabelAr: "عرض الملف",

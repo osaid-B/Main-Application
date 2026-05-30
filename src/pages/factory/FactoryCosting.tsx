@@ -12,7 +12,7 @@ import { useLoadingDelay } from "../../hooks/useLoadingDelay";
 import styles from "./factory.module.css";
 
 export default function FactoryCosting() {
-  const { t, formatCurrency } = useSettings();
+  const { t, formatCurrency, formatNumber } = useSettings();
   const tc = t.factory.costing;
   const { costingEntries: COSTING_ENTRIES, boms, rawMaterials } = useFactory();
 
@@ -121,7 +121,7 @@ export default function FactoryCosting() {
                       <td className={`${styles.numEnd} ${styles.mono}`}>{e.laborCost > 0 ? formatCurrency(e.laborCost) : "—"}</td>
                       <td className={`${styles.numEnd} ${styles.mono}`}>{e.overheadCost > 0 ? formatCurrency(e.overheadCost) : "—"}</td>
                       <td className={`${styles.numEnd} ${styles.mono}`}>{e.totalCost > 0 ? formatCurrency(e.totalCost) : "—"}</td>
-                      <td className={`${styles.numEnd} ${styles.mono}`}>{e.unitsProduced > 0 ? e.unitsProduced.toLocaleString() : "—"}</td>
+                      <td className={`${styles.numEnd} ${styles.mono}`}>{e.unitsProduced > 0 ? formatNumber(e.unitsProduced) : "—"}</td>
                       <td className={`${styles.numEnd} ${styles.mono}`}>{e.costPerUnit > 0 ? formatCurrency(e.costPerUnit) : "—"}</td>
                       <td className={`${styles.numEnd} ${styles.mono}`} style={varClass}>
                         {e.variance !== 0 ? formatCurrency(Math.abs(e.variance)) : "—"}

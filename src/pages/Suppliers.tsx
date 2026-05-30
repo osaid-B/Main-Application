@@ -34,6 +34,7 @@ import {
 import { useData } from "../context/DataContext";
 import { useSettings } from "../context/SettingsContext";
 import type { Purchase, Supplier } from "../data/types";
+import { formatCurrencyValue } from "../utils/displayFormatters";
 
 type SupplierStatus = "Active" | "Inactive" | "Preferred" | "Blocked";
 
@@ -386,7 +387,7 @@ const formatLocationOption = (location: string) =>
   `${location} - ${LOCATION_AR_LABELS[location] || location}`;
 
 const PAYMENT_TERM_PRESETS = [
-  "Cash - كاش",
+  "Cash - نقداً",
   "Partial payment - دفع جزئي",
   "Half payment - دفع نصفي",
   "Cheque - شيك",
@@ -456,11 +457,7 @@ function buildNextRegistrationNumber(profiles: SupplierProfile[]) {
 }
 
 function money(value: number) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 2,
-  }).format(value || 0);
+  return formatCurrencyValue(value || 0, "USD");
 }
 
 function formatDate(value: string) {
@@ -771,7 +768,7 @@ export default function Suppliers() {
         topRated: isArabic ? "الأعلى تقييماً" : "Top Rated Suppliers",
         thisMonth: isArabic ? "هذا الشهر" : "This month",
         updatedToday: isArabic ? "محدث اليوم" : "Updated today",
-        acrossVendors: isArabic ? "على كل الموردين" : "Across all vendors",
+        acrossVendors: isArabic ? "على مستوى جميع الموردين" : "Across all vendors",
         ratingHint: isArabic ? "4.6 فأعلى" : "4.6 and above",
       },
       filters: {
@@ -1810,7 +1807,7 @@ export default function Suppliers() {
               <div className="simple-suppliers-footer">
                 <span>
                   {isArabic
-                    ? `عرض جميع ${filteredSuppliers.length} موردين`
+                    ? `عرض جميع ${filteredSuppliers.length} مورداً`
                     : `Showing all ${filteredSuppliers.length} suppliers`}
                 </span>
               </div>

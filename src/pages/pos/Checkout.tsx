@@ -21,6 +21,7 @@ import {
   type PosProduct,
 } from "../../data/posMock";
 import { PaymentModal } from "../../components/pos/PaymentModal";
+import { formatIntegerValue, formatTimeValue } from "../../utils/displayFormatters";
 import styles from "./Checkout.module.css";
 
 interface CartLine {
@@ -155,7 +156,7 @@ export default function Checkout() {
     return () => window.removeEventListener("keydown", handler);
   }, [cart.length, attachWalkInDemo]);
 
-  const time = now.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  const time = formatTimeValue(now, { hour: "2-digit", minute: "2-digit", second: "2-digit" }, "en-GB");
 
   return (
     <div className={styles.pos}>
@@ -202,7 +203,7 @@ export default function Checkout() {
             <div className={styles.customerChip}>
               <div className={styles.customerChipBody}>
                 <strong>{customer.name}</strong>
-                <span>{customer.code} · {customer.coins.toLocaleString()} عملة</span>
+                <span>{customer.code} · {formatIntegerValue(customer.coins)} عملة</span>
               </div>
               <Badge variant={customer.tier === "platinum" ? "info" : customer.tier === "gold" ? "warning" : "neutral"} size="sm">
                 {customer.tier === "platinum" ? "Platinum" : customer.tier === "gold" ? "Gold" : "Silver"}

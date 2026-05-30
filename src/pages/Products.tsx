@@ -38,6 +38,7 @@ import {
 
 import type { InvoiceItem, Product, Purchase, Supplier } from "../data/types";
 import { useSettings } from "../context/SettingsContext";
+import { formatCurrencyValue } from "../utils/displayFormatters";
 import { useData } from "../context/DataContext";
 
 type StockFilter = "" | "in" | "low" | "out";
@@ -110,11 +111,7 @@ function normalizeCategoryName(value: string) {
 }
 
 function formatMoney(value: number) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 2,
-  }).format(Number(value || 0));
+  return formatCurrencyValue(Number(value || 0), "USD");
 }
 
 function getStatusLabel(available: number, minStock: number) {

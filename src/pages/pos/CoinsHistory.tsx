@@ -20,7 +20,7 @@ const ACTION_VARIANT: Record<CoinAction, "success" | "danger" | "warning" | "inf
 };
 
 export default function CoinsHistory() {
-  const { t } = useSettings();
+  const { t, formatNumber } = useSettings();
   const tc = t.pos.coinsHistory;
 
   const ACTION_FILTERS: Array<{ value: CoinAction | "all"; label: string }> = [
@@ -106,9 +106,9 @@ export default function CoinsHistory() {
         </header>
 
         <Grid cols={4} gap="md" responsive>
-          <Kpi label={tc.kpi.issued}      value={issued30d.toLocaleString()}      subtitle={tc.kpi.last30days ?? "Last 30 days"} tone="success" />
-          <Kpi label={tc.kpi.redeemed}    value={redeemed30d.toLocaleString()}    subtitle={tc.kpi.last30days ?? "Last 30 days"} tone="info"    />
-          <Kpi label={tc.kpi.outstanding} value={outstanding.toLocaleString()}    subtitle={tc.kpi.allCustomers ?? "All customers"} tone="warning" />
+          <Kpi label={tc.kpi.issued}      value={formatNumber(issued30d)}         subtitle={tc.kpi.last30days ?? "Last 30 days"} tone="success" />
+          <Kpi label={tc.kpi.redeemed}    value={formatNumber(redeemed30d)}       subtitle={tc.kpi.last30days ?? "Last 30 days"} tone="info"    />
+          <Kpi label={tc.kpi.outstanding} value={formatNumber(outstanding)}       subtitle={tc.kpi.allCustomers ?? "All customers"} tone="warning" />
           <Kpi label={tc.kpi.expiring}    value={String(COIN_TRANSACTIONS.filter((tx) => tx.action === "expired").length)} subtitle={tc.kpi.allTime ?? "All time"} tone="danger"  />
         </Grid>
 
@@ -181,7 +181,7 @@ export default function CoinsHistory() {
                   <td className={`${styles.numCol} ${styles.mono} ${tx.delta >= 0 ? styles.gain : styles.loss}`}>
                     {tx.delta >= 0 ? `+${tx.delta}` : tx.delta}
                   </td>
-                  <td className={`${styles.numCol} ${styles.mono}`}>{tx.balanceAfter.toLocaleString()}</td>
+                  <td className={`${styles.numCol} ${styles.mono}`}>{formatNumber(tx.balanceAfter)}</td>
                 </tr>
               ))}
               {filtered.length === 0 && (

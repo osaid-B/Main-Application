@@ -27,6 +27,7 @@ import { Modal } from "../components/ui/Modal";
 import { Badge } from "../components/ui/Badge";
 import { useAuth } from "../context/AuthContext";
 import { useSettings } from "../context/SettingsContext";
+import { formatCurrencyValue, formatDateValue } from "../utils/displayFormatters";
 import {
   getAuditEvents,
   getBankAccounts,
@@ -104,20 +105,16 @@ const ROLE_MATRIX: Record<
 const TODAY = new Date().toISOString().split("T")[0];
 
 function money(value: number, currency = "USD") {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency,
-    minimumFractionDigits: 2,
-  }).format(Number(value || 0));
+  return formatCurrencyValue(Number(value || 0), currency as "USD" | "ILS" | "JOD");
 }
 
 function formatDate(value?: string, isArabic = false) {
   if (!value) return isArabic ? "بدون تاريخ" : "No date";
-  return new Intl.DateTimeFormat("en-GB", {
+  return formatDateValue(new Date(value), {
     day: "2-digit",
     month: "short",
     year: "numeric",
-  }).format(new Date(value));
+  }, "en-GB");
 }
 
 function relTime(dateStr?: string, isArabic = false) {

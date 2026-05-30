@@ -22,7 +22,7 @@ function materialStatus(m: RawMaterial): "ok" | "low" | "critical" {
 const STATUS_VARIANT = { ok: "success", low: "warning", critical: "danger" } as const;
 
 export default function FactoryRawMaterials() {
-  const { t, formatCurrency } = useSettings();
+  const { t, formatCurrency, formatNumber } = useSettings();
   const tc = t.factory.rawMaterials;
   const { rawMaterials } = useFactory();
 
@@ -110,8 +110,8 @@ export default function FactoryRawMaterials() {
                       <td><span className={styles.tag}>{m.category}</span></td>
                       <td><span className={styles.tag}>{tc.originLabel[m.origin]}</span></td>
                       <td>{m.supplier}</td>
-                      <td className={`${styles.numEnd} ${styles.mono}`}>{m.onHand.toLocaleString()} {m.unit}</td>
-                      <td className={`${styles.numEnd} ${styles.mono}`}>{m.reorderPoint.toLocaleString()} {m.unit}</td>
+                      <td className={`${styles.numEnd} ${styles.mono}`}>{formatNumber(m.onHand)} {m.unit}</td>
+                      <td className={`${styles.numEnd} ${styles.mono}`}>{formatNumber(m.reorderPoint)} {m.unit}</td>
                       <td className={`${styles.numEnd} ${styles.mono}`}>{formatCurrency(m.unitCost)}</td>
                       <td className={`${styles.numEnd} ${styles.mono}`}>{formatCurrency(m.onHand * m.unitCost)}</td>
                       <td><Badge variant={STATUS_VARIANT[st]} size="sm">{tc.status[st]}</Badge></td>

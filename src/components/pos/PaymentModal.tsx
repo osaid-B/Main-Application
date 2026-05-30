@@ -5,6 +5,7 @@ import { Button } from "../ui/Button";
 import { Badge } from "../ui/Badge";
 import { Input } from "../ui/Input";
 import type { LoyaltyCustomer } from "../../data/posMock";
+import { formatCurrencyValue, formatIntegerValue } from "../../utils/displayFormatters";
 import styles from "./PaymentModal.module.css";
 
 type Method = "cash" | "card" | "coins" | "transfer";
@@ -75,7 +76,7 @@ export function PaymentModal({
       <header className={styles.head}>
         <div>
           <span className={styles.headLabel}>TOTAL DUE</span>
-          <strong className={styles.headTotal}>₪{total.toFixed(2)}</strong>
+          <strong className={styles.headTotal}>{formatCurrencyValue(total)}</strong>
         </div>
         <div className={styles.headMeta}>
           <span>Sale POS-9821</span>
@@ -112,7 +113,7 @@ export function PaymentModal({
             <MethodCard
               icon={<Sparkles size={18} />}
               label="Coins"
-              hint={customer ? `${customer.coins.toLocaleString()} available` : "NO CUSTOMER"}
+              hint={customer ? `${formatIntegerValue(customer.coins)} available` : "NO CUSTOMER"}
               tone="orange"
               selected={method === "coins"}
               onClick={() => customer && setMethod("coins")}
@@ -153,7 +154,7 @@ export function PaymentModal({
 
           <div className={styles.changeBox}>
             <span>المتبقي للزبون</span>
-            <strong>₪{change.toFixed(2)}</strong>
+            <strong>{formatCurrencyValue(change)}</strong>
           </div>
 
           <div className={styles.quickRow}>
@@ -162,7 +163,7 @@ export function PaymentModal({
               className={`${styles.quickChip} ${cashReceived === total ? styles.quickActive : ""}`}
               onClick={() => setCashReceived(total)}
             >
-              ₪{total.toFixed(2)} <span>(تماماً)</span>
+              {formatCurrencyValue(total)} <span>(تماماً)</span>
             </button>
             {QUICK_CASH.map((amt) => (
               <button
@@ -201,7 +202,7 @@ export function PaymentModal({
 
           <div className={styles.balanceBox}>
             <span>الرصيد المتاح</span>
-            <strong>{customer.coins.toLocaleString()} <em>عملة</em></strong>
+            <strong>{formatIntegerValue(customer.coins)} <em>عملة</em></strong>
           </div>
 
           <div className={styles.sliderWrap}>
@@ -217,8 +218,8 @@ export function PaymentModal({
             />
             <div className={styles.sliderTicks}>
               <span>0</span>
-              <span>{Math.floor(maxCoins / 2).toLocaleString()}</span>
-              <span>{maxCoins.toLocaleString()}</span>
+              <span>{formatIntegerValue(Math.floor(maxCoins / 2))}</span>
+              <span>{formatIntegerValue(maxCoins)}</span>
             </div>
           </div>
 
@@ -237,13 +238,13 @@ export function PaymentModal({
           </div>
 
           <p className={styles.coinsCalc}>
-            استبدال <strong>{coinsToRedeem.toLocaleString()}</strong> عملة
-            → خصم <strong>₪{coinValue.toFixed(2)}</strong>
+            استبدال <strong>{formatIntegerValue(coinsToRedeem)}</strong> عملة
+            → خصم <strong>{formatCurrencyValue(coinValue)}</strong>
           </p>
 
           <div className={styles.finalBox}>
             <span>الإجمالي بعد الخصم</span>
-            <strong>₪{finalTotal.toFixed(2)}</strong>
+            <strong>{formatCurrencyValue(finalTotal)}</strong>
           </div>
 
           <footer className={styles.foot}>
@@ -298,12 +299,12 @@ export function PaymentModal({
           <div className={styles.successDetails}>
             <Row label="الفاتورة"  value="POS-9821" mono />
             <Row label="الطريقة"   value={method === "cash" ? "نقد" : method === "card" ? "بطاقة" : method === "coins" ? "عملات + نقد" : "تحويل"} />
-            <Row label="المدفوع"   value={`₪${(method === "cash" ? cashReceived : finalTotal).toFixed(2)}`} mono />
+            <Row label="المدفوع"   value={formatCurrencyValue(method === "cash" ? cashReceived : finalTotal)} mono />
             {method === "cash" && change > 0 && (
-              <Row label="الباقي" value={`₪${change.toFixed(2)}`} mono tone="success" />
+              <Row label="الباقي" value={formatCurrencyValue(change)} mono tone="success" />
             )}
             {method === "coins" && coinsToRedeem > 0 && (
-              <Row label="عملات مُستبدلة" value={coinsToRedeem.toLocaleString()} mono />
+              <Row label="عملات مُستبدلة" value={formatIntegerValue(coinsToRedeem)} mono />
             )}
           </div>
 

@@ -32,6 +32,7 @@ import {
 } from "../data/storage";
 import type { Product, Purchase, Supplier } from "../data/types";
 import { useSettings } from "../context/SettingsContext";
+import { formatCurrencyValue } from "../utils/displayFormatters";
 
 type PurchaseFormState = {
   supplierId: string;
@@ -152,11 +153,7 @@ const DELETE_CONFIRMATION_CODE = "123";
 const TODAY = new Date().toISOString().split("T")[0];
 
 function money(value: number) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 2,
-  }).format(Number(value || 0));
+  return formatCurrencyValue(Number(value || 0), "USD");
 }
 
 function formatDate(value: string) {

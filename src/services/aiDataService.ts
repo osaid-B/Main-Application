@@ -1,5 +1,6 @@
 import type { DataContextValue } from "../context/DataContext";
 import type { FactoryContextValue } from "../context/FactoryContext";
+import { formatCurrencyValue } from "../utils/displayFormatters";
 
 type DataCtx = Pick<
   DataContextValue,
@@ -121,7 +122,7 @@ export function buildSmartAlerts(data: DataCtx, factory: FactoryCtx): AISmartAle
     alerts.push({
       type: "overdue",
       title: "فواتير متأخرة",
-      detail: `${overdueInvoices.length} فاتورة · ₪${Math.round(total).toLocaleString()}`,
+      detail: `${overdueInvoices.length} فاتورة · ${formatCurrencyValue(Math.round(total))}`,
       severity: overdueInvoices.length > 5 ? "high" : "medium",
     });
   }

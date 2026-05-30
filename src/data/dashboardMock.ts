@@ -133,7 +133,7 @@ export const TIMELINE_EVENTS: TimelineEventData[] = [
     title: "Ram Allah shift started",
     titleAr: "بدء وردية رام الله",
     description: "Supermarket lanes #1-8 cashier sign-in complete.",
-    descriptionAr: "اكتمل تسجيل دخول الكاشيرين — ممرات السوبرماركت 1-8.",
+    descriptionAr: "اكتمل تسجيل دخول أمناء الصندوق — الممرات 1-8 في المتجر.",
   },
   {
     id: "te2", time: "08:30", dot: "purple",

@@ -122,4 +122,4 @@ export const DEFAULT_EXCHANGE_RATES: Record<string, Record<string, number>> = {
 };
 
 export const DATE_FORMAT = "DD/MM/YYYY";
-export const NUMBER_LOCALE = "ar-PS";
+export const NUMBER_LOCALE = "en-US";
