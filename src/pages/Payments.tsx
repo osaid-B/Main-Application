@@ -132,7 +132,7 @@ function normalizeStatus(status?: string): PaymentStatus {
 }
 
 function formatMoney(value: number) {
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2 }).format(roundMoney(value));
+  return new Intl.NumberFormat("ar-IL", { style: "currency", currency: "ILS", minimumFractionDigits: 2 }).format(roundMoney(value));
 }
 
 function formatDate(value: string) {
@@ -164,8 +164,14 @@ function formatStatus(status: PaymentStatus) {
 }
 
 function formatMethod(method: PaymentMethod) {
-  if (method === "Bank Transfer") return "Bank transfer";
-  return method;
+  switch (method) {
+    case "Cash": return "نقداً";
+    case "Card": return "بطاقة";
+    case "Bank Transfer": return "تحويل بنكي";
+    case "Wallet": return "محفظة إلكترونية";
+    case "Cheque": return "شيك";
+    default: return "أخرى";
+  }
 }
 
 function getMethodIcon(method: PaymentMethod) {
@@ -341,7 +347,7 @@ function PaymentEditor({
 
                 <div className="field-block">
                   <div className="amount-input-wrap">
-                    <span className="amount-prefix">$</span>
+                    <span className="amount-prefix">₪</span>
                     <Input
                       variant="number"
                       label={`${t.payments.form.amount} *`}
@@ -878,10 +884,10 @@ export default function Payments() {
         {/* ── KPI Row (4 cards) ── */}
         <div className="pay-kpi-row">
           {[
-            { icon: CreditCard, color: "blue", label: "Total Payments", value: formatMoney(metrics.totalAmount), meta: "↑ 18.7%", metaClass: "up", sub: "vs last 7 days" },
-            { icon: CalendarRange, color: "purple", label: "Pending Payments", value: formatMoney(metrics.pendingAmount), meta: "↑ 12.4%", metaClass: "up", sub: `${metrics.pendingCount} payments` },
-            { icon: CheckCircle2, color: "green", label: "Completed Payments", value: formatMoney(metrics.completedAmount), meta: "↑ 25.4%", metaClass: "up", sub: `${metrics.completedCount} payments` },
-            { icon: XCircle, color: "red", label: "Failed / Refunded", value: formatMoney(metrics.failedRefundedAmount), meta: "— 0%", metaClass: "", sub: `${metrics.failedRefundedCount} payments` },
+            { icon: CreditCard, color: "blue", label: "إجمالي الدفعات", value: formatMoney(metrics.totalAmount), meta: "↑ 18.7%", metaClass: "up", sub: "vs last 7 days" },
+            { icon: CalendarRange, color: "purple", label: "دفعات معلقة", value: formatMoney(metrics.pendingAmount), meta: "↑ 12.4%", metaClass: "up", sub: `${metrics.pendingCount} payments` },
+            { icon: CheckCircle2, color: "green", label: "دفعات مكتملة", value: formatMoney(metrics.completedAmount), meta: "↑ 25.4%", metaClass: "up", sub: `${metrics.completedCount} payments` },
+            { icon: XCircle, color: "red", label: "فاشلة / مُستردة", value: formatMoney(metrics.failedRefundedAmount), meta: "— 0%", metaClass: "", sub: `${metrics.failedRefundedCount} payments` },
           ].map((kpi) => {
             const Icon = kpi.icon;
             return (
@@ -908,7 +914,7 @@ export default function Payments() {
           {/* Toolbar */}
           <div className="pay-ops-header">
             <div className="pay-ops-title-block">
-              <h2>Recent Payment Operations</h2>
+              <h2>عمليات الدفع الأخيرة</h2>
               <span className="pay-ops-count-badge">{filteredPayments.length} payment{filteredPayments.length === 1 ? "" : "s"}</span>
             </div>
             <div className="pay-ops-toolbar">
@@ -1068,7 +1074,7 @@ export default function Payments() {
 
               <div className="pay-ops-footer">
                 <span className="pay-footer-info">
-                  Showing {(effectivePage - 1) * rowsPerPage + 1}–{Math.min(effectivePage * rowsPerPage, filteredPayments.length)} of {filteredPayments.length} payments
+                  عرض {(effectivePage - 1) * rowsPerPage + 1}–{Math.min(effectivePage * rowsPerPage, filteredPayments.length)} من {filteredPayments.length} دفعة
                 </span>
                 <div className="pay-footer-center">
                   <button type="button" className="pay-pg-btn" disabled={effectivePage === 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>‹</button>
@@ -1111,21 +1117,21 @@ export default function Payments() {
         <aside className="pay-sidebar">
           {/* Payment Summary */}
           <div className="pay-sidebar-card">
-            <h3 className="pay-sidebar-heading">Payment Summary</h3>
-            <p className="pay-sidebar-subheading">Methods</p>
+            <h3 className="pay-sidebar-heading">ملخص الدفعات</h3>
+            <p className="pay-sidebar-subheading">طرق الدفع</p>
             <ul className="pay-sidebar-methods">
               {[
-                { label: "Cash", color: "#2563eb" },
-                { label: "Bank Transfer", color: "#16a34a" },
-                { label: "Card", color: "#f59e0b" },
-                { label: "Cheque", color: "#7c3aed" },
-                { label: "Other", color: "#94a3b8" },
+                { key: "Cash", label: "نقداً", color: "#2563eb" },
+                { key: "Bank Transfer", label: "تحويل بنكي", color: "#16a34a" },
+                { key: "Card", label: "بطاقة", color: "#f59e0b" },
+                { key: "Cheque", label: "شيك", color: "#7c3aed" },
+                { key: "Other", label: "أخرى", color: "#94a3b8" },
               ].map((m) => {
-                const found = methodBreakdown.find((b) => b.method === m.label);
+                const found = methodBreakdown.find((b) => b.method === m.key);
                 const pct = found ? (found.pct * 100).toFixed(1) : "0";
                 const amt = found ? formatMoney(found.amount) : formatMoney(0);
                 return (
-                  <li key={m.label} className="pay-method-row">
+                  <li key={m.key} className="pay-method-row">
                     <span className="pay-method-dot" style={{ background: m.color }} />
                     <span className="pay-method-name">{m.label}</span>
                     <span className="pay-method-amount">{amt} ({pct}%)</span>
@@ -1140,11 +1146,8 @@ export default function Payments() {
             <h3 className="pay-sidebar-heading">Quick Actions</h3>
             <ul className="pay-sidebar-actions">
               {[
-                { icon: Plus, label: "Record Payment", action: openCreateModal },
-                { icon: FileText, label: "Apply to Invoice", action: () => setToast({ type: "info", message: "Open an invoice to apply a payment." }) },
-                { icon: RotateCcw, label: "Refund Payment", action: () => setToast({ type: "info", message: "Select a payment to refund." }) },
-                { icon: ArrowUpDown, label: "Payment Matching", action: () => setToast({ type: "info", message: "Payment matching is coming soon." }) },
-                { icon: Landmark, label: "Bank Reconciliation", action: () => setToast({ type: "info", message: "Bank reconciliation is coming soon." }) },
+                { icon: Plus, label: "سجّل دفعة", action: openCreateModal },
+                { icon: FileText, label: "ربط بفاتورة", action: () => setToast({ type: "info", message: "Open an invoice to apply a payment." }) },
               ].map((item) => {
                 const Icon = item.icon;
                 return (
