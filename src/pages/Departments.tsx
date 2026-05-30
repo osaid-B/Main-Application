@@ -44,7 +44,8 @@ export default function Departments() {
 
   function parentName(parentId?: string) {
     if (!parentId) return null;
-    return departments.find((d) => d.id === parentId)?.name ?? null;
+    const p = departments.find((d) => d.id === parentId);
+    return p ? (p.nameAr || p.name) : null;
   }
 
   function saveDepartment(data: Omit<Department, "id">) {
@@ -138,8 +139,8 @@ export default function Departments() {
                     <tr key={d.id} onClick={() => setDetailDept(d)} style={{ cursor: "pointer" }}>
                       <td>
                         <div className={`${styles.deptCell} ${d.parentId ? styles.deptCellChild : ""}`}>
-                          <div className={styles.deptName}>{d.name}</div>
-                          <div className={styles.deptNameAr}>{d.nameAr}</div>
+                          <div className={styles.deptName}>{d.nameAr || d.name}</div>
+                          <div className={styles.deptNameAr}>{d.name}</div>
                           {parent && <span className={styles.parentBadge}>{parent}</span>}
                         </div>
                       </td>
@@ -231,7 +232,7 @@ function OrgNode({ dept, children, staffLabel }: { dept: Department; children: D
   return (
     <div className={styles.orgBranch}>
       <div className={styles.orgNode}>
-        <div className={styles.orgNodeName}>{dept.name}</div>
+        <div className={styles.orgNodeName}>{dept.nameAr || dept.name}</div>
         <div className={styles.orgNodeMeta}>{dept.headcount} {staffLabel}</div>
       </div>
       {children.length > 0 && (
@@ -239,7 +240,7 @@ function OrgNode({ dept, children, staffLabel }: { dept: Department; children: D
           {children.map((child) => (
             <div key={child.id} className={styles.orgChildNode}>
               <div className={styles.orgNode}>
-                <div className={styles.orgNodeName}>{child.name}</div>
+                <div className={styles.orgNodeName}>{child.nameAr || child.name}</div>
                 <div className={styles.orgNodeMeta}>{child.headcount} {staffLabel}</div>
               </div>
             </div>
@@ -312,7 +313,7 @@ function DepartmentFormModal({
             <select className={styles.formSelect} value={parentId} onChange={(e) => setParentId(e.target.value)}>
               <option value="">{tc.form.none}</option>
               {allDepts.filter((d) => !initial || d.id !== initial.id).map((d) => (
-                <option key={d.id} value={d.id}>{d.name}</option>
+                <option key={d.id} value={d.id}>{d.nameAr || d.name}</option>
               ))}
             </select>
           </div>
@@ -346,8 +347,8 @@ function DeptDetailDrawer({
       <aside className={styles.drawer} onClick={(e) => e.stopPropagation()}>
         <div className={styles.drawerHeader}>
           <div>
-            <div className={styles.drawerTitle}>{dept.name}</div>
-            <div className={styles.drawerSub}>{dept.nameAr}</div>
+            <div className={styles.drawerTitle}>{dept.nameAr || dept.name}</div>
+            <div className={styles.drawerSub}>{dept.name}</div>
           </div>
           <button type="button" className={styles.drawerClose} onClick={onClose}>✕</button>
         </div>
