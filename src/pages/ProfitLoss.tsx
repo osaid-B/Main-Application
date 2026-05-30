@@ -26,17 +26,37 @@ function getDefaultDates(period: Period): { from: string; to: string } {
   return { from: new Date(now.getFullYear(), 0, 1).toISOString().slice(0, 10), to };
 }
 
+function formatPLAmount(value: number, fmt: FmtFn): { text: string; negative: boolean } {
+  const abs = Math.abs(value);
+  const formatted = fmt(abs, "ILS");
+  return { text: value < 0 ? `(${formatted})` : formatted, negative: value < 0 };
+}
+
 function PLRow({ label, cur, pr, isTotal = false, isNet = false, isSub = false, compare, fmt, varFn }: {
   label: string; cur: number; pr?: number; isTotal?: boolean; isNet?: boolean; isSub?: boolean;
   compare: boolean; fmt: FmtFn; varFn: VarFn;
 }) {
   const v = varFn(cur, pr);
   const cls = isNet ? styles.netIncomeRow : isTotal ? styles.totalRow : isSub ? styles.subtotalRow : styles.dataRow;
+  const curFmt = formatPLAmount(cur, fmt);
+  const prFmt = pr !== undefined ? formatPLAmount(pr, fmt) : null;
   return (
     <tr className={cls}>
       <td>{label}</td>
-      <td className={styles.mono}>{fmt(cur, "ILS")}</td>
-      {compare && <td className={styles.mono}>{pr !== undefined ? fmt(pr, "ILS") : "—"}</td>}
+      <td className={styles.mono}>
+        <span style={curFmt.negative ? { color: "var(--app-danger, var(--atlas-red, #dc2626))" } : undefined}>
+          {curFmt.text}
+        </span>
+      </td>
+      {compare && (
+        <td className={styles.mono}>
+          {prFmt ? (
+            <span style={prFmt.negative ? { color: "var(--app-danger, var(--atlas-red, #dc2626))" } : undefined}>
+              {prFmt.text}
+            </span>
+          ) : "—"}
+        </td>
+      )}
       {compare && (
         <td className={v ? (v.positive ? styles.varPos : styles.varNeg) : ""}>
           {v ? `${v.positive ? "+" : ""}${fmt(v.diff, "ILS")} (${v.pct}%)` : "—"}

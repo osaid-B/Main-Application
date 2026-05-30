@@ -36,6 +36,13 @@ const SEV_BORDER: Record<NotificationSeverity, string> = {
   success: styles.sevSuccess,
 };
 
+const SEVERITY_AR: Record<string, string> = {
+  error:   "خطأ",
+  warning: "تحذير",
+  info:    "معلومة",
+  success: "نجاح",
+};
+
 type T = ReturnType<typeof useSettings>["t"];
 
 function relTime(ts: Date, t: T): string {
@@ -179,7 +186,7 @@ export default function Notifications() {
                           <div className={styles.cardTop}>
                             <div className={styles.cardMeta}>
                               <span className={styles.cardTitle}>{title}</span>
-                              <Badge variant={SEV_VARIANT[n.severity]} size="sm">{n.severity}</Badge>
+                              <Badge variant={SEV_VARIANT[n.severity]} size="sm">{isArabic ? (SEVERITY_AR[n.severity] ?? n.severity) : n.severity}</Badge>
                             </div>
                             <div className={styles.cardRight}>
                               <span className={styles.cardTime}>{relTime(n.timestamp, t)}</span>
@@ -187,6 +194,7 @@ export default function Notifications() {
                                 type="button"
                                 className={styles.dismissBtn}
                                 aria-label="Dismiss notification"
+                                style={{ minWidth: 32, minHeight: 32, display: "flex", alignItems: "center", justifyContent: "center" }}
                                 onClick={(e) => { e.stopPropagation(); dismiss(n.id); }}
                               >
                                 <X size={12} />
