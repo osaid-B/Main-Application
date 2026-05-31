@@ -1,10 +1,13 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Eye, MoreHorizontal } from "lucide-react";
 
 export interface RowAction {
   label: string;
   onClick: () => void;
   variant?: "danger";
+  show?: boolean;
+  icon?: React.ReactNode;
 }
 
 export interface RowActionsProps {
@@ -15,61 +18,120 @@ export interface RowActionsProps {
 
 export function RowActions({ onView, primary, items = [] }: RowActionsProps) {
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState({ top: 0, left: 0 });
+  const btnRef = useRef<HTMLButtonElement>(null);
+
+  function openMenu() {
+    if (!btnRef.current) return;
+    const rect = btnRef.current.getBoundingClientRect();
+    const visibleItems = items.filter((a) => a.show !== false);
+    const menuHeight = visibleItems.length * 40 + 16;
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const spaceAbove = rect.top;
+
+    const top =
+      spaceBelow < menuHeight && spaceAbove > menuHeight
+        ? rect.top - menuHeight + window.scrollY
+        : rect.bottom + 4 + window.scrollY;
+
+    const isRTL =
+      document.dir === "rtl" || document.documentElement.dir === "rtl";
+    const left = isRTL
+      ? rect.right - 180 + window.scrollX
+      : rect.left + window.scrollX;
+
+    setPos({ top, left });
+    setOpen(true);
+  }
 
   useEffect(() => {
     if (!open) return;
-    function handler(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
+    function handler() {
+      setOpen(false);
     }
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [open]);
 
+  useEffect(() => {
+    if (!open) return;
+    function handler() {
+      setOpen(false);
+    }
+    window.addEventListener("scroll", handler, true);
+    return () => window.removeEventListener("scroll", handler, true);
+  }, [open]);
+
+  const visibleItems = items.filter((a) => a.show !== false);
+
   return (
-    <div ref={ref} className={`ra-wrap${open ? " ra-wrap--open" : ""}`}>
+    <div className="ra-wrap" onClick={(e) => e.stopPropagation()}>
       {onView && (
         <button type="button" className="ra-eye" onClick={onView} title="عرض">
           <Eye size={13} />
         </button>
       )}
+
       {primary && (
-        <button type="button" className="ra-primary" onClick={primary.onClick}>
+        <button
+          type="button"
+          className="ra-primary"
+          onClick={(e) => {
+            e.stopPropagation();
+            primary.onClick();
+          }}
+        >
+          {primary.icon}
           {primary.label}
         </button>
       )}
-      {items.length > 0 && (
-        <div className="ra-overflow">
+
+      {visibleItems.length > 0 && (
+        <>
           <button
+            ref={btnRef}
             type="button"
-            className="ra-overflow-btn"
+            className={`ra-overflow-btn${open ? " ra-overflow-btn--open" : ""}`}
             onClick={(e) => {
               e.stopPropagation();
-              setOpen((o) => !o);
+              open ? setOpen(false) : openMenu();
             }}
+            title="المزيد"
           >
             <MoreHorizontal size={13} />
           </button>
-          {open && (
-            <div className="ra-menu">
-              {items.map((item) => (
-                <button
-                  key={item.label}
-                  type="button"
-                  className={`ra-menu-item${item.variant === "danger" ? " ra-menu-item--danger" : ""}`}
-                  onClick={() => {
-                    setOpen(false);
-                    item.onClick();
-                  }}
-                >
-                  {item.label}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+
+          {open &&
+            createPortal(
+              <div
+                className="ra-menu"
+                style={{
+                  position: "fixed",
+                  top: pos.top,
+                  left: pos.left,
+                  zIndex: 9999,
+                }}
+                onMouseDown={(e) => e.stopPropagation()}
+              >
+                {visibleItems.map((item) => (
+                  <button
+                    key={item.label}
+                    type="button"
+                    className={`ra-menu-item${item.variant === "danger" ? " ra-menu-item--danger" : ""}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setOpen(false);
+                      item.onClick();
+                    }}
+                  >
+                    {item.icon}
+                    {item.label}
+                  </button>
+                ))}
+              </div>,
+              document.body
+            )}
+        </>
       )}
     </div>
   );
