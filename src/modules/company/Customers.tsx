@@ -67,32 +67,36 @@ function fmtDate(iso: string): string {
 
 export default function CustomersPage() {
   const navigate = useNavigate();
-  const { customers, deleteCustomer } = useData();
+  const { customers: rawCustomers, deleteCustomer } = useData();
   const { formatCurrency } = useSettings();
+
+  // Guard against null/undefined leaking through from corrupted localStorage
+  const customers = Array.isArray(rawCustomers) ? rawCustomers : [];
 
   const [search, setSearch] = useState("");
   const [filterCity, setFilterCity] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
 
   const activeCustomers = useMemo(
-    () => customers.filter((c) => !c.isDeleted),
+    () => (customers ?? []).filter((c) => !c.isDeleted),
     [customers]
   );
 
   const stats = useMemo(() => {
-    const total = activeCustomers.length;
-    const outstanding = activeCustomers.reduce(
+    const safe = activeCustomers ?? [];
+    const total = safe.length;
+    const outstanding = safe.reduce(
       (sum, c) => sum + (c.outstandingBalance ?? 0),
       0
     );
-    const vip = activeCustomers.filter((c) => c.classification === "vip").length;
-    const active = activeCustomers.filter((c) => c.status === "active").length;
+    const vip = safe.filter((c) => c.classification === "vip").length;
+    const active = safe.filter((c) => c.status === "active").length;
     return { total, outstanding, vip, active };
   }, [activeCustomers]);
 
   const cities = useMemo(() => {
     const set = new Set<string>();
-    activeCustomers.forEach((c) => {
+    (activeCustomers ?? []).forEach((c) => {
       if (c.governorate) set.add(c.governorate);
       else if (c.city) set.add(c.city);
     });
@@ -101,7 +105,7 @@ export default function CustomersPage() {
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return activeCustomers.filter((c) => {
+    return (activeCustomers ?? []).filter((c) => {
       const matchSearch =
         !q ||
         c.name.toLowerCase().includes(q) ||
@@ -115,7 +119,7 @@ export default function CustomersPage() {
 
   const PAGE_SIZE = 25;
   const [page, setPage] = useState(1);
-  const pageItems = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const pageItems = (filtered ?? []).slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   function handleDelete(id: string) {
     if (window.confirm("هل أنت متأكد؟")) {

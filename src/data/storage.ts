@@ -66,7 +66,10 @@ function readStorage<T>(key: string, fallback: T): T {
   if (!data) return fallback;
 
   try {
-    return JSON.parse(data) as T;
+    const parsed = JSON.parse(data) as T;
+    // JSON.parse("null") returns null — fall back to default rather than
+    // letting a null/undefined value poison array-typed state.
+    return parsed ?? fallback;
   } catch {
     localStorage.removeItem(key);
     return fallback;
