@@ -11,6 +11,7 @@ import { FactoryProvider } from "./context/FactoryContext";
 import { NotificationsProvider } from "./context/NotificationsContext";
 import { SidebarPreferencesProvider } from "./context/SidebarPreferencesContext";
 import { CompanySettingsProvider } from "./context/CompanySettingsContext";
+import { TreasuryProvider } from "./context/TreasuryContext";
 
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
@@ -260,9 +261,11 @@ export default function App() {
         <FactoryProvider>
           <NotificationsProvider>
             <SidebarPreferencesProvider>
-              <ErrorBoundary>
-                <AppRoutes />
-              </ErrorBoundary>
+              <TreasuryProvider>
+                <ErrorBoundary>
+                  <AppRoutes />
+                </ErrorBoundary>
+              </TreasuryProvider>
             </SidebarPreferencesProvider>
           </NotificationsProvider>
         </FactoryProvider>

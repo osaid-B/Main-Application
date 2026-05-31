@@ -1,212 +1,98 @@
 import "./Treasury.css";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useCallback } from "react";
 import {
   AlertTriangle,
-  Banknote,
-  BrainCircuit,
+  ArrowRight,
+  BanknoteIcon,
   ChevronLeft,
   ChevronRight,
-  CreditCard,
+  Download,
   Eye,
   FileScan,
   Landmark,
-  Lock,
-  MoreVertical,
+  Plus,
   RefreshCcw,
   Search,
   ShieldCheck,
-  Upload,
-  X,
 } from "lucide-react";
-import { createPortal } from "react-dom";
-import OverflowContent from "../components/ui/OverflowContent";
+import { useNavigate } from "react-router-dom";
 import { Button } from "../components/ui/Button";
-import { Input } from "../components/ui/Input";
-import { Select } from "../components/ui/Select";
-import { Modal } from "../components/ui/Modal";
-import { Badge } from "../components/ui/Badge";
-import { useAuth } from "../context/AuthContext";
+import { Tooltip } from "../components/ui/Tooltip";
 import { useSettings } from "../context/SettingsContext";
+import { useTreasury } from "../context/TreasuryContext";
+import type { TreasuryInstrument, InstrumentStatus } from "../types/treasury";
 import {
-  getAuditEvents,
-  getBankAccounts,
-  getBankTransfers,
-  getCustomers,
-  getIncomingCheques,
-  getInvoices,
-  getOCRExtractions,
-  getOutgoingCheques,
-  getPayments,
-  getReconciliationItems,
-  getSuppliers,
-  saveAuditEvents,
-  saveBankTransfers,
-  saveIncomingCheques,
-  saveOCRExtractions,
-  saveOutgoingCheques,
-} from "../data/storage";
-import type {
-  AuditEvent,
-  BankTransfer,
-  ChequeInstrument,
-  OCRExtraction,
-  OCRFieldReview,
-  ReconciliationItem,
-} from "../data/types";
+  PALESTINIAN_BANKS,
+  STATUS_AR,
+  TYPE_AR,
+  DIRECTION_LABELS_AR,
+} from "../types/treasury";
+import { TreasuryDetailPanel } from "./TreasuryDetailPanel";
+import { AddInstrumentModal } from "./TreasuryAddModal";
+import {
+  DepositModal,
+  ClearModal,
+  BounceModal,
+  ReDepositModal,
+  LegalInfoModal,
+  CancelModal,
+} from "./TreasuryStatusModals";
 
-type TreasuryTab =
-  | "overview"
-  | "incoming"
-  | "outgoing"
-  | "transfers"
-  | "reconciliation";
+// ─── Types ────────────────────────────────────────────────────────────────────
 
-type DetailRecord =
-  | { type: "incoming"; record: ChequeInstrument }
-  | { type: "outgoing"; record: ChequeInstrument }
-  | { type: "transfer"; record: BankTransfer };
+type TreasuryTab = "overview" | "incoming" | "outgoing" | "transfers" | "guarantees";
 
-type OCRTarget =
-  | { type: "incoming"; record: ChequeInstrument; extraction: OCRExtraction }
-  | { type: "outgoing"; record: ChequeInstrument; extraction: OCRExtraction }
-  | { type: "transfer"; record: BankTransfer; extraction: OCRExtraction };
+type ActionModal =
+  | { type: "deposit";   instrument: TreasuryInstrument }
+  | { type: "clear";     instrument: TreasuryInstrument }
+  | { type: "bounce";    instrument: TreasuryInstrument }
+  | { type: "redeposit"; instrument: TreasuryInstrument }
+  | { type: "legal";     instrument: TreasuryInstrument }
+  | { type: "cancel";    instrument: TreasuryInstrument }
+  | { type: "add_check"; direction: "incoming" | "outgoing" }
+  | { type: "add_transfer"; direction: "incoming" | "outgoing" };
 
-type TreasuryRole = "Admin" | "Finance" | "Sales" | "Inventory";
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
-type UnifiedRow = {
-  id: string;
-  avatarLabel: string;
-  avatarBg: string;
-  avatarColor: string;
-  reference: string;
-  subLabel: string;
-  typeLabel: string;
-  typeBg: string;
-  typeColor: string;
-  party: string;
-  status: string;
-  date: string;
-  amount: number | null;
-  currency: string;
-  onView: () => void;
-};
+const TODAY_ISO = new Date().toISOString().slice(0, 10);
 
-const ROLE_MATRIX: Record<
-  TreasuryRole,
-  { approve: boolean; verifyTransfer: boolean; correctOCR: boolean; reconcile: boolean }
-> = {
-  Admin:     { approve: true,  verifyTransfer: true,  correctOCR: true,  reconcile: true  },
-  Finance:   { approve: true,  verifyTransfer: true,  correctOCR: true,  reconcile: true  },
-  Sales:     { approve: false, verifyTransfer: false, correctOCR: false, reconcile: false },
-  Inventory: { approve: false, verifyTransfer: false, correctOCR: false, reconcile: false },
-};
-
-const TODAY = new Date().toISOString().split("T")[0];
-
-function money(value: number, currency = "USD") {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency,
-    minimumFractionDigits: 2,
-  }).format(Number(value || 0));
+function dueDateToISO(ddmmyyyy: string): string {
+  if (!ddmmyyyy) return "";
+  if (ddmmyyyy.includes("-")) return ddmmyyyy;
+  const [dd, mm, yyyy] = ddmmyyyy.split("/");
+  return `${yyyy}-${mm}-${dd}`;
 }
 
-function formatDate(value?: string, isArabic = false) {
-  if (!value) return isArabic ? "بدون تاريخ" : "No date";
-  return new Intl.DateTimeFormat("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  }).format(new Date(value));
+function isOverdue(instrument: TreasuryInstrument): boolean {
+  if (["cleared", "cancelled"].includes(instrument.status)) return false;
+  const iso = dueDateToISO(instrument.dueDate);
+  return iso < TODAY_ISO;
 }
 
-function relTime(dateStr?: string, isArabic = false) {
-  if (!dateStr) return "";
-  const diff = Math.ceil(
-    (new Date(dateStr).getTime() - new Date(TODAY).getTime()) / (1000 * 60 * 60 * 24)
-  );
-  if (diff > 0) return isArabic ? `خلال ${diff} ${diff === 1 ? "يوم" : "أيام"}` : `In ${diff} day${diff === 1 ? "" : "s"}`;
-  if (diff < 0) return isArabic ? `قبل ${Math.abs(diff)} ${Math.abs(diff) === 1 ? "يوم" : "أيام"}` : `${Math.abs(diff)} day${Math.abs(diff) === 1 ? "" : "s"} ago`;
-  return isArabic ? "اليوم" : "Today";
+function formatMoney(amount: number, currency: string): string {
+  const sym: Record<string, string> = { ILS: "₪", JOD: "د.أ", USD: "$" };
+  return `${sym[currency] ?? currency}${amount.toLocaleString("ar-PS", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-function confidenceLabel(value: number, isArabic = false) {
-  if (value >= 0.9) return isArabic ? "ثقة عالية" : "High confidence";
-  if (value >= 0.75) return isArabic ? "ثقة متوسطة" : "Medium confidence";
-  return isArabic ? "تحتاج مراجعة" : "Needs review";
+function statusBadgeClass(status: InstrumentStatus): string {
+  return `trs-badge trs-badge--${status}`;
 }
 
-function urgencyLabel(dueDate: string, isArabic = false) {
-  const diff = Math.ceil(
-    (new Date(dueDate).getTime() - new Date(TODAY).getTime()) / (1000 * 60 * 60 * 24)
-  );
-  if (diff < 0) return isArabic ? `متأخر ${Math.abs(diff)} ${Math.abs(diff) === 1 ? "يوماً" : "أيام"}` : `Overdue by ${Math.abs(diff)} day${Math.abs(diff) === 1 ? "" : "s"}`;
-  if (diff === 0) return isArabic ? "مستحق اليوم" : "Due today";
-  if (diff === 1) return isArabic ? "مستحق غداً" : "Due tomorrow";
-  return isArabic ? `مستحق خلال ${diff} أيام` : `Due in ${diff} days`;
+function rowClass(inst: TreasuryInstrument): string {
+  if (inst.status === "bounced")          return "trs-row--bounced";
+  if (inst.status === "under_review")     return "trs-row--review";
+  if (isOverdue(inst))                    return "trs-row--overdue";
+  return "";
 }
 
-function statusLabel(status: string, isArabic = false) {
-  if (!isArabic) return status;
-
-  const labels: Record<string, string> = {
-    Approved: "معتمد",
-    Bounced: "مرتجع",
-    Cancelled: "ملغى",
-    Cleared: "محصّل",
-    Collected: "محصّل",
-    Corrected: "مصحح",
-    Delivered: "مسلّم",
-    Deposited: "مودع",
-    "Fully Applied": "مسوّى بالكامل",
-    Held: "محتجز",
-    Issued: "مصدر",
-    "Partially Applied": "مسوّى جزئياً",
-    Pending: "معلّق",
-    "Pending Verification": "بانتظار التحقق",
-    "Post-dated": "مؤجل",
-    Received: "مستلم",
-    Rejected: "مرفوض",
-    Returned: "معاد",
-    Reviewed: "مراجع",
-    "Under Collection": "قيد التحصيل",
-    Verified: "موثّق",
-    Voided: "ملغى",
-  };
-
-  return labels[status] ?? status;
+function rowExtraClass(inst: TreasuryInstrument): string {
+  if (!inst.micrVerified && inst.micrRaw) return "trs-row--ocr-unverified";
+  return "";
 }
 
-function roleLabel(role: TreasuryRole, isArabic = false) {
-  if (!isArabic) return role;
+// ─── Render pagination buttons ────────────────────────────────────────────────
 
-  switch (role) {
-    case "Admin":
-      return "المدير";
-    case "Finance":
-      return "المالية";
-    case "Sales":
-      return "المبيعات";
-    case "Inventory":
-      return "المخزون";
-    default:
-      return role;
-  }
-}
-
-function statusTone(status: string) {
-  if (["Cleared", "Verified", "Approved", "Fully Applied", "Collected"].includes(status)) return "success";
-  if (["Pending Verification", "Deposited", "Under Collection", "Partially Applied", "Issued", "Delivered", "Held", "Post-dated"].includes(status)) return "warning";
-  if (["Bounced", "Rejected", "Cancelled", "Returned", "Voided"].includes(status)) return "danger";
-  return "neutral";
-}
-
-function averageConfidence(fields: OCRFieldReview[]) {
-  if (fields.length === 0) return 0;
-  return fields.reduce((sum, item) => sum + item.confidence, 0) / fields.length;
-}
-
-function renderPages(page: number, total: number, setPage: (p: number) => void) {
+function renderPageButtons(page: number, total: number, setPage: (p: number) => void) {
   if (total <= 1) return null;
   const pages: (number | "…")[] = [];
   if (total <= 5) {
@@ -222,880 +108,758 @@ function renderPages(page: number, total: number, setPage: (p: number) => void) 
     p === "…" ? (
       <span key={`e${idx}`} className="trs-pg-ellipsis">…</span>
     ) : (
-      <Button
+      <button
         key={p}
         type="button"
-        variant="ghost"
         className={`trs-pg-btn${page === p ? " active" : ""}`}
         onClick={() => setPage(p as number)}
       >
         {p}
-      </Button>
+      </button>
     )
   );
 }
 
-export default function Treasury() {
-  const { user } = useAuth();
-  const { t, isArabic } = useSettings();
-  const customers  = useMemo(() => getCustomers(),  []);
-  const suppliers  = useMemo(() => getSuppliers(),  []);
-  const invoices   = useMemo(() => getInvoices(),   []);
-  const payments   = useMemo(() => getPayments(),   []);
-  const bankAccounts = useMemo(() => getBankAccounts(), []);
+// ─── Context-aware row action buttons ─────────────────────────────────────────
 
-  const [incomingCheques,  setIncomingCheques]  = useState(() => getIncomingCheques());
-  const [outgoingCheques,  setOutgoingCheques]  = useState(() => getOutgoingCheques());
-  const [bankTransfers,    setBankTransfers]    = useState(() => getBankTransfers());
-  const [ocrExtractions,   setOcrExtractions]   = useState(() => getOCRExtractions());
-  const [auditEvents,      setAuditEvents]      = useState(() => getAuditEvents());
-  const [reconciliationItems] = useState<ReconciliationItem[]>(() => getReconciliationItems());
-  const [activeTab,    setActiveTab]    = useState<TreasuryTab>("overview");
-  const [searchTerm,   setSearchTerm]   = useState("");
-  const [statusFilter, setStatusFilter] = useState("All");
-  const [detailRecord, setDetailRecord] = useState<DetailRecord | null>(null);
-  const [ocrTarget,    setOcrTarget]    = useState<OCRTarget | null>(null);
-  const [toast,        setToast]        = useState<string>("");
-  const [page,         setPage]         = useState(1);
-  const [rowsPerPage,  setRowsPerPage]  = useState(10);
-
-  const rolePreset = (localStorage.getItem("app-role-preset") as TreasuryRole) || "Admin";
-  const access = ROLE_MATRIX[rolePreset] ?? ROLE_MATRIX.Admin;
-  const activeAccountsLabel = isArabic
-    ? bankAccounts.length === 2
-      ? "عبر حسابين خزينة نشطين"
-      : `عبر ${bankAccounts.length} حسابات خزينة نشطة`
-    : `Across ${bankAccounts.length} active treasury accounts`;
-
-  const combinedSignals = useMemo(() => {
-    const dueSoon = incomingCheques.filter(
-      (item) =>
-        ["Received", "Held", "Deposited", "Under Collection"].includes(item.status) &&
-        new Date(item.dueDate).getTime() <= new Date(TODAY).getTime() + 3 * 24 * 60 * 60 * 1000
-    ).length;
-    const bounced = [...incomingCheques, ...outgoingCheques].filter(
-      (item) => item.status === "Bounced"
-    ).length;
-    const pendingVerification = bankTransfers.filter(
-      (item) => item.status === "Pending Verification"
-    ).length;
-    const lowConfidence = ocrExtractions.filter(
-      (item) => item.averageConfidence < 0.8 || item.status !== "Reviewed"
-    ).length;
-    return { dueSoon, bounced, pendingVerification, lowConfidence };
-  }, [bankTransfers, incomingCheques, ocrExtractions, outgoingCheques]);
-
-  const filteredIncoming = useMemo(() => {
-    return incomingCheques.filter((item) => {
-      const q = [item.chequeNumber, item.accountHolder, item.bankName, item.notes].filter(Boolean).join(" ").toLowerCase();
-      return q.includes(searchTerm.toLowerCase()) && (statusFilter === "All" || item.status === statusFilter);
-    });
-  }, [incomingCheques, searchTerm, statusFilter]);
-
-  const filteredOutgoing = useMemo(() => {
-    return outgoingCheques.filter((item) => {
-      const q = [item.chequeNumber, item.accountHolder, item.bankName, item.notes].filter(Boolean).join(" ").toLowerCase();
-      return q.includes(searchTerm.toLowerCase()) && (statusFilter === "All" || item.status === statusFilter);
-    });
-  }, [outgoingCheques, searchTerm, statusFilter]);
-
-  const filteredTransfers = useMemo(() => {
-    return bankTransfers.filter((item) => {
-      const q = [item.transferReference, item.senderOrReceiver, item.sourceBank, item.destinationBank, item.notes].filter(Boolean).join(" ").toLowerCase();
-      return q.includes(searchTerm.toLowerCase()) && (statusFilter === "All" || item.status === statusFilter);
-    });
-  }, [bankTransfers, searchTerm, statusFilter]);
-
-  const ocrQueue = useMemo(() => {
-    return ocrExtractions.filter((item) => item.status !== "Reviewed").sort((a, b) => a.averageConfidence - b.averageConfidence);
-  }, [ocrExtractions]);
-
-  const unifiedRows = useMemo((): UnifiedRow[] => {
-    const rows: UnifiedRow[] = [];
-
-    filteredIncoming.forEach((r) => {
-      const customer = customers.find((c) => c.id === r.customerId);
-      rows.push({
-        id: r.id,
-        avatarLabel: "CHQ",
-        avatarBg: "#dbeafe",
-        avatarColor: "#1d4ed8",
-        reference: r.chequeNumber,
-        subLabel: isArabic ? "شيك" : "Cheque",
-        typeLabel: isArabic ? "وارد" : "Incoming",
-        typeBg: "#dbeafe",
-        typeColor: "#1d4ed8",
-        party: customer?.name ?? r.accountHolder,
-        status: r.status,
-        date: r.dueDate,
-        amount: r.amount,
-        currency: r.currency,
-        onView: () => setDetailRecord({ type: "incoming", record: r }),
-      });
-    });
-
-    filteredOutgoing.forEach((r) => {
-      const supplier = suppliers.find((s) => s.id === r.supplierId);
-      rows.push({
-        id: r.id,
-        avatarLabel: "CHQ",
-        avatarBg: "#ffedd5",
-        avatarColor: "#ea580c",
-        reference: r.chequeNumber,
-        subLabel: isArabic ? "شيك" : "Cheque",
-        typeLabel: isArabic ? "صادر" : "Outgoing",
-        typeBg: "#ffedd5",
-        typeColor: "#ea580c",
-        party: supplier?.name ?? r.accountHolder,
-        status: r.status,
-        date: r.dueDate,
-        amount: r.amount,
-        currency: r.currency,
-        onView: () => setDetailRecord({ type: "outgoing", record: r }),
-      });
-    });
-
-    filteredTransfers.forEach((r) => {
-      rows.push({
-        id: r.id,
-        avatarLabel: "TRF",
-        avatarBg: "#dcfce7",
-        avatarColor: "#16a34a",
-        reference: r.transferReference,
-        subLabel: isArabic ? "تحويل بنكي" : "Bank Transfer",
-        typeLabel: r.direction === "incoming"
-          ? (isArabic ? "وارد" : "Incoming")
-          : (isArabic ? "صادر" : "Outgoing"),
-        typeBg: r.direction === "incoming" ? "#dbeafe" : "#ffedd5",
-        typeColor: r.direction === "incoming" ? "#1d4ed8" : "#ea580c",
-        party: r.senderOrReceiver,
-        status: r.status,
-        date: r.transferDate,
-        amount: r.amount,
-        currency: r.currency,
-        onView: () => setDetailRecord({ type: "transfer", record: r }),
-      });
-    });
-
-    ocrQueue.forEach((r) => {
-      rows.push({
-        id: r.id,
-        avatarLabel: "OCR",
-        avatarBg: "#f1f5f9",
-        avatarColor: "#64748b",
-        reference: r.id,
-        subLabel: isArabic ? "أداة مالية" : "Instrument",
-        typeLabel: isArabic ? "مراجعة" : "Review",
-        typeBg: "#f1f5f9",
-        typeColor: "#64748b",
-        party: isArabic ? "مراجعة يدوية" : "Manual review",
-        status: "Pending",
-        date: r.capturedAt,
-        amount: null,
-        currency: "USD",
-        onView: () => {
-          const transfer = bankTransfers.find((t) => t.ocrExtractionId === r.id);
-          if (transfer) { setOcrTarget({ type: "transfer", record: transfer, extraction: r }); return; }
-          const incoming = incomingCheques.find((c) => c.ocrExtractionId === r.id);
-          if (incoming) setOcrTarget({ type: "incoming", record: incoming, extraction: r });
-        },
-      });
-    });
-
-    return rows;
-  }, [bankTransfers, customers, filteredIncoming, filteredOutgoing, filteredTransfers, incomingCheques, isArabic, ocrQueue, suppliers]);
-
-  const totalPages = Math.ceil(unifiedRows.length / rowsPerPage);
-  const pagedRows  = unifiedRows.slice((page - 1) * rowsPerPage, page * rowsPerPage);
-
-  const activeStatuses = useMemo(() => {
-    const values = new Set<string>(["All"]);
-    [...incomingCheques, ...outgoingCheques, ...bankTransfers].forEach((item) => values.add(item.status));
-    return Array.from(values);
-  }, [bankTransfers, incomingCheques, outgoingCheques]);
-
-  const postAudit = (event: AuditEvent) => {
-    const next = [event, ...auditEvents];
-    setAuditEvents(next);
-    saveAuditEvents(next);
-  };
-
-  const showToast = (message: string) => {
-    setToast(message);
-    window.setTimeout(() => setToast(""), 2800);
-  };
-
-  const handleApproveCheque = (record: ChequeInstrument, direction: "incoming" | "outgoing") => {
-    if (!access.approve) {
-      showToast(isArabic ? "صلاحيتك لا تسمح باعتماد الشيكات." : "Your role cannot approve cheque actions.");
-      return;
-    }
-    const ts = new Date().toISOString();
-    const nextStatus: ChequeInstrument["status"] =
-      direction === "incoming" ? (record.status === "Deposited" ? "Under Collection" : "Approved") : "Approved";
-    if (direction === "incoming") {
-      const next = incomingCheques.map((item) => item.id === record.id ? { ...item, status: nextStatus, approvedBy: user?.username ?? rolePreset, updatedAt: ts } : item);
-      setIncomingCheques(next); saveIncomingCheques(next);
-    } else {
-      const next = outgoingCheques.map((item) => item.id === record.id ? { ...item, status: nextStatus, approvedBy: user?.username ?? rolePreset, updatedAt: ts } : item);
-      setOutgoingCheques(next); saveOutgoingCheques(next);
-    }
-    postAudit({ id: `AUD-${record.id}-${ts}`, entityType: direction === "incoming" ? "incoming-cheque" : "outgoing-cheque", entityId: record.id, action: "Approval recorded", actor: user?.username ?? "system", actorRole: rolePreset, timestamp: ts, details: `Status moved to ${nextStatus}.` });
-    showToast(isArabic ? "تم تسجيل اعتماد الشيك." : "Cheque approval recorded.");
-  };
-
-  const handleVerifyTransfer = (record: BankTransfer) => {
-    if (!access.verifyTransfer) {
-      showToast(isArabic ? "صلاحيتك لا تسمح بالتحقق من التحويلات البنكية." : "Your role cannot verify bank transfers.");
-      return;
-    }
-    const ts = new Date().toISOString();
-    const next = bankTransfers.map((item) => item.id === record.id ? { ...item, status: "Verified" as BankTransfer["status"], approvedBy: user?.username ?? rolePreset, updatedAt: ts } : item);
-    setBankTransfers(next); saveBankTransfers(next);
-    postAudit({ id: `AUD-${record.id}-${ts}`, entityType: "bank-transfer", entityId: record.id, action: "Transfer verified", actor: user?.username ?? "system", actorRole: rolePreset, timestamp: ts, details: `Transfer ${record.transferReference} verified and ready for settlement posting.` });
-    showToast(isArabic ? "تم التحقق من التحويل البنكي." : "Bank transfer verified.");
-  };
-
-  const handleSaveOcrCorrections = (updatedFields: OCRFieldReview[]) => {
-    if (!ocrTarget) return;
-    if (!access.correctOCR) {
-      showToast(isArabic ? "صلاحيتك لا تسمح بتصحيح بيانات OCR." : "Your role cannot correct OCR data.");
-      return;
-    }
-    const ts = new Date().toISOString();
-    const nextExtraction = { ...ocrTarget.extraction, status: "Corrected" as const, fields: updatedFields, averageConfidence: averageConfidence(updatedFields) };
-    const next = ocrExtractions.map((item) => item.id === nextExtraction.id ? nextExtraction : item);
-    setOcrExtractions(next); saveOCRExtractions(next);
-    postAudit({ id: `AUD-${nextExtraction.id}-${ts}`, entityType: "ocr-extraction", entityId: nextExtraction.id, action: "OCR corrected", actor: user?.username ?? "system", actorRole: rolePreset, timestamp: ts, details: `Manual corrections saved for ${ocrTarget.type} ${ocrTarget.record.id}.` });
-    setOcrTarget(null);
-    showToast(isArabic ? "تم حفظ تصحيحات OCR وتدقيقها." : "OCR corrections saved and audited.");
-  };
-
-  const openOCR = (type: OCRTarget["type"], record: ChequeInstrument | BankTransfer) => {
-    const extraction = ocrExtractions.find((item) => item.id === record.ocrExtractionId);
-    if (extraction) setOcrTarget({ type, record: record as never, extraction } as OCRTarget);
-  };
-
-  const renderLinkage = (record: DetailRecord["record"]) => {
-    const customer  = "customerId" in record && record.customerId  ? customers.find((c) => c.id === record.customerId)  : undefined;
-    const supplier  = "supplierId" in record && record.supplierId  ? suppliers.find((s) => s.id === record.supplierId)  : undefined;
-    const invoice   = "invoiceId"  in record && record.invoiceId   ? invoices.find((i)  => i.id === record.invoiceId)   : undefined;
-    const payment   = "paymentId"  in record && record.paymentId   ? payments.find((p)  => p.id === record.paymentId)   : undefined;
-    const journalEntry = "transferReference" in record ? record.linkedJournal : record.journalLink;
-    const td = t.treasury.drawer;
-    return (
-      <div className="treasury-detail-links">
-        <div><span>{td.labelCustomer}</span><strong>{customer?.name ?? td.notLinked}</strong></div>
-        <div><span>{td.labelSupplier}</span><strong>{supplier?.name ?? td.notLinked}</strong></div>
-        <div><span>{td.labelInvoice}</span><strong>{invoice?.id ?? td.notLinked}</strong></div>
-        <div><span>{td.labelPayment}</span><strong>{payment?.paymentId ?? payment?.id ?? td.notLinked}</strong></div>
-        <div><span>{td.labelJournal}</span><strong>{journalEntry?.journalEntryId ?? td.readyToMap}</strong></div>
-        <div><span>{td.labelPosting}</span><strong>{journalEntry?.postingState ?? td.notMapped}</strong></div>
-      </div>
-    );
-  };
-
-  const switchTab = (tab: TreasuryTab) => { setActiveTab(tab); setPage(1); };
-
+function RowActions({
+  instrument,
+  onView,
+  onDeposit,
+  onClear,
+  onBounce,
+  onRedeposit,
+  onLegal,
+  onCancel,
+  onSubmit,
+}: {
+  instrument: TreasuryInstrument;
+  onView: () => void;
+  onDeposit: () => void;
+  onClear: () => void;
+  onBounce: () => void;
+  onRedeposit: () => void;
+  onLegal: () => void;
+  onCancel: () => void;
+  onSubmit: () => void;
+}) {
+  const { status } = instrument;
   return (
-    <div className="trs-page">
+    <div className="tc-actions" onClick={e => e.stopPropagation()}>
+      <Button variant="icon" size="sm" className="trs-icon-btn" onClick={onView} title="عرض التفاصيل">
+        <Eye size={14} />
+      </Button>
 
-      {/* ── Header ─────────────────────────────────────────── */}
-      <header className="trs-header">
-        <div className="trs-header-eyebrow">
-          <Landmark size={14} />
-          {t.treasury.pageTitle}
-        </div>
-        <p className="trs-header-sub">{t.treasury.pageSubtitle}</p>
-      </header>
-
-      {/* ── KPI Row ────────────────────────────────────────── */}
-      <div className="trs-kpi-row">
-        <div className="trs-kpi-card">
-          <div className="trs-kpi-icon trs-kpi-icon--blue"><Landmark size={20} /></div>
-          <div>
-            <span className="trs-kpi-label">{t.treasury.overview.bankAccounts}</span>
-            <strong className="trs-kpi-value">
-              {money(bankAccounts.reduce((sum, a) => sum + a.currentBalance, 0))}
-            </strong>
-            <span className="trs-kpi-link">{activeAccountsLabel}</span>
-          </div>
-        </div>
-        <div className="trs-kpi-card">
-          <div className="trs-kpi-icon trs-kpi-icon--amber"><Banknote size={20} /></div>
-          <div>
-            <span className="trs-kpi-label">{isArabic ? "شيكات واردة مستحقة قريباً" : "Incoming Cheques Due Soon"}</span>
-            <strong className="trs-kpi-value">{combinedSignals.dueSoon}</strong>
-            <span className="trs-kpi-note">{isArabic ? "مؤجلة أو تستحق خلال 3 أيام" : "Post-dated or maturing within 3 days"}</span>
-          </div>
-        </div>
-        <div className="trs-kpi-card">
-          <div className="trs-kpi-icon trs-kpi-icon--red"><AlertTriangle size={20} /></div>
-          <div>
-            <span className="trs-kpi-label">{isArabic ? "أدوات مالية مرتجعة" : "Bounced Instruments"}</span>
-            <strong className="trs-kpi-value">{combinedSignals.bounced}</strong>
-            <span className="trs-kpi-note">{isArabic ? "تحتاج متابعة أو عكساً أو إجراءً من العميل أو المورد" : "Need follow-up, reversal, or customer/supplier action"}</span>
-          </div>
-        </div>
-        <div className="trs-kpi-card">
-          <div className="trs-kpi-icon trs-kpi-icon--purple"><FileScan size={20} /></div>
-          <div>
-            <span className="trs-kpi-label">{isArabic ? "قائمة OCR" : "OCR Queue"}</span>
-            <strong className="trs-kpi-value">{ocrQueue.length}</strong>
-            <span className="trs-kpi-note">
-              {isArabic
-                ? `${combinedSignals.lowConfidence} عناصر تحتاج تحققاً يدوياً`
-                : `${combinedSignals.lowConfidence} items need manual validation`}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* ── Body ───────────────────────────────────────────── */}
-      <div className="trs-body">
-
-        {/* Content column */}
-        <div className="trs-content-col">
-
-          {/* Toolbar */}
-          <div className="trs-toolbar">
-            <div className="trs-toolbar-top">
-              <div className="trs-search">
-                <Search size={15} />
-                <Input
-                  variant="search"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder={t.treasury.searchPlaceholder}
-                />
-              </div>
-              <Select
-                className="trs-status-select"
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                options={activeStatuses.map((s) => ({ value: s, label: s === "All" ? (isArabic ? "الكل" : "All") : statusLabel(s, isArabic) }))}
-              />
-              <div className="trs-tab-group">
-                {([["overview", t.treasury.tabs.overview], ["incoming", t.treasury.tabs.incoming], ["outgoing", t.treasury.tabs.outgoing]] as [TreasuryTab, string][]).map(([key, label]) => (
-                  <Button key={key} type="button" variant="ghost" className={`trs-tab-btn${activeTab === key ? " active" : ""}`} onClick={() => switchTab(key)}>
-                    {label}
-                  </Button>
-                ))}
-              </div>
-            </div>
-            <div className="trs-sub-tab-group">
-              {([["overview", t.common.all], ["transfers", t.treasury.tabs.transfers], ["reconciliation", t.treasury.tabs.reconciliation]] as [TreasuryTab, string][]).map(([key, label]) => (
-                <Button key={key} type="button" variant="ghost" className={`trs-sub-tab-btn${activeTab === key ? " active" : ""}`} onClick={() => switchTab(key)}>
-                  {label}
-                </Button>
-              ))}
-            </div>
-          </div>
-
-          {/* ── Overview / unified table ── */}
-          {activeTab === "overview" && (
-            <div className="trs-table-card">
-              <div className="trs-table-wrap">
-                <table className="trs-table">
-                  <colgroup>
-                    <col style={{ width: "22%" }} />
-                    <col style={{ width: "10%" }} />
-                    <col style={{ width: "18%" }} />
-                    <col style={{ width: "13%" }} />
-                    <col style={{ width: "16%" }} />
-                    <col style={{ width: "12%" }} />
-                    <col style={{ width: "9%" }} />
-                  </colgroup>
-                  <thead>
-                    <tr>
-                      <th>{t.treasury.cols.reference}</th>
-                      <th>{t.common.type}</th>
-                      <th>{t.treasury.cols.party}</th>
-                      <th>{t.treasury.cols.status}</th>
-                      <th>{t.treasury.cols.date}</th>
-                      <th>{t.treasury.cols.amount}</th>
-                      <th>{t.treasury.cols.actions}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {pagedRows.map((row) => (
-                      <tr key={row.id}>
-                        <td>
-                          <div className="trs-item-cell">
-                            <div className="trs-avatar" style={{ background: row.avatarBg, color: row.avatarColor }}>
-                              {row.avatarLabel}
-                            </div>
-                            <div>
-                              <strong className="numeric-cell">{row.reference}</strong>
-                              <span className="trs-sub-label">{row.subLabel}</span>
-                            </div>
-                          </div>
-                        </td>
-                        <td>
-                          <Badge variant="info" className="trs-type-badge" style={{ background: row.typeBg, color: row.typeColor }}>
-                            {row.typeLabel}
-                          </Badge>
-                        </td>
-                        <td className="trs-party-cell">{row.party}</td>
-                        <td>
-                          <Badge variant={statusTone(row.status) as "success" | "warning" | "danger" | "neutral"} className={`trs-status-badge trs-status--${statusTone(row.status)}`}>
-                            {statusLabel(row.status, isArabic)}
-                          </Badge>
-                        </td>
-                        <td>
-                          <div className="trs-date-cell">
-                            <span className="numeric-cell">{formatDate(row.date, isArabic)}</span>
-                            <span className="trs-date-sub">{relTime(row.date, isArabic)}</span>
-                          </div>
-                        </td>
-                        <td>
-                          {row.amount !== null
-                            ? <strong className="trs-amount numeric-cell">{money(row.amount, row.currency)}</strong>
-                            : <span className="trs-muted">—</span>}
-                        </td>
-                        <td>
-                          <div className="trs-row-actions">
-                            <Button type="button" variant="icon" className="trs-icon-btn" onClick={row.onView} title={isArabic ? "عرض التفاصيل" : "View details"}>
-                              <Eye size={15} />
-                            </Button>
-                            <Button type="button" variant="icon" className="trs-icon-btn" title={isArabic ? "خيارات إضافية" : "More options"}>
-                              <MoreVertical size={15} />
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                    {pagedRows.length === 0 && (
-                      <tr>
-                        <td colSpan={7} className="trs-empty-row">
-                          {isArabic ? "لا توجد أدوات تطابق البحث." : "No instruments match your search."}
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-              <div className="trs-pagination">
-                <span className="trs-pg-meta">
-                  {isArabic
-                    ? `عرض ${unifiedRows.length === 0 ? 0 : (page - 1) * rowsPerPage + 1} إلى ${Math.min(page * rowsPerPage, unifiedRows.length)} من ${unifiedRows.length} عناصر`
-                    : `Showing ${unifiedRows.length === 0 ? 0 : (page - 1) * rowsPerPage + 1} to ${Math.min(page * rowsPerPage, unifiedRows.length)} of ${unifiedRows.length} items`}
-                </span>
-                <div className="trs-pg-controls">
-                  <Button type="button" variant="ghost" className="trs-pg-btn" onClick={() => setPage((p) => p - 1)} disabled={page === 1}>
-                    <ChevronLeft size={14} />
-                  </Button>
-                  {renderPages(page, totalPages, setPage)}
-                  <Button type="button" variant="ghost" className="trs-pg-btn" onClick={() => setPage((p) => p + 1)} disabled={page >= totalPages}>
-                    <ChevronRight size={14} />
-                  </Button>
-                </div>
-                <Select
-                  className="trs-rpp-select"
-                  value={String(rowsPerPage)}
-                  onChange={(e) => { setRowsPerPage(Number(e.target.value)); setPage(1); }}
-                  options={[5, 10, 20].map((n) => ({ value: String(n), label: isArabic ? `صفحة / ${n}` : `${n} / page` }))}
-                />
-              </div>
-            </div>
-          )}
-
-          {/* ── Incoming Cheques ── */}
-          {activeTab === "incoming" && (
-            <div className="trs-table-card">
-              <div className="trs-table-inner-head">
-                <strong>{t.treasury.tabs.incoming}</strong>
-                <span className="trs-table-sub">{t.treasury.pageSubtitle}</span>
-              </div>
-              <div className="trs-table-wrap">
-                <table className="trs-table">
-                  <thead>
-                    <tr>
-                      <th>{t.treasury.cols.reference}</th><th>{t.common.customer}</th><th>{t.treasury.cols.dueDate}</th>
-                      <th>{t.treasury.cols.amount}</th><th>{t.treasury.cols.status}</th><th>OCR</th><th>{t.treasury.cols.actions}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredIncoming.map((record) => {
-                      const customer   = customers.find((c) => c.id === record.customerId);
-                      const extraction = ocrExtractions.find((e) => e.id === record.ocrExtractionId);
-                      return (
-                        <tr key={record.id}>
-                          <td>
-                            <div className="trs-item-cell">
-                              <div className="trs-avatar" style={{ background: "#dbeafe", color: "#1d4ed8" }}>CHQ</div>
-                              <div><strong className="numeric-cell">{record.chequeNumber}</strong><span className="trs-sub-label">{record.bankName}</span></div>
-                            </div>
-                          </td>
-                          <td><div><strong>{customer?.name ?? record.accountHolder}</strong><span className="trs-sub-label">{record.invoiceId ? `${isArabic ? "فاتورة" : "Invoice"} ${record.invoiceId}` : (isArabic ? "غير مسوّى" : "Unapplied")}</span></div></td>
-                          <td><div><strong className="numeric-cell">{formatDate(record.dueDate, isArabic)}</strong><span className={`trs-sub-label${new Date(record.dueDate) < new Date(TODAY) ? " trs-danger-text" : ""}`}>{urgencyLabel(record.dueDate, isArabic)}</span></div></td>
-                          <td><strong className="trs-amount numeric-cell">{money(record.amount, record.currency)}</strong></td>
-                          <td><Badge variant={statusTone(record.status) as "success" | "warning" | "danger" | "neutral"} className={`trs-status-badge trs-status--${statusTone(record.status)}`}>{statusLabel(record.status, isArabic)}</Badge></td>
-                          <td>
-                            {extraction
-                              ? <Button type="button" variant="secondary" className="trs-mini-btn" onClick={() => openOCR("incoming", record)}>{Math.round(extraction.averageConfidence * 100)}% · {isArabic ? "مراجعة" : "Review"}</Button>
-                              : <span className="trs-muted">{isArabic ? "بدون OCR" : "No OCR"}</span>}
-                          </td>
-                          <td>
-                            <div className="trs-row-actions">
-                              <Button type="button" variant="icon" className="trs-icon-btn" onClick={() => setDetailRecord({ type: "incoming", record })}><Eye size={15} /></Button>
-                              <Button type="button" variant="primary" className="trs-mini-btn trs-mini-btn--primary" disabled={!access.approve} onClick={() => handleApproveCheque(record, "incoming")}>{isArabic ? "اعتماد" : "Approve"}</Button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
-          {/* ── Outgoing Cheques ── */}
-          {activeTab === "outgoing" && (
-            <div className="trs-table-card">
-              <div className="trs-table-inner-head">
-                <strong>{t.treasury.tabs.outgoing}</strong>
-                <span className="trs-table-sub">{t.treasury.pageSubtitle}</span>
-              </div>
-              <div className="trs-table-wrap">
-                <table className="trs-table">
-                  <thead>
-                    <tr>
-                      <th>{t.treasury.cols.reference}</th><th>{t.common.supplier}</th><th>{t.treasury.cols.dueDate}</th>
-                      <th>{t.treasury.cols.amount}</th><th>{t.treasury.cols.status}</th><th>{t.common.notes}</th><th>{t.treasury.cols.actions}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredOutgoing.map((record) => {
-                      const supplier = suppliers.find((s) => s.id === record.supplierId);
-                      return (
-                        <tr key={record.id}>
-                          <td>
-                            <div className="trs-item-cell">
-                              <div className="trs-avatar" style={{ background: "#ffedd5", color: "#ea580c" }}>CHQ</div>
-                              <div><strong className="numeric-cell">{record.chequeNumber}</strong><span className="trs-sub-label">{record.bankName}</span></div>
-                            </div>
-                          </td>
-                          <td><div><strong>{supplier?.name ?? record.accountHolder}</strong><span className="trs-sub-label">{record.linkedPurchaseId ? `${isArabic ? "شراء" : "Purchase"} ${record.linkedPurchaseId}` : (isArabic ? "بدون ربط مستحقات" : "No payable link")}</span></div></td>
-                          <td><div><strong className="numeric-cell">{formatDate(record.dueDate, isArabic)}</strong><span className="trs-sub-label">{urgencyLabel(record.dueDate, isArabic)}</span></div></td>
-                          <td><strong className="trs-amount numeric-cell">{money(record.amount, record.currency)}</strong></td>
-                          <td><Badge variant={statusTone(record.status) as "success" | "warning" | "danger" | "neutral"} className={`trs-status-badge trs-status--${statusTone(record.status)}`}>{statusLabel(record.status, isArabic)}</Badge></td>
-                          <td><span className="trs-muted">{record.journalLink?.postingState ?? (isArabic ? "غير مرتبط" : "Not mapped")}</span></td>
-                          <td>
-                            <div className="trs-row-actions">
-                              <Button type="button" variant="icon" className="trs-icon-btn" onClick={() => setDetailRecord({ type: "outgoing", record })}><Eye size={15} /></Button>
-                              <Button type="button" variant="primary" className="trs-mini-btn trs-mini-btn--primary" disabled={!access.approve} onClick={() => handleApproveCheque(record, "outgoing")}>{isArabic ? "اعتماد" : "Approve"}</Button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
-          {/* ── Bank Transfers ── */}
-          {activeTab === "transfers" && (
-            <div className="trs-table-card">
-              <div className="trs-table-inner-head">
-                <strong>{t.treasury.tabs.transfers}</strong>
-                <span className="trs-table-sub">{t.treasury.pageSubtitle}</span>
-              </div>
-              <div className="trs-table-wrap">
-                <table className="trs-table">
-                  <thead>
-                    <tr>
-                      <th>{t.treasury.form.transfer.reference}</th><th>{t.treasury.form.transfer.from}</th><th>{t.treasury.cols.date}</th>
-                      <th>{t.treasury.cols.amount}</th><th>{t.treasury.cols.status}</th><th>OCR</th><th>{t.treasury.cols.actions}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredTransfers.map((record) => {
-                      const extraction = ocrExtractions.find((e) => e.id === record.ocrExtractionId);
-                      return (
-                        <tr key={record.id}>
-                          <td>
-                            <div className="trs-item-cell">
-                              <div className="trs-avatar" style={{ background: "#dcfce7", color: "#16a34a" }}>TRF</div>
-                              <div><strong className="numeric-cell">{record.transferReference}</strong><span className="trs-sub-label">{record.direction === "incoming" ? (isArabic ? "تحويل وارد" : "Incoming transfer") : (isArabic ? "تحويل صادر" : "Outgoing transfer")}</span></div>
-                            </div>
-                          </td>
-                          <td><div><strong>{record.senderOrReceiver}</strong><span className="trs-sub-label">{record.sourceBank} → {record.destinationBank}</span></div></td>
-                          <td><div><strong className="numeric-cell">{formatDate(record.transferDate, isArabic)}</strong><span className="trs-sub-label">{record.settlementDate ? `${isArabic ? "تسوية" : "Settles"} ${formatDate(record.settlementDate, isArabic)}` : (isArabic ? "بانتظار التسوية" : "Settlement pending")}</span></div></td>
-                          <td><strong className="trs-amount numeric-cell">{money(record.amount, record.currency)}</strong></td>
-                          <td><Badge variant={statusTone(record.status) as "success" | "warning" | "danger" | "neutral"} className={`trs-status-badge trs-status--${statusTone(record.status)}`}>{statusLabel(record.status, isArabic)}</Badge></td>
-                          <td>
-                            {extraction
-                              ? <Button type="button" variant="secondary" className="trs-mini-btn" onClick={() => openOCR("transfer", record)}>{Math.round(extraction.averageConfidence * 100)}% · OCR</Button>
-                              : <span className="trs-muted">{isArabic ? `${record.attachmentIds.length} ملفات` : `${record.attachmentIds.length} file(s)`}</span>}
-                          </td>
-                          <td>
-                            <div className="trs-row-actions">
-                              <Button type="button" variant="icon" className="trs-icon-btn" onClick={() => setDetailRecord({ type: "transfer", record })}><Eye size={15} /></Button>
-                              <Button type="button" variant="primary" className="trs-mini-btn trs-mini-btn--primary" disabled={!access.verifyTransfer} onClick={() => handleVerifyTransfer(record)}>{t.treasury.reconciliation.match}</Button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
-          {/* ── Reconciliation ── */}
-          {activeTab === "reconciliation" && (
-            <div className="trs-table-card">
-              <div className="trs-table-inner-head" style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <div>
-                  <strong>{t.treasury.reconciliation.title}</strong>
-                  <span className="trs-table-sub">{t.treasury.reconciliation.subtitle}</span>
-                </div>
-                <Button type="button" variant="primary" className="trs-mini-btn trs-mini-btn--primary" disabled={!access.reconcile} leftIcon={<RefreshCcw size={14} />}>
-                  {t.treasury.reconciliation.match}
-                </Button>
-              </div>
-              <div className="trs-table-wrap">
-                <table className="trs-table">
-                  <thead>
-                    <tr>
-                      <th>{t.treasury.cols.reference}</th><th>{t.treasury.cols.date}</th><th>{t.treasury.cols.amount}</th>
-                      <th>{t.treasury.cols.status}</th><th>{t.treasury.reconciliation.match}</th><th>{t.common.notes}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {reconciliationItems.map((item) => (
-                      <tr key={item.id}>
-                        <td><div><strong className="numeric-cell">{item.sourceId}</strong><span className="trs-sub-label">{item.sourceType}</span></div></td>
-                        <td className="numeric-cell">{formatDate(item.date, isArabic)}</td>
-                        <td><strong className="trs-amount numeric-cell">{money(item.amount, item.currency)}</strong></td>
-                        <td><Badge variant={statusTone(item.matchStatus) as "success" | "warning" | "danger" | "neutral"} className={`trs-status-badge trs-status--${statusTone(item.matchStatus)}`}>{statusLabel(item.matchStatus, isArabic)}</Badge></td>
-                        <td>
-                          <OverflowContent title={item.sourceId} subtitle={isArabic ? "مطابقة مقترحة" : "Suggested match"} preview={item.suggestedTarget ? `${item.suggestedBy}: ${item.suggestedTarget}` : (isArabic ? "لا توجد مطابقة بعد" : "No match yet")} content={item.suggestedTarget ? `${item.suggestedBy}: ${item.suggestedTarget}` : (isArabic ? "لا توجد مطابقة مقترحة بعد." : "No suggested match yet.")} />
-                        </td>
-                        <td>
-                          <OverflowContent title={item.sourceId} subtitle={isArabic ? "ملاحظة التسوية" : "Reconciliation note"} preview={item.notes || (isArabic ? "بدون ملاحظات" : "No notes")} content={item.notes || (isArabic ? "لا توجد ملاحظات مسجلة." : "No notes recorded.")} />
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* ── Sidebar ────────────────────────────────────── */}
-        <aside className="trs-sidebar-col">
-
-          {/* Role card */}
-          <div className="trs-sidebar-card trs-role-card">
-            <span className="trs-role-eyebrow">{isArabic ? "دور الخزينة الحالي" : "Active treasury role"}</span>
-            <div className="trs-role-icon-wrap"><ShieldCheck size={22} /></div>
-            <strong className="trs-role-name">{roleLabel(rolePreset, isArabic)}</strong>
-            <p className="trs-role-desc">
-              {access.approve
-                ? (isArabic ? "يمكنه اعتماد الأدوات ومسارات التحقق." : "Can approve instruments and verification workflows.")
-                : (isArabic ? "وصول للعرض فقط في إجراءات الخزينة الحساسة." : "View-only access for sensitive treasury actions.")}
-            </p>
-            <Button type="button" variant="primary" className="trs-capture-btn" leftIcon={<Upload size={15} />}>
-              {isArabic ? "التقاط أداة مالية" : "Capture Instrument"}
-            </Button>
-          </div>
-
-          {/* Instrument Controls */}
-          <div className="trs-sidebar-card">
-            <div className="trs-sidebar-head">
-              <span className="trs-sidebar-title">{isArabic ? "ضوابط الأدوات" : "Instrument Controls"}</span>
-              <ShieldCheck size={15} className="trs-sidebar-icon" />
-            </div>
-            <p className="trs-sidebar-sub">{isArabic ? "إجراءات الخزينة الحساسة مقيدة بالصلاحيات ويتم تدقيقها" : "Sensitive treasury actions are role-gated and audited."}</p>
-            <div className="trs-controls-list">
-              {([
-                [isArabic ? "اعتماد الشيكات" : "Approve cheques", access.approve],
-                [isArabic ? "التحقق من التحويلات" : "Verify transfers", access.verifyTransfer],
-                [isArabic ? "تصحيح OCR" : "Correct OCR", access.correctOCR],
-                [isArabic ? "إجراءات التسوية" : "Reconciliation actions", access.reconcile],
-              ] as [string, boolean][]).map(([label, allowed]) => (
-                <div key={label} className="trs-control-row">
-                  <Lock size={12} className="trs-control-lock" />
-                  <span className="trs-control-label">{label}</span>
-                  <Badge variant={allowed ? "success" : "danger"} className={`trs-access-badge${allowed ? " trs-access--allowed" : " trs-access--restricted"}`}>
-                    {allowed ? (isArabic ? "مسموح" : "Allowed") : (isArabic ? "مقيد" : "Restricted")}
-                  </Badge>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Operational Signals */}
-          <div className="trs-sidebar-card">
-            <div className="trs-sidebar-head">
-              <span className="trs-sidebar-title">{isArabic ? "الإشارات التشغيلية" : "Operational Signals"}</span>
-              <BrainCircuit size={15} className="trs-sidebar-icon" />
-            </div>
-            <p className="trs-sidebar-sub">{isArabic ? "عناصر خزينة عالية الأولوية" : "High-priority treasury items."}</p>
-            <div className="trs-signals-list">
-              <Button type="button" variant="ghost" className="trs-signal-row" onClick={() => switchTab("incoming")}>
-                <span className="trs-signal-count trs-signal--red">{combinedSignals.bounced}</span>
-                <span className="trs-signal-label">{isArabic ? "شيكات مرتجعة" : "bounced cheques"}</span>
-                <ChevronRight size={14} className="trs-signal-chevron" />
-              </Button>
-              <Button type="button" variant="ghost" className="trs-signal-row" onClick={() => switchTab("transfers")}>
-                <span className="trs-signal-count trs-signal--amber">{combinedSignals.pendingVerification}</span>
-                <span className="trs-signal-label">{isArabic ? "تحويلات بانتظار التحقق" : "transfers pending verification"}</span>
-                <ChevronRight size={14} className="trs-signal-chevron" />
-              </Button>
-              <Button type="button" variant="ghost" className="trs-signal-row" onClick={() => switchTab("incoming")}>
-                <span className="trs-signal-count trs-signal--blue">{combinedSignals.dueSoon}</span>
-                <span className="trs-signal-label">{isArabic ? "أدوات تستحق خلال 3 أيام" : "instruments due within 3 days"}</span>
-                <ChevronRight size={14} className="trs-signal-chevron" />
-              </Button>
-            </div>
-          </div>
-
-          {/* Bank Accounts */}
-          <div className="trs-sidebar-card">
-            <div className="trs-sidebar-head">
-              <span className="trs-sidebar-title">{isArabic ? "الحسابات البنكية" : "Bank Accounts"}</span>
-              <CreditCard size={15} className="trs-sidebar-icon" />
-            </div>
-            <div className="trs-accounts-list">
-              {bankAccounts.slice(0, 2).map((account) => (
-                <div key={account.id} className="trs-account-row">
-                  <div>
-                    <strong className="trs-account-name">{account.name}</strong>
-                    <span className="trs-account-bank numeric-cell">
-                      {account.bankName} •••• {account.accountNumberMasked.replace(/\D/g, "").slice(-4)}
-                    </span>
-                  </div>
-                  <strong className="trs-account-balance numeric-cell">
-                    {money(account.currentBalance, account.currency)}
-                  </strong>
-                </div>
-              ))}
-            </div>
-            <Button type="button" variant="ghost" className="trs-view-all-btn" rightIcon={<ChevronRight size={13} />}>
-              {isArabic ? "عرض كل الحسابات" : "View all accounts"}
-            </Button>
-          </div>
-        </aside>
-      </div>
-
-      {/* ── Detail Drawer ─────────────────────────────────── */}
-      {detailRecord
-        ? createPortal(
-            <div className="treasury-overlay" onClick={() => setDetailRecord(null)}>
-              <aside className="treasury-drawer" onClick={(e) => e.stopPropagation()}>
-                <div className="treasury-drawer-head">
-                  <div>
-                    <span>{detailRecord.type === "transfer" ? t.treasury.drawer.transferDetails : t.treasury.drawer.chequeDetails}</span>
-                    <h2 className="numeric-cell">{"transferReference" in detailRecord.record ? detailRecord.record.transferReference : detailRecord.record.chequeNumber}</h2>
-                    <p>{t.treasury.drawer.drawerSubtitle}</p>
-                  </div>
-                  <button type="button" className="icon-dismiss-btn" onClick={() => setDetailRecord(null)}><X size={18} /></button>
-                </div>
-                <div className="treasury-drawer-body">
-                  <section className="workspace-surface treasury-drawer-card">
-                    <h3>{t.treasury.drawer.coreData}</h3>
-                    <div className="treasury-detail-grid">
-                      <div><span>{t.treasury.drawer.labelStatus}</span><strong>{statusLabel(detailRecord.record.status, isArabic)}</strong></div>
-                      <div><span>{t.treasury.drawer.labelAmount}</span><strong className="numeric-cell">{money(detailRecord.record.amount, detailRecord.record.currency)}</strong></div>
-                      <div><span>{t.treasury.drawer.labelIssuedDate}</span><strong className="numeric-cell">{formatDate("transferDate" in detailRecord.record ? detailRecord.record.transferDate : detailRecord.record.issueDate, isArabic)}</strong></div>
-                      <div><span>{t.treasury.drawer.labelDueDate}</span><strong className="numeric-cell">{formatDate("transferReference" in detailRecord.record ? detailRecord.record.settlementDate : detailRecord.record.dueDate, isArabic)}</strong></div>
-                      <div><span>{t.treasury.drawer.labelApprovedBy}</span><strong>{detailRecord.record.approvedBy || t.treasury.drawer.pendingApproval}</strong></div>
-                      <div><span>{t.treasury.drawer.labelReconciled}</span><strong>{detailRecord.record.reconciled ? t.treasury.drawer.yes : t.treasury.drawer.no}</strong></div>
-                    </div>
-                  </section>
-                  <section className="workspace-surface treasury-drawer-card">
-                    <h3>{t.treasury.drawer.linkedRecords}</h3>
-                    {renderLinkage(detailRecord.record)}
-                  </section>
-                  <section className="workspace-surface treasury-drawer-card">
-                    <h3>{t.treasury.drawer.ocrContext}</h3>
-                    <div className="treasury-detail-grid">
-                      <div><span>{t.treasury.drawer.labelAttachments}</span><strong>{detailRecord.record.attachmentIds.length}</strong></div>
-                      <div><span>{t.treasury.drawer.labelOcrExtraction}</span><strong className="numeric-cell">{detailRecord.record.ocrExtractionId ?? t.treasury.drawer.notCaptured}</strong></div>
-                      <div><span>{t.treasury.drawer.labelCreatedBy}</span><strong>{detailRecord.record.createdBy}</strong></div>
-                      <div><span>{t.treasury.drawer.labelLastUpdated}</span><strong className="numeric-cell">{formatDate(detailRecord.record.updatedAt, isArabic)}</strong></div>
-                    </div>
-                  </section>
-                </div>
-              </aside>
-            </div>,
-            document.body
-          )
-        : null}
-
-      {/* ── OCR Modal ─────────────────────────────────────── */}
-      {ocrTarget
-        ? <OCRReviewModal target={ocrTarget} onClose={() => setOcrTarget(null)} onSave={handleSaveOcrCorrections} />
-        : null}
-
-      {toast ? <div className="treasury-toast">{toast}</div> : null}
+      {status === "draft" && (
+        <>
+          <Button variant="primary" size="sm" className="trs-act-btn" onClick={onSubmit}>تقديم</Button>
+          <Button variant="secondary" size="sm" className="trs-act-btn" onClick={onCancel}>إلغاء</Button>
+        </>
+      )}
+      {status === "pending" && (
+        <>
+          <Button variant="primary" size="sm" className="trs-act-btn" onClick={onDeposit}>تسجيل إيداع</Button>
+          <Button variant="secondary" size="sm" className="trs-act-btn" onClick={onCancel}>إلغاء</Button>
+        </>
+      )}
+      {status === "deposited" && (
+        <>
+          <Button variant="primary" size="sm" className="trs-act-btn" onClick={onClear}>تأكيد التحصيل</Button>
+          <Button variant="secondary" size="sm" className="trs-act-btn" onClick={onBounce}>تسجيل ارتجاع</Button>
+        </>
+      )}
+      {status === "bounced" && (
+        <>
+          <Button variant="primary" size="sm" className="trs-act-btn" onClick={onRedeposit}>إعادة إيداع</Button>
+          <Button variant="danger" size="sm" className="trs-act-btn" onClick={onLegal}>إجراء قانوني</Button>
+          <Button variant="secondary" size="sm" className="trs-act-btn" onClick={onCancel}>إلغاء</Button>
+        </>
+      )}
+      {status === "under_review" && (
+        <Button variant="primary" size="sm" className="trs-act-btn" onClick={onView}>مراجعة OCR</Button>
+      )}
+      {status === "cleared" && (
+        <Button variant="ghost" size="sm" className="trs-act-btn" onClick={onView}>عرض التفاصيل</Button>
+      )}
+      {status === "partially_applied" && (
+        <>
+          <Button variant="primary" size="sm" className="trs-act-btn" onClick={onClear}>تأكيد التحصيل</Button>
+          <Button variant="secondary" size="sm" className="trs-act-btn" onClick={onBounce}>تسجيل ارتجاع</Button>
+        </>
+      )}
     </div>
   );
 }
 
-function OCRReviewModal({
-  target,
-  onClose,
-  onSave,
-}: {
-  target: OCRTarget;
-  onClose: () => void;
-  onSave: (fields: OCRFieldReview[]) => void;
-}) {
-  const { t, isArabic } = useSettings();
-  const [fields, setFields] = useState(target.extraction.fields);
-  return (
-    <Modal
-      isOpen={true}
-      onClose={onClose}
-      variant="dialog"
-      size="lg"
-      title={target.extraction.sourceId}
-      description={t.treasury.ocr.subtitle}
-      footer={
-        <>
-          <Button type="button" variant="secondary" className="trs-mini-btn" onClick={onClose}>{t.common.cancel}</Button>
-          <Button type="button" variant="primary" className="trs-mini-btn trs-mini-btn--primary" onClick={() => onSave(fields)}>{t.common.save}</Button>
-        </>
+// ─── Treasury page ────────────────────────────────────────────────────────────
+
+export default function Treasury() {
+  const { isArabic } = useSettings();
+  const navigate = useNavigate();
+  const {
+    instruments,
+    bankAccounts,
+    addInstrument,
+    updateInstrumentStatus,
+  } = useTreasury();
+
+  // UI state
+  const [activeTab,     setActiveTab]     = useState<TreasuryTab>("overview");
+  const [searchTerm,    setSearchTerm]    = useState("");
+  const [filterDir,     setFilterDir]     = useState("all");
+  const [filterStatus,  setFilterStatus]  = useState("all");
+  const [filterBank,    setFilterBank]    = useState("all");
+  const [dateFrom,      setDateFrom]      = useState("");
+  const [dateTo,        setDateTo]        = useState("");
+  const [page,          setPage]          = useState(1);
+  const [rowsPerPage,   setRowsPerPage]   = useState(10);
+  const [selectedInst,  setSelectedInst]  = useState<TreasuryInstrument | null>(null);
+  const [actionModal,   setActionModal]   = useState<ActionModal | null>(null);
+  const [toast,         setToast]         = useState("");
+
+  const showToast = useCallback((msg: string) => {
+    setToast(msg);
+    window.setTimeout(() => setToast(""), 2800);
+  }, []);
+
+  // ── Stat card values ─────────────────────────────────────────────────────────
+  const totalBalanceILS = bankAccounts
+    .filter(a => a.isActive)
+    .reduce((sum, a) => {
+      const rates: Record<string, number> = { ILS: 1, JOD: 5.15, USD: 3.7 };
+      return sum + a.balance * (rates[a.currency] ?? 1);
+    }, 0);
+  const activeAccountsCount = bankAccounts.filter(a => a.isActive).length;
+
+  const pendingIncoming = instruments.filter(
+    i => i.direction === "incoming" && ["pending", "deposited"].includes(i.status)
+  );
+  const pendingIncomingTotal = pendingIncoming.reduce((s, i) => s + i.amountInILS, 0);
+
+  const bouncedCount = instruments.filter(i => i.status === "bounced").length;
+  const underReviewCount = instruments.filter(i => i.status === "under_review").length;
+
+  // ── Filter logic ──────────────────────────────────────────────────────────────
+  const filtered = useMemo(() => {
+    return instruments.filter(inst => {
+      // Tab filter
+      if (activeTab === "incoming")   return inst.direction === "incoming" && inst.type === "check";
+      if (activeTab === "outgoing")   return inst.direction === "outgoing" && inst.type === "check";
+      if (activeTab === "transfers")  return inst.type === "bank_transfer";
+      if (activeTab === "guarantees") return inst.type === "bank_guarantee" || inst.type === "letter_of_credit";
+
+      // Overview — all
+      if (filterDir !== "all" && inst.direction !== filterDir) return false;
+      if (filterStatus !== "all" && inst.status !== filterStatus) return false;
+      if (filterBank !== "all" && inst.bankId !== filterBank) return false;
+
+      if (dateFrom) {
+        const instIso = dueDateToISO(inst.instrumentDate);
+        if (instIso < dateFrom) return false;
       }
-    >
-      <div className="ocr-summary-strip">
-        <div><span>{isArabic ? "المزوّد" : "Provider"}</span><strong>{target.extraction.provider}</strong></div>
-        <div><span>{isArabic ? "متوسط الثقة" : "Average confidence"}</span><strong className="numeric-cell">{Math.round(target.extraction.averageConfidence * 100)}%</strong></div>
-        <div><span>{isArabic ? "الحالة" : "Status"}</span><strong>{statusLabel(target.extraction.status, isArabic)}</strong></div>
-      </div>
-      <div className="ocr-field-list">
-        {fields.map((field) => (
-          <div key={field.field} className="ocr-field-row">
-            <div className="ocr-field-meta">
-              <strong>{field.field}</strong>
-              <span>{confidenceLabel(field.confidence, isArabic)} · {Math.round(field.confidence * 100)}%</span>
-            </div>
-            <label><span>{t.treasury.ocr.extracted}</span><Input value={field.extractedValue} disabled /></label>
-            <label>
-              <span>{t.treasury.ocr.confirm}</span>
-              <Input
-                value={field.correctedValue ?? field.extractedValue}
-                onChange={(e) =>
-                  setFields((cur) =>
-                    cur.map((item) =>
-                      item.field === field.field ? { ...item, correctedValue: e.target.value, approved: true } : item
-                    )
-                  )
-                }
-              />
-            </label>
+      if (dateTo) {
+        const instIso = dueDateToISO(inst.instrumentDate);
+        if (instIso > dateTo) return false;
+      }
+
+      // Text search
+      if (searchTerm) {
+        const q = searchTerm.toLowerCase();
+        const haystack = [
+          inst.id, inst.drawerName, inst.bankName,
+          inst.checkNumber ?? "", inst.referenceNumber ?? "",
+          inst.accountNumber,
+        ].join(" ").toLowerCase();
+        if (!haystack.includes(q)) return false;
+      }
+
+      return true;
+    });
+  }, [instruments, activeTab, filterDir, filterStatus, filterBank, dateFrom, dateTo, searchTerm]);
+
+  const totalPages  = Math.ceil(filtered.length / rowsPerPage);
+  const pagedItems  = filtered.slice((page - 1) * rowsPerPage, page * rowsPerPage);
+
+  const switchTab = (tab: TreasuryTab) => {
+    setActiveTab(tab);
+    setPage(1);
+  };
+
+  // ── Action handlers ───────────────────────────────────────────────────────────
+  const handlePanelAction = useCallback((
+    action: "submit" | "deposit" | "clear" | "bounce" | "redeposit" | "legal" | "review" | "cancel",
+    inst: TreasuryInstrument
+  ) => {
+    if (action === "submit") {
+      updateInstrumentStatus(inst.id, "pending");
+      setSelectedInst(null);
+      showToast("تم تقديم الأداة للمعالجة.");
+    } else if (action === "deposit") {
+      setActionModal({ type: "deposit", instrument: inst });
+    } else if (action === "clear") {
+      setActionModal({ type: "clear", instrument: inst });
+    } else if (action === "bounce") {
+      setActionModal({ type: "bounce", instrument: inst });
+    } else if (action === "redeposit") {
+      setActionModal({ type: "redeposit", instrument: inst });
+    } else if (action === "legal") {
+      setActionModal({ type: "legal", instrument: inst });
+    } else if (action === "cancel") {
+      setActionModal({ type: "cancel", instrument: inst });
+    }
+  }, [updateInstrumentStatus, showToast]);
+
+  const handleAddInstrument = useCallback(
+    (data: Parameters<typeof addInstrument>[0], _asDraft?: boolean) => {
+      void _asDraft;
+      addInstrument(data);
+      setActionModal(null);
+      showToast("تم إضافة الأداة المالية بنجاح.");
+    },
+    [addInstrument, showToast]
+  );
+
+  // ── Unique bank options for filter ────────────────────────────────────────────
+  const bankOptions = useMemo(() => {
+    const banks = new Set(instruments.map(i => i.bankId));
+    return [
+      { value: "all", label: "كل البنوك" },
+      ...PALESTINIAN_BANKS
+        .filter(b => banks.has(b.id))
+        .map(b => ({ value: b.id, label: b.nameAr })),
+    ];
+  }, [instruments]);
+
+  const statusOptions = [
+    { value: "all", label: "كل الحالات" },
+    { value: "draft", label: "مسودة" },
+    { value: "pending", label: "معلقة" },
+    { value: "deposited", label: "مودعة" },
+    { value: "cleared", label: "محصّلة" },
+    { value: "bounced", label: "مرتجعة" },
+    { value: "cancelled", label: "ملغاة" },
+    { value: "under_review", label: "قيد المراجعة" },
+    { value: "partially_applied", label: "مطبّقة جزئياً" },
+  ];
+
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  return (
+    <div className="trs-page">
+
+      {/* ── Page header ──────────────────────────────────────────────────────── */}
+      <div className="trs-header">
+        <div className="trs-header-left">
+          <div className="trs-header-icon">
+            <Landmark size={24} />
           </div>
-        ))}
+          <div className="trs-header-copy">
+            <h1>الخزينة والمصرفية</h1>
+            <p>إدارة الشيكات والتحويلات والضمانات البنكية — البنوك الفلسطينية المرخّصة</p>
+          </div>
+        </div>
+        <div className="trs-header-actions">
+          <Button
+            variant="secondary"
+            size="sm"
+            leftIcon={<ShieldCheck size={14} />}
+            onClick={() => navigate("/treasury/accounts")}
+          >
+            الحسابات البنكية
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            leftIcon={<Download size={14} />}
+          >
+            تصدير CSV
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            leftIcon={<RefreshCcw size={14} />}
+          >
+            تسوية بنكية
+          </Button>
+        </div>
       </div>
-    </Modal>
+
+      {/* ── Stat cards ───────────────────────────────────────────────────────── */}
+      <div className="trs-stat-row">
+        <div className="trs-stat-card">
+          <div className="trs-stat-icon trs-stat-icon--blue"><Landmark size={20} /></div>
+          <div className="trs-stat-body">
+            <span className="trs-stat-label">الحسابات البنكية</span>
+            <span className="trs-stat-value">
+              {formatMoney(totalBalanceILS, "ILS")}
+            </span>
+            <span className="trs-stat-sub">{activeAccountsCount} حساب نشط</span>
+          </div>
+        </div>
+
+        <div className="trs-stat-card">
+          <div className="trs-stat-icon trs-stat-icon--orange"><BanknoteIcon size={20} /></div>
+          <div className="trs-stat-body">
+            <span className="trs-stat-label">شيكات واردة معلقة</span>
+            <span className="trs-stat-value">{pendingIncoming.length}</span>
+            <span className="trs-stat-sub trs-stat-sub--orange">
+              {formatMoney(pendingIncomingTotal, "ILS")}
+            </span>
+          </div>
+        </div>
+
+        <div className="trs-stat-card">
+          <div className="trs-stat-icon trs-stat-icon--red"><AlertTriangle size={20} /></div>
+          <div className="trs-stat-body">
+            <span className="trs-stat-label">أدوات مرتجعة</span>
+            <span className="trs-stat-value">{bouncedCount}</span>
+            <span className="trs-stat-sub trs-stat-sub--red">تحتاج إجراءً فورياً</span>
+          </div>
+        </div>
+
+        <div className="trs-stat-card">
+          <div className="trs-stat-icon trs-stat-icon--purple"><FileScan size={20} /></div>
+          <div className="trs-stat-body">
+            <span className="trs-stat-label">قائمة OCR</span>
+            <span className="trs-stat-value">{underReviewCount}</span>
+            <span className="trs-stat-sub trs-stat-sub--purple">تحتاج مراجعة يدوية</span>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Toolbar ──────────────────────────────────────────────────────────── */}
+      <div className="trs-toolbar">
+
+        {/* Row 1: Tab pills */}
+        <div className="trs-tab-pills" role="tablist">
+          {([
+            ["overview",   "نظرة عامة"],
+            ["incoming",   "الشيكات الواردة"],
+            ["outgoing",   "الشيكات الصادرة"],
+            ["transfers",  "التحويلات"],
+            ["guarantees", "الضمانات"],
+          ] as const).map(([key, label]) => (
+            <button
+              key={key}
+              type="button"
+              role="tab"
+              aria-selected={activeTab === key}
+              className={`trs-tab-pill ${activeTab === key ? "active" : ""}`}
+              onClick={() => switchTab(key)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {/* Row 2: Filters */}
+        <div className="trs-filters-row">
+          <span className="trs-filter-label">الاتجاه:</span>
+          <select
+            className="trs-filter-select"
+            value={filterDir}
+            onChange={e => { setFilterDir(e.target.value); setPage(1); }}
+          >
+            <option value="all">الكل</option>
+            <option value="incoming">وارد</option>
+            <option value="outgoing">صادر</option>
+          </select>
+
+          <span className="trs-filter-label">الحالة:</span>
+          <select
+            className="trs-filter-select"
+            value={filterStatus}
+            onChange={e => { setFilterStatus(e.target.value); setPage(1); }}
+          >
+            {statusOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+
+          <span className="trs-filter-label">البنك:</span>
+          <select
+            className="trs-filter-select"
+            value={filterBank}
+            onChange={e => { setFilterBank(e.target.value); setPage(1); }}
+          >
+            {bankOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+
+          <span className="trs-filter-label">من:</span>
+          <input type="date" className="trs-filter-date" value={dateFrom} onChange={e => { setDateFrom(e.target.value); setPage(1); }} />
+          <span className="trs-filter-label">إلى:</span>
+          <input type="date" className="trs-filter-date" value={dateTo} onChange={e => { setDateTo(e.target.value); setPage(1); }} />
+
+          <div className="trs-search-wrap">
+            <Search size={13} />
+            <input
+              type="search"
+              className="trs-search-input"
+              placeholder="بحث بالمرجع أو الاسم أو رقم الشيك..."
+              value={searchTerm}
+              onChange={e => { setSearchTerm(e.target.value); setPage(1); }}
+            />
+          </div>
+        </div>
+
+        {/* Row 3: Actions */}
+        <div className="trs-actions-row">
+          <div className="trs-actions-start">
+            <Button
+              variant="primary"
+              size="sm"
+              leftIcon={<Plus size={14} />}
+              onClick={() => setActionModal({ type: "add_check", direction: "incoming" })}
+            >
+              إضافة شيك وارد
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              leftIcon={<Plus size={14} />}
+              onClick={() => setActionModal({ type: "add_check", direction: "outgoing" })}
+            >
+              إضافة شيك صادر
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              leftIcon={<Plus size={14} />}
+              onClick={() => setActionModal({ type: "add_transfer", direction: "incoming" })}
+            >
+              إضافة تحويل
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              leftIcon={<FileScan size={14} />}
+              onClick={() => setActionModal({ type: "add_check", direction: "incoming" })}
+            >
+              مسح ضوئي OCR
+            </Button>
+          </div>
+          <div className="trs-actions-end">
+            <Button
+              variant="ghost"
+              size="sm"
+              rightIcon={<ArrowRight size={13} />}
+              onClick={() => navigate("/treasury/accounts")}
+            >
+              الحسابات البنكية
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Main table ───────────────────────────────────────────────────────── */}
+      <div className="trs-table-card">
+        <div className="trs-table-head">
+          <strong>
+            {activeTab === "overview"   ? "جميع الأدوات المالية"
+           : activeTab === "incoming"   ? "الشيكات الواردة"
+           : activeTab === "outgoing"   ? "الشيكات الصادرة"
+           : activeTab === "transfers"  ? "التحويلات البنكية"
+           : "الضمانات والاعتمادات"}
+          </strong>
+          <span className="trs-table-count">{filtered.length} سجل</span>
+        </div>
+
+        <div className="trs-table-wrap">
+          <table className="trs-table" role="grid">
+            <colgroup>
+              <col style={{ width: 120 }} />
+              <col style={{ width: 90  }} />
+              <col style={{ width: 200 }} />
+              <col style={{ width: 110 }} />
+              <col style={{ width: 140 }} />
+              <col style={{ width: 110 }} />
+              <col style={{ width: 120 }} />
+              <col style={{ width: 120 }} />
+              <col />
+            </colgroup>
+            <thead>
+              <tr>
+                <th>
+                  المرجع
+                  <Tooltip content="رقم مرجع الأداة المالية الداخلي." side="top">
+                    <span className="trs-help-icon">?</span>
+                  </Tooltip>
+                </th>
+                <th>النوع</th>
+                <th>الطرف</th>
+                <th>
+                  رقم الشيك
+                  <Tooltip content="الرقم المطبوع على الشيك — 6 أرقام في فلسطين." side="top">
+                    <span className="trs-help-icon">?</span>
+                  </Tooltip>
+                </th>
+                <th>المبلغ</th>
+                <th>
+                  تاريخ الشيك
+                </th>
+                <th>
+                  تاريخ الاستحقاق
+                  <Tooltip content="الشيك الآجل: شيك بتاريخ مستقبلي. لا يُصرف قبله." side="top">
+                    <span className="trs-help-icon">?</span>
+                  </Tooltip>
+                </th>
+                <th>الحالة</th>
+                <th>الإجراءات</th>
+              </tr>
+            </thead>
+            <tbody>
+              {pagedItems.length === 0 ? (
+                <tr className="trs-empty-row">
+                  <td colSpan={9}>
+                    لا توجد أدوات تطابق البحث الحالي.
+                  </td>
+                </tr>
+              ) : (
+                pagedItems.map(inst => {
+                  const overdue = isOverdue(inst);
+                  const dueIso  = dueDateToISO(inst.dueDate);
+                  const dueDiff = Math.ceil((new Date(dueIso).getTime() - new Date(TODAY_ISO).getTime()) / 86_400_000);
+                  const dueSuffix = overdue
+                    ? `متأخر ${Math.abs(dueDiff)} يوم`
+                    : dueDiff === 0 ? "مستحق اليوم"
+                    : `خلال ${dueDiff} أيام`;
+
+                  return (
+                    <tr
+                      key={inst.id}
+                      className={[rowClass(inst), rowExtraClass(inst)].filter(Boolean).join(" ")}
+                      onClick={() => setSelectedInst(inst)}
+                      role="row"
+                      tabIndex={0}
+                      onKeyDown={e => e.key === "Enter" && setSelectedInst(inst)}
+                    >
+                      {/* المرجع */}
+                      <td>
+                        <div className="tc-ref">
+                          <strong>{inst.id}</strong>
+                          <span className="tc-ref-sub">{TYPE_AR[inst.type]}</span>
+                        </div>
+                      </td>
+
+                      {/* النوع */}
+                      <td>
+                        <span className={`trs-badge trs-dir-badge--${inst.direction}`}>
+                          {DIRECTION_LABELS_AR[inst.direction]}
+                        </span>
+                      </td>
+
+                      {/* الطرف */}
+                      <td>
+                        <div className="tc-party">
+                          <strong>{inst.drawerName}</strong>
+                          <span>{inst.bankName} •••• {inst.accountNumber.slice(-4)}</span>
+                        </div>
+                      </td>
+
+                      {/* رقم الشيك */}
+                      <td>
+                        <span style={{ fontFamily: "var(--font-mono)", fontSize: 12.5 }}>
+                          {inst.checkNumber ?? "—"}
+                        </span>
+                      </td>
+
+                      {/* المبلغ */}
+                      <td>
+                        <div className="tc-amount">
+                          <strong>{formatMoney(inst.amount, inst.currency)}</strong>
+                          {inst.currency !== "ILS" && (
+                            <span>{formatMoney(inst.amountInILS, "ILS")}</span>
+                          )}
+                        </div>
+                      </td>
+
+                      {/* تاريخ الشيك */}
+                      <td>
+                        <div className="tc-date">
+                          <strong>{inst.instrumentDate}</strong>
+                        </div>
+                      </td>
+
+                      {/* تاريخ الاستحقاق */}
+                      <td>
+                        <div className="tc-date">
+                          <strong className={overdue ? "overdue-label" : ""}>{inst.dueDate}</strong>
+                          <span className={overdue ? "overdue-label" : ""}>{dueSuffix}</span>
+                        </div>
+                      </td>
+
+                      {/* الحالة */}
+                      <td>
+                        <span className={statusBadgeClass(inst.status)}>
+                          {STATUS_AR[inst.status]}
+                        </span>
+                      </td>
+
+                      {/* الإجراءات */}
+                      <td>
+                        <RowActions
+                          instrument={inst}
+                          onView={() => setSelectedInst(inst)}
+                          onDeposit={() => setActionModal({ type: "deposit", instrument: inst })}
+                          onClear={() => setActionModal({ type: "clear", instrument: inst })}
+                          onBounce={() => setActionModal({ type: "bounce", instrument: inst })}
+                          onRedeposit={() => setActionModal({ type: "redeposit", instrument: inst })}
+                          onLegal={() => setActionModal({ type: "legal", instrument: inst })}
+                          onCancel={() => setActionModal({ type: "cancel", instrument: inst })}
+                          onSubmit={() => {
+                            updateInstrumentStatus(inst.id, "pending");
+                            showToast("تم تقديم الأداة للمعالجة.");
+                          }}
+                        />
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Pagination */}
+        <div className="trs-pagination">
+          <span className="trs-pg-info">
+            {filtered.length === 0
+              ? "لا توجد سجلات"
+              : `عرض ${(page - 1) * rowsPerPage + 1}–${Math.min(page * rowsPerPage, filtered.length)} من ${filtered.length}`}
+          </span>
+          <div className="trs-pg-controls">
+            <button
+              type="button"
+              className="trs-pg-btn"
+              onClick={() => setPage(p => p - 1)}
+              disabled={page === 1}
+            >
+              <ChevronRight size={14} />
+            </button>
+            {renderPageButtons(page, totalPages, setPage)}
+            <button
+              type="button"
+              className="trs-pg-btn"
+              onClick={() => setPage(p => p + 1)}
+              disabled={page >= totalPages}
+            >
+              <ChevronLeft size={14} />
+            </button>
+          </div>
+          <select
+            className="trs-rpp-select"
+            value={String(rowsPerPage)}
+            onChange={e => { setRowsPerPage(Number(e.target.value)); setPage(1); }}
+          >
+            {[5, 10, 20, 50].map(n => <option key={n} value={n}>{n} / صفحة</option>)}
+          </select>
+        </div>
+      </div>
+
+      {/* ── Detail panel ─────────────────────────────────────────────────────── */}
+      {selectedInst && (
+        <TreasuryDetailPanel
+          instrument={selectedInst}
+          isArabic={isArabic}
+          onClose={() => setSelectedInst(null)}
+          onAction={action => {
+            handlePanelAction(action, selectedInst);
+          }}
+          onCopyRef={() => {
+            void navigator.clipboard.writeText(selectedInst.id);
+            showToast(`تم نسخ المرجع: ${selectedInst.id}`);
+          }}
+        />
+      )}
+
+      {/* ── Action modals ────────────────────────────────────────────────────── */}
+      {actionModal?.type === "add_check" && (
+        <AddInstrumentModal
+          defaultDirection={actionModal.direction}
+          onSave={(data, asDraft) => handleAddInstrument({ ...data, status: asDraft ? "draft" : "pending" }, asDraft)}
+          onClose={() => setActionModal(null)}
+        />
+      )}
+      {actionModal?.type === "add_transfer" && (
+        <AddInstrumentModal
+          defaultDirection={actionModal.direction}
+          onSave={(data, asDraft) => handleAddInstrument({ ...data, type: "bank_transfer" }, asDraft)}
+          onClose={() => setActionModal(null)}
+        />
+      )}
+
+      {actionModal?.type === "deposit" && (
+        <DepositModal
+          bankAccounts={bankAccounts}
+          onConfirm={({ depositRef, notes }) => {
+            updateInstrumentStatus(actionModal.instrument.id, "deposited", `إيداع ${depositRef ? `رقم ${depositRef}` : ""}${notes ? ` — ${notes}` : ""}`);
+            setActionModal(null);
+            if (selectedInst?.id === actionModal.instrument.id) {
+              setSelectedInst(prev => prev ? { ...prev, status: "deposited" } : null);
+            }
+            showToast("تم تسجيل الإيداع بنجاح.");
+          }}
+          onClose={() => setActionModal(null)}
+        />
+      )}
+
+      {actionModal?.type === "clear" && (
+        <ClearModal
+          onConfirm={({ bankRef }) => {
+            updateInstrumentStatus(actionModal.instrument.id, "cleared", `تأكيد تحصيل — مرجع البنك: ${bankRef}`);
+            setActionModal(null);
+            if (selectedInst?.id === actionModal.instrument.id) setSelectedInst(null);
+            showToast("تم تأكيد التحصيل وتحديث الفواتير المرتبطة.");
+          }}
+          onClose={() => setActionModal(null)}
+        />
+      )}
+
+      {actionModal?.type === "bounce" && (
+        <BounceModal
+          onConfirm={({ reason, bankRef }) => {
+            updateInstrumentStatus(actionModal.instrument.id, "bounced", `سبب الارتجاع: ${reason}${bankRef ? ` — إشعار: ${bankRef}` : ""}`);
+            setActionModal(null);
+            if (selectedInst?.id === actionModal.instrument.id) {
+              setSelectedInst(prev => prev ? { ...prev, status: "bounced" } : null);
+            }
+            showToast("تم تسجيل الارتجاع.");
+          }}
+          onClose={() => setActionModal(null)}
+        />
+      )}
+
+      {actionModal?.type === "redeposit" && (
+        <ReDepositModal
+          onConfirm={() => {
+            updateInstrumentStatus(actionModal.instrument.id, "deposited", "إعادة إيداع بعد الارتجاع");
+            setActionModal(null);
+            if (selectedInst?.id === actionModal.instrument.id) {
+              setSelectedInst(prev => prev ? { ...prev, status: "deposited" } : null);
+            }
+            showToast("تم تسجيل إعادة الإيداع.");
+          }}
+          onClose={() => setActionModal(null)}
+        />
+      )}
+
+      {actionModal?.type === "legal" && (
+        <LegalInfoModal onClose={() => setActionModal(null)} />
+      )}
+
+      {actionModal?.type === "cancel" && (
+        <CancelModal
+          instrumentRef={actionModal.instrument.id}
+          onConfirm={note => {
+            updateInstrumentStatus(actionModal.instrument.id, "cancelled", note || "إلغاء يدوي");
+            setActionModal(null);
+            if (selectedInst?.id === actionModal.instrument.id) setSelectedInst(null);
+            showToast("تم إلغاء الأداة المالية.");
+          }}
+          onClose={() => setActionModal(null)}
+        />
+      )}
+
+      {/* Toast */}
+      {toast && <div className="trs-toast">{toast}</div>}
+    </div>
   );
 }
