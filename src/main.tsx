@@ -16,25 +16,28 @@ import { ToastProvider } from "./components/ui/Toast";
 import { WorkspaceProvider } from "./contexts/WorkspaceContext";
 import { ModuleProvider } from "./context/ModuleContext";
 import { TreasuryProvider } from "./context/TreasuryContext";
+import { CompanySettingsProvider } from "./context/CompanySettingsContext";
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>
     <SettingsProvider>
-      <ToastProvider>
-        <BrowserRouter>
-          <AuthProvider>
-            <AIProvider>
-              <WorkspaceProvider>
-                <ModuleProvider>
-                <TreasuryProvider>
-                  <App />
-                </TreasuryProvider>
-                </ModuleProvider>
-              </WorkspaceProvider>
-            </AIProvider>
-          </AuthProvider>
-        </BrowserRouter>
-      </ToastProvider>
+      <CompanySettingsProvider>
+        <ToastProvider>
+          <BrowserRouter>
+            <AuthProvider>
+              <AIProvider>
+                <WorkspaceProvider>
+                  <ModuleProvider>
+                    <TreasuryProvider>
+                      <App />
+                    </TreasuryProvider>
+                  </ModuleProvider>
+                </WorkspaceProvider>
+              </AIProvider>
+            </AuthProvider>
+          </BrowserRouter>
+        </ToastProvider>
+      </CompanySettingsProvider>
     </SettingsProvider>
   </React.StrictMode>
 );

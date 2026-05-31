@@ -51,6 +51,8 @@ export function CompanySettingsProvider({ children }: { children: ReactNode }) {
 
 export function useCompanySettings(): CompanySettingsContextValue {
   const ctx = useContext(CompanySettingsContext);
-  if (!ctx) throw new Error("useCompanySettings must be used within CompanySettingsProvider");
+  if (!ctx) {
+    return { settings: { ...DEFAULT_COMPANY_SETTINGS }, updateSettings: () => {}, resetToDefaults: () => {} };
+  }
   return ctx;
 }
