@@ -1037,6 +1037,133 @@ body, .ds-body {
   font-family: 'Cairo', sans-serif;
 }
 
+/* ── RowActions (shared hover-reveal table actions) ── */
+.ra-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  position: relative;
+}
+
+.ra-eye {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-micro);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: color 120ms, background 120ms, opacity 120ms;
+  opacity: 0.4;
+}
+tr:hover .ra-eye,
+.ra-eye:hover {
+  opacity: 1;
+  color: var(--color-text-muted);
+}
+.ra-eye:hover {
+  background: var(--color-surface);
+}
+
+.ra-primary {
+  display: flex;
+  align-items: center;
+  height: 26px;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  font-family: 'Cairo', sans-serif;
+  color: var(--module-primary, #3B5BDB);
+  padding: 0 8px;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(4px);
+  transition: opacity 120ms ease, transform 120ms ease, background 120ms;
+  white-space: nowrap;
+}
+tr:hover .ra-primary,
+.ra-wrap--open .ra-primary {
+  opacity: 1;
+  pointer-events: auto;
+  transform: none;
+}
+.ra-primary:hover {
+  background: var(--color-info-bg, #EFF6FF);
+}
+
+.ra-overflow {
+  position: relative;
+}
+
+.ra-overflow-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  color: var(--color-text-muted);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease, background 120ms, color 120ms;
+}
+tr:hover .ra-overflow-btn,
+.ra-wrap--open .ra-overflow-btn {
+  opacity: 1;
+  pointer-events: auto;
+}
+.ra-overflow-btn:hover {
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.ra-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  inset-inline-end: 0;
+  background: white;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  min-width: 150px;
+  z-index: 200;
+  overflow: hidden;
+}
+
+.ra-menu-item {
+  display: block;
+  width: 100%;
+  padding: 9px 14px;
+  border: none;
+  background: transparent;
+  text-align: right;
+  font-size: 13px;
+  font-family: 'Cairo', sans-serif;
+  color: var(--color-text);
+  cursor: pointer;
+  transition: background 100ms;
+  white-space: nowrap;
+}
+.ra-menu-item:hover {
+  background: var(--color-surface);
+}
+.ra-menu-item--danger {
+  color: var(--color-danger);
+}
+.ra-menu-item--danger:hover {
+  background: var(--color-danger-bg);
+}
+
 /* Utility */
 .text-danger  { color: var(--color-danger) !important; }
 .text-warning { color: var(--color-warning) !important; }

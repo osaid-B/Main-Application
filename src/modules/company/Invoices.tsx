@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Search } from "lucide-react";
 import { useData } from "../../context/DataContext";
 import { useSettings } from "../../context/SettingsContext";
+import { RowActions, type RowAction } from "../../components/ui/RowActions";
 
 function StatCard({
   label,
@@ -63,6 +64,37 @@ function fmtDate(iso: string): string {
   return `${d.getDate().toString().padStart(2, "0")}/${(d.getMonth() + 1)
     .toString()
     .padStart(2, "0")}/${d.getFullYear()}`;
+}
+
+function invoiceActions(
+  status: string,
+  id: string,
+  navigate: ReturnType<typeof useNavigate>
+): { primary: RowAction; items: RowAction[] } {
+  const edit: RowAction = { label: "تعديل", onClick: () => navigate(`/company/invoices/${id}/edit`) };
+  switch (status) {
+    case "Pending":
+      return {
+        primary: { label: "تسجيل دفعة", onClick: () => navigate(`/company/payments/new?invoice=${id}`) },
+        items: [edit, { label: "إلغاء", onClick: () => {}, variant: "danger" }],
+      };
+    case "Partial":
+    case "Debit":
+      return {
+        primary: { label: "تسجيل دفعة", onClick: () => navigate(`/company/payments/new?invoice=${id}`) },
+        items: [edit],
+      };
+    case "Paid":
+      return {
+        primary: { label: "عرض ←", onClick: () => navigate(`/company/invoices/${id}/edit`) },
+        items: [{ label: "طباعة", onClick: () => {} }],
+      };
+    default:
+      return {
+        primary: { label: "تعديل", onClick: () => navigate(`/company/invoices/${id}/edit`) },
+        items: [],
+      };
+  }
 }
 
 export default function InvoicesPage() {
@@ -207,7 +239,7 @@ export default function InvoicesPage() {
             <tbody>
               {pageItems.map((inv) => (
                 <tr key={inv.id}>
-                  <td className="tc-code">{inv.id.slice(0, 8)}</td>
+                  <td className="tc-code">{(inv.id ?? "").slice(0, 8)}</td>
                   <td className="tc-flex tc-primary">
                     {custMap.get(inv.customerId) ?? "—"}
                   </td>
@@ -220,17 +252,16 @@ export default function InvoicesPage() {
                     </span>
                   </td>
                   <td className="tc-actions">
-                    <div className="row-actions">
-                      <button
-                        type="button"
-                        className="ds-btn ds-btn--ghost ds-btn--sm"
-                        onClick={() =>
-                          navigate(`/company/invoices/${inv.id}/edit`)
-                        }
-                      >
-                        تعديل
-                      </button>
-                    </div>
+                    {(() => {
+                      const { primary, items } = invoiceActions(inv.status ?? "", inv.id ?? "", navigate);
+                      return (
+                        <RowActions
+                          onView={() => navigate(`/company/invoices/${inv.id}/edit`)}
+                          primary={primary}
+                          items={items}
+                        />
+                      );
+                    })()}
                   </td>
                 </tr>
               ))}

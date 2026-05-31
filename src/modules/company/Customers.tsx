@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Search } from "lucide-react";
 import { useData } from "../../context/DataContext";
 import { useSettings } from "../../context/SettingsContext";
+import { RowActions } from "../../components/ui/RowActions";
 
 function StatCard({
   label,
@@ -267,24 +268,16 @@ export default function CustomersPage() {
                     </span>
                   </td>
                   <td className="tc-actions">
-                    <div className="row-actions">
-                      <button
-                        type="button"
-                        className="ds-btn ds-btn--ghost ds-btn--sm"
-                        onClick={() =>
-                          navigate(`/company/customers/${customer.id}/edit`)
-                        }
-                      >
-                        تعديل
-                      </button>
-                      <button
-                        type="button"
-                        className="ds-btn ds-btn--danger ds-btn--sm"
-                        onClick={() => handleDelete(customer.id)}
-                      >
-                        حذف
-                      </button>
-                    </div>
+                    <RowActions
+                      onView={() => navigate(`/company/customers/${customer.id}/edit`)}
+                      primary={{ label: "عرض ←", onClick: () => navigate(`/company/customers/${customer.id}/edit`) }}
+                      items={[
+                        { label: "تعديل", onClick: () => navigate(`/company/customers/${customer.id}/edit`) },
+                        { label: "فواتير الزبون", onClick: () => navigate(`/company/invoices?customer=${customer.id}`) },
+                        { label: "سجل الدفعات", onClick: () => navigate(`/company/payments?customer=${customer.id}`) },
+                        { label: "حذف", onClick: () => handleDelete(customer.id), variant: "danger" },
+                      ]}
+                    />
                   </td>
                 </tr>
               ))}

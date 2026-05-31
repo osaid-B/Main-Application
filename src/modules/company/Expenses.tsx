@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Search } from "lucide-react";
 import { useData } from "../../context/DataContext";
 import { useSettings } from "../../context/SettingsContext";
+import { RowActions } from "../../components/ui/RowActions";
 
 function StatCard({
   label,
@@ -239,17 +240,21 @@ export default function ExpensesPage() {
                     </span>
                   </td>
                   <td className="tc-actions">
-                    <div className="row-actions">
-                      <button
-                        type="button"
-                        className="ds-btn ds-btn--ghost ds-btn--sm"
-                        onClick={() =>
-                          navigate(`/company/expenses/${expense.id}/edit`)
-                        }
-                      >
-                        تعديل
-                      </button>
-                    </div>
+                    <RowActions
+                      onView={() => navigate(`/company/expenses/${expense.id}/edit`)}
+                      primary={
+                        expense.status === "pending"
+                          ? { label: "موافقة", onClick: () => navigate(`/company/expenses/${expense.id}/edit`) }
+                          : { label: "عرض ←", onClick: () => navigate(`/company/expenses/${expense.id}/edit`) }
+                      }
+                      items={[
+                        { label: "تعديل", onClick: () => navigate(`/company/expenses/${expense.id}/edit`) },
+                        ...(expense.status === "pending"
+                          ? [{ label: "رفض", onClick: () => {}, variant: "danger" as const }]
+                          : []),
+                        { label: "حذف", onClick: () => {}, variant: "danger" as const },
+                      ]}
+                    />
                   </td>
                 </tr>
               ))}

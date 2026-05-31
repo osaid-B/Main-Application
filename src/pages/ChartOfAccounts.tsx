@@ -5,6 +5,7 @@ import { Container } from "../components/layout/Container";
 import { Button } from "../components/ui/Button";
 import { Modal } from "../components/ui/Modal";
 import { Badge } from "../components/ui/Badge";
+import { RowActions } from "../components/ui/RowActions";
 import { useSettings } from "../context/SettingsContext";
 import { useData } from "../context/DataContext";
 import { CHART_OF_ACCOUNTS } from "../data/chartOfAccountsMock";
@@ -116,12 +117,14 @@ export default function ChartOfAccounts() {
           <td className={styles.numEnd + " " + styles.mono}>{isParent ? "—" : formatCurrency(getBalance(parent), "ILS")}</td>
           <td className={styles.normalBalance}>{parent.normalBalance === "debit" ? tc.normalDebit : tc.normalCredit}</td>
           <td>
-            <div className={styles.actionsCell}>
-              {isParent && <button className={styles.actionBtn} onClick={() => openAdd(parent.id)}>{tc.addSubAccount}</button>}
-              <button className={styles.actionBtn} onClick={() => openEdit(parent)}>{tc.editAccount}</button>
-              {!isParent && parent.isActive && <button className={styles.actionBtn} onClick={() => deactivateAccount(parent.id)}>{tc.deactivate}</button>}
-              {!isParent && <button className={styles.actionBtn} onClick={() => navigate(`/general-ledger?account=${parent.code}`)}>{tc.viewTransactions}</button>}
-            </div>
+            <RowActions
+              primary={{ label: "تعديل", onClick: () => openEdit(parent) }}
+              items={[
+                ...(isParent ? [{ label: tc.addSubAccount, onClick: () => openAdd(parent.id) }] : []),
+                ...(!isParent ? [{ label: tc.viewTransactions, onClick: () => navigate(`/general-ledger?account=${parent.code}`) }] : []),
+                ...(!isParent && parent.isActive ? [{ label: tc.deactivate, onClick: () => deactivateAccount(parent.id), variant: "danger" as const }] : []),
+              ]}
+            />
           </td>
         </tr>
       );
@@ -129,34 +132,38 @@ export default function ChartOfAccounts() {
         const childChildren = grandChildren.filter(a => a.parentId === child.id);
         rows.push(
           <tr key={child.id} className={styles.level1Row}>
-            <td><span className={styles.codeChip}>{child.code}</span></td>
-            <td>{isArabic ? child.nameAr : child.nameEn}</td>
+            <td style={{ paddingInlineStart: "16px" }}><span className={styles.codeChip}>{child.code}</span></td>
+            <td style={{ paddingInlineStart: "16px" }}>{isArabic ? child.nameAr : child.nameEn}</td>
             <td><span className={`${styles.typeBadge} ${typeBadge[child.type]}`}>{tc.types[child.type]}</span></td>
             <td className={styles.numEnd + " " + styles.mono}>{childChildren.length > 0 ? "—" : formatCurrency(getBalance(child), "ILS")}</td>
             <td className={styles.normalBalance}>{child.normalBalance === "debit" ? tc.normalDebit : tc.normalCredit}</td>
             <td>
-              <div className={styles.actionsCell}>
-                <button className={styles.actionBtn} onClick={() => openAdd(child.id)}>{tc.addSubAccount}</button>
-                <button className={styles.actionBtn} onClick={() => openEdit(child)}>{tc.editAccount}</button>
-                <button className={styles.actionBtn} onClick={() => navigate(`/general-ledger?account=${child.code}`)}>{tc.viewTransactions}</button>
-              </div>
+              <RowActions
+                primary={{ label: "تعديل", onClick: () => openEdit(child) }}
+                items={[
+                  { label: tc.addSubAccount, onClick: () => openAdd(child.id) },
+                  { label: tc.viewTransactions, onClick: () => navigate(`/general-ledger?account=${child.code}`) },
+                ]}
+              />
             </td>
           </tr>
         );
         childChildren.forEach(leaf => {
           rows.push(
             <tr key={leaf.id} className={styles.level2Row}>
-              <td><span className={styles.codeChip}>{leaf.code}</span></td>
-              <td>{isArabic ? leaf.nameAr : leaf.nameEn}</td>
+              <td style={{ paddingInlineStart: "32px" }}><span className={styles.codeChip}>{leaf.code}</span></td>
+              <td style={{ paddingInlineStart: "32px" }}>{isArabic ? leaf.nameAr : leaf.nameEn}</td>
               <td><span className={`${styles.typeBadge} ${typeBadge[leaf.type]}`}>{tc.types[leaf.type]}</span></td>
               <td className={styles.numEnd + " " + styles.mono}>{formatCurrency(getBalance(leaf), "ILS")}</td>
               <td className={styles.normalBalance}>{leaf.normalBalance === "debit" ? tc.normalDebit : tc.normalCredit}</td>
               <td>
-                <div className={styles.actionsCell}>
-                  <button className={styles.actionBtn} onClick={() => openEdit(leaf)}>{tc.editAccount}</button>
-                  {leaf.isActive && <button className={styles.actionBtn} onClick={() => deactivateAccount(leaf.id)}>{tc.deactivate}</button>}
-                  <button className={styles.actionBtn} onClick={() => navigate(`/general-ledger?account=${leaf.code}`)}>{tc.viewTransactions}</button>
-                </div>
+                <RowActions
+                  primary={{ label: "تعديل", onClick: () => openEdit(leaf) }}
+                  items={[
+                    { label: tc.viewTransactions, onClick: () => navigate(`/general-ledger?account=${leaf.code}`) },
+                    ...(leaf.isActive ? [{ label: tc.deactivate, onClick: () => deactivateAccount(leaf.id), variant: "danger" as const }] : []),
+                  ]}
+                />
               </td>
             </tr>
           );

@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Search } from "lucide-react";
 import { useData } from "../../context/DataContext";
+import { RowActions } from "../../components/ui/RowActions";
 
 function StatCard({
   label,
@@ -123,24 +124,21 @@ export default function SuppliersPage() {
                         fontFamily: "Inter, monospace",
                       }}
                     >
-                      {supplier.id.slice(0, 8)}
+                      {(supplier.id ?? "").slice(0, 8)}
                     </div>
                   </td>
                   <td className="tc-text">{supplier.phone ?? "—"}</td>
                   <td className="tc-text">{supplier.email ?? "—"}</td>
                   <td className="tc-text">{supplier.address ?? "—"}</td>
                   <td className="tc-actions">
-                    <div className="row-actions">
-                      <button
-                        type="button"
-                        className="ds-btn ds-btn--ghost ds-btn--sm"
-                        onClick={() =>
-                          navigate(`/company/suppliers/${supplier.id}/edit`)
-                        }
-                      >
-                        تعديل
-                      </button>
-                    </div>
+                    <RowActions
+                      onView={() => navigate(`/company/suppliers/${supplier.id}/edit`)}
+                      primary={{ label: "عرض ←", onClick: () => navigate(`/company/suppliers/${supplier.id}/edit`) }}
+                      items={[
+                        { label: "تعديل", onClick: () => navigate(`/company/suppliers/${supplier.id}/edit`) },
+                        { label: "طلبات الشراء", onClick: () => navigate(`/company/purchases?supplier=${supplier.id}`) },
+                      ]}
+                    />
                   </td>
                 </tr>
               ))}

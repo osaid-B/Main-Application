@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Search } from "lucide-react";
 import { useData } from "../../context/DataContext";
 import { useSettings } from "../../context/SettingsContext";
+import { RowActions } from "../../components/ui/RowActions";
 
 function StatCard({
   label,
@@ -180,7 +181,7 @@ export default function EmployeesPage() {
                         fontFamily: "Inter, monospace",
                       }}
                     >
-                      {emp.id.slice(0, 8)}
+                      {(emp.id ?? "").slice(0, 8)}
                     </div>
                   </td>
                   <td className="tc-text">{emp.jobTitle ?? "—"}</td>
@@ -188,17 +189,15 @@ export default function EmployeesPage() {
                   <td className="tc-text">{emp.phone ?? "—"}</td>
                   <td className="tc-num">{formatCurrency(emp.fixedSalary ?? 0)}</td>
                   <td className="tc-actions">
-                    <div className="row-actions">
-                      <button
-                        type="button"
-                        className="ds-btn ds-btn--ghost ds-btn--sm"
-                        onClick={() =>
-                          navigate(`/company/employees/${emp.id}/edit`)
-                        }
-                      >
-                        تعديل
-                      </button>
-                    </div>
+                    <RowActions
+                      onView={() => navigate(`/company/employees/${emp.id}/edit`)}
+                      primary={{ label: "عرض الملف", onClick: () => navigate(`/company/employees/${emp.id}/edit`) }}
+                      items={[
+                        { label: "تعديل", onClick: () => navigate(`/company/employees/${emp.id}/edit`) },
+                        { label: "طلب إجازة", onClick: () => navigate(`/company/employees/${emp.id}/leave`) },
+                        { label: "تعطيل", onClick: () => {}, variant: "danger" },
+                      ]}
+                    />
                   </td>
                 </tr>
               ))}

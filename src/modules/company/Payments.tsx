@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Search } from "lucide-react";
 import { useData } from "../../context/DataContext";
 import { useSettings } from "../../context/SettingsContext";
+import { RowActions } from "../../components/ui/RowActions";
 
 function StatCard({
   label,
@@ -200,7 +201,7 @@ export default function PaymentsPage() {
             <tbody>
               {pageItems.map((payment) => (
                 <tr key={payment.id}>
-                  <td className="tc-code">{payment.id.slice(0, 8)}</td>
+                  <td className="tc-code">{(payment.id ?? "").slice(0, 8)}</td>
                   <td className="tc-flex tc-primary">
                     {custMap.get(payment.customerId) ?? "—"}
                   </td>
@@ -215,17 +216,14 @@ export default function PaymentsPage() {
                   </td>
                   <td className="tc-date">{fmtDate(payment.date)}</td>
                   <td className="tc-actions">
-                    <div className="row-actions">
-                      <button
-                        type="button"
-                        className="ds-btn ds-btn--ghost ds-btn--sm"
-                        onClick={() =>
-                          navigate(`/company/payments/${payment.id}/edit`)
-                        }
-                      >
-                        تعديل
-                      </button>
-                    </div>
+                    <RowActions
+                      onView={() => navigate(`/company/payments/${payment.id}/edit`)}
+                      primary={{ label: "عرض ←", onClick: () => navigate(`/company/payments/${payment.id}/edit`) }}
+                      items={[
+                        { label: "تعديل", onClick: () => navigate(`/company/payments/${payment.id}/edit`) },
+                        { label: "طباعة", onClick: () => {} },
+                      ]}
+                    />
                   </td>
                 </tr>
               ))}
