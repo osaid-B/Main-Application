@@ -7,6 +7,7 @@ import { Input } from "../components/ui/Input";
 import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
 import { Modal } from "../components/ui/Modal";
+import { RowActions } from "../components/ui/RowActions";
 import { useSettings } from "../context/SettingsContext";
 import { useData } from "../context/DataContext";
 import { Skeleton } from "../components/ui/Skeleton";
@@ -161,14 +162,14 @@ export default function Departments() {
                           {d.status === "active" ? t.common.active : t.common.inactive}
                         </Badge>
                       </td>
-                      <td className="col-actions">
-                        <button
-                          type="button"
-                          className={styles.editBtn}
-                          onClick={(e) => { e.stopPropagation(); setEditing(d); }}
-                        >
-                          {t.common.edit}
-                        </button>
+                      <td className="col-actions" onClick={(e) => e.stopPropagation()}>
+                        <RowActions
+                          onView={() => setDetailDept(d)}
+                          primary={{ label: "تعديل", onClick: () => setEditing(d) }}
+                          items={[
+                            { label: d.status === "active" ? "تعطيل" : "تفعيل", onClick: () => {} },
+                          ]}
+                        />
                       </td>
                     </tr>
                   );
