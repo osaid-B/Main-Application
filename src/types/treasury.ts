@@ -133,3 +133,8 @@ export const CURRENCY_RATES: Record<PalestinianCurrency, number> = {
   JOD: 5.15,
   USD: 3.7,
 };
+
+export const DIRECTION_LABELS_AR: Record<InstrumentDirection, string> = {
+  incoming: 'وارد',
+  outgoing: 'صادر',
+};

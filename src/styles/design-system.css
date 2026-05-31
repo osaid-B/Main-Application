@@ -317,7 +317,7 @@ body, .ds-body {
 @media (max-width: 1024px) { .stat-grid { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 640px)  { .stat-grid { grid-template-columns: 1fr; } }
 
-.content-card { padding: 0; overflow: hidden; }
+.content-card { padding: 0; overflow: visible; }
 
 .table-toolbar {
   display: flex;
@@ -1036,6 +1036,118 @@ body, .ds-body {
   gap: 4px;
   font-family: 'Cairo', sans-serif;
 }
+
+/* ── RowActions (shared hover-reveal table actions) ── */
+.ra-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+}
+
+.ra-eye {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-micro);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: color 150ms, background 150ms, opacity 150ms;
+  opacity: 0.3;
+}
+tr:hover .ra-eye { opacity: 1; color: var(--color-text-muted); }
+.ra-eye:hover { background: var(--color-surface); }
+
+.ra-primary {
+  display: none;
+  align-items: center;
+  gap: 4px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border-strong);
+  background: white;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: 'Cairo', sans-serif;
+  color: var(--color-text);
+  white-space: nowrap;
+  transition: border-color 120ms, color 120ms;
+}
+tr:hover .ra-primary { display: inline-flex; }
+.ra-primary:hover {
+  border-color: var(--module-primary, #3B5BDB);
+  color: var(--module-primary, #3B5BDB);
+}
+
+.ra-overflow-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid transparent;
+  background: transparent;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  color: var(--color-text-muted);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 150ms ease, background 150ms, color 150ms, border-color 150ms;
+}
+tr:hover .ra-overflow-btn,
+.ra-overflow-btn--open {
+  opacity: 1;
+  pointer-events: auto;
+}
+.ra-overflow-btn:hover,
+.ra-overflow-btn--open {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+  color: var(--color-text);
+}
+
+/* Portal dropdown — rendered in document.body via createPortal */
+.ra-menu {
+  background: white;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.06);
+  min-width: 180px;
+  padding: 4px;
+  animation: ra-drop 120ms ease;
+}
+@keyframes ra-drop {
+  from { opacity: 0; transform: scale(0.95) translateY(-4px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.ra-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 7px;
+  border: none;
+  background: none;
+  text-align: right;
+  direction: rtl;
+  font-size: 13px;
+  font-family: 'Cairo', sans-serif;
+  color: var(--color-text);
+  cursor: pointer;
+  transition: background 100ms;
+  white-space: nowrap;
+}
+.ra-menu-item:hover { background: var(--color-surface); }
+.ra-menu-item--danger { color: var(--color-danger); }
+.ra-menu-item--danger:hover { background: var(--color-danger-bg); }
 
 /* Utility */
 .text-danger  { color: var(--color-danger) !important; }

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Search } from "lucide-react";
 import { useData } from "../../context/DataContext";
 import { useSettings } from "../../context/SettingsContext";
+import { RowActions } from "../../components/ui/RowActions";
 
 function StatCard({
   label,
@@ -67,32 +68,45 @@ function fmtDate(iso: string): string {
 
 export default function CustomersPage() {
   const navigate = useNavigate();
-  const { customers, deleteCustomer } = useData();
+  const { customers: rawCustomers, deleteCustomer } = useData();
   const { formatCurrency } = useSettings();
+
+  // Guard against null/undefined leaking through from corrupted localStorage
+  const customers = Array.isArray(rawCustomers) ? rawCustomers : [];
 
   const [search, setSearch] = useState("");
   const [filterCity, setFilterCity] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
 
   const activeCustomers = useMemo(
-    () => customers.filter((c) => !c.isDeleted),
+    // Filter out malformed records: must have a non-empty string id AND a name.
+    // Corrupted localStorage entries can have missing id or name fields.
+    () =>
+      (customers ?? []).filter(
+        (c) =>
+          !c.isDeleted &&
+          typeof c.id === "string" &&
+          c.id !== "" &&
+          typeof c.name === "string"
+      ),
     [customers]
   );
 
   const stats = useMemo(() => {
-    const total = activeCustomers.length;
-    const outstanding = activeCustomers.reduce(
+    const safe = activeCustomers ?? [];
+    const total = safe.length;
+    const outstanding = safe.reduce(
       (sum, c) => sum + (c.outstandingBalance ?? 0),
       0
     );
-    const vip = activeCustomers.filter((c) => c.classification === "vip").length;
-    const active = activeCustomers.filter((c) => c.status === "active").length;
+    const vip = safe.filter((c) => c.classification === "vip").length;
+    const active = safe.filter((c) => c.status === "active").length;
     return { total, outstanding, vip, active };
   }, [activeCustomers]);
 
   const cities = useMemo(() => {
     const set = new Set<string>();
-    activeCustomers.forEach((c) => {
+    (activeCustomers ?? []).forEach((c) => {
       if (c.governorate) set.add(c.governorate);
       else if (c.city) set.add(c.city);
     });
@@ -101,10 +115,10 @@ export default function CustomersPage() {
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return activeCustomers.filter((c) => {
+    return (activeCustomers ?? []).filter((c) => {
       const matchSearch =
         !q ||
-        c.name.toLowerCase().includes(q) ||
+        (c.name ?? "").toLowerCase().includes(q) ||
         (c.phone ?? "").toLowerCase().includes(q);
       const location = c.governorate ?? c.city ?? "";
       const matchCity = !filterCity || location === filterCity;
@@ -115,7 +129,7 @@ export default function CustomersPage() {
 
   const PAGE_SIZE = 25;
   const [page, setPage] = useState(1);
-  const pageItems = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const pageItems = (filtered ?? []).slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   function handleDelete(id: string) {
     if (window.confirm("هل أنت متأكد؟")) {
@@ -244,7 +258,7 @@ export default function CustomersPage() {
                         fontFamily: "Inter, monospace",
                       }}
                     >
-                      {customer.id.slice(0, 8)}
+                      {(customer.id ?? "").slice(0, 8)}
                     </div>
                   </td>
                   <td className="tc-text">{customer.phone ?? "—"}</td>
@@ -261,24 +275,16 @@ export default function CustomersPage() {
                     </span>
                   </td>
                   <td className="tc-actions">
-                    <div className="row-actions">
-                      <button
-                        type="button"
-                        className="ds-btn ds-btn--ghost ds-btn--sm"
-                        onClick={() =>
-                          navigate(`/company/customers/${customer.id}/edit`)
-                        }
-                      >
-                        تعديل
-                      </button>
-                      <button
-                        type="button"
-                        className="ds-btn ds-btn--danger ds-btn--sm"
-                        onClick={() => handleDelete(customer.id)}
-                      >
-                        حذف
-                      </button>
-                    </div>
+                    <RowActions
+                      onView={() => navigate(`/company/customers/${customer.id}/edit`)}
+                      primary={{ label: "عرض ←", onClick: () => navigate(`/company/customers/${customer.id}/edit`) }}
+                      items={[
+                        { label: "تعديل", onClick: () => navigate(`/company/customers/${customer.id}/edit`) },
+                        { label: "فواتير الزبون", onClick: () => navigate(`/company/invoices?customer=${customer.id}`) },
+                        { label: "سجل الدفعات", onClick: () => navigate(`/company/payments?customer=${customer.id}`) },
+                        { label: "حذف", onClick: () => handleDelete(customer.id), variant: "danger" },
+                      ]}
+                    />
                   </td>
                 </tr>
               ))}
