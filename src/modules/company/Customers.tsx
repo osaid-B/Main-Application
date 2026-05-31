@@ -79,9 +79,16 @@ export default function CustomersPage() {
   const [filterStatus, setFilterStatus] = useState("");
 
   const activeCustomers = useMemo(
-    // Also filter out any malformed records that are missing an id — those
-    // can reach localStorage when a customer is saved with an empty code field.
-    () => (customers ?? []).filter((c) => !c.isDeleted && typeof c.id === "string" && c.id !== ""),
+    // Filter out malformed records: must have a non-empty string id AND a name.
+    // Corrupted localStorage entries can have missing id or name fields.
+    () =>
+      (customers ?? []).filter(
+        (c) =>
+          !c.isDeleted &&
+          typeof c.id === "string" &&
+          c.id !== "" &&
+          typeof c.name === "string"
+      ),
     [customers]
   );
 
@@ -111,7 +118,7 @@ export default function CustomersPage() {
     return (activeCustomers ?? []).filter((c) => {
       const matchSearch =
         !q ||
-        c.name.toLowerCase().includes(q) ||
+        (c.name ?? "").toLowerCase().includes(q) ||
         (c.phone ?? "").toLowerCase().includes(q);
       const location = c.governorate ?? c.city ?? "";
       const matchCity = !filterCity || location === filterCity;

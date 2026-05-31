@@ -50,7 +50,7 @@ export default function SuppliersPage() {
 
   const PAGE_SIZE = 25;
   const [page, setPage] = useState(1);
-  const pageItems = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const pageItems = (filtered ?? []).slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   return (
     <div className="page-layout">
