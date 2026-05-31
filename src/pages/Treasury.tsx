@@ -1,9 +1,7 @@
 import "./Treasury.css";
 import { useMemo, useState, useCallback } from "react";
 import {
-  AlertTriangle,
   ArrowRight,
-  BanknoteIcon,
   ChevronLeft,
   ChevronRight,
   Download,
@@ -17,7 +15,6 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "../components/ui/Button";
-import { Tooltip } from "../components/ui/Tooltip";
 import { useSettings } from "../context/SettingsContext";
 import { useTreasury } from "../context/TreasuryContext";
 import type { TreasuryInstrument, InstrumentStatus } from "../types/treasury";
@@ -127,10 +124,7 @@ function RowActions({
   onView,
   onDeposit,
   onClear,
-  onBounce,
   onRedeposit,
-  onLegal,
-  onCancel,
   onSubmit,
 }: {
   instrument: TreasuryInstrument;
@@ -144,48 +138,26 @@ function RowActions({
   onSubmit: () => void;
 }) {
   const { status } = instrument;
-  return (
-    <div className="tc-actions" onClick={e => e.stopPropagation()}>
-      <Button variant="icon" size="sm" className="trs-icon-btn" onClick={onView} title="عرض التفاصيل">
-        <Eye size={14} />
-      </Button>
 
-      {status === "draft" && (
-        <>
-          <Button variant="primary" size="sm" className="trs-act-btn" onClick={onSubmit}>تقديم</Button>
-          <Button variant="secondary" size="sm" className="trs-act-btn" onClick={onCancel}>إلغاء</Button>
-        </>
-      )}
-      {status === "pending" && (
-        <>
-          <Button variant="primary" size="sm" className="trs-act-btn" onClick={onDeposit}>تسجيل إيداع</Button>
-          <Button variant="secondary" size="sm" className="trs-act-btn" onClick={onCancel}>إلغاء</Button>
-        </>
-      )}
-      {status === "deposited" && (
-        <>
-          <Button variant="primary" size="sm" className="trs-act-btn" onClick={onClear}>تأكيد التحصيل</Button>
-          <Button variant="secondary" size="sm" className="trs-act-btn" onClick={onBounce}>تسجيل ارتجاع</Button>
-        </>
-      )}
-      {status === "bounced" && (
-        <>
-          <Button variant="primary" size="sm" className="trs-act-btn" onClick={onRedeposit}>إعادة إيداع</Button>
-          <Button variant="danger" size="sm" className="trs-act-btn" onClick={onLegal}>إجراء قانوني</Button>
-          <Button variant="secondary" size="sm" className="trs-act-btn" onClick={onCancel}>إلغاء</Button>
-        </>
-      )}
-      {status === "under_review" && (
-        <Button variant="primary" size="sm" className="trs-act-btn" onClick={onView}>مراجعة OCR</Button>
-      )}
-      {status === "cleared" && (
-        <Button variant="ghost" size="sm" className="trs-act-btn" onClick={onView}>عرض التفاصيل</Button>
-      )}
-      {status === "partially_applied" && (
-        <>
-          <Button variant="primary" size="sm" className="trs-act-btn" onClick={onClear}>تأكيد التحصيل</Button>
-          <Button variant="secondary" size="sm" className="trs-act-btn" onClick={onBounce}>تسجيل ارتجاع</Button>
-        </>
+  const primary: { label: string; fn: () => void } | null = (() => {
+    if (status === "draft")             return { label: "تقديم",        fn: onSubmit    };
+    if (status === "pending")           return { label: "إيداع",         fn: onDeposit   };
+    if (status === "deposited")         return { label: "تحصيل",         fn: onClear     };
+    if (status === "bounced")           return { label: "إعادة إيداع",   fn: onRedeposit };
+    if (status === "under_review")      return { label: "مراجعة",        fn: onView      };
+    if (status === "partially_applied") return { label: "تحصيل",         fn: onClear     };
+    return null;
+  })();
+
+  return (
+    <div className="trs-row-actions" onClick={e => e.stopPropagation()}>
+      <button type="button" className="trs-row-eye" onClick={onView} title="عرض التفاصيل">
+        <Eye size={13} />
+      </button>
+      {primary && (
+        <button type="button" className="trs-row-primary-btn" onClick={primary.fn}>
+          {primary.label}
+        </button>
       )}
     </div>
   );
@@ -386,44 +358,30 @@ export default function Treasury() {
 
       {/* ── Stat cards ───────────────────────────────────────────────────────── */}
       <div className="trs-stat-row">
-        <div className="trs-stat-card">
-          <div className="trs-stat-icon trs-stat-icon--blue"><Landmark size={20} /></div>
-          <div className="trs-stat-body">
-            <span className="trs-stat-label">الحسابات البنكية</span>
-            <span className="trs-stat-value">
-              {formatMoney(totalBalanceILS, "ILS")}
-            </span>
-            <span className="trs-stat-sub">{activeAccountsCount} حساب نشط</span>
-          </div>
+        <div className="trs-stat-card" style={{ "--card-accent": "#3B5BDB" } as React.CSSProperties}>
+          <span className="trs-stat-label">الحسابات البنكية</span>
+          <span className="trs-stat-value">{formatMoney(totalBalanceILS, "ILS")}</span>
+          <span className="trs-stat-sub">{activeAccountsCount} حساب نشط</span>
         </div>
 
-        <div className="trs-stat-card">
-          <div className="trs-stat-icon trs-stat-icon--orange"><BanknoteIcon size={20} /></div>
-          <div className="trs-stat-body">
-            <span className="trs-stat-label">شيكات واردة معلقة</span>
-            <span className="trs-stat-value">{pendingIncoming.length}</span>
-            <span className="trs-stat-sub trs-stat-sub--orange">
-              {formatMoney(pendingIncomingTotal, "ILS")}
-            </span>
-          </div>
+        <div className="trs-stat-card" style={{ "--card-accent": "#D97706" } as React.CSSProperties}>
+          <span className="trs-stat-label">شيكات واردة معلقة</span>
+          <span className="trs-stat-value">{pendingIncoming.length}</span>
+          <span className="trs-stat-sub trs-stat-sub--orange">
+            {formatMoney(pendingIncomingTotal, "ILS")}
+          </span>
         </div>
 
-        <div className="trs-stat-card">
-          <div className="trs-stat-icon trs-stat-icon--red"><AlertTriangle size={20} /></div>
-          <div className="trs-stat-body">
-            <span className="trs-stat-label">أدوات مرتجعة</span>
-            <span className="trs-stat-value">{bouncedCount}</span>
-            <span className="trs-stat-sub trs-stat-sub--red">تحتاج إجراءً فورياً</span>
-          </div>
+        <div className="trs-stat-card" style={{ "--card-accent": "#DC2626" } as React.CSSProperties}>
+          <span className="trs-stat-label">أدوات مرتجعة</span>
+          <span className="trs-stat-value">{bouncedCount}</span>
+          <span className="trs-stat-sub trs-stat-sub--red">تحتاج إجراءً فورياً</span>
         </div>
 
-        <div className="trs-stat-card">
-          <div className="trs-stat-icon trs-stat-icon--purple"><FileScan size={20} /></div>
-          <div className="trs-stat-body">
-            <span className="trs-stat-label">قائمة OCR</span>
-            <span className="trs-stat-value">{underReviewCount}</span>
-            <span className="trs-stat-sub trs-stat-sub--purple">تحتاج مراجعة يدوية</span>
-          </div>
+        <div className="trs-stat-card" style={{ "--card-accent": "#7C3AED" } as React.CSSProperties}>
+          <span className="trs-stat-label">قائمة OCR</span>
+          <span className="trs-stat-value">{underReviewCount}</span>
+          <span className="trs-stat-sub trs-stat-sub--purple">تحتاج مراجعة يدوية</span>
         </div>
       </div>
 
@@ -452,48 +410,49 @@ export default function Treasury() {
           ))}
         </div>
 
-        {/* Row 2: Filters */}
+        {/* Row 2: Filters — single compact row */}
         <div className="trs-filters-row">
-          <span className="trs-filter-label">الاتجاه:</span>
           <select
             className="trs-filter-select"
             value={filterDir}
             onChange={e => { setFilterDir(e.target.value); setPage(1); }}
+            title="الاتجاه"
           >
-            <option value="all">الكل</option>
+            <option value="all">كل الاتجاهات</option>
             <option value="incoming">وارد</option>
             <option value="outgoing">صادر</option>
           </select>
 
-          <span className="trs-filter-label">الحالة:</span>
           <select
             className="trs-filter-select"
             value={filterStatus}
             onChange={e => { setFilterStatus(e.target.value); setPage(1); }}
+            title="الحالة"
           >
             {statusOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
 
-          <span className="trs-filter-label">البنك:</span>
           <select
             className="trs-filter-select"
             value={filterBank}
             onChange={e => { setFilterBank(e.target.value); setPage(1); }}
+            title="البنك"
           >
             {bankOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
 
-          <span className="trs-filter-label">من:</span>
-          <input type="date" className="trs-filter-date" value={dateFrom} onChange={e => { setDateFrom(e.target.value); setPage(1); }} />
-          <span className="trs-filter-label">إلى:</span>
-          <input type="date" className="trs-filter-date" value={dateTo} onChange={e => { setDateTo(e.target.value); setPage(1); }} />
+          <div className="trs-date-range">
+            <input type="date" className="trs-filter-date" value={dateFrom} onChange={e => { setDateFrom(e.target.value); setPage(1); }} title="من تاريخ" />
+            <span className="trs-date-sep">—</span>
+            <input type="date" className="trs-filter-date" value={dateTo} onChange={e => { setDateTo(e.target.value); setPage(1); }} title="إلى تاريخ" />
+          </div>
 
           <div className="trs-search-wrap">
             <Search size={13} />
             <input
               type="search"
               className="trs-search-input"
-              placeholder="بحث بالمرجع أو الاسم أو رقم الشيك..."
+              placeholder="بحث: مرجع، اسم، رقم شيك..."
               value={searchTerm}
               onChange={e => { setSearchTerm(e.target.value); setPage(1); }}
             />
@@ -577,30 +536,13 @@ export default function Treasury() {
             </colgroup>
             <thead>
               <tr>
-                <th>
-                  المرجع
-                  <Tooltip content="رقم مرجع الأداة المالية الداخلي." side="top">
-                    <span className="trs-help-icon">?</span>
-                  </Tooltip>
-                </th>
+                <th>المرجع</th>
                 <th>النوع</th>
                 <th>الطرف</th>
-                <th>
-                  رقم الشيك
-                  <Tooltip content="الرقم المطبوع على الشيك — 6 أرقام في فلسطين." side="top">
-                    <span className="trs-help-icon">?</span>
-                  </Tooltip>
-                </th>
+                <th>رقم الشيك</th>
                 <th>المبلغ</th>
-                <th>
-                  تاريخ الشيك
-                </th>
-                <th>
-                  تاريخ الاستحقاق
-                  <Tooltip content="الشيك الآجل: شيك بتاريخ مستقبلي. لا يُصرف قبله." side="top">
-                    <span className="trs-help-icon">?</span>
-                  </Tooltip>
-                </th>
+                <th>تاريخ الشيك</th>
+                <th>تاريخ الاستحقاق</th>
                 <th>الحالة</th>
                 <th>الإجراءات</th>
               </tr>
@@ -681,8 +623,13 @@ export default function Treasury() {
                       {/* تاريخ الاستحقاق */}
                       <td>
                         <div className="tc-date">
-                          <strong className={overdue ? "overdue-label" : ""}>{inst.dueDate}</strong>
-                          <span className={overdue ? "overdue-label" : ""}>{dueSuffix}</span>
+                          <strong>{inst.dueDate}</strong>
+                          {overdue
+                            ? <span className="trs-overdue-pill">{dueSuffix}</span>
+                            : dueDiff <= 3
+                            ? <span className="trs-due-soon-label">{dueSuffix}</span>
+                            : <span className="trs-due-ok-label">{dueSuffix}</span>
+                          }
                         </div>
                       </td>
 
