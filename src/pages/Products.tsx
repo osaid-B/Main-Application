@@ -281,6 +281,8 @@ export default function Products() {
   const [deleteTarget, setDeleteTarget] = useState<ProductRow | null>(null);
   const [deleteCode, setDeleteCode] = useState("");
   const [barcodeProduct, setBarcodeProduct] = useState<ProductRow | null>(null);
+  const [menuProductId, setMenuProductId] = useState<string | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
 
   const [page, setPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -321,6 +323,17 @@ export default function Products() {
     document.addEventListener("mousedown", handleCategoryClose);
     return () => document.removeEventListener("mousedown", handleCategoryClose);
   }, [showCategoryDropdown]);
+
+  useEffect(() => {
+    if (!menuProductId) return;
+    function handleMenuClose(event: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setMenuProductId(null);
+      }
+    }
+    document.addEventListener("mousedown", handleMenuClose);
+    return () => document.removeEventListener("mousedown", handleMenuClose);
+  }, [menuProductId]);
 
   const supplierMap = useMemo(() => {
     const map = new Map<string, string>();
@@ -1112,17 +1125,38 @@ export default function Products() {
                             <Pencil size={15} />
                           </Button>
 
-                          <Button
-                            type="button"
-                            variant="icon"
-                            size="sm"
-                            className="product-action-icon"
-                            title="More actions"
-                            aria-label="More actions"
-                            onClick={() => setViewProduct(product)}
+                          <div
+                            className="prod-menu-wrap"
+                            ref={menuProductId === product.id ? menuRef : undefined}
                           >
-                            <MoreHorizontal size={15} />
-                          </Button>
+                            <Button
+                              type="button"
+                              variant="icon"
+                              size="sm"
+                              className={`product-action-icon ${menuProductId === product.id ? "active" : ""}`}
+                              title="More actions"
+                              aria-label="More actions"
+                              onClick={() => setMenuProductId(menuProductId === product.id ? null : product.id)}
+                            >
+                              <MoreHorizontal size={15} />
+                            </Button>
+                            {menuProductId === product.id && (
+                              <div className="prod-action-menu">
+                                <button type="button" onClick={() => { setViewProduct(product); setMenuProductId(null); }}>
+                                  <Eye size={14} /> عرض التفاصيل
+                                </button>
+                                <button type="button" onClick={() => { openEditModal(product); setMenuProductId(null); }}>
+                                  <Pencil size={14} /> تعديل
+                                </button>
+                                <button type="button" onClick={() => { setBarcodeProduct(product); setMenuProductId(null); }}>
+                                  <Tags size={14} /> باركود
+                                </button>
+                                <button type="button" className="danger" onClick={() => { requestDeleteProduct(product); setMenuProductId(null); }}>
+                                  <Trash2 size={14} /> حذف
+                                </button>
+                              </div>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     );

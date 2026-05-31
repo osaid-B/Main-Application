@@ -4284,3 +4284,44 @@ textarea.modal-input {
   cursor: pointer;
   outline: none;
 }
+/* ── ⋯ action dropdown menu ── */
+.prod-menu-wrap {
+  position: relative;
+  display: inline-block;
+}
+
+.prod-action-menu {
+  position: absolute;
+  inset-block-start: calc(100% + 4px);
+  inset-inline-end: 0;
+  min-width: 150px;
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius);
+  box-shadow: 0 4px 16px rgba(0,0,0,.1);
+  z-index: 50;
+  overflow: hidden;
+  animation: fadeInDown 0.1s ease;
+}
+
+@keyframes fadeInDown {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.prod-action-menu button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 9px 14px;
+  border: 0;
+  background: transparent;
+  color: var(--app-text);
+  font-size: 13px;
+  text-align: start;
+  cursor: pointer;
+}
+.prod-action-menu button:hover { background: var(--app-hover, #f3f4f6); }
+.prod-action-menu button.danger { color: #dc2626; }
+.prod-action-menu button.danger:hover { background: #fef2f2; }

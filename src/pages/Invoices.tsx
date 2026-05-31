@@ -95,9 +95,8 @@ type InvoiceFormState = {
   dueDate: string;
   currency: string;
   paymentMethod: PaymentMethod;
-  productId: string;
-  quantity: string;
-  unitPrice: string;
+  items: InvoiceLine[];
+  statusOverride: InvoiceStatus | "";
   paidAmount: string;
   vatEnabled: boolean;
   vatRate: string;
@@ -143,9 +142,8 @@ const EMPTY_FORM: InvoiceFormState = {
   dueDate: TODAY,
   currency: "ILS",
   paymentMethod: "Bank Transfer",
-  productId: "",
-  quantity: "1",
-  unitPrice: "0",
+  items: [],
+  statusOverride: "",
   paidAmount: "0",
   vatEnabled: true,
   vatRate: "16",
@@ -156,6 +154,10 @@ const EMPTY_FORM: InvoiceFormState = {
   priority: "Medium",
   approvedBy: "",
 };
+
+function makeBlankItem(): InvoiceLine {
+  return { id: `line-${Date.now()}-${Math.random().toString(36).slice(2)}`, productId: "", label: "", quantity: 1, unitPrice: 0, total: 0 };
+}
 
 const TAB_ORDER: TabKey[] = ["customer", "supplier", "internal"];
 
@@ -215,7 +217,7 @@ function formatDate(value: string) {
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
 
-  return `${year}/${month}/${day}`;
+  return `${day}/${month}/${year}`;
 }
 
 function isLate(invoice: InvoiceRecord) {
@@ -352,23 +354,6 @@ function getProductById(products: Product[], productId: string) {
   return products.find((product, index) => getProductId(product, index) === productId);
 }
 
-function buildLine(
-  product: Product | undefined,
-  productId: string,
-  quantity: number,
-  unitPrice: number
-): InvoiceLine {
-  const label = product ? getProductName(product) : "General item";
-
-  return {
-    id: `line-${Date.now()}`,
-    productId,
-    label,
-    quantity,
-    unitPrice,
-    total: quantity * unitPrice,
-  };
-}
 
 function seedInvoices(
   customers: Customer[],
@@ -512,7 +497,7 @@ function seedInvoices(
         {
           id: "line-supplier-2",
           productId: "",
-          label: "Logistics Service",
+          label: "خدمة لوجستية",
           quantity: 1,
           unitPrice: 859,
           total: 859,
@@ -544,7 +529,7 @@ function seedInvoices(
         {
           id: "line-internal-1",
           productId: "",
-          label: "Maintenance",
+          label: "صيانة",
           quantity: 1,
           unitPrice: 907,
           total: 907,
@@ -580,7 +565,7 @@ function seedInvoices(
         {
           id: "line-internal-2",
           productId: "",
-          label: "Marketing Campaign",
+          label: "حملة تسويقية",
           quantity: 1,
           unitPrice: 551,
           total: 551,
@@ -838,7 +823,6 @@ export default function Invoices() {
       "partySubtext",
       "customerId",
       "supplierId",
-      "productId",
       "notes",
       "department",
       "category",
@@ -850,16 +834,17 @@ export default function Invoices() {
       return value !== "";
     });
 
-    const hasChangedNumbers =
-      formState.quantity !== "1" ||
-      formState.unitPrice !== "0" ||
-      formState.paidAmount !== "0";
+    const hasItems = formState.items.some(
+      (item) => item.productId !== "" || item.unitPrice > 0
+    );
+
+    const hasChangedNumbers = formState.paidAmount !== "0";
 
     const hasChangedDates =
       formState.issueDate !== TODAY ||
       formState.dueDate !== TODAY;
 
-    return hasTextData || hasChangedNumbers || hasChangedDates;
+    return hasTextData || hasItems || hasChangedNumbers || hasChangedDates;
   }
 
   function requestCloseFormModal() {
@@ -913,6 +898,8 @@ export default function Invoices() {
       paymentMethod: "Bank Transfer",
       vatRate: String(companySettings.defaultTaxRate ?? 16),
       vatEnabled: !companySettings.taxExempt,
+      items: [makeBlankItem()],
+      statusOverride: "",
     });
 
     setCustomerSearch("");
@@ -924,8 +911,6 @@ export default function Invoices() {
   }
 
   function openEditModal(invoice: InvoiceRecord) {
-    const firstLine = invoice.items[0];
-
     setFormMode("edit");
     setFormState({
       id: invoice.id,
@@ -939,9 +924,8 @@ export default function Invoices() {
       dueDate: invoice.dueDate,
       currency: invoice.currency || "ILS",
       paymentMethod: normalizePaymentMethod(invoice.paymentMethod),
-      productId: firstLine?.productId ?? "",
-      quantity: String(firstLine?.quantity ?? 1),
-      unitPrice: String(firstLine?.unitPrice ?? invoice.subtotal ?? invoice.totalAmount),
+      items: invoice.items.length > 0 ? invoice.items : [makeBlankItem()],
+      statusOverride: "",
       paidAmount: String(invoice.paidAmount),
       vatEnabled: (invoice.vatRate ?? 0) > 0,
       vatRate: String(invoice.vatRate ?? 16),
@@ -971,26 +955,10 @@ export default function Invoices() {
     setEditDeleteError("");
   }
 
-  function handleProductChange(productId: string) {
-    const selectedProduct = getProductById(products, productId);
-    const price = selectedProduct ? getProductPrice(selectedProduct) : 0;
-
-    setFormState((current) => ({
-      ...current,
-      productId,
-      unitPrice: String(price),
-    }));
-  }
-
   function handleFormChange(
     event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) {
     const { name, value } = event.target;
-
-    if (name === "productId") {
-      handleProductChange(value);
-      return;
-    }
 
     setFormState((current) => {
       if (name === "type") {
@@ -1030,20 +998,51 @@ export default function Invoices() {
     });
   }
 
+  function addItem() {
+    setFormState((s) => ({ ...s, items: [...s.items, makeBlankItem()] }));
+  }
+
+  function removeItem(id: string) {
+    setFormState((s) => ({ ...s, items: s.items.filter((i) => i.id !== id) }));
+  }
+
+  function updateItemProduct(id: string, productId: string) {
+    const product = getProductById(products, productId);
+    const price = product ? getProductPrice(product) : 0;
+    const label = product ? getProductName(product) : "";
+    setFormState((s) => ({
+      ...s,
+      items: s.items.map((i) =>
+        i.id === id ? { ...i, productId, label, unitPrice: price, total: price * i.quantity } : i
+      ),
+    }));
+  }
+
+  function updateItemQty(id: string, qty: number) {
+    const safeQty = Math.max(1, qty);
+    setFormState((s) => ({
+      ...s,
+      items: s.items.map((i) =>
+        i.id === id ? { ...i, quantity: safeQty, total: safeQty * i.unitPrice } : i
+      ),
+    }));
+  }
+
   function saveInvoice(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    const quantity = Math.max(1, normalizeNumber(formState.quantity));
-    const unitPrice = Math.max(0, normalizeNumber(formState.unitPrice));
-    const subtotal = quantity * unitPrice;
+    const items = formState.items
+      .filter((i) => i.productId !== "" || i.unitPrice > 0)
+      .map((i) => ({ ...i, total: i.quantity * i.unitPrice }));
+    if (items.length === 0) return;
+
+    const subtotal = items.reduce((s, i) => s + i.total, 0);
     const vatRate = formState.vatEnabled ? Math.max(0, normalizeNumber(formState.vatRate)) : 0;
     const vatAmount = Math.round(subtotal * vatRate) / 100;
     const totalAmount = subtotal + vatAmount;
     const paidAmount = Math.min(Math.max(0, normalizeNumber(formState.paidAmount)), totalAmount);
     const remainingAmount = Math.max(totalAmount - paidAmount, 0);
-    const status = statusFromAmounts(paidAmount, totalAmount);
-    const product = getProductById(products, formState.productId);
-    const item = buildLine(product, formState.productId, quantity, unitPrice);
+    const status: InvoiceStatus = (formState.statusOverride || statusFromAmounts(paidAmount, totalAmount)) as InvoiceStatus;
 
     const partyName =
       formState.partyName.trim() ||
@@ -1077,7 +1076,7 @@ export default function Invoices() {
       totalAmount,
       paidAmount,
       remainingAmount,
-      items: [item],
+      items,
       notes: formState.notes.trim(),
       linkedRecord: buildLinkedRecord(formState.type, nextId),
       department: formState.type === "internal" ? partyName : undefined,
@@ -1148,6 +1147,15 @@ export default function Invoices() {
 
     pushToast(t.invoices.toast.markedPaid);
   }
+
+  const editingRecord = useMemo(
+    () => (formMode === "edit" && formState.id ? records.find((r) => r.id === formState.id) ?? null : null),
+    [formMode, formState.id, records]
+  );
+  const effectiveStatus: InvoiceStatus = (formState.statusOverride || editingRecord?.status || "Unpaid") as InvoiceStatus;
+  const isLocked = formMode === "edit" && effectiveStatus === "Paid";
+
+  const formSubtotal = formState.items.reduce((s, i) => s + i.total, 0);
 
   return (
     <>
@@ -1532,6 +1540,7 @@ export default function Invoices() {
                             value={formState.type}
                             onChange={handleFormChange}
                             autoComplete="off"
+                            disabled={isLocked}
                           >
                             <option value="customer">{t.invoices.tabs.customer}</option>
                             <option value="supplier">{t.invoices.tabs.supplier}</option>
@@ -1668,53 +1677,98 @@ export default function Invoices() {
                       </div>
                     </section>
 
+                    {isLocked && (
+                      <div className="inv-lock-banner">
+                        🔒 هذه الفاتورة مدفوعة — بعض الحقول مقيّدة. غيّر الحالة أدناه لتحرير الفاتورة.
+                      </div>
+                    )}
+
+                    {formMode === "edit" && (
+                      <section className="form-cluster">
+                        <div className="form-grid form-grid-inline">
+                          <label className="field-stack">
+                            <span>حالة الفاتورة</span>
+                            <select
+                              value={formState.statusOverride}
+                              onChange={(e) => setFormState((s) => ({ ...s, statusOverride: e.target.value as InvoiceStatus | "" }))}
+                              autoComplete="off"
+                            >
+                              <option value="">تلقائي (حسب المبلغ المدفوع)</option>
+                              <option value="Unpaid">{t.invoices.status.unpaid}</option>
+                              <option value="Partial">{t.invoices.status.partial}</option>
+                              <option value="Paid">{t.invoices.status.paid}</option>
+                            </select>
+                          </label>
+                        </div>
+                      </section>
+                    )}
+
                     <section className="form-cluster">
-                      <div className="form-grid form-grid-financial">
-                        <label className="field-stack">
+                      <div className="inv-items-table">
+                        <div className="inv-items-header">
                           <span>{t.invoices.form.product}</span>
-                          <select
-                            name="productId"
-                            value={formState.productId}
-                            onChange={handleFormChange}
-                            autoComplete="off"
-                            required
-                          >
-                            <option value="">{t.invoices.form.selectProduct}</option>
-                            {productOptions.map((product) => (
-                              <option key={product.id} value={product.id}>
-                                {product.name} - {money(product.price, formState.currency)}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
-
-                        <label className="field-stack">
                           <span>{t.invoices.form.quantity}</span>
-                          <input
-                            name="quantity"
-                            type="number"
-                            min="1"
-                            value={formState.quantity}
-                            onChange={handleFormChange}
-                            autoComplete="off"
-                            required
-                          />
-                        </label>
-
-                        <label className="field-stack">
                           <span>{t.invoices.form.unitPrice}</span>
-                          <input
-                            name="unitPrice"
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            value={formState.unitPrice}
-                            readOnly
-                            className="readonly-field"
-                            autoComplete="off"
-                          />
-                        </label>
+                          <span>الإجمالي</span>
+                          <span></span>
+                        </div>
+                        {formState.items.map((item, idx) => (
+                          <div key={item.id} className="inv-items-row">
+                            <select
+                              value={item.productId}
+                              onChange={(e) => updateItemProduct(item.id, e.target.value)}
+                              disabled={isLocked}
+                              required={idx === 0}
+                              autoComplete="off"
+                            >
+                              <option value="">{t.invoices.form.selectProduct}</option>
+                              {productOptions.map((product) => (
+                                <option key={product.id} value={product.id}>
+                                  {product.name}
+                                </option>
+                              ))}
+                            </select>
+                            <div className="inv-qty-ctrl">
+                              <button
+                                type="button"
+                                onClick={() => updateItemQty(item.id, item.quantity - 1)}
+                                disabled={isLocked || item.quantity <= 1}
+                              >−</button>
+                              <input
+                                type="number"
+                                min="1"
+                                value={item.quantity}
+                                onChange={(e) => updateItemQty(item.id, Number(e.target.value))}
+                                disabled={isLocked}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => updateItemQty(item.id, item.quantity + 1)}
+                                disabled={isLocked}
+                              >+</button>
+                            </div>
+                            <span className="inv-item-price">{money(item.unitPrice, formState.currency)}</span>
+                            <span className="inv-item-total">{money(item.total, formState.currency)}</span>
+                            <button
+                              type="button"
+                              className="inv-item-del"
+                              onClick={() => removeItem(item.id)}
+                              disabled={isLocked || formState.items.length <= 1}
+                              title="حذف السطر"
+                            >×</button>
+                          </div>
+                        ))}
+                        <button
+                          type="button"
+                          className="inv-add-item-btn"
+                          onClick={addItem}
+                          disabled={isLocked}
+                        >
+                          <Plus size={14} /> إضافة منتج
+                        </button>
+                      </div>
 
+                      <div className="form-grid form-grid-financial" style={{ marginTop: 12 }}>
                         <label className="field-stack">
                           <span>{t.invoices.form.paidAmount}</span>
                           <input
@@ -1725,6 +1779,7 @@ export default function Invoices() {
                             value={formState.paidAmount}
                             onChange={handleFormChange}
                             autoComplete="off"
+                            disabled={isLocked}
                           />
                         </label>
 
@@ -1735,6 +1790,7 @@ export default function Invoices() {
                             value={formState.currency}
                             onChange={handleFormChange}
                             autoComplete="off"
+                            disabled={isLocked}
                           >
                             <option value="ILS">ILS</option>
                             <option value="USD">USD</option>
@@ -1749,6 +1805,7 @@ export default function Invoices() {
                             value={formState.paymentMethod}
                             onChange={handleFormChange}
                             autoComplete="off"
+                            disabled={isLocked}
                           >
                             <option value="Cash">{t.invoices.methods.cash}</option>
                             <option value="Card">{t.invoices.methods.card}</option>
@@ -1763,6 +1820,7 @@ export default function Invoices() {
                           <input
                             type="checkbox"
                             checked={formState.vatEnabled}
+                            disabled={isLocked}
                             onChange={(e) => setFormState((s) => ({ ...s, vatEnabled: e.target.checked }))}
                           />
                           <span>{t.invoices.form.vatEnabled}</span>
@@ -1777,6 +1835,7 @@ export default function Invoices() {
                               step="1"
                               className="invoice-vat-rate-input"
                               value={formState.vatRate}
+                              disabled={isLocked}
                               onChange={(e) => setFormState((s) => ({ ...s, vatRate: e.target.value }))}
                             />
                           </label>
@@ -1786,13 +1845,7 @@ export default function Invoices() {
                       <div className="invoice-auto-price-box">
                         <div>
                           <span>{t.invoices.form.subtotal}</span>
-                          <strong>
-                            {money(
-                              normalizeNumber(formState.quantity) *
-                                normalizeNumber(formState.unitPrice),
-                              formState.currency
-                            )}
-                          </strong>
+                          <strong>{money(formSubtotal, formState.currency)}</strong>
                         </div>
 
                         {formState.vatEnabled && (
@@ -1800,11 +1853,7 @@ export default function Invoices() {
                             <span>{t.invoices.form.vatLine} {formState.vatRate}%</span>
                             <strong>
                               {money(
-                                Math.round(
-                                  normalizeNumber(formState.quantity) *
-                                    normalizeNumber(formState.unitPrice) *
-                                    normalizeNumber(formState.vatRate)
-                                ) / 100,
+                                Math.round(formSubtotal * normalizeNumber(formState.vatRate)) / 100,
                                 formState.currency
                               )}
                             </strong>
@@ -1815,11 +1864,7 @@ export default function Invoices() {
                           <span>{t.invoices.form.total}</span>
                           <strong>
                             {money(
-                              (() => {
-                                const sub = normalizeNumber(formState.quantity) * normalizeNumber(formState.unitPrice);
-                                const vat = formState.vatEnabled ? Math.round(sub * normalizeNumber(formState.vatRate)) / 100 : 0;
-                                return sub + vat;
-                              })(),
+                              formSubtotal + (formState.vatEnabled ? Math.round(formSubtotal * normalizeNumber(formState.vatRate)) / 100 : 0),
                               formState.currency
                             )}
                           </strong>
@@ -1835,11 +1880,7 @@ export default function Invoices() {
                           <strong>
                             {money(
                               Math.max(
-                                (() => {
-                                  const sub = normalizeNumber(formState.quantity) * normalizeNumber(formState.unitPrice);
-                                  const vat = formState.vatEnabled ? Math.round(sub * normalizeNumber(formState.vatRate)) / 100 : 0;
-                                  return sub + vat;
-                                })() - normalizeNumber(formState.paidAmount),
+                                formSubtotal + (formState.vatEnabled ? Math.round(formSubtotal * normalizeNumber(formState.vatRate)) / 100 : 0) - normalizeNumber(formState.paidAmount),
                                 0
                               ),
                               formState.currency
