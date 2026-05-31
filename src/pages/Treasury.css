@@ -41,17 +41,19 @@
 
 .trs-header-copy h1 {
   margin: 0;
-  font-size: 28px;
-  font-weight: 950;
-  letter-spacing: -0.03em;
-  color: var(--app-text);
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #111827;
   line-height: 1.2;
+  font-family: var(--font-cairo, "Cairo", sans-serif);
 }
 
 .trs-header-copy p {
   margin: 5px 0 0;
-  color: var(--app-text-muted);
-  font-size: 14px;
+  color: #6B7280;
+  font-size: 13px;
+  font-weight: 400;
   line-height: 1.5;
 }
 
@@ -222,6 +224,14 @@
   border-color: #3b5bdb;
 }
 
+.trs-date-label {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--app-text-muted);
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
 .trs-date-sep {
   font-size: 11px;
   color: var(--app-text-muted);
@@ -291,6 +301,62 @@
   gap: var(--app-space-2);
 }
 
+.trs-text-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #3b5bdb;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px 0;
+  transition: color var(--app-transition);
+  font-family: inherit;
+}
+
+.trs-text-link:hover {
+  color: #2f4ac5;
+  text-decoration: underline;
+}
+
+.trs-add-dropdown-wrap {
+  position: relative;
+}
+
+.trs-add-dropdown-menu {
+  position: absolute;
+  inset-inline-end: 0;
+  top: calc(100% + 4px);
+  z-index: 50;
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-md);
+  box-shadow: var(--app-shadow-soft);
+  min-width: 140px;
+  overflow: hidden;
+}
+
+.trs-add-dropdown-menu button {
+  display: block;
+  width: 100%;
+  padding: 9px 16px;
+  text-align: start;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  color: var(--app-text);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: background var(--app-transition);
+}
+
+.trs-add-dropdown-menu button:hover {
+  background: var(--app-surface-hover);
+}
+
 /* ── Table card ──────────────────────────────────────────── */
 .trs-table-card {
   background: var(--app-surface);
@@ -350,7 +416,7 @@
 
 .trs-table td {
   padding: 13px 16px;
-  border-bottom: 1px solid var(--app-border);
+  border-bottom: 1px solid #F3F4F6;
   vertical-align: middle;
   color: var(--app-text);
 }
@@ -365,20 +431,43 @@
 }
 
 .trs-table tbody tr:hover {
-  background: var(--app-surface-hover);
+  background: #FAFBFC;
 }
 
-/* Row highlighting — subtle tints, not filled backgrounds */
+/* Hover arrow indicator on first cell */
+.trs-table td:first-child {
+  position: relative;
+}
+
+.trs-table tbody tr:hover td:first-child::before {
+  content: '';
+  position: absolute;
+  inset-inline-start: 0;
+  top: 20%;
+  height: 60%;
+  width: 2px;
+  background: #c5d0f5;
+  border-radius: 1px;
+}
+
+/* Don't override existing colored borders */
+.trs-table tbody tr.trs-row--overdue:hover td:first-child::before,
+.trs-table tbody tr.trs-row--bounced:hover td:first-child::before,
+.trs-table tbody tr.trs-row--review:hover td:first-child::before {
+  display: none;
+}
+
+/* Row highlighting */
 .trs-table tbody tr.trs-row--overdue {
-  background: #fffdf0;
+  background: #FFFBFB;
 }
 
 .trs-table tbody tr.trs-row--overdue td:first-child {
-  border-inline-start: 2px solid #f59e0b;
+  border-inline-start: 3px solid #DC2626;
 }
 
 .trs-table tbody tr.trs-row--overdue:hover {
-  background: #fffbeb;
+  background: #fff5f5;
 }
 
 .trs-table tbody tr.trs-row--bounced {
@@ -499,11 +588,12 @@
   gap: 4px;
 }
 
-/* New clean row action pattern */
+/* Row action pattern — eye always visible, primary + overflow reveal on hover */
 .trs-row-actions {
   display: flex;
   align-items: center;
   gap: 5px;
+  position: relative;
 }
 
 .trs-row-eye {
@@ -539,7 +629,10 @@
   color: var(--app-text-soft);
   cursor: pointer;
   white-space: nowrap;
-  transition: background var(--app-transition), color var(--app-transition), border-color var(--app-transition);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(2px);
+  transition: opacity 0.15s ease, transform 0.15s ease, background var(--app-transition), color var(--app-transition), border-color var(--app-transition);
 }
 
 .trs-row-primary-btn:hover {
@@ -548,18 +641,95 @@
   border-color: #c5cff7;
 }
 
-/* Overdue / due-soon indicators */
-.trs-overdue-pill {
+.trs-table tbody tr:hover .trs-row-primary-btn,
+.trs-row-actions--open .trs-row-primary-btn {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+/* Overflow button and dropdown */
+.trs-row-overflow-wrap {
+  position: relative;
+}
+
+.trs-row-overflow-btn {
+  width: 28px;
+  height: 28px;
   display: inline-flex;
   align-items: center;
-  padding: 2px 7px;
-  border-radius: var(--app-radius-full);
-  font-size: 10.5px;
-  font-weight: 700;
-  background: #fff1f2;
-  color: #be123c;
-  border: 1px solid #fecdd3;
-  white-space: nowrap;
+  justify-content: center;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-sm);
+  background: transparent;
+  color: var(--app-text-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(2px);
+  transition: opacity 0.15s ease, transform 0.15s ease, background var(--app-transition), color var(--app-transition), border-color var(--app-transition);
+}
+
+.trs-row-overflow-btn:hover {
+  background: var(--app-surface-hover);
+  color: var(--app-text);
+  border-color: var(--app-border-strong);
+}
+
+.trs-table tbody tr:hover .trs-row-overflow-btn,
+.trs-row-actions--open .trs-row-overflow-btn {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.trs-row-overflow-menu {
+  position: absolute;
+  inset-inline-end: 0;
+  top: calc(100% + 4px);
+  z-index: 50;
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-md);
+  box-shadow: var(--app-shadow-soft);
+  min-width: 128px;
+  overflow: hidden;
+}
+
+.trs-row-overflow-menu button {
+  display: block;
+  width: 100%;
+  padding: 8px 14px;
+  text-align: start;
+  font-size: 12.5px;
+  font-weight: 500;
+  font-family: inherit;
+  color: var(--app-text);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: background var(--app-transition);
+}
+
+.trs-row-overflow-menu button:hover {
+  background: var(--app-surface-hover);
+}
+
+.trs-row-overflow-menu .trs-overflow-item--danger {
+  color: var(--app-danger);
+}
+
+.trs-row-overflow-menu .trs-overflow-item--danger:hover {
+  background: var(--app-danger-subtle);
+}
+
+/* Overdue / due-soon indicators */
+.trs-overdue-text {
+  font-size: 11px;
+  color: #DC2626;
+  font-weight: 600;
+  display: block;
   margin-top: 2px;
 }
 
@@ -578,18 +748,38 @@
   margin-top: 2px;
 }
 
-/* ── Status badge colors ─────────────────────────────────── */
-.trs-badge--draft           { background: #f1f5f9; color: #475569;  border: 1px solid #e2e8f0; }
-.trs-badge--pending         { background: #eff6ff; color: #1d4ed8;  border: 1px solid #bfdbfe; }
-.trs-badge--deposited       { background: #f0fdf4; color: #0d9488;  border: 1px solid #a7f3d0; }
-.trs-badge--cleared         { background: #f0fdf4; color: #16a34a;  border: 1px solid #bbf7d0; }
-.trs-badge--bounced         { background: var(--app-danger-subtle); color: var(--app-danger);   border: 1px solid #fecaca; }
-.trs-badge--cancelled       { background: #f8fafc; color: #94a3b8;  border: 1px solid #e2e8f0; }
-.trs-badge--under_review    { background: #faf5ff; color: #7c3aed;  border: 1px solid #ddd6fe; }
-.trs-badge--partially_applied { background: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
+/* ── Status badge colors — soft borderless pills ─────────── */
+.trs-badge--draft             { background: #F1F5F9; color: #64748B; border: none; }
+.trs-badge--pending           { background: #EFF6FF; color: #3B82F6; border: none; }
+.trs-badge--deposited         { background: #ECFDF5; color: #059669; border: none; }
+.trs-badge--cleared           { background: #F0FDF4; color: #16A34A; border: none; }
+.trs-badge--bounced           { background: #FEF2F2; color: #DC2626; border: none; }
+.trs-badge--cancelled         { background: #F8FAFC; color: #94A3B8; border: none; }
+.trs-badge--under_review      { background: #FAF5FF; color: #7C3AED; border: none; }
+.trs-badge--partially_applied { background: #FFFBEB; color: #D97706; border: none; }
 
-.trs-dir-badge--incoming { background: #eff6ff; color: #1d4ed8;  border: 1px solid #bfdbfe; }
-.trs-dir-badge--outgoing { background: #fff7ed; color: #c2410c;  border: 1px solid #fed7aa; }
+.trs-dir-badge--incoming { background: #EFF6FF; color: #3B82F6; border: none; }
+.trs-dir-badge--outgoing { background: #FFF7ED; color: #C2410C; border: none; }
+
+/* Direction pills (compact, inside المرجع cell) */
+.tc-ref-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.trs-dir-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  border-radius: var(--app-radius-full);
+  font-size: 10px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.trs-dir-pill--incoming { background: #EFF6FF; color: #3B82F6; }
+.trs-dir-pill--outgoing { background: #FFF7ED; color: #C2410C; }
 
 /* ── Status badge base ───────────────────────────────────── */
 .trs-badge {

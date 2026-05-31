@@ -1,13 +1,15 @@
 import "./Treasury.css";
-import { useMemo, useState, useCallback } from "react";
+import { useMemo, useState, useCallback, useRef, useEffect } from "react";
 import {
   ArrowRight,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Download,
   Eye,
   FileScan,
   Landmark,
+  MoreHorizontal,
   Plus,
   RefreshCcw,
   Search,
@@ -125,6 +127,7 @@ function RowActions({
   onDeposit,
   onClear,
   onRedeposit,
+  onCancel,
   onSubmit,
 }: {
   instrument: TreasuryInstrument;
@@ -138,6 +141,19 @@ function RowActions({
   onSubmit: () => void;
 }) {
   const { status } = instrument;
+  const [menuOpen, setMenuOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const close = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, [menuOpen]);
 
   const primary: { label: string; fn: () => void } | null = (() => {
     if (status === "draft")             return { label: "تقديم",        fn: onSubmit    };
@@ -149,8 +165,14 @@ function RowActions({
     return null;
   })();
 
+  const canCancel = ["draft", "pending", "bounced", "under_review"].includes(status);
+
   return (
-    <div className="trs-row-actions" onClick={e => e.stopPropagation()}>
+    <div
+      ref={containerRef}
+      className={`trs-row-actions${menuOpen ? " trs-row-actions--open" : ""}`}
+      onClick={e => e.stopPropagation()}
+    >
       <button type="button" className="trs-row-eye" onClick={onView} title="عرض التفاصيل">
         <Eye size={13} />
       </button>
@@ -159,6 +181,32 @@ function RowActions({
           {primary.label}
         </button>
       )}
+      <div className="trs-row-overflow-wrap">
+        <button
+          type="button"
+          className="trs-row-overflow-btn"
+          onClick={() => setMenuOpen(v => !v)}
+          title="المزيد"
+        >
+          <MoreHorizontal size={13} />
+        </button>
+        {menuOpen && (
+          <div className="trs-row-overflow-menu">
+            <button type="button" onClick={() => { onView(); setMenuOpen(false); }}>
+              عرض التفاصيل
+            </button>
+            {canCancel && (
+              <button
+                type="button"
+                className="trs-overflow-item--danger"
+                onClick={() => { onCancel(); setMenuOpen(false); }}
+              >
+                إلغاء
+              </button>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -188,6 +236,19 @@ export default function Treasury() {
   const [selectedInst,  setSelectedInst]  = useState<TreasuryInstrument | null>(null);
   const [actionModal,   setActionModal]   = useState<ActionModal | null>(null);
   const [toast,         setToast]         = useState("");
+  const [showAddDropdown, setShowAddDropdown] = useState(false);
+  const addDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!showAddDropdown) return;
+    const close = (e: MouseEvent) => {
+      if (addDropdownRef.current && !addDropdownRef.current.contains(e.target as Node)) {
+        setShowAddDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, [showAddDropdown]);
 
   const showToast = useCallback((msg: string) => {
     setToast(msg);
@@ -442,9 +503,11 @@ export default function Treasury() {
           </select>
 
           <div className="trs-date-range">
-            <input type="date" className="trs-filter-date" value={dateFrom} onChange={e => { setDateFrom(e.target.value); setPage(1); }} title="من تاريخ" />
+            <span className="trs-date-label">من:</span>
+            <input type="date" className="trs-filter-date" value={dateFrom} onChange={e => { setDateFrom(e.target.value); setPage(1); }} />
             <span className="trs-date-sep">—</span>
-            <input type="date" className="trs-filter-date" value={dateTo} onChange={e => { setDateTo(e.target.value); setPage(1); }} title="إلى تاريخ" />
+            <span className="trs-date-label">إلى:</span>
+            <input type="date" className="trs-filter-date" value={dateTo} onChange={e => { setDateTo(e.target.value); setPage(1); }} />
           </div>
 
           <div className="trs-search-wrap">
@@ -462,48 +525,57 @@ export default function Treasury() {
         {/* Row 3: Actions */}
         <div className="trs-actions-row">
           <div className="trs-actions-start">
-            <Button
-              variant="primary"
-              size="sm"
-              leftIcon={<Plus size={14} />}
-              onClick={() => setActionModal({ type: "add_check", direction: "incoming" })}
+            <button
+              type="button"
+              className="trs-text-link"
+              onClick={() => navigate("/treasury/accounts")}
             >
-              إضافة شيك وارد
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              leftIcon={<Plus size={14} />}
-              onClick={() => setActionModal({ type: "add_check", direction: "outgoing" })}
-            >
-              إضافة شيك صادر
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              leftIcon={<Plus size={14} />}
-              onClick={() => setActionModal({ type: "add_transfer", direction: "incoming" })}
-            >
-              إضافة تحويل
-            </Button>
+              الحسابات البنكية
+              <ArrowRight size={13} />
+            </button>
+          </div>
+          <div className="trs-actions-end">
             <Button
               variant="ghost"
               size="sm"
               leftIcon={<FileScan size={14} />}
               onClick={() => setActionModal({ type: "add_check", direction: "incoming" })}
             >
-              مسح ضوئي OCR
+              مسح OCR
             </Button>
-          </div>
-          <div className="trs-actions-end">
-            <Button
-              variant="ghost"
-              size="sm"
-              rightIcon={<ArrowRight size={13} />}
-              onClick={() => navigate("/treasury/accounts")}
-            >
-              الحسابات البنكية
-            </Button>
+            <div ref={addDropdownRef} className="trs-add-dropdown-wrap">
+              <Button
+                variant="primary"
+                size="sm"
+                leftIcon={<Plus size={14} />}
+                rightIcon={<ChevronDown size={12} />}
+                onClick={() => setShowAddDropdown(v => !v)}
+              >
+                إضافة
+              </Button>
+              {showAddDropdown && (
+                <div className="trs-add-dropdown-menu">
+                  <button
+                    type="button"
+                    onClick={() => { setActionModal({ type: "add_check", direction: "incoming" }); setShowAddDropdown(false); }}
+                  >
+                    شيك وارد
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setActionModal({ type: "add_check", direction: "outgoing" }); setShowAddDropdown(false); }}
+                  >
+                    شيك صادر
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setActionModal({ type: "add_transfer", direction: "incoming" }); setShowAddDropdown(false); }}
+                  >
+                    حوالة بنكية
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -524,8 +596,7 @@ export default function Treasury() {
         <div className="trs-table-wrap">
           <table className="trs-table" role="grid">
             <colgroup>
-              <col style={{ width: 120 }} />
-              <col style={{ width: 90  }} />
+              <col style={{ width: 150 }} />
               <col style={{ width: 200 }} />
               <col style={{ width: 110 }} />
               <col style={{ width: 140 }} />
@@ -537,7 +608,6 @@ export default function Treasury() {
             <thead>
               <tr>
                 <th>المرجع</th>
-                <th>النوع</th>
                 <th>الطرف</th>
                 <th>رقم الشيك</th>
                 <th>المبلغ</th>
@@ -550,7 +620,7 @@ export default function Treasury() {
             <tbody>
               {pagedItems.length === 0 ? (
                 <tr className="trs-empty-row">
-                  <td colSpan={9}>
+                  <td colSpan={8}>
                     لا توجد أدوات تطابق البحث الحالي.
                   </td>
                 </tr>
@@ -576,23 +646,21 @@ export default function Treasury() {
                       {/* المرجع */}
                       <td>
                         <div className="tc-ref">
-                          <strong>{inst.id}</strong>
+                          <div className="tc-ref-top">
+                            <strong>{inst.id}</strong>
+                            <span className={`trs-dir-pill trs-dir-pill--${inst.direction}`}>
+                              {DIRECTION_LABELS_AR[inst.direction]}
+                            </span>
+                          </div>
                           <span className="tc-ref-sub">{TYPE_AR[inst.type]}</span>
                         </div>
-                      </td>
-
-                      {/* النوع */}
-                      <td>
-                        <span className={`trs-badge trs-dir-badge--${inst.direction}`}>
-                          {DIRECTION_LABELS_AR[inst.direction]}
-                        </span>
                       </td>
 
                       {/* الطرف */}
                       <td>
                         <div className="tc-party">
                           <strong>{inst.drawerName}</strong>
-                          <span>{inst.bankName} •••• {inst.accountNumber.slice(-4)}</span>
+                          <span>{inst.bankName} ···· {inst.accountNumber.slice(-4)}</span>
                         </div>
                       </td>
 
@@ -625,7 +693,7 @@ export default function Treasury() {
                         <div className="tc-date">
                           <strong>{inst.dueDate}</strong>
                           {overdue
-                            ? <span className="trs-overdue-pill">{dueSuffix}</span>
+                            ? <span className="trs-overdue-text">{dueSuffix}</span>
                             : dueDiff <= 3
                             ? <span className="trs-due-soon-label">{dueSuffix}</span>
                             : <span className="trs-due-ok-label">{dueSuffix}</span>
