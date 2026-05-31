@@ -12,7 +12,7 @@ import { useLoadingDelay } from "../../hooks/useLoadingDelay";
 import styles from "./factory.module.css";
 
 export default function FactoryCosting() {
-  const { t, formatCurrency } = useSettings();
+  const { t, formatCurrency, formatNumber } = useSettings();
   const tc = t.factory.costing;
   const { costingEntries: COSTING_ENTRIES, boms, rawMaterials } = useFactory();
 
@@ -58,6 +58,7 @@ export default function FactoryCosting() {
         <header className={styles.header}>
           <div>
             <div className={styles.breadcrumb}>{tc.breadcrumb}</div>
+            <h1 className={styles.title}>{tc.pageTitle}</h1>
             <p className={styles.subtitle}>{tc.pageSubtitle}</p>
           </div>
         </header>
@@ -79,41 +80,27 @@ export default function FactoryCosting() {
           </select>
         </div>
 
-        <div className={`${styles.tableWrap} atlas-table-wrapper`}>
+        <div className={styles.tableWrap}>
           {isLoading ? (
             <Skeleton variant="rect" height={280} />
           ) : filtered.length === 0 ? (
             <EmptyState icon={<DollarSign size={32} />} title={tc.noData} />
           ) : (
-            <table className={`${styles.table} atlas-table`}>
-              <colgroup>
-                <col className="col-w-110" />
-                <col className="col-w-110" />
-                <col />
-                <col className="col-w-90" />
-                <col className="col-currency col-w-120" />
-                <col className="col-currency col-w-100" />
-                <col className="col-currency col-w-100" />
-                <col className="col-currency col-w-110" />
-                <col className="col-w-80" />
-                <col className="col-currency col-w-110" />
-                <col className="col-w-90" />
-                <col className="col-currency col-w-120" />
-              </colgroup>
+            <table className={styles.table}>
               <thead>
                 <tr>
-                  <th className="col-code">{tc.cols.costId}</th>
-                  <th className="col-code">{tc.cols.order}</th>
+                  <th>{tc.cols.costId}</th>
+                  <th>{tc.cols.order}</th>
                   <th>{tc.cols.product}</th>
                   <th>{tc.cols.period}</th>
-                  <th className="col-num">{tc.cols.rawMaterial}</th>
-                  <th className="col-num">{tc.cols.labor}</th>
-                  <th className="col-num">{tc.cols.overhead}</th>
-                  <th className="col-num">{tc.cols.total}</th>
-                  <th className="col-num">{tc.cols.units}</th>
-                  <th className="col-num">{tc.cols.perUnit}</th>
-                  <th className="col-num">{tc.cols.variance}</th>
-                  <th className="col-num">{tc.cols.liveBomCost}</th>
+                  <th className={styles.numEnd}>{tc.cols.rawMaterial}</th>
+                  <th className={styles.numEnd}>{tc.cols.labor}</th>
+                  <th className={styles.numEnd}>{tc.cols.overhead}</th>
+                  <th className={styles.numEnd}>{tc.cols.total}</th>
+                  <th className={styles.numEnd}>{tc.cols.units}</th>
+                  <th className={styles.numEnd}>{tc.cols.perUnit}</th>
+                  <th className={styles.numEnd}>{tc.cols.variance}</th>
+                  <th className={styles.numEnd}>{tc.cols.liveBomCost}</th>
                 </tr>
               </thead>
               <tbody>
@@ -126,20 +113,20 @@ export default function FactoryCosting() {
                   const liveBomCost = computeLiveBomCost(e.productionOrderId);
                   return (
                     <tr key={e.id}>
-                      <td className="col-code"><span className={styles.mono}>{e.id}</span></td>
-                      <td className="col-code"><span className={styles.mono}>{e.productionOrderId}</span></td>
+                      <td><span className={styles.mono}>{e.id}</span></td>
+                      <td><span className={styles.mono}>{e.productionOrderId}</span></td>
                       <td>{e.productName}</td>
-                      <td className="col-badge"><span className={styles.tag}>{e.period}</span></td>
-                      <td className={`${styles.numEnd} ${styles.mono} col-num`}>{e.rawMaterialCost > 0 ? formatCurrency(e.rawMaterialCost) : "—"}</td>
-                      <td className={`${styles.numEnd} ${styles.mono} col-num`}>{e.laborCost > 0 ? formatCurrency(e.laborCost) : "—"}</td>
-                      <td className={`${styles.numEnd} ${styles.mono} col-num`}>{e.overheadCost > 0 ? formatCurrency(e.overheadCost) : "—"}</td>
-                      <td className={`${styles.numEnd} ${styles.mono} col-num`}>{e.totalCost > 0 ? formatCurrency(e.totalCost) : "—"}</td>
-                      <td className={`${styles.numEnd} ${styles.mono} col-num`}>{e.unitsProduced > 0 ? e.unitsProduced.toLocaleString() : "—"}</td>
-                      <td className={`${styles.numEnd} ${styles.mono} col-num`}>{e.costPerUnit > 0 ? formatCurrency(e.costPerUnit) : "—"}</td>
-                      <td className={`${styles.numEnd} ${styles.mono} col-num`} style={varClass}>
+                      <td><span className={styles.tag}>{e.period}</span></td>
+                      <td className={`${styles.numEnd} ${styles.mono}`}>{e.rawMaterialCost > 0 ? formatCurrency(e.rawMaterialCost) : "—"}</td>
+                      <td className={`${styles.numEnd} ${styles.mono}`}>{e.laborCost > 0 ? formatCurrency(e.laborCost) : "—"}</td>
+                      <td className={`${styles.numEnd} ${styles.mono}`}>{e.overheadCost > 0 ? formatCurrency(e.overheadCost) : "—"}</td>
+                      <td className={`${styles.numEnd} ${styles.mono}`}>{e.totalCost > 0 ? formatCurrency(e.totalCost) : "—"}</td>
+                      <td className={`${styles.numEnd} ${styles.mono}`}>{e.unitsProduced > 0 ? formatNumber(e.unitsProduced) : "—"}</td>
+                      <td className={`${styles.numEnd} ${styles.mono}`}>{e.costPerUnit > 0 ? formatCurrency(e.costPerUnit) : "—"}</td>
+                      <td className={`${styles.numEnd} ${styles.mono}`} style={varClass}>
                         {e.variance !== 0 ? formatCurrency(Math.abs(e.variance)) : "—"}
                       </td>
-                      <td className={`${styles.numEnd} ${styles.mono} col-num`} style={{ color: "var(--app-text-muted)", fontSize: 12 }}>
+                      <td className={`${styles.numEnd} ${styles.mono}`} style={{ color: "var(--app-text-muted)", fontSize: 12 }}>
                         {liveBomCost !== null ? formatCurrency(liveBomCost) : "—"}
                       </td>
                     </tr>

@@ -56,7 +56,7 @@ function saveSidebarRoleConfig(config: SidebarRoleConfig) {
 const MODULES = ["pos", "customers", "invoices", "inventory", "reports", "employees", "settings"];
 const MODULE_LABELS: Record<string, { label: string; labelAr: string }> = {
   pos:       { label: "POS",       labelAr: "نقطة البيع" },
-  customers: { label: "Customers", labelAr: "الزبائن"   },
+  customers: { label: "Customers", labelAr: "العملاء"   },
   invoices:  { label: "Invoices",  labelAr: "الفواتير"  },
   inventory: { label: "Inventory", labelAr: "المخزون"   },
   reports:   { label: "Reports",   labelAr: "التقارير"  },

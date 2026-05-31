@@ -13,7 +13,7 @@ import { useLoadingDelay } from "../../hooks/useLoadingDelay";
 import styles from "./factory.module.css";
 
 export default function FactorySources() {
-  const { t, formatCurrency, isArabic } = useSettings();
+  const { t, formatCurrency, formatNumber, isArabic } = useSettings();
   const tc = t.factory.sources;
   const { sourceRecords: SOURCE_RECORDS } = useFactory();
 
@@ -45,6 +45,7 @@ export default function FactorySources() {
         <header className={styles.header}>
           <div>
             <div className={styles.breadcrumb}>{tc.breadcrumb}</div>
+            <h1 className={styles.title}>{tc.pageTitle}</h1>
             <p className={styles.subtitle}>{tc.pageSubtitle}</p>
           </div>
         </header>
@@ -71,50 +72,40 @@ export default function FactorySources() {
           </select>
         </div>
 
-        <div className={`${styles.tableWrap} atlas-table-wrapper`}>
+        <div className={styles.tableWrap}>
           {isLoading ? (
             <Skeleton variant="rect" height={280} />
           ) : filtered.length === 0 ? (
             <EmptyState icon={<Globe size={32} />} title={tc.noData} />
           ) : (
-            <table className={`${styles.table} atlas-table`}>
-              <colgroup>
-                <col />
-                <col className="col-w-90" />
-                <col className="col-w-160" />
-                <col className="col-w-100" />
-                <col className="col-w-100" />
-                <col className="col-currency col-w-120" />
-                <col className="col-currency col-w-130" />
-                <col className="col-date col-w-120" />
-              </colgroup>
+            <table className={styles.table}>
               <thead>
                 <tr>
                   <th>{tc.cols.material}</th>
-                  <th className="col-badge">{tc.cols.origin}</th>
+                  <th>{tc.cols.origin}</th>
                   <th>{tc.cols.supplier}</th>
                   <th>{tc.cols.country}</th>
-                  <th className="col-num">{tc.cols.quantity}</th>
-                  <th className="col-num">{tc.cols.unitCost}</th>
-                  <th className="col-num">{tc.cols.totalValue}</th>
-                  <th className="col-date">{tc.cols.purchaseDate}</th>
+                  <th className={styles.numEnd}>{tc.cols.quantity}</th>
+                  <th className={styles.numEnd}>{tc.cols.unitCost}</th>
+                  <th className={styles.numEnd}>{tc.cols.totalValue}</th>
+                  <th>{tc.cols.purchaseDate}</th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.map((r) => (
                   <tr key={r.id}>
                     <td>{isArabic ? r.materialNameAr : r.materialName}</td>
-                    <td className="col-badge">
+                    <td>
                       <Badge variant={r.origin === "local" ? "success" : "info"} size="sm">
                         {tc.originLabel[r.origin]}
                       </Badge>
                     </td>
                     <td>{isArabic ? r.supplierAr : r.supplier}</td>
                     <td>{isArabic ? r.countryAr : r.country}</td>
-                    <td className={`${styles.numEnd} ${styles.mono} col-num`}>{r.quantity.toLocaleString()} {r.unit}</td>
-                    <td className={`${styles.numEnd} ${styles.mono} col-num`}>{formatCurrency(r.unitCost)}</td>
-                    <td className={`${styles.numEnd} ${styles.mono} col-num`}>{formatCurrency(r.totalValue)}</td>
-                    <td className={`${styles.mono} col-date`}>{r.purchaseDate}</td>
+                    <td className={`${styles.numEnd} ${styles.mono}`}>{formatNumber(r.quantity)} {r.unit}</td>
+                    <td className={`${styles.numEnd} ${styles.mono}`}>{formatCurrency(r.unitCost)}</td>
+                    <td className={`${styles.numEnd} ${styles.mono}`}>{formatCurrency(r.totalValue)}</td>
+                    <td className={styles.mono}>{r.purchaseDate}</td>
                   </tr>
                 ))}
               </tbody>

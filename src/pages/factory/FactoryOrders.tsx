@@ -23,7 +23,7 @@ const STATUS_VARIANT: Record<ProductionOrderStatus, "success" | "warning" | "inf
 };
 
 export default function FactoryOrders() {
-  const { t, isArabic } = useSettings();
+  const { t, formatNumber, isArabic } = useSettings();
   const tc = t.factory.orders;
   const { toast } = useToast();
   const { factoryOrders, boms, factoryProducts, updateOrderStatus } = useFactory();
@@ -63,6 +63,7 @@ export default function FactoryOrders() {
         <header className={styles.header}>
           <div>
             <div className={styles.breadcrumb}>{tc.breadcrumb}</div>
+            <h1 className={styles.title}>{tc.pageTitle}</h1>
             <p className={styles.subtitle}>{tc.pageSubtitle}</p>
           </div>
           <div className={styles.headerActions}>
@@ -83,43 +84,34 @@ export default function FactoryOrders() {
           </select>
         </div>
 
-        <div className={`${styles.tableWrap} atlas-table-wrapper`}>
+        <div className={styles.tableWrap}>
           {isLoading ? (
             <Skeleton variant="rect" height={280} />
           ) : filtered.length === 0 ? (
             <EmptyState icon={<ClipboardList size={32} />} title={tc.noData} />
           ) : (
-            <table className={`${styles.table} atlas-table`}>
-              <colgroup>
-                <col className="col-w-110" />
-                <col />
-                <col className="col-w-100" />
-                <col className="col-date" />
-                <col className="col-date" />
-                <col className="col-w-90" />
-                <col className="col-actions" />
-              </colgroup>
+            <table className={styles.table}>
               <thead>
                 <tr>
-                  <th className="col-code">{tc.cols.orderId}</th>
+                  <th>{tc.cols.orderId}</th>
                   <th>{tc.cols.product}</th>
-                  <th className="col-num">{tc.cols.quantity}</th>
-                  <th className="col-date">{tc.cols.startDate}</th>
-                  <th className="col-date">{tc.cols.dueDate}</th>
-                  <th className="col-badge">{tc.cols.status}</th>
-                  <th className="col-actions">{tc.cols.actions}</th>
+                  <th className={styles.numEnd}>{tc.cols.quantity}</th>
+                  <th>{tc.cols.startDate}</th>
+                  <th>{tc.cols.dueDate}</th>
+                  <th>{tc.cols.status}</th>
+                  <th>{tc.cols.actions}</th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.map((o) => (
                   <tr key={o.id}>
-                    <td className="col-code"><span className={styles.mono}>{o.id}</span></td>
+                    <td><span className={styles.mono}>{o.id}</span></td>
                     <td>{getProductName(o.productId)}</td>
-                    <td className={`${styles.numEnd} ${styles.mono} col-num`}>{o.quantity.toLocaleString()}</td>
-                    <td className={`${styles.mono} col-date`}>{o.startDate}</td>
-                    <td className={`${styles.mono} col-date`}>{o.dueDate}</td>
-                    <td className="col-badge"><Badge variant={STATUS_VARIANT[o.status]} size="sm">{tc.status[o.status]}</Badge></td>
-                    <td className="col-actions">
+                    <td className={`${styles.numEnd} ${styles.mono}`}>{formatNumber(o.quantity)}</td>
+                    <td className={styles.mono}>{o.startDate}</td>
+                    <td className={styles.mono}>{o.dueDate}</td>
+                    <td><Badge variant={STATUS_VARIANT[o.status]} size="sm">{tc.status[o.status]}</Badge></td>
+                    <td>
                       <div className={styles.rowActions}>
                         <button type="button" className={styles.actionBtn} onClick={() => setDetail(o)}>{tc.actions.view}</button>
                         {o.status === "planned" && (
@@ -146,7 +138,7 @@ export default function FactoryOrders() {
           footer={<Button variant="secondary" onClick={() => setDetail(null)}>{tc.drawer.close}</Button>}>
           <div className={styles.drawerMeta}>
             <span>{tc.cols.product}</span><span>{getProductName(detailTarget.productId)}</span>
-            <span>{tc.cols.quantity}</span><span className={styles.mono}>{detailTarget.quantity.toLocaleString()}</span>
+            <span>{tc.cols.quantity}</span><span className={styles.mono}>{formatNumber(detailTarget.quantity)}</span>
             <span>{tc.cols.startDate}</span><span className={styles.mono}>{detailTarget.startDate}</span>
             <span>{tc.cols.dueDate}</span><span className={styles.mono}>{detailTarget.dueDate}</span>
             <span>{tc.cols.status}</span><span><Badge variant={STATUS_VARIANT[detailTarget.status]} size="sm">{tc.status[detailTarget.status]}</Badge></span>

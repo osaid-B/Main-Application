@@ -22,7 +22,7 @@ function materialStatus(m: RawMaterial): "ok" | "low" | "critical" {
 const STATUS_VARIANT = { ok: "success", low: "warning", critical: "danger" } as const;
 
 export default function FactoryRawMaterials() {
-  const { t, formatCurrency } = useSettings();
+  const { t, formatCurrency, formatNumber } = useSettings();
   const tc = t.factory.rawMaterials;
   const { rawMaterials } = useFactory();
 
@@ -54,6 +54,7 @@ export default function FactoryRawMaterials() {
         <header className={styles.header}>
           <div>
             <div className={styles.breadcrumb}>{tc.breadcrumb}</div>
+            <h1 className={styles.title}>{tc.pageTitle}</h1>
             <p className={styles.subtitle}>{tc.pageSubtitle}</p>
           </div>
         </header>
@@ -80,35 +81,24 @@ export default function FactoryRawMaterials() {
           </select>
         </div>
 
-        <div className={`${styles.tableWrap} atlas-table-wrapper`}>
+        <div className={styles.tableWrap}>
           {isLoading ? (
             <Skeleton variant="rect" height={280} />
           ) : filtered.length === 0 ? (
             <EmptyState icon={<Boxes size={32} />} title={tc.noData} />
           ) : (
-            <table className={`${styles.table} atlas-table`}>
-              <colgroup>
-                <col />
-                <col className="col-w-100" />
-                <col className="col-w-90" />
-                <col className="col-w-150" />
-                <col className="col-w-100" />
-                <col className="col-w-110" />
-                <col className="col-currency col-w-120" />
-                <col className="col-currency col-w-130" />
-                <col className="col-w-80" />
-              </colgroup>
+            <table className={styles.table}>
               <thead>
                 <tr>
                   <th>{tc.cols.name}</th>
-                  <th className="col-badge">{tc.cols.category}</th>
-                  <th className="col-badge">{tc.cols.origin}</th>
+                  <th>{tc.cols.category}</th>
+                  <th>{tc.cols.origin}</th>
                   <th>{tc.cols.supplier}</th>
-                  <th className="col-num">{tc.cols.onHand}</th>
-                  <th className="col-num">{tc.cols.reorderPoint}</th>
-                  <th className="col-num">{tc.cols.unitCost}</th>
-                  <th className="col-num">{tc.cols.totalValue}</th>
-                  <th className="col-badge">{tc.cols.status}</th>
+                  <th className={styles.numEnd}>{tc.cols.onHand}</th>
+                  <th className={styles.numEnd}>{tc.cols.reorderPoint}</th>
+                  <th className={styles.numEnd}>{tc.cols.unitCost}</th>
+                  <th className={styles.numEnd}>{tc.cols.totalValue}</th>
+                  <th>{tc.cols.status}</th>
                 </tr>
               </thead>
               <tbody>
@@ -117,14 +107,14 @@ export default function FactoryRawMaterials() {
                   return (
                     <tr key={m.id}>
                       <td>{m.name}</td>
-                      <td className="col-badge"><span className={styles.tag}>{m.category}</span></td>
-                      <td className="col-badge"><span className={styles.tag}>{tc.originLabel[m.origin]}</span></td>
+                      <td><span className={styles.tag}>{m.category}</span></td>
+                      <td><span className={styles.tag}>{tc.originLabel[m.origin]}</span></td>
                       <td>{m.supplier}</td>
-                      <td className={`${styles.numEnd} ${styles.mono} col-num`}>{m.onHand.toLocaleString()} {m.unit}</td>
-                      <td className={`${styles.numEnd} ${styles.mono} col-num`}>{m.reorderPoint.toLocaleString()} {m.unit}</td>
-                      <td className={`${styles.numEnd} ${styles.mono} col-num`}>{formatCurrency(m.unitCost)}</td>
-                      <td className={`${styles.numEnd} ${styles.mono} col-num`}>{formatCurrency(m.onHand * m.unitCost)}</td>
-                      <td className="col-badge"><Badge variant={STATUS_VARIANT[st]} size="sm">{tc.status[st]}</Badge></td>
+                      <td className={`${styles.numEnd} ${styles.mono}`}>{formatNumber(m.onHand)} {m.unit}</td>
+                      <td className={`${styles.numEnd} ${styles.mono}`}>{formatNumber(m.reorderPoint)} {m.unit}</td>
+                      <td className={`${styles.numEnd} ${styles.mono}`}>{formatCurrency(m.unitCost)}</td>
+                      <td className={`${styles.numEnd} ${styles.mono}`}>{formatCurrency(m.onHand * m.unitCost)}</td>
+                      <td><Badge variant={STATUS_VARIANT[st]} size="sm">{tc.status[st]}</Badge></td>
                     </tr>
                   );
                 })}

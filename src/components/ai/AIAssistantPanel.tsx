@@ -40,7 +40,7 @@ export default function AIAssistantPanel({
     {
       id: "welcome",
       role: "assistant",
-      content: "مرحبًا، أنا AI Copilot. أستطيع مساعدتك في فهم البيانات، تلخيص الصفحات، واقتراح الخطوات التالية.",
+      content: "مرحباً، أنا المساعد الذكي. أستطيع مساعدتك في فهم البيانات، وتلخيص الصفحات، واقتراح الخطوات التالية.",
     },
   ]);
   const [input, setInput] = useState("");

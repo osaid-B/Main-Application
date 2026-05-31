@@ -21,7 +21,7 @@ const QC_STATUS_VARIANT = {
 } as const;
 
 export default function FactoryDashboard() {
-  const { t, formatCurrency } = useSettings();
+  const { t, formatCurrency, formatNumber } = useSettings();
   const { factoryOrders, qualityChecks, finishedGoods, kpi } = useFactory();
   const tc = t.factory.dashboard;
   const to = t.factory.orders;
@@ -67,7 +67,7 @@ export default function FactoryDashboard() {
                   <tr key={o.id}>
                     <td><span className={styles.mono}>{o.id}</span></td>
                     <td>{o.productId}</td>
-                    <td className={`${styles.numEnd} ${styles.mono}`}>{o.quantity.toLocaleString()}</td>
+                    <td className={`${styles.numEnd} ${styles.mono}`}>{formatNumber(o.quantity)}</td>
                     <td><Badge variant={ORDER_STATUS_VARIANT[o.status]} size="sm">{to.status[o.status]}</Badge></td>
                   </tr>
                 ))}
@@ -103,7 +103,7 @@ export default function FactoryDashboard() {
         <div className={styles.summaryCard}>
           <div className={styles.summaryCardTitle}>{t.factory.finishedGoods.pageTitle}</div>
           <p style={{ margin: 0, fontSize: 13, color: "var(--app-text-muted)" }}>
-            {formatCurrency(totalFGValue)} {t.common.total} · {kpi.totalFinishedOnHand.toLocaleString()} {t.common.quantity}
+            {formatCurrency(totalFGValue)} {t.common.total} · {formatNumber(kpi.totalFinishedOnHand)} {t.common.quantity}
           </p>
         </div>
       </Stack>

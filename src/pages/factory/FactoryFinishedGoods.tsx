@@ -12,7 +12,7 @@ import { useLoadingDelay } from "../../hooks/useLoadingDelay";
 import styles from "./factory.module.css";
 
 export default function FactoryFinishedGoods() {
-  const { t, formatCurrency } = useSettings();
+  const { t, formatCurrency, formatNumber } = useSettings();
   const tc = t.factory.finishedGoods;
   const { finishedGoods: FINISHED_GOODS } = useFactory();
 
@@ -41,14 +41,15 @@ export default function FactoryFinishedGoods() {
         <header className={styles.header}>
           <div>
             <div className={styles.breadcrumb}>{tc.breadcrumb}</div>
+            <h1 className={styles.title}>{tc.pageTitle}</h1>
             <p className={styles.subtitle}>{tc.pageSubtitle}</p>
           </div>
         </header>
 
         <Grid cols={4} gap="md" responsive>
-          <Kpi label={tc.kpi.totalOnHand} value={totalOnHand.toLocaleString()}    tone="success" />
-          <Kpi label={tc.kpi.reserved}    value={totalReserved.toLocaleString()}  tone="warning" />
-          <Kpi label={tc.kpi.available}   value={totalAvail.toLocaleString()}     tone="info"    />
+          <Kpi label={tc.kpi.totalOnHand} value={formatNumber(totalOnHand)}       tone="success" />
+          <Kpi label={tc.kpi.reserved}    value={formatNumber(totalReserved)}     tone="warning" />
+          <Kpi label={tc.kpi.available}   value={formatNumber(totalAvail)}        tone="info"    />
           <Kpi label={tc.kpi.skus}        value={String(FINISHED_GOODS.length)}   tone="neutral" />
         </Grid>
 
@@ -62,37 +63,25 @@ export default function FactoryFinishedGoods() {
           </select>
         </div>
 
-        <div className={`${styles.tableWrap} atlas-table-wrapper`}>
+        <div className={styles.tableWrap}>
           {isLoading ? (
             <Skeleton variant="rect" height={280} />
           ) : filtered.length === 0 ? (
             <EmptyState icon={<Package size={32} />} title={tc.noData} />
           ) : (
-            <table className={`${styles.table} atlas-table`}>
-              <colgroup>
-                <col />
-                <col className="col-w-110" />
-                <col className="col-w-100" />
-                <col className="col-w-90" />
-                <col className="col-w-90" />
-                <col className="col-w-100" />
-                <col className="col-currency col-w-120" />
-                <col className="col-currency col-w-120" />
-                <col className="col-w-90" />
-                <col className="col-date col-w-110" />
-              </colgroup>
+            <table className={styles.table}>
               <thead>
                 <tr>
                   <th>{tc.cols.name}</th>
-                  <th className="col-code">{tc.cols.sku}</th>
-                  <th className="col-badge">{tc.cols.category}</th>
-                  <th className="col-num">{tc.cols.onHand}</th>
-                  <th className="col-num">{tc.cols.reserved}</th>
-                  <th className="col-num">{tc.cols.available}</th>
-                  <th className="col-num">{tc.cols.unitCost}</th>
-                  <th className="col-num">{tc.cols.sellingPrice}</th>
-                  <th className="col-num">{tc.cols.margin}</th>
-                  <th className="col-date">{tc.cols.lastProduced}</th>
+                  <th>{tc.cols.sku}</th>
+                  <th>{tc.cols.category}</th>
+                  <th className={styles.numEnd}>{tc.cols.onHand}</th>
+                  <th className={styles.numEnd}>{tc.cols.reserved}</th>
+                  <th className={styles.numEnd}>{tc.cols.available}</th>
+                  <th className={styles.numEnd}>{tc.cols.unitCost}</th>
+                  <th className={styles.numEnd}>{tc.cols.sellingPrice}</th>
+                  <th className={styles.numEnd}>{tc.cols.margin}</th>
+                  <th>{tc.cols.lastProduced}</th>
                 </tr>
               </thead>
               <tbody>
@@ -102,15 +91,15 @@ export default function FactoryFinishedGoods() {
                   return (
                     <tr key={g.id}>
                       <td>{g.name}</td>
-                      <td className="col-code"><span className={styles.mono}>{g.sku}</span></td>
-                      <td className="col-badge"><span className={styles.tag}>{g.category}</span></td>
-                      <td className={`${styles.numEnd} ${styles.mono} col-num`}>{g.onHand.toLocaleString()}</td>
-                      <td className={`${styles.numEnd} ${styles.mono} col-num`}>{g.reserved.toLocaleString()}</td>
-                      <td className={`${styles.numEnd} ${styles.mono} col-num`}>{avail.toLocaleString()}</td>
-                      <td className={`${styles.numEnd} ${styles.mono} col-num`}>{formatCurrency(g.unitCost)}</td>
-                      <td className={`${styles.numEnd} ${styles.mono} col-num`}>{formatCurrency(g.sellingPrice)}</td>
-                      <td className={`${styles.numEnd} ${styles.mono} col-num`}>{margin}%</td>
-                      <td className={`${styles.mono} col-date`}>{g.lastProducedDate ?? "—"}</td>
+                      <td><span className={styles.mono}>{g.sku}</span></td>
+                      <td><span className={styles.tag}>{g.category}</span></td>
+                      <td className={`${styles.numEnd} ${styles.mono}`}>{formatNumber(g.onHand)}</td>
+                      <td className={`${styles.numEnd} ${styles.mono}`}>{formatNumber(g.reserved)}</td>
+                      <td className={`${styles.numEnd} ${styles.mono}`}>{formatNumber(avail)}</td>
+                      <td className={`${styles.numEnd} ${styles.mono}`}>{formatCurrency(g.unitCost)}</td>
+                      <td className={`${styles.numEnd} ${styles.mono}`}>{formatCurrency(g.sellingPrice)}</td>
+                      <td className={`${styles.numEnd} ${styles.mono}`}>{margin}%</td>
+                      <td className={styles.mono}>{g.lastProducedDate ?? "—"}</td>
                     </tr>
                   );
                 })}

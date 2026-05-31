@@ -15,6 +15,7 @@ import {
 } from "../data/companyMock";
 import { useSettings } from "../context/SettingsContext";
 import { useData } from "../context/DataContext";
+import { formatCurrencyValue } from "../utils/displayFormatters";
 import styles from "./CompanyOverview.module.css";
 
 const KPI_BAR_COLOR: Record<CompanyKPI["color"], string> = {
@@ -273,7 +274,7 @@ export default function CompanyOverview() {
                   </Pie>
                   <Tooltip
                     contentStyle={{ background: "var(--app-surface)", border: "1px solid var(--app-border)", borderRadius: 8, fontSize: 12 }}
-                    formatter={(v) => `$${Number(v).toLocaleString()}`}
+                  formatter={(v) => formatCurrencyValue(Number(v), "USD")}
                   />
                 </PieChart>
               </ResponsiveContainer>
@@ -383,7 +384,7 @@ function InvoiceRow({ inv }: { inv: OpenInvoice }) {
       <td><code className={`${styles.invCode} numeric-cell`}>{inv.invoice}</code></td>
       <td>{inv.customer}</td>
       <td className={styles.invDue}>{inv.due}</td>
-      <td className={`${styles.invAmount} numeric-cell`}>${inv.amount.toLocaleString()}</td>
+      <td className={`${styles.invAmount} numeric-cell`}>{formatCurrencyValue(inv.amount, "USD")}</td>
       <td>
         <Badge variant={inv.status === "overdue" ? "danger" : "warning"} size="sm">
           {inv.status === "overdue"

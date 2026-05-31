@@ -1,4 +1,5 @@
-﻿import type { AppLanguage } from "./translations";
+﻿import { normalizeArabicRecord, normalizeArabicText } from "./arabicPolish";
+import type { AppLanguage } from "./translations";
 
 type LocalizedAttribute = "placeholder" | "aria-label" | "title" | "alt";
 
@@ -15,7 +16,7 @@ const originalAttributes = new WeakMap<Element, Partial<Record<LocalizedAttribut
 // ═══════════════════════════════════════════════════════════════
 //  COMPREHENSIVE ARABIC TRANSLATIONS — Palestinian / Levantine dialect
 // ═══════════════════════════════════════════════════════════════
-const arCopy: Record<string, string> = {
+const baseArCopy: Record<string, string> = {
 
   // ── COMMON UI ───────────────────────────────────────────────
   "Save": "حفظ",
@@ -776,6 +777,8 @@ const arCopy: Record<string, string> = {
 
 };
 
+const arCopy = normalizeArabicRecord(baseArCopy);
+
 // ── DYNAMIC TRANSLATION RULES ────────────────────────────────
 const dynamicRules: Array<[RegExp, (match: RegExpMatchArray) => string]> = [
   [/^Showing ([0-9,-]+) of ([0-9,]+)$/i,
@@ -860,7 +863,7 @@ function translateText(value: string) {
 
   for (const [rule, replacer] of dynamicRules) {
     const match = normalized.match(rule);
-    if (match) return `${leading}${replacer(match)}${trailing}`;
+    if (match) return `${leading}${normalizeArabicText(replacer(match))}${trailing}`;
   }
 
   return value;

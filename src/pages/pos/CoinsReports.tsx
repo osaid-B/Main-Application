@@ -25,7 +25,7 @@ const ACTION_VARIANT: Record<CoinAction, "success" | "danger" | "warning" | "inf
 };
 
 export default function CoinsReports() {
-  const { t } = useSettings();
+  const { t, formatNumber } = useSettings();
   const tc = t.pos.coinsReports;
 
   const [actionFilter, setActionFilter] = useState<CoinAction | "">("");
@@ -62,13 +62,14 @@ export default function CoinsReports() {
         <header className={styles.header}>
           <div>
             <div className={styles.breadcrumb}>{tc.breadcrumb}</div>
+            <h1 className={styles.title}>{tc.pageTitle}</h1>
             <p className={styles.subtitle}>{tc.pageSubtitle}</p>
           </div>
         </header>
 
         <Grid cols={4} gap="md" responsive>
-          <Kpi label={tc.kpi.issued}   value={totalIssued.toLocaleString()}   sub={tc.kpi.issuedSub}   tone="info"    />
-          <Kpi label={tc.kpi.redeemed} value={totalRedeemed.toLocaleString()} sub={tc.kpi.redeemedSub} tone="success" />
+          <Kpi label={tc.kpi.issued}   value={formatNumber(totalIssued)}      sub={tc.kpi.issuedSub}   tone="info"    />
+          <Kpi label={tc.kpi.redeemed} value={formatNumber(totalRedeemed)}    sub={tc.kpi.redeemedSub} tone="success" />
           <Kpi label={tc.kpi.members}  value={String(uniqueMembers)}          sub={tc.kpi.membersSub}  tone="warning" />
           <Kpi label={tc.kpi.rate}     value={redemptionRate}                 sub={tc.kpi.rateSub}     tone="danger"  />
         </Grid>
@@ -126,24 +127,16 @@ export default function CoinsReports() {
           </div>
         </div>
 
-        <div className={`${styles.tableWrap} atlas-table-wrapper`}>
-          <table className={`${styles.table} atlas-table`}>
-            <colgroup>
-              <col />
-              <col className="col-date col-w-120" />
-              <col className="col-w-100" />
-              <col className="col-w-90" />
-              <col className="col-w-130" />
-              <col className="col-w-90" />
-            </colgroup>
+        <div className={styles.tableWrap}>
+          <table className={styles.table}>
             <thead>
               <tr>
                 <th>{tc.cols.customer}</th>
-                <th className="col-date">{tc.cols.date}</th>
-                <th className="col-badge">{tc.cols.action}</th>
-                <th className="col-num">{tc.cols.coins}</th>
+                <th>{tc.cols.date}</th>
+                <th>{tc.cols.action}</th>
+                <th className={styles.numEnd}>{tc.cols.coins}</th>
                 <th>{tc.cols.trigger}</th>
-                <th className="col-num">{tc.cols.balanceAfter}</th>
+                <th className={styles.numEnd}>{tc.cols.balanceAfter}</th>
               </tr>
             </thead>
             <tbody>
@@ -155,17 +148,17 @@ export default function CoinsReports() {
                       {tx.customerCode && <div className={styles.custCode}>{tx.customerCode}</div>}
                     </div>
                   </td>
-                  <td className={`${styles.mono} col-date`}>{tx.timestamp.slice(0, 10)}</td>
-                  <td className="col-badge">
+                  <td className={styles.mono}>{tx.timestamp.slice(0, 10)}</td>
+                  <td>
                     <Badge variant={ACTION_VARIANT[tx.action]} size="sm">
                       {t.pos.coinsHistory.actions[tx.action]}
                     </Badge>
                   </td>
-                  <td className={`${styles.numEnd} ${styles.mono} col-num ${tx.delta >= 0 ? styles.pos : styles.neg}`}>
+                  <td className={`${styles.numEnd} ${styles.mono} ${tx.delta >= 0 ? styles.pos : styles.neg}`}>
                     {tx.delta >= 0 ? `+${tx.delta}` : String(tx.delta)}
                   </td>
                   <td className={styles.reasonCell}>{tx.reason}</td>
-                  <td className={`${styles.numEnd} ${styles.mono} col-num`}>{tx.balanceAfter.toLocaleString()}</td>
+                  <td className={`${styles.numEnd} ${styles.mono}`}>{formatNumber(tx.balanceAfter)}</td>
                 </tr>
               ))}
               {filteredTx.length === 0 && (

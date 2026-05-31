@@ -1,13 +1,9 @@
-import { DEFAULT_EXCHANGE_RATES, NUMBER_LOCALE, type CurrencyCode } from "../config/palestineConfig";
+import { DEFAULT_EXCHANGE_RATES, type CurrencyCode } from "../config/palestineConfig";
+import { formatCurrencyValue, formatNumberValue } from "../utils/displayFormatters";
 
 export function formatCurrency(amount: number, currency: CurrencyCode = "ILS"): string {
   try {
-    return new Intl.NumberFormat(NUMBER_LOCALE, {
-      style: "currency",
-      currency,
-      minimumFractionDigits: currency === "JOD" ? 3 : 2,
-      maximumFractionDigits: currency === "JOD" ? 3 : 2,
-    }).format(amount);
+    return formatCurrencyValue(amount, currency);
   } catch {
     return `${amount.toFixed(2)} ${currency}`;
   }
@@ -15,10 +11,10 @@ export function formatCurrency(amount: number, currency: CurrencyCode = "ILS"): 
 
 export function formatNumber(amount: number, decimals = 2): string {
   try {
-    return new Intl.NumberFormat(NUMBER_LOCALE, {
+    return formatNumberValue(amount, {
       minimumFractionDigits: decimals,
       maximumFractionDigits: decimals,
-    }).format(amount);
+    });
   } catch {
     return amount.toFixed(decimals);
   }

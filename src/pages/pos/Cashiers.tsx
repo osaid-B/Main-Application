@@ -24,7 +24,7 @@ const STATUS_VARIANT: Record<CashierStatus, "success" | "neutral" | "warning"> =
 };
 
 export default function Cashiers() {
-  const { t, formatCurrency } = useSettings();
+  const { t, formatCurrency, formatDate } = useSettings();
   const tc = t.pos.cashiers;
   const { cashiers, addCashier, updateCashier } = useData();
 
@@ -86,6 +86,7 @@ export default function Cashiers() {
         <header className={styles.header}>
           <div>
             <div className={styles.breadcrumb}>{tc.breadcrumb}</div>
+            <h1 className={styles.title}>{tc.pageTitle}</h1>
             <p className={styles.subtitle}>{tc.pageSubtitle}</p>
           </div>
           <Button variant="primary" size="sm" leftIcon={<Plus size={14} />} onClick={() => setIsAdding(true)}>
@@ -113,28 +114,18 @@ export default function Cashiers() {
           </div>
         </div>
 
-        <div className={`${styles.tableWrap} atlas-table-wrapper`}>
-          <table className={`${styles.table} atlas-table`}>
-            <colgroup>
-              <col />
-              <col className="col-w-100" />
-              <col className="col-w-90" />
-              <col className="col-w-110" />
-              <col className="col-currency col-w-120" />
-              <col className="col-w-100" />
-              <col className="col-date col-w-120" />
-              <col className="col-actions" />
-            </colgroup>
+        <div className={styles.tableWrap}>
+          <table className={styles.table}>
             <thead>
               <tr>
                 <th>{tc.cols.cashier}</th>
-                <th className="col-code">{tc.cols.code}</th>
-                <th className="col-badge">{tc.cols.status}</th>
+                <th>{tc.cols.code}</th>
+                <th>{tc.cols.status}</th>
                 <th>{tc.cols.shift}</th>
-                <th className="col-num">{tc.cols.todaySales}</th>
-                <th className="col-num">{tc.cols.transactions}</th>
-                <th className="col-date">{tc.cols.lastActive}</th>
-                <th className="col-actions">{tc.cols.actions}</th>
+                <th className={styles.numEnd}>{tc.cols.todaySales}</th>
+                <th className={styles.numEnd}>{tc.cols.transactions}</th>
+                <th>{tc.cols.lastActive}</th>
+                <th>{tc.cols.actions}</th>
               </tr>
             </thead>
             <tbody>
@@ -146,17 +137,17 @@ export default function Cashiers() {
                       <span className={styles.cashierName}>{c.name}</span>
                     </div>
                   </td>
-                  <td className="col-code"><span className={styles.mono}>{c.code}</span></td>
-                  <td className="col-badge">
+                  <td><span className={styles.mono}>{c.code}</span></td>
+                  <td>
                     <Badge variant={STATUS_VARIANT[c.status]} size="sm">
                       {tc.status[c.status === "on-break" ? "onBreak" : c.status]}
                     </Badge>
                   </td>
                   <td>{tc.shift[c.shift]}</td>
-                  <td className={`${styles.numEnd} ${styles.mono} col-num`}>{formatCurrency(c.todaySales)}</td>
-                  <td className={`${styles.numEnd} ${styles.mono} col-num`}>{c.transactions}</td>
-                  <td className={`${styles.mono} col-date`}>{new Date(c.lastActive).toLocaleDateString()}</td>
-                  <td className="col-actions">
+                  <td className={`${styles.numEnd} ${styles.mono}`}>{formatCurrency(c.todaySales)}</td>
+                  <td className={`${styles.numEnd} ${styles.mono}`}>{c.transactions}</td>
+                  <td className={styles.mono}>{formatDate(c.lastActive)}</td>
+                  <td>
                     <OverflowMenu
                       onEdit={() => setEditing(c)}
                       onToggle={() => toggleStatus(c.id)}

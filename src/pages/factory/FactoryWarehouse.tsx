@@ -19,7 +19,7 @@ const ZONE_VARIANT: Record<WarehouseZone, "info" | "success" | "warning" | "dang
 };
 
 export default function FactoryWarehouse() {
-  const { t } = useSettings();
+  const { t, formatNumber } = useSettings();
   const tc = t.factory.warehouse;
   const { warehouseLocations: WAREHOUSE_LOCATIONS } = useFactory();
 
@@ -35,44 +35,34 @@ export default function FactoryWarehouse() {
         <header className={styles.header}>
           <div>
             <div className={styles.breadcrumb}>{tc.breadcrumb}</div>
+            <h1 className={styles.title}>{tc.pageTitle}</h1>
             <p className={styles.subtitle}>{tc.pageSubtitle}</p>
           </div>
         </header>
 
         <Grid cols={4} gap="md" responsive>
-          <Kpi label={tc.kpi.totalCapacity} value={totalCapacity.toLocaleString()} tone="info"    />
-          <Kpi label={tc.kpi.usedCapacity}  value={totalUsed.toLocaleString()}     tone="warning" />
-          <Kpi label={tc.kpi.freeCapacity}  value={totalFree.toLocaleString()}     tone="success" />
+          <Kpi label={tc.kpi.totalCapacity} value={formatNumber(totalCapacity)}    tone="info"    />
+          <Kpi label={tc.kpi.usedCapacity}  value={formatNumber(totalUsed)}        tone="warning" />
+          <Kpi label={tc.kpi.freeCapacity}  value={formatNumber(totalFree)}        tone="success" />
           <Kpi label={tc.kpi.utilisation}   value={`${utilPct}%`}                 tone="neutral" />
         </Grid>
 
-        <div className={`${styles.tableWrap} atlas-table-wrapper`}>
+        <div className={styles.tableWrap}>
           {isLoading ? (
             <Skeleton variant="rect" height={280} />
           ) : WAREHOUSE_LOCATIONS.length === 0 ? (
             <EmptyState icon={<Warehouse size={32} />} title={tc.noData} />
           ) : (
-            <table className={`${styles.table} atlas-table`}>
-              <colgroup>
-                <col className="col-w-110" />
-                <col />
-                <col className="col-w-90" />
-                <col className="col-w-90" />
-                <col className="col-w-80" />
-                <col className="col-w-80" />
-                <col className="col-w-90" />
-                <col className="col-w-100" />
-                <col />
-              </colgroup>
+            <table className={styles.table}>
               <thead>
                 <tr>
-                  <th className="col-code">{tc.cols.locationId}</th>
+                  <th>{tc.cols.locationId}</th>
                   <th>{tc.cols.name}</th>
                   <th>{tc.cols.zone}</th>
-                  <th className="col-num">{tc.cols.capacity}</th>
-                  <th className="col-num">{tc.cols.used}</th>
-                  <th className="col-num">{tc.cols.free}</th>
-                  <th className="col-num">{tc.cols.utilPct}</th>
+                  <th className={styles.numEnd}>{tc.cols.capacity}</th>
+                  <th className={styles.numEnd}>{tc.cols.used}</th>
+                  <th className={styles.numEnd}>{tc.cols.free}</th>
+                  <th>{tc.cols.utilPct}</th>
                   <th>{tc.cols.temperature}</th>
                   <th>{tc.cols.notes}</th>
                 </tr>
@@ -84,12 +74,12 @@ export default function FactoryWarehouse() {
                   const fillClass = pct >= 90 ? styles.utilFillDanger : pct >= 70 ? styles.utilFillWarn : styles.utilFill;
                   return (
                     <tr key={loc.id}>
-                      <td className="col-code"><span className={styles.mono}>{loc.id}</span></td>
+                      <td><span className={styles.mono}>{loc.id}</span></td>
                       <td>{loc.name}</td>
-                      <td className="col-badge"><Badge variant={ZONE_VARIANT[loc.zone]} size="sm">{tc.zones[loc.zone]}</Badge></td>
-                      <td className={`${styles.numEnd} ${styles.mono} col-num`}>{loc.capacity.toLocaleString()}</td>
-                      <td className={`${styles.numEnd} ${styles.mono} col-num`}>{loc.used.toLocaleString()}</td>
-                      <td className={`${styles.numEnd} ${styles.mono} col-num`}>{free.toLocaleString()}</td>
+                      <td><Badge variant={ZONE_VARIANT[loc.zone]} size="sm">{tc.zones[loc.zone]}</Badge></td>
+                      <td className={`${styles.numEnd} ${styles.mono}`}>{formatNumber(loc.capacity)}</td>
+                      <td className={`${styles.numEnd} ${styles.mono}`}>{formatNumber(loc.used)}</td>
+                      <td className={`${styles.numEnd} ${styles.mono}`}>{formatNumber(free)}</td>
                       <td style={{ minWidth: 100 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                           <div className={styles.utilBar} style={{ width: 60 }}>

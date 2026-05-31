@@ -10,7 +10,7 @@ type ModuleKey = typeof MODULES[number];
 
 const MODULE_LABELS: Record<ModuleKey, { label: string; labelAr: string }> = {
   pos:       { label: "POS",       labelAr: "نقطة البيع" },
-  customers: { label: "Customers", labelAr: "الزبائن"   },
+  customers: { label: "Customers", labelAr: "العملاء"   },
   invoices:  { label: "Invoices",  labelAr: "الفواتير"  },
   inventory: { label: "Inventory", labelAr: "المخزون"   },
   reports:   { label: "Reports",   labelAr: "التقارير"  },
@@ -29,19 +29,19 @@ function makePerms(defaults: Partial<Record<ModuleKey, Record<PermissionAction, 
 export const ROLES: Role[] = [
   {
     id: "role-admin", name: "Admin", nameAr: "مدير النظام",
-    description: "Full access to all modules.", descriptionAr: "صلاحية كاملة على جميع الوحدات.",
+    description: "Full access to all modules.", descriptionAr: "صلاحيات كاملة.",
     userCount: 2, isSystem: true,
     permissions: makePerms({ pos: ALL_ON, customers: ALL_ON, invoices: ALL_ON, inventory: ALL_ON, reports: ALL_ON, employees: ALL_ON, settings: ALL_ON }),
   },
   {
     id: "role-manager", name: "Manager", nameAr: "مدير",
-    description: "Manage operations, no settings access.", descriptionAr: "إدارة العمليات دون الوصول إلى الإعدادات.",
+    description: "Manage operations, no settings access.", descriptionAr: "إدارة العمليات.",
     userCount: 5, isSystem: false,
     permissions: makePerms({ pos: ALL_ON, customers: NO_DELETE, invoices: NO_DELETE, inventory: NO_DELETE, reports: VIEW_EXPORT, employees: VIEW_ONLY, settings: VIEW_ONLY }),
   },
   {
-    id: "role-cashier", name: "Cashier", nameAr: "كاشير",
-    description: "POS access only.", descriptionAr: "صلاحية نقطة البيع فقط.",
+    id: "role-cashier", name: "Cashier", nameAr: "أمين الصندوق",
+    description: "POS access only.", descriptionAr: "صلاحية POS فقط.",
     userCount: 8, isSystem: false,
     permissions: makePerms({
       pos: { view: true, create: true, edit: false, delete: false, export: false },
@@ -50,13 +50,13 @@ export const ROLES: Role[] = [
   },
   {
     id: "role-accountant", name: "Accountant", nameAr: "محاسب",
-    description: "Finance & reports access.", descriptionAr: "صلاحية الوصول إلى المالية والتقارير.",
+    description: "Finance & reports access.", descriptionAr: "صلاحيات المالية والتقارير.",
     userCount: 3, isSystem: false,
     permissions: makePerms({ pos: VIEW_ONLY, customers: VIEW_ONLY, invoices: NO_DELETE, inventory: VIEW_ONLY, reports: VIEW_EXPORT, employees: VIEW_ONLY, settings: VIEW_ONLY }),
   },
   {
     id: "role-viewer", name: "Viewer", nameAr: "مُشاهد",
-    description: "Read-only access to all modules.", descriptionAr: "صلاحية القراءة فقط على جميع الوحدات.",
+    description: "Read-only access to all modules.", descriptionAr: "قراءة فقط.",
     userCount: 4, isSystem: false,
     permissions: makePerms({ pos: VIEW_ONLY, customers: VIEW_ONLY, invoices: VIEW_ONLY, inventory: VIEW_ONLY, reports: VIEW_EXPORT, employees: VIEW_ONLY, settings: VIEW_ONLY }),
   },

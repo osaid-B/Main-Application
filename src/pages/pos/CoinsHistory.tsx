@@ -20,7 +20,7 @@ const ACTION_VARIANT: Record<CoinAction, "success" | "danger" | "warning" | "inf
 };
 
 export default function CoinsHistory() {
-  const { t } = useSettings();
+  const { t, formatNumber } = useSettings();
   const tc = t.pos.coinsHistory;
 
   const ACTION_FILTERS: Array<{ value: CoinAction | "all"; label: string }> = [
@@ -82,6 +82,7 @@ export default function CoinsHistory() {
         <header className={styles.header}>
           <div>
             <div className={styles.breadcrumb}>{tc.breadcrumb}</div>
+            <h1 className={styles.title}>{tc.pageTitle}</h1>
             <p className={styles.subtitle}>{tc.pageSubtitle}</p>
           </div>
           <Button
@@ -105,9 +106,9 @@ export default function CoinsHistory() {
         </header>
 
         <Grid cols={4} gap="md" responsive>
-          <Kpi label={tc.kpi.issued}      value={issued30d.toLocaleString()}      subtitle={tc.kpi.last30days ?? "Last 30 days"} tone="success" />
-          <Kpi label={tc.kpi.redeemed}    value={redeemed30d.toLocaleString()}    subtitle={tc.kpi.last30days ?? "Last 30 days"} tone="info"    />
-          <Kpi label={tc.kpi.outstanding} value={outstanding.toLocaleString()}    subtitle={tc.kpi.allCustomers ?? "All customers"} tone="warning" />
+          <Kpi label={tc.kpi.issued}      value={formatNumber(issued30d)}         subtitle={tc.kpi.last30days ?? "Last 30 days"} tone="success" />
+          <Kpi label={tc.kpi.redeemed}    value={formatNumber(redeemed30d)}       subtitle={tc.kpi.last30days ?? "Last 30 days"} tone="info"    />
+          <Kpi label={tc.kpi.outstanding} value={formatNumber(outstanding)}       subtitle={tc.kpi.allCustomers ?? "All customers"} tone="warning" />
           <Kpi label={tc.kpi.expiring}    value={String(COIN_TRANSACTIONS.filter((tx) => tx.action === "expired").length)} subtitle={tc.kpi.allTime ?? "All time"} tone="danger"  />
         </Grid>
 
@@ -136,36 +137,25 @@ export default function CoinsHistory() {
           </div>
         </div>
 
-        <div className={`${styles.tableWrap} atlas-table-wrapper`}>
-          <table className={`${styles.table} atlas-table`}>
-            <colgroup>
-              <col className="col-date col-w-130" />
-              <col />
-              <col className="col-w-100" />
-              <col className="col-w-110" />
-              <col className="col-w-130" />
-              <col className="col-w-110" />
-              <col className="col-w-100" />
-              <col className="col-w-90" />
-              <col className="col-w-90" />
-            </colgroup>
+        <div className={styles.tableWrap}>
+          <table className={styles.table}>
             <thead>
               <tr>
-                <th className="col-date">{tc.cols.timestamp}</th>
+                <th>{tc.cols.timestamp}</th>
                 <th>{tc.cols.customer}</th>
-                <th className="col-badge">{tc.cols.action}</th>
-                <th className="col-code">{tc.cols.invoiceRef}</th>
+                <th>{tc.cols.action}</th>
+                <th>{tc.cols.invoiceRef}</th>
                 <th>{tc.cols.reason}</th>
                 <th>{tc.cols.user}</th>
                 <th>{tc.cols.branch}</th>
-                <th className="col-num">{tc.cols.deltaCoins}</th>
-                <th className="col-num">{tc.cols.balance}</th>
+                <th className={styles.numCol}>{tc.cols.deltaCoins}</th>
+                <th className={styles.numCol}>{tc.cols.balance}</th>
               </tr>
             </thead>
             <tbody>
               {filtered.map((tx) => (
                 <tr key={tx.id}>
-                  <td className={`${styles.mono} col-date`}>{tx.timestamp}</td>
+                  <td className={styles.mono}>{tx.timestamp}</td>
                   <td>
                     {tx.customerName ? (
                       <div className={styles.custCell}>
@@ -179,19 +169,19 @@ export default function CoinsHistory() {
                       <span className={styles.walkIn}>{tc.walkIn}</span>
                     )}
                   </td>
-                  <td className="col-badge">
+                  <td>
                     <Badge variant={ACTION_VARIANT[tx.action]} size="sm">
                       {tc.actions[tx.action]}
                     </Badge>
                   </td>
-                  <td className={`${styles.mono} col-code`}>{tx.invoice ?? "—"}</td>
+                  <td className={styles.mono}>{tx.invoice ?? "—"}</td>
                   <td className={styles.reasonCell}>{tx.reason}</td>
                   <td>{tx.user}</td>
                   <td className={styles.branchCell}>{tx.branch}</td>
-                  <td className={`${styles.numCol} ${styles.mono} col-num ${tx.delta >= 0 ? styles.gain : styles.loss}`}>
+                  <td className={`${styles.numCol} ${styles.mono} ${tx.delta >= 0 ? styles.gain : styles.loss}`}>
                     {tx.delta >= 0 ? `+${tx.delta}` : tx.delta}
                   </td>
-                  <td className={`${styles.numCol} ${styles.mono} col-num`}>{tx.balanceAfter.toLocaleString()}</td>
+                  <td className={`${styles.numCol} ${styles.mono}`}>{formatNumber(tx.balanceAfter)}</td>
                 </tr>
               ))}
               {filtered.length === 0 && (

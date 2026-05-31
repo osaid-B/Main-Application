@@ -3,15 +3,12 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import RoleGuard from "./components/RoleGuard";
 import { ErrorBoundary } from "./components/ui/ErrorBoundary";
 import MainLayout from "./components/layout/MainLayout";
-import ModuleLayout from "./components/layout/ModuleLayout";
 import { PageCrashFallback } from "./components/ui/PageCrashFallback";
 import { useAuth } from "./context/AuthContext";
 import { DataProvider } from "./context/DataContext";
-import { TreasuryProvider } from "./context/TreasuryContext";
 import { FactoryProvider } from "./context/FactoryContext";
 import { NotificationsProvider } from "./context/NotificationsContext";
 import { SidebarPreferencesProvider } from "./context/SidebarPreferencesContext";
-import { CompanySettingsProvider } from "./context/CompanySettingsContext";
 
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
@@ -26,8 +23,6 @@ import Payments from "./pages/Payments";
 import Treasury from "./pages/Treasury";
 import Employees from "./pages/Employees";
 import AddEmployee from "./pages/AddEmployee";
-import Leaves from "./pages/Leaves";
-import CompanySettingsPage from "./pages/CompanySettings";
 import Settings from "./pages/Settings";
 import DataImport from "./pages/DataImport";
 import Preview from "./pages/Preview";
@@ -68,40 +63,6 @@ import ChartOfAccounts from "./pages/ChartOfAccounts";
 import InventoryOverview from "./pages/InventoryOverview";
 import InventoryMovements from "./pages/InventoryMovements";
 import BarcodeProduct from "./pages/BarcodeProduct";
-import AuditLog from "./pages/AuditLog";
-import ModuleSelector from "./pages/ModuleSelector";
-
-// Company module pages
-import CompanyDashboard from "./modules/company/Dashboard";
-import TreasuryHub from "./modules/company/TreasuryHub";
-import BankAccountsPage from "./modules/company/BankAccountsPage";
-import CompanyCustomers from "./modules/company/Customers";
-import CompanySuppliers from "./modules/company/Suppliers";
-import CompanyInvoices from "./modules/company/Invoices";
-import CompanyPayments from "./modules/company/Payments";
-import CompanyExpenses from "./modules/company/Expenses";
-import CompanyEmployees from "./modules/company/Employees";
-import CompanyReports from "./modules/company/Reports";
-
-// Factory module pages
-import FactoryModuleDashboard from "./modules/factory/Dashboard";
-import FactoryModuleOrders from "./modules/factory/Orders";
-import FactoryModuleMaterials from "./modules/factory/Materials";
-import FactoryModuleProducts from "./modules/factory/Products";
-import FactoryModuleBoms from "./modules/factory/Boms";
-import FactoryModuleQuality from "./modules/factory/Quality";
-import FactoryModuleSuppliers from "./modules/factory/Suppliers";
-import FactoryModuleReports from "./modules/factory/Reports";
-
-// POS module pages
-import PosDashboard from "./modules/pos/Dashboard";
-import PosModuleCheckout from "./modules/pos/Checkout";
-import PosModuleSales from "./modules/pos/Sales";
-import PosModuleProducts from "./modules/pos/Products";
-import PosModuleCategories from "./modules/pos/Categories";
-import PosModuleCustomers from "./modules/pos/Customers";
-import PosModuleCashiers from "./modules/pos/Cashiers";
-import PosModuleReports from "./modules/pos/Reports";
 
 function AppRoutes() {
   const { isAuthenticated } = useAuth();
@@ -110,12 +71,12 @@ function AppRoutes() {
     <Routes>
       <Route
         path="/"
-        element={<Navigate to={isAuthenticated ? "/modules" : "/login"} replace />}
+        element={<Navigate to={isAuthenticated ? "/dashboard" : "/login"} replace />}
       />
 
       <Route
         path="/login"
-        element={isAuthenticated ? <Navigate to="/modules" replace /> : <Login />}
+        element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Login />}
       />
 
       <Route element={<ProtectedRoute />}>
@@ -124,8 +85,6 @@ function AppRoutes() {
           <Route path="/company" element={<CompanyOverview />} />
           <Route path="/customers" element={<Customers />} />
           <Route path="/customers/new" element={<ErrorBoundary fallback={(_, reset) => <PageCrashFallback onReset={reset} />}><AddCustomer /></ErrorBoundary>} />
-          <Route path="/customers/:id/edit" element={<ErrorBoundary fallback={(_, reset) => <PageCrashFallback onReset={reset} />}><AddCustomer /></ErrorBoundary>} />
-          <Route path="/customers/:id" element={<Navigate to="/customers" replace />} />
           <Route path="/products" element={<Products />} />
           <Route path="/products/barcode/:code" element={<BarcodeProduct />} />
           <Route path="/purchases" element={<Purchases />} />
@@ -133,12 +92,10 @@ function AppRoutes() {
           <Route path="/suppliers/new" element={<ErrorBoundary fallback={(_, reset) => <PageCrashFallback onReset={reset} />}><AddSupplier /></ErrorBoundary>} />
           <Route path="/invoices" element={<Invoices />} />
           <Route path="/payments" element={<Payments />} />
-          <Route path="/treasury" element={<TreasuryProvider><Treasury /></TreasuryProvider>} />
+          <Route path="/treasury" element={<Treasury />} />
           <Route path="/employees" element={<Employees />} />
           <Route path="/employees/new" element={<ErrorBoundary fallback={(_, reset) => <PageCrashFallback onReset={reset} />}><AddEmployee /></ErrorBoundary>} />
-          <Route path="/leaves" element={<Leaves />} />
           <Route path="/settings" element={<Settings />} />
-          <Route path="/settings/company" element={<CompanySettingsPage />} />
           <Route path="/data-import" element={<DataImport />} />
           <Route path="/preview" element={<Preview />} />
 
@@ -157,7 +114,7 @@ function AppRoutes() {
           {/* Inventory & Operations */}
           <Route path="/inventory" element={<InventoryOverview />} />
           <Route path="/inventory/movements" element={<InventoryMovements />} />
-          <Route path="/manufacturing" element={<Navigate to="/factory/dashboard" replace />} />
+          <Route path="/manufacturing" element={<ComingSoon title="التصنيع" />} />
 
           {/* Sales */}
           <Route path="/quotes" element={<ComingSoon title="عروض الأسعار" />} />
@@ -170,7 +127,7 @@ function AppRoutes() {
 
           {/* System */}
           <Route path="/notifications" element={<Notifications />} />
-          <Route path="/audit-log" element={<AuditLog />} />
+          <Route path="/audit-log" element={<ComingSoon title="سجل التدقيق" />} />
 
           {/* Factory workspace — Factory role + Admin */}
           <Route path="/factory" element={<Navigate to="/factory/dashboard" replace />} />
@@ -206,49 +163,6 @@ function AppRoutes() {
         </Route>
       </Route>
 
-      {/* Module selector — authenticated root */}
-      <Route element={<ProtectedRoute />}>
-        <Route path="/modules" element={<ModuleSelector />} />
-
-        {/* Company module */}
-        <Route element={<ModuleLayout />}>
-          <Route path="/company/dashboard" element={<CompanyDashboard />} />
-          <Route path="/company/customers" element={<CompanyCustomers />} />
-          <Route path="/company/suppliers" element={<CompanySuppliers />} />
-          <Route path="/company/invoices" element={<CompanyInvoices />} />
-          <Route path="/company/payments" element={<CompanyPayments />} />
-          <Route path="/company/expenses" element={<CompanyExpenses />} />
-          <Route path="/company/employees" element={<CompanyEmployees />} />
-          <Route path="/company/reports" element={<CompanyReports />} />
-          <Route path="/company/treasury" element={<TreasuryHub />} />
-          <Route path="/company/treasury/accounts" element={<BankAccountsPage />} />
-        </Route>
-
-        {/* Factory module */}
-        <Route element={<ModuleLayout />}>
-          <Route path="/factory/dashboard" element={<FactoryModuleDashboard />} />
-          <Route path="/factory/orders" element={<FactoryModuleOrders />} />
-          <Route path="/factory/materials" element={<FactoryModuleMaterials />} />
-          <Route path="/factory/products" element={<FactoryModuleProducts />} />
-          <Route path="/factory/boms" element={<FactoryModuleBoms />} />
-          <Route path="/factory/quality" element={<FactoryModuleQuality />} />
-          <Route path="/factory/suppliers" element={<FactoryModuleSuppliers />} />
-          <Route path="/factory/reports" element={<FactoryModuleReports />} />
-        </Route>
-
-        {/* POS module */}
-        <Route element={<ModuleLayout />}>
-          <Route path="/pos/dashboard" element={<PosDashboard />} />
-          <Route path="/pos/checkout" element={<PosModuleCheckout />} />
-          <Route path="/pos/sales" element={<PosModuleSales />} />
-          <Route path="/pos/products" element={<PosModuleProducts />} />
-          <Route path="/pos/categories" element={<PosModuleCategories />} />
-          <Route path="/pos/customers" element={<PosModuleCustomers />} />
-          <Route path="/pos/cashiers" element={<PosModuleCashiers />} />
-          <Route path="/pos/reports" element={<PosModuleReports />} />
-        </Route>
-      </Route>
-
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
@@ -256,18 +170,16 @@ function AppRoutes() {
 
 export default function App() {
   return (
-    <CompanySettingsProvider>
-      <DataProvider>
-        <FactoryProvider>
-          <NotificationsProvider>
-            <SidebarPreferencesProvider>
-              <ErrorBoundary>
-                <AppRoutes />
-              </ErrorBoundary>
-            </SidebarPreferencesProvider>
-          </NotificationsProvider>
-        </FactoryProvider>
-      </DataProvider>
-    </CompanySettingsProvider>
+    <DataProvider>
+      <FactoryProvider>
+        <NotificationsProvider>
+          <SidebarPreferencesProvider>
+            <ErrorBoundary>
+              <AppRoutes />
+            </ErrorBoundary>
+          </SidebarPreferencesProvider>
+        </NotificationsProvider>
+      </FactoryProvider>
+    </DataProvider>
   );
 }

@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Bell, CheckCheck, Factory, FileText, Package, ShoppingCart, Star, Trash2, UserCheck, X } from "lucide-react";
+import { Bell, CheckCheck, Factory, FileText, Package, ShoppingCart, Star, Trash2, X } from "lucide-react";
 import { Container } from "../components/layout/Container";
 import { Stack } from "../components/layout/Stack";
 import { Button } from "../components/ui/Button";
@@ -8,6 +8,7 @@ import { Badge } from "../components/ui/Badge";
 import { useNotifications } from "../context/NotificationsContext";
 import type { Notification, NotificationCategory, NotificationSeverity } from "../context/NotificationsContext";
 import { useSettings } from "../context/SettingsContext";
+import { formatDateValue } from "../utils/displayFormatters";
 import styles from "./Notifications.module.css";
 
 type TabId = "all" | "unread" | NotificationCategory;
@@ -19,7 +20,7 @@ const CAT_ICON: Record<NotificationCategory, typeof FileText> = {
   pos:       ShoppingCart,
   loyalty:   Star,
   system:    Bell,
-  hr:        UserCheck,
+  hr:        CheckCheck,
 };
 
 const SEV_VARIANT: Record<NotificationSeverity, "danger" | "warning" | "info" | "success"> = {
@@ -36,13 +37,6 @@ const SEV_BORDER: Record<NotificationSeverity, string> = {
   success: styles.sevSuccess,
 };
 
-const SEVERITY_AR: Record<string, string> = {
-  error:   "خطأ",
-  warning: "تحذير",
-  info:    "معلومة",
-  success: "نجاح",
-};
-
 type T = ReturnType<typeof useSettings>["t"];
 
 function relTime(ts: Date, t: T): string {
@@ -56,10 +50,7 @@ function relTime(ts: Date, t: T): string {
   const diffD = Math.floor(diffH / 24);
   if (diffD === 1) return rl.yesterday;
   if (diffD < 7) return `${rl.prefix}${diffD}${rl.dAgo}`;
-  const d = ts.getDate().toString().padStart(2, "0");
-  const m = (ts.getMonth() + 1).toString().padStart(2, "0");
-  const y = ts.getFullYear();
-  return `${d}/${m}/${y}`;
+  return formatDateValue(ts);
 }
 
 function dateGroup(ts: Date, t: T): string {
@@ -123,6 +114,7 @@ export default function Notifications() {
         {/* Header */}
         <header className={styles.header}>
           <div>
+            <h1 className={styles.title}>{tn.pageTitle}</h1>
             <p className={styles.subtitle}>{tn.pageSubtitle}</p>
           </div>
           <div className={styles.headerActions}>
@@ -189,7 +181,7 @@ export default function Notifications() {
                           <div className={styles.cardTop}>
                             <div className={styles.cardMeta}>
                               <span className={styles.cardTitle}>{title}</span>
-                              <Badge variant={SEV_VARIANT[n.severity]} size="sm">{isArabic ? (SEVERITY_AR[n.severity] ?? n.severity) : n.severity}</Badge>
+                              <Badge variant={SEV_VARIANT[n.severity]} size="sm">{n.severity}</Badge>
                             </div>
                             <div className={styles.cardRight}>
                               <span className={styles.cardTime}>{relTime(n.timestamp, t)}</span>
@@ -197,7 +189,6 @@ export default function Notifications() {
                                 type="button"
                                 className={styles.dismissBtn}
                                 aria-label="Dismiss notification"
-                                style={{ minWidth: 32, minHeight: 32, display: "flex", alignItems: "center", justifyContent: "center" }}
                                 onClick={(e) => { e.stopPropagation(); dismiss(n.id); }}
                               >
                                 <X size={12} />

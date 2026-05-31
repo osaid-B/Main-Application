@@ -12,9 +12,9 @@ const LOCAL_SETTINGS_KEY = "atlas-local-settings";
 function loadLocalSettings() {
   try {
     const raw = localStorage.getItem(LOCAL_SETTINGS_KEY);
-    if (raw) return JSON.parse(raw) as { currency: string; vatRate: number; vatByDefault: boolean; arabicNumerals: boolean };
+    if (raw) return JSON.parse(raw) as { currency: string; vatRate: number; vatByDefault: boolean; arabicNumerals?: boolean };
   } catch { /* ignore */ }
-  return { currency: "ILS", vatRate: 16, vatByDefault: true, arabicNumerals: false };
+  return { currency: "ILS", vatRate: 16, vatByDefault: true };
 }
 
 export default function Settings() {
@@ -263,22 +263,6 @@ export default function Settings() {
                 />
                 <span>{t.settings.vatApplyByDefault}</span>
               </label>
-            </div>
-
-            <div className="settings-local-field settings-local-field--full">
-              <label className="settings-vat-toggle-label">
-                <input
-                  type="checkbox"
-                  checked={localSettings.arabicNumerals}
-                  onChange={(e) => saveLocalSettings({ ...localSettings, arabicNumerals: e.target.checked })}
-                />
-                <span>{t.settings.arabicNumerals}</span>
-              </label>
-              {localSettings.arabicNumerals && (
-                <p style={{ fontSize: 12, color: "var(--app-text-muted)", marginTop: 4 }}>
-                  {t.settings.arabicNumeralsHint}
-                </p>
-              )}
             </div>
           </div>
         </article>

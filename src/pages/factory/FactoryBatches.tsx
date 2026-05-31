@@ -27,7 +27,7 @@ const QC_VARIANT: Record<QcStatus, "success" | "danger" | "warning" | "info"> = 
 };
 
 export default function FactoryBatches() {
-  const { t, formatCurrency } = useSettings();
+  const { t, formatCurrency, formatNumber } = useSettings();
   const tc = t.factory.batches;
   const { batches: PRODUCTION_BATCHES } = useFactory();
 
@@ -53,6 +53,7 @@ export default function FactoryBatches() {
         <header className={styles.header}>
           <div>
             <div className={styles.breadcrumb}>{tc.breadcrumb}</div>
+            <h1 className={styles.title}>{tc.pageTitle}</h1>
             <p className={styles.subtitle}>{tc.pageSubtitle}</p>
           </div>
         </header>
@@ -75,54 +76,41 @@ export default function FactoryBatches() {
           </select>
         </div>
 
-        <div className={`${styles.tableWrap} atlas-table-wrapper`}>
+        <div className={styles.tableWrap}>
           {isLoading ? (
             <Skeleton variant="rect" height={280} />
           ) : filtered.length === 0 ? (
             <EmptyState icon={<Layers size={32} />} title={tc.noData} />
           ) : (
-            <table className={`${styles.table} atlas-table`}>
-              <colgroup>
-                <col className="col-w-110" />
-                <col className="col-w-110" />
-                <col />
-                <col className="col-w-80" />
-                <col className="col-date" />
-                <col className="col-date" />
-                <col className="col-w-90" />
-                <col className="col-w-90" />
-                <col className="col-currency col-w-120" />
-                <col className="col-currency col-w-120" />
-                <col />
-              </colgroup>
+            <table className={styles.table}>
               <thead>
                 <tr>
-                  <th className="col-code">{tc.cols.batchId}</th>
-                  <th className="col-code">{tc.cols.order}</th>
+                  <th>{tc.cols.batchId}</th>
+                  <th>{tc.cols.order}</th>
                   <th>{tc.cols.product}</th>
-                  <th className="col-num">{tc.cols.quantity}</th>
-                  <th className="col-date">{tc.cols.producedDate}</th>
-                  <th className="col-date">{tc.cols.expiryDate}</th>
-                  <th className="col-badge">{tc.cols.status}</th>
-                  <th className="col-badge">{tc.cols.qcStatus}</th>
-                  <th className="col-num">{tc.cols.unitCost}</th>
-                  <th className="col-num">{tc.cols.totalCost}</th>
+                  <th className={styles.numEnd}>{tc.cols.quantity}</th>
+                  <th>{tc.cols.producedDate}</th>
+                  <th>{tc.cols.expiryDate}</th>
+                  <th>{tc.cols.status}</th>
+                  <th>{tc.cols.qcStatus}</th>
+                  <th className={styles.numEnd}>{tc.cols.unitCost}</th>
+                  <th className={styles.numEnd}>{tc.cols.totalCost}</th>
                   <th>{tc.cols.notes}</th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.map((b) => (
                   <tr key={b.id}>
-                    <td className="col-code"><span className={styles.mono}>{b.id}</span></td>
-                    <td className="col-code"><span className={styles.mono}>{b.productionOrderId}</span></td>
+                    <td><span className={styles.mono}>{b.id}</span></td>
+                    <td><span className={styles.mono}>{b.productionOrderId}</span></td>
                     <td>{b.productName}</td>
-                    <td className={`${styles.numEnd} ${styles.mono} col-num`}>{b.quantity > 0 ? b.quantity.toLocaleString() : "—"}</td>
-                    <td className={`${styles.mono} col-date`}>{b.producedDate || "—"}</td>
-                    <td className={`${styles.mono} col-date`}>{b.expiryDate || "—"}</td>
-                    <td className="col-badge"><Badge variant={BATCH_STATUS_VARIANT[b.status]} size="sm">{tc.status[b.status]}</Badge></td>
-                    <td className="col-badge"><Badge variant={QC_VARIANT[b.qcStatus]} size="sm">{tc.qcStatus[b.qcStatus]}</Badge></td>
-                    <td className={`${styles.numEnd} ${styles.mono} col-num`}>{b.unitCost > 0 ? formatCurrency(b.unitCost) : "—"}</td>
-                    <td className={`${styles.numEnd} ${styles.mono} col-num`}>{b.totalCost > 0 ? formatCurrency(b.totalCost) : "—"}</td>
+                    <td className={`${styles.numEnd} ${styles.mono}`}>{b.quantity > 0 ? formatNumber(b.quantity) : "—"}</td>
+                    <td className={styles.mono}>{b.producedDate || "—"}</td>
+                    <td className={styles.mono}>{b.expiryDate || "—"}</td>
+                    <td><Badge variant={BATCH_STATUS_VARIANT[b.status]} size="sm">{tc.status[b.status]}</Badge></td>
+                    <td><Badge variant={QC_VARIANT[b.qcStatus]} size="sm">{tc.qcStatus[b.qcStatus]}</Badge></td>
+                    <td className={`${styles.numEnd} ${styles.mono}`}>{b.unitCost > 0 ? formatCurrency(b.unitCost) : "—"}</td>
+                    <td className={`${styles.numEnd} ${styles.mono}`}>{b.totalCost > 0 ? formatCurrency(b.totalCost) : "—"}</td>
                     <td style={{ fontSize: 11, color: "var(--app-text-muted)", maxWidth: 160 }}>{b.notes ?? "—"}</td>
                   </tr>
                 ))}

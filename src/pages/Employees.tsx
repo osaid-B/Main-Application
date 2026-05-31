@@ -27,16 +27,14 @@ import {
 } from "lucide-react";
 import { Button } from "../components/ui/Button";
 import { useData } from "../context/DataContext";
-import { getLeaveRequests } from "../data/storage";
 import type {
   Employee,
   EmployeeAdvance,
-  EmployeeGender,
-  ContractType,
   SalaryType,
   DailyAttendanceEntry,
   DailyAttendanceStatus,
 } from "../data/types";
+import { formatDateValue } from "../utils/displayFormatters";
 
 type EmployeeForm = {
   name: string;
@@ -46,16 +44,8 @@ type EmployeeForm = {
   salaryType: SalaryType;
   hourlyRate: string;
   fixedSalary: string;
-  dailyRate: string;
   notes: string;
   departmentId: string;
-  nationalId: string;
-  gender: EmployeeGender | "";
-  city: string;
-  jobTitle: string;
-  hireDate: string;
-  contractType: ContractType | "";
-  currency: "ILS" | "USD" | "JOD" | "";
 };
 
 type EmployeeFormErrors = {
@@ -65,7 +55,6 @@ type EmployeeFormErrors = {
   workEnd?: string;
   hourlyRate?: string;
   fixedSalary?: string;
-  dailyRate?: string;
 };
 
 type ToastState = {
@@ -119,35 +108,11 @@ const EMPTY_FORM: EmployeeForm = {
   salaryType: "hourly",
   hourlyRate: "10",
   fixedSalary: "0",
-  dailyRate: "0",
   notes: "",
   departmentId: "",
-  nationalId: "",
-  gender: "",
-  city: "",
-  jobTitle: "",
-  hireDate: "",
-  contractType: "",
-  currency: "ILS",
 };
 
 const DELETE_CONFIRMATION_CODE = "123";
-
-function getEffectiveStatus(
-  emp: Employee,
-  date: string,
-): DailyAttendanceStatus | null {
-  const leaves = getLeaveRequests();
-  const approved = leaves.find(
-    (l) => l.employeeId === emp.id && l.status === "approved" && date >= l.startDate && date <= l.endDate,
-  );
-  if (approved) return "leave";
-  const pending = leaves.find(
-    (l) => l.employeeId === emp.id && l.status === "pending" && date >= l.startDate && date <= l.endDate,
-  );
-  if (pending) return "leave_pending";
-  return null;
-}
 
 const DAILY_STATUS_OPTIONS: Array<{
   value: DailyAttendanceStatus;
@@ -158,7 +123,6 @@ const DAILY_STATUS_OPTIONS: Array<{
   { value: "absent", label: "Absent" },
   { value: "half-day", label: "Half Day" },
   { value: "leave", label: "Leave" },
-  { value: "leave_pending", label: "Leave (Pending)" },
 ];
 
 const DAILY_STATUS_SHORT_LABELS: Record<DailyAttendanceStatus, string> = {
@@ -166,8 +130,8 @@ const DAILY_STATUS_SHORT_LABELS: Record<DailyAttendanceStatus, string> = {
   late: "L",
   absent: "A",
   "half-day": "H",
-  leave: "إج",
-  leave_pending: "معلق",
+  leave: "V",
+  leave_pending: "?",
 };
 
 const DAILY_STATUS_CLASS_MAP: Record<DailyAttendanceStatus, string> = {
@@ -176,7 +140,7 @@ const DAILY_STATUS_CLASS_MAP: Record<DailyAttendanceStatus, string> = {
   absent: "is-absent",
   "half-day": "is-half-day",
   leave: "is-leave",
-  leave_pending: "is-leave-pending",
+  leave_pending: "is-leave",
 };
 
 const EMP_AVATAR_COLORS = [
@@ -216,18 +180,13 @@ const calculateShiftHours = (start: string, end: string) => {
 const getTodayDate = () => new Date().toISOString().slice(0, 10);
 
 
-// Palestinian work week: Sun(0)–Thu(4). Weekend = Fri(5)+Sat(6).
-// Week starts on Sunday.
 function getStartOfWeek(date = new Date()) {
   const d = new Date(date);
-  const day = d.getDay(); // 0=Sun
-  d.setDate(d.getDate() - day); // roll back to Sunday
+  const day = d.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  d.setDate(d.getDate() + diff);
   d.setHours(0, 0, 0, 0);
   return d;
-}
-
-function isPalestinianWeekend(dow: number) {
-  return dow === 5 || dow === 6; // Fri or Sat
 }
 
 function getStartOfMonth(date = new Date()) {
@@ -272,23 +231,16 @@ function getMonthDays(baseDate: string) {
   });
 
   return {
-    monthLabel: ref.toLocaleDateString("en-US", { month: "long", year: "numeric" }),
+    monthLabel: formatDateValue(ref, { month: "long", year: "numeric" }, "en-US"),
     days,
   };
 }
 
 function groupDaysIntoWeeks(days: Array<{ day: number; date: string; dow: number }>) {
   const weeks: Array<Array<{ day: number; date: string; dow: number }>> = [];
-  // Group by Sunday-start week
-  let week: typeof days = [];
-  for (const day of days) {
-    if (day.dow === 0 && week.length > 0) {
-      weeks.push(week);
-      week = [];
-    }
-    week.push(day);
+  for (let index = 0; index < days.length; index += 7) {
+    weeks.push(days.slice(index, index + 7));
   }
-  if (week.length > 0) weeks.push(week);
   return weeks;
 }
 
@@ -315,14 +267,10 @@ function validateEmployeeForm(values: EmployeeForm): EmployeeFormErrors {
   if (!values.name.trim()) errors.name = "Employee name is required.";
   if (!values.phone.trim()) {
     errors.phone = "Phone number is required.";
-  } else {
-    const digits = values.phone.replace(/\D/g, "");
-    const VALID_PREFIXES = ["052", "053", "054", "055", "056", "057", "058", "059"];
-    if (digits.length !== 10) {
-      errors.phone = "Phone number must be exactly 10 digits.";
-    } else if (!VALID_PREFIXES.some((p) => digits.startsWith(p))) {
-      errors.phone = "Enter a valid Palestinian mobile number (05x-xxxxxxx).";
-    }
+  } else if (!(values.phone.startsWith("059") || values.phone.startsWith("056"))) {
+    errors.phone = "Phone number must start with 059 or 056.";
+  } else if (values.phone.length !== 10) {
+    errors.phone = "Phone number must be exactly 10 digits.";
   }
   if (!values.workStart) errors.workStart = "Work start time is required.";
   if (!values.workEnd) {
@@ -342,13 +290,6 @@ function validateEmployeeForm(values: EmployeeForm): EmployeeFormErrors {
       errors.fixedSalary = "Fixed salary is required.";
     } else if (Number.isNaN(Number(values.fixedSalary)) || Number(values.fixedSalary) < 0) {
       errors.fixedSalary = "Fixed salary must be a valid positive number.";
-    }
-  }
-  if (values.salaryType === "daily") {
-    if (values.dailyRate === "") {
-      errors.dailyRate = "Daily rate is required.";
-    } else if (Number.isNaN(Number(values.dailyRate)) || Number(values.dailyRate) < 0) {
-      errors.dailyRate = "Daily rate must be a valid positive number.";
     }
   }
   return errors;
@@ -371,6 +312,10 @@ function getDefaultWorkedHours(employee: Employee, status: DailyAttendanceStatus
   if (status === "absent" || status === "leave") return 0;
   if (status === "half-day") return Number((fullShift / 2).toFixed(2));
   return Number(fullShift.toFixed(2));
+}
+
+function getStatusLabel(status: DailyAttendanceStatus) {
+  return DAILY_STATUS_OPTIONS.find((item) => item.value === status)?.label || status;
 }
 
 function upsertDailyAttendance(employee: Employee, entry: DailyAttendanceEntry): Employee {
@@ -404,13 +349,10 @@ function getDailyAttendanceSummaryForRange(employee: Employee, range: Attendance
 
 function getEmployeePayrollForRange(employee: Employee, range: AttendanceRange) {
   const summary = getDailyAttendanceSummaryForRange(employee, range);
-  const presentDays = summary.present + summary.late + summary.halfDay * 0.5;
-  const gross: number =
+  const gross =
     employee.salaryType === "hourly"
       ? summary.totalHours * Number(employee.hourlyRate || 0)
-      : employee.salaryType === "daily"
-        ? presentDays * Number(employee.dailyRate || 0)
-        : Number(employee.fixedSalary || 0);
+      : Number(employee.fixedSalary || 0);
   const net = gross - summary.advance;
   return { totalHours: summary.totalHours, gross, advance: summary.advance, net };
 }
@@ -460,44 +402,48 @@ function EmployeeFormModal({
           </div>
           <Button variant="icon" size="md" aria-label="Close" onClick={onClose}>×</Button>
         </div>
-        <form className="modal-form emp-modal-form" onSubmit={(e) => { e.preventDefault(); onSubmit(); }}>
-          {/* Section 1: Basic info */}
-          <p className="emp-form-section-title">{t.employees.form.basicInfo ?? "Basic Information"}</p>
+        <form className="modal-form" onSubmit={(e) => { e.preventDefault(); onSubmit(); }}>
           <div className="employees-form-grid">
             <div>
-              <label className="modal-label">{t.employees.form.name} <span className="emp-req">*</span></label>
+              <label className="modal-label">{t.employees.form.name}</label>
               <input className="modal-input" type="text" value={values.name} onChange={(e) => onChange("name", e.target.value)} />
               {errors.name && <p className="form-error">{errors.name}</p>}
             </div>
             <div>
-              <label className="modal-label">{t.employees.form.phone} <span className="emp-req">*</span></label>
-              <input className="modal-input" type="text" placeholder="05xxxxxxxx" value={values.phone} onChange={(e) => onChange("phone", e.target.value.replace(/\D/g, "").slice(0, 10))} />
+              <label className="modal-label">{t.employees.form.phone}</label>
+              <input className="modal-input" type="text" value={values.phone} onChange={(e) => onChange("phone", e.target.value.replace(/\D/g, "").slice(0, 10))} />
               {errors.phone && <p className="form-error">{errors.phone}</p>}
             </div>
             <div>
-              <label className="modal-label">{t.employees.form.nationalId}</label>
-              <input className="modal-input" type="text" value={values.nationalId} onChange={(e) => onChange("nationalId", e.target.value)} />
+              <label className="modal-label">{t.employees.form.workStart}</label>
+              <input className="modal-input" type="time" value={values.workStart} onChange={(e) => onChange("workStart", e.target.value)} />
+              {errors.workStart && <p className="form-error">{errors.workStart}</p>}
             </div>
             <div>
-              <label className="modal-label">{t.employees.form.gender}</label>
-              <select className="modal-input" value={values.gender} onChange={(e) => onChange("gender", e.target.value)}>
-                <option value="">—</option>
-                <option value="male">{t.employees.form.genderMale}</option>
-                <option value="female">{t.employees.form.genderFemale}</option>
+              <label className="modal-label">{t.employees.form.workEnd}</label>
+              <input className="modal-input" type="time" value={values.workEnd} onChange={(e) => onChange("workEnd", e.target.value)} />
+              {errors.workEnd && <p className="form-error">{errors.workEnd}</p>}
+            </div>
+            <div>
+              <label className="modal-label">{t.employees.form.salaryType}</label>
+              <select className="modal-input" value={values.salaryType} onChange={(e) => onChange("salaryType", e.target.value as SalaryType)}>
+                <option value="hourly">{t.employees.salaryType.hourly}</option>
+                <option value="fixed">{t.employees.salaryType.fixed}</option>
               </select>
             </div>
-            <div>
-              <label className="modal-label">{t.employees.form.jobTitle}</label>
-              <input className="modal-input" type="text" value={values.jobTitle} onChange={(e) => onChange("jobTitle", e.target.value)} />
-            </div>
-            <div>
-              <label className="modal-label">{t.employees.form.city}</label>
-              <input className="modal-input" type="text" value={values.city} onChange={(e) => onChange("city", e.target.value)} />
-            </div>
-            <div>
-              <label className="modal-label">{t.employees.form.hireDate}</label>
-              <input className="modal-input" type="date" value={values.hireDate} onChange={(e) => onChange("hireDate", e.target.value)} />
-            </div>
+            {values.salaryType === "hourly" ? (
+              <div>
+                <label className="modal-label">{t.employees.form.hourlyRate}</label>
+                <input className="modal-input" type="number" min="0" step="1" value={values.hourlyRate} onChange={(e) => onChange("hourlyRate", e.target.value)} />
+                {errors.hourlyRate && <p className="form-error">{errors.hourlyRate}</p>}
+              </div>
+            ) : (
+              <div>
+                <label className="modal-label">{t.employees.form.fixedSalary}</label>
+                <input className="modal-input" type="number" min="0" step="1" value={values.fixedSalary} onChange={(e) => onChange("fixedSalary", e.target.value)} />
+                {errors.fixedSalary && <p className="form-error">{errors.fixedSalary}</p>}
+              </div>
+            )}
             <div>
               <label className="modal-label">{t.employees.form.department ?? "Department"}</label>
               <select className="modal-input" value={values.departmentId} onChange={(e) => onChange("departmentId", e.target.value)}>
@@ -507,71 +453,9 @@ function EmployeeFormModal({
                 ))}
               </select>
             </div>
-          </div>
-
-          {/* Section 2: Contract & Salary */}
-          <p className="emp-form-section-title">{t.employees.form.contractSalary ?? "Contract & Salary"}</p>
-          <div className="employees-form-grid">
-            <div>
-              <label className="modal-label">{t.employees.form.contractType}</label>
-              <select className="modal-input" value={values.contractType} onChange={(e) => onChange("contractType", e.target.value)}>
-                <option value="">—</option>
-                <option value="full-time">{t.employees.contractType["full-time"]}</option>
-                <option value="part-time">{t.employees.contractType["part-time"]}</option>
-                <option value="daily">{t.employees.contractType.daily}</option>
-                <option value="temporary">{t.employees.contractType.temporary}</option>
-              </select>
-            </div>
-            <div>
-              <label className="modal-label">{t.employees.form.salaryType} <span className="emp-req">*</span></label>
-              <select className="modal-input" value={values.salaryType} onChange={(e) => onChange("salaryType", e.target.value as SalaryType)}>
-                <option value="hourly">{t.employees.salaryType.hourly}</option>
-                <option value="fixed">{t.employees.salaryType.fixed}</option>
-                <option value="daily">{t.employees.salaryType.daily}</option>
-              </select>
-            </div>
-            {values.salaryType === "hourly" && (
-              <div>
-                <label className="modal-label">{t.employees.form.hourlyRate} <span className="emp-req">*</span></label>
-                <input className="modal-input" type="number" min="0" step="0.5" value={values.hourlyRate} onChange={(e) => onChange("hourlyRate", e.target.value)} />
-                {errors.hourlyRate && <p className="form-error">{errors.hourlyRate}</p>}
-              </div>
-            )}
-            {values.salaryType === "fixed" && (
-              <div>
-                <label className="modal-label">{t.employees.form.fixedSalary} <span className="emp-req">*</span></label>
-                <input className="modal-input" type="number" min="0" step="50" value={values.fixedSalary} onChange={(e) => onChange("fixedSalary", e.target.value)} />
-                {errors.fixedSalary && <p className="form-error">{errors.fixedSalary}</p>}
-              </div>
-            )}
-            {values.salaryType === "daily" && (
-              <div>
-                <label className="modal-label">{t.employees.form.dailyRate} <span className="emp-req">*</span></label>
-                <input className="modal-input" type="number" min="0" step="10" value={values.dailyRate} onChange={(e) => onChange("dailyRate", e.target.value)} />
-                {errors.dailyRate && <p className="form-error">{errors.dailyRate}</p>}
-              </div>
-            )}
-            <div>
-              <label className="modal-label">{t.employees.form.currency}</label>
-              <select className="modal-input" value={values.currency} onChange={(e) => onChange("currency", e.target.value)}>
-                <option value="ILS">ILS — ₪</option>
-                <option value="USD">USD — $</option>
-                <option value="JOD">JOD — د.أ</option>
-              </select>
-            </div>
-            <div>
-              <label className="modal-label">{t.employees.form.workStart} <span className="emp-req">*</span></label>
-              <input className="modal-input" type="time" value={values.workStart} onChange={(e) => onChange("workStart", e.target.value)} />
-              {errors.workStart && <p className="form-error">{errors.workStart}</p>}
-            </div>
-            <div>
-              <label className="modal-label">{t.employees.form.workEnd} <span className="emp-req">*</span></label>
-              <input className="modal-input" type="time" value={values.workEnd} onChange={(e) => onChange("workEnd", e.target.value)} />
-              {errors.workEnd && <p className="form-error">{errors.workEnd}</p>}
-            </div>
             <div className="employees-form-grid-full">
               <label className="modal-label">{t.employees.form.notes}</label>
-              <textarea className="modal-input" rows={3} value={values.notes} onChange={(e) => onChange("notes", e.target.value)} />
+              <textarea className="modal-input" rows={4} value={values.notes} onChange={(e) => onChange("notes", e.target.value)} />
             </div>
           </div>
           <div className="modal-actions">
@@ -600,7 +484,7 @@ function DeleteConfirmModal({
         <div className="modal-header">
           <div>
             <h2>{t.employees.delete.title}</h2>
-            <p>{t.employees.delete.hint}</p>
+            <p>Danger zone</p>
           </div>
           <Button variant="icon" size="md" aria-label="Close" onClick={onClose}>×</Button>
         </div>
@@ -729,14 +613,13 @@ function DonutChart({ present, late, absent, total }: { present: number; late: n
   );
 }
 
-// Mini calendar: week starts on Sunday (Palestinian convention).
 function getMiniCalWeeks(dateStr: string) {
   const ref = new Date(`${dateStr.slice(0, 7)}-01T00:00:00`);
   const year = ref.getFullYear();
   const month = ref.getMonth();
-  // Sunday-start: offset = firstDow (0=Sun means no offset)
   const firstDow = new Date(year, month, 1).getDay();
-  const start = new Date(year, month, 1 - firstDow);
+  const offset = firstDow === 0 ? -6 : 1 - firstDow;
+  const start = new Date(year, month, 1 + offset);
   const weeks: Array<Array<{ date: string; dayNum: number; isCurrentMonth: boolean; dow: number }>> = [];
   const cur = new Date(start);
   while (weeks.length < 6) {
@@ -768,7 +651,7 @@ function TodayAttendanceSection({
   onUpdateEmployeeDay: (employeeId: string, payload: { status: DailyAttendanceStatus; workedHours: number; advanceAmount: number; notes?: string }) => void;
   onSaveSheet: () => void;
 }) {
-  const { t, formatCurrency } = useSettings();
+  const { t } = useSettings();
   const [page, setPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [sheetSearch, setSheetSearch] = useState("");
@@ -798,22 +681,22 @@ function TodayAttendanceSection({
   const safePage = Math.min(page, totalPages);
   const paginated = filtered.slice((safePage - 1) * rowsPerPage, safePage * rowsPerPage);
 
-  const total = employees.filter((e) => !e.isDeleted).length;
+  const total = employees.length;
   const pct = (n: number) => total > 0 ? `${Math.round((n / total) * 100)}%` : "0%";
 
-  const dateLabel = new Date(`${selectedDate}T00:00:00`).toLocaleDateString("en-US", {
+  const dateLabel = formatDateValue(new Date(`${selectedDate}T00:00:00`), {
     month: "long", day: "numeric", year: "numeric",
-  });
+  }, "en-US");
 
   const miniCalWeeks = useMemo(() => getMiniCalWeeks(selectedDate), [selectedDate]);
 
   const STATUS_BADGE_STYLE: Record<DailyAttendanceStatus, { bg: string; color: string }> = {
-    present:       { bg: "#dcfce7", color: "#15803d" },
-    late:          { bg: "#fef3c7", color: "#b45309" },
-    absent:        { bg: "#fee2e2", color: "#b91c1c" },
-    "half-day":    { bg: "#ede9fe", color: "#6d28d9" },
-    leave:         { bg: "#dbeafe", color: "#1d4ed8" },
-    leave_pending: { bg: "#eff6ff", color: "#2563eb" },
+    present:      { bg: "#dcfce7", color: "#15803d" },
+    late:         { bg: "#fef3c7", color: "#b45309" },
+    absent:       { bg: "#fee2e2", color: "#b91c1c" },
+    "half-day":   { bg: "#ede9fe", color: "#6d28d9" },
+    leave:        { bg: "#f1f5f9", color: "#475569" },
+    leave_pending:{ bg: "#fef9c3", color: "#a16207" },
   };
 
   return (
@@ -829,7 +712,7 @@ function TodayAttendanceSection({
             <div>
               <span>{t.employees.attendance.present}</span>
               <strong>{todaySummary.present}</strong>
-              <small className="emp-kpi-pct">{pct(todaySummary.present)} {t.employees.today.ofTotal} <TrendingUp size={11} /></small>
+              <small className="emp-kpi-pct">{pct(todaySummary.present)} of total <TrendingUp size={11} /></small>
             </div>
           </div>
           <div className="emp-kpi-card emp-kpi-late">
@@ -839,7 +722,7 @@ function TodayAttendanceSection({
             <div>
               <span>{t.employees.attendance.late}</span>
               <strong>{todaySummary.late}</strong>
-              <small className="emp-kpi-pct">{pct(todaySummary.late)} {t.employees.today.ofTotal} <TrendingUp size={11} /></small>
+              <small className="emp-kpi-pct">{pct(todaySummary.late)} of total <TrendingUp size={11} /></small>
             </div>
           </div>
           <div className="emp-kpi-card emp-kpi-absent">
@@ -849,7 +732,7 @@ function TodayAttendanceSection({
             <div>
               <span>{t.employees.attendance.absent}</span>
               <strong>{todaySummary.absent}</strong>
-              <small className="emp-kpi-pct">{pct(todaySummary.absent)} {t.employees.today.ofTotal} <TrendingUp size={11} /></small>
+              <small className="emp-kpi-pct">{pct(todaySummary.absent)} of total <TrendingUp size={11} /></small>
             </div>
           </div>
           <div className="emp-kpi-card emp-kpi-advance">
@@ -857,9 +740,9 @@ function TodayAttendanceSection({
               <Wallet size={20} color="#7c3aed" />
             </div>
             <div>
-              <span>{t.employees.today.advancesToday}</span>
-              <strong>{formatCurrency(todaySummary.advance, "ILS")}</strong>
-              <small>{t.employees.today.totalAdvances}</small>
+              <span>Advances Today</span>
+              <strong>${todaySummary.advance.toFixed(2)}</strong>
+              <small>Total advances</small>
             </div>
           </div>
         </div>
@@ -868,8 +751,8 @@ function TodayAttendanceSection({
         <div className="emp-sheet-card">
           <div className="emp-sheet-head">
             <div>
-              <h3 className="emp-section-title">{t.employees.today.dailySheet}</h3>
-              <p className="emp-section-sub">{t.employees.today.dailySheetSub}</p>
+              <h3 className="emp-section-title">Daily Sheet</h3>
+              <p className="emp-section-sub">Edit only employees who differ from the default attendance.</p>
             </div>
           </div>
 
@@ -879,13 +762,13 @@ function TodayAttendanceSection({
               <Search size={14} />
               <input
                 type="text"
-                placeholder={t.employees.searchPlaceholder}
+                placeholder="Search employee..."
                 value={sheetSearch}
                 onChange={(e) => { setSheetSearch(e.target.value); setPage(1); }}
               />
             </div>
             <select className="emp-dept-select">
-              <option>{t.employees.today.allDepartments}</option>
+              <option>All Departments</option>
             </select>
           </div>
 
@@ -896,7 +779,7 @@ function TodayAttendanceSection({
                   <thead>
                     <tr>
                       <th>{t.employees.cols.employee}</th>
-                      <th>{t.employees.cols.shift}</th>
+                      <th>Shift</th>
                       <th>{t.employees.cols.status}</th>
                       <th>{t.employees.cols.workHours}</th>
                       <th>{t.employees.cols.advance}</th>
@@ -1094,10 +977,10 @@ function TodayAttendanceSection({
           </div>
           <div className="emp-sidebar-date-actions">
             <Button variant="secondary" size="sm" style={{ flex: 1 }} onClick={onApplyPresentToAll}>
-              {t.employees.today.prepareDay}
+              Prepare Day
             </Button>
             <Button variant="primary" size="sm" style={{ flex: 1 }} onClick={onSaveSheet}>
-              {t.employees.today.saveDay}
+              Save Day
             </Button>
           </div>
         </div>
@@ -1107,20 +990,19 @@ function TodayAttendanceSection({
           <div className="emp-sidebar-card-head">
             <div className="emp-sidebar-card-title">
               <Calendar size={15} color="#2563eb" />
-              <span>{t.employees.today.monthlyOverview}</span>
+              <span>Monthly Overview</span>
             </div>
             <select className="emp-sidebar-period-select">
-              <option>{t.employees.attendanceRange.month}</option>
+              <option>This Month</option>
             </select>
           </div>
           <div className="emp-mini-cal-month">
-            {new Date(`${selectedDate}T00:00:00`).toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+            {formatDateValue(new Date(`${selectedDate}T00:00:00`), { month: "long", year: "numeric" }, "en-US")}
           </div>
           <div className="emp-mini-cal">
             <div className="emp-mini-cal-header">
-              {/* Sunday-start, Fri+Sat marked as weekend */}
-              {([t.employees.today.sun, t.employees.today.mon, t.employees.today.tue, t.employees.today.wed, t.employees.today.thu, t.employees.today.fri, t.employees.today.sat] as string[]).map((d, i) => (
-                <span key={d} className={isPalestinianWeekend(i) ? "emp-cal-hdr-weekend" : ""}>{d}</span>
+              {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => (
+                <span key={d}>{d}</span>
               ))}
             </div>
             {miniCalWeeks.map((week, wi) => (
@@ -1128,10 +1010,10 @@ function TodayAttendanceSection({
                 {week.map((day) => {
                   const isToday = day.date === getTodayDate();
                   const presentCount = employees.filter(
-                    (e) => !e.isDeleted && getDailyAttendanceEntryByDate(e, day.date)?.status === "present"
+                    (e) => getDailyAttendanceEntryByDate(e, day.date)?.status === "present"
                   ).length;
                   const hasSomePresent = presentCount > 0 && day.isCurrentMonth;
-                  const isWeekend = isPalestinianWeekend(day.dow);
+                  const isWeekend = day.dow === 5 || day.dow === 6;
                   return (
                     <span
                       key={day.date}
@@ -1151,10 +1033,10 @@ function TodayAttendanceSection({
             ))}
           </div>
           <div className="emp-cal-legend">
-            <span><span className="emp-cal-dot" style={{ background: "#16a34a" }} />{t.employees.attendance.present}</span>
-            <span><span className="emp-cal-dot" style={{ background: "#f59e0b" }} />{t.employees.attendance.late}</span>
-            <span><span className="emp-cal-dot" style={{ background: "#ef4444" }} />{t.employees.attendance.absent}</span>
-            <span><span className="emp-cal-dot" style={{ background: "#cbd5e1" }} />{t.employees.today.weekend}</span>
+            <span><span className="emp-cal-dot" style={{ background: "#16a34a" }} />Present</span>
+            <span><span className="emp-cal-dot" style={{ background: "#f59e0b" }} />Late</span>
+            <span><span className="emp-cal-dot" style={{ background: "#ef4444" }} />Absent</span>
+            <span><span className="emp-cal-dot" style={{ background: "#cbd5e1" }} />Weekend</span>
           </div>
         </div>
 
@@ -1163,13 +1045,13 @@ function TodayAttendanceSection({
           <div className="emp-sidebar-card-head">
             <div className="emp-sidebar-card-title">
               <Calendar size={15} color="#2563eb" />
-              <span>{t.employees.today.quickActions}</span>
+              <span>Quick Actions</span>
             </div>
           </div>
           <div className="emp-quick-actions-grid">
             <Button variant="secondary" size="sm">
               <Upload size={18} />
-              <span>{t.employees.today.importAttendance}</span>
+              <span>Import Attendance</span>
             </Button>
             <Button variant="secondary" size="sm" onClick={() => {
               const rows = employees.map((e) => {
@@ -1185,15 +1067,15 @@ function TodayAttendanceSection({
               URL.revokeObjectURL(a.href);
             }}>
               <Download size={18} />
-              <span>{t.employees.today.exportReport}</span>
+              <span>Export Report</span>
             </Button>
             <Button variant="secondary" size="sm">
               <DollarSign size={18} />
-              <span>{t.employees.today.bulkAdvance}</span>
+              <span>Bulk Advance</span>
             </Button>
             <Button variant="secondary" size="sm">
               <Send size={18} />
-              <span>{t.employees.today.sendNotice}</span>
+              <span>Send Notice</span>
             </Button>
           </div>
         </div>
@@ -1202,7 +1084,7 @@ function TodayAttendanceSection({
         <div className="emp-sidebar-card">
           <div className="emp-sidebar-card-head">
             <div className="emp-sidebar-card-title">
-              <span>{t.employees.today.todaySummary}</span>
+              <span>Today's Summary</span>
             </div>
           </div>
           <div className="emp-summary-donut-wrap">
@@ -1216,17 +1098,17 @@ function TodayAttendanceSection({
           <div className="emp-summary-legend">
             <div>
               <span className="emp-cal-dot" style={{ background: "#16a34a" }} />
-              <span>{t.employees.attendance.present}</span>
+              <span>Present</span>
               <strong>{todaySummary.present} ({pct(todaySummary.present)})</strong>
             </div>
             <div>
               <span className="emp-cal-dot" style={{ background: "#f59e0b" }} />
-              <span>{t.employees.attendance.late}</span>
+              <span>Late</span>
               <strong>{todaySummary.late} ({pct(todaySummary.late)})</strong>
             </div>
             <div>
               <span className="emp-cal-dot" style={{ background: "#ef4444" }} />
-              <span>{t.employees.attendance.absent}</span>
+              <span>Absent</span>
               <strong>{todaySummary.absent} ({pct(todaySummary.absent)})</strong>
             </div>
           </div>
@@ -1251,7 +1133,6 @@ function MonthlyAttendanceSection({
   onChangeWeekIndex: (index: number) => void;
   onOpenEditor: (employee: Employee, date: string) => void;
 }) {
-  const { t, locale } = useSettings();
   const { days } = useMemo(() => getMonthDays(monthDate), [monthDate]);
   const weeks = useMemo(() => groupDaysIntoWeeks(days), [days]);
   const safeWeekIndex = Math.min(Math.max(weekIndex, 0), Math.max(weeks.length - 1, 0));
@@ -1282,7 +1163,11 @@ function MonthlyAttendanceSection({
     if (!visibleDays.length) return "";
     const first = visibleDays[0].date;
     const last = visibleDays[visibleDays.length - 1].date;
-    const fmt = (d: string) => new Date(`${d}T00:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+    const fmt = (d: string) => formatDateValue(new Date(`${d}T00:00:00`), {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    }, "en-US");
     return `Week ${safeWeekIndex + 1} (${fmt(first)} – ${fmt(last)})`;
   })();
 
@@ -1303,7 +1188,7 @@ function MonthlyAttendanceSection({
                 return d.toISOString().slice(0, 7);
               }).map((ym) => (
                 <option key={ym} value={ym}>
-                  {new Date(`${ym}-01`).toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+                  {formatDateValue(new Date(`${ym}-01`), { month: "long", year: "numeric" }, "en-US")}
                 </option>
               ))}
             </select>
@@ -1321,11 +1206,11 @@ function MonthlyAttendanceSection({
           {viewMode === "week" && (
             <>
               <Button variant="secondary" size="sm" onClick={() => { onChangeWeekIndex(Math.max(safeWeekIndex - 1, 0)); }} disabled={safeWeekIndex === 0}>
-                <ChevronLeft size={14} /> {t.employees.monthly.previous}
+                <ChevronLeft size={14} /> Previous
               </Button>
               <span className="emp-week-label">{weekLabel}</span>
               <Button variant="secondary" size="sm" onClick={() => { onChangeWeekIndex(Math.min(safeWeekIndex + 1, weeks.length - 1)); }} disabled={safeWeekIndex === weeks.length - 1}>
-                {t.employees.monthly.next} <ChevronRight size={14} />
+                Next <ChevronRight size={14} />
               </Button>
             </>
           )}
@@ -1333,38 +1218,38 @@ function MonthlyAttendanceSection({
 
         <div className="emp-monthly-toolbar-right">
           <Button variant="secondary" size="sm">
-            <Filter size={14} /> {t.employees.monthly.filters}
+            <Filter size={14} /> Filters
           </Button>
-          <span className="emp-filter-chip">{t.employees.monthly.allDepartments}</span>
-          <span className="emp-filter-chip">{t.employees.monthly.allShifts}</span>
-          <Button variant="ghost" size="sm">{t.employees.monthly.clear}</Button>
+          <span className="emp-filter-chip">All Departments</span>
+          <span className="emp-filter-chip">All Shifts</span>
+          <Button variant="ghost" size="sm">Clear</Button>
         </div>
       </div>
 
       {/* Stats row */}
       <div className="emp-monthly-stats-row">
         <div className="emp-monthly-stat">
-          <span>{t.employees.monthly.totalEmployees}</span>
+          <span>Total Employees</span>
           <strong>{total}</strong>
         </div>
         <div className="emp-monthly-stat emp-stat-present">
-          <span><span className="emp-stat-dot" style={{ background: "#16a34a" }} />{t.employees.attendance.present}</span>
+          <span><span className="emp-stat-dot" style={{ background: "#16a34a" }} />Present</span>
           <strong>{todayStats.present} <small>({pct(todayStats.present)})</small></strong>
         </div>
         <div className="emp-monthly-stat emp-stat-late">
-          <span><span className="emp-stat-dot" style={{ background: "#d97706" }} />{t.employees.attendance.late}</span>
+          <span><span className="emp-stat-dot" style={{ background: "#d97706" }} />Late</span>
           <strong>{todayStats.late} <small>({pct(todayStats.late)})</small></strong>
         </div>
         <div className="emp-monthly-stat emp-stat-absent">
-          <span><span className="emp-stat-dot" style={{ background: "#dc2626" }} />{t.employees.attendance.absent}</span>
+          <span><span className="emp-stat-dot" style={{ background: "#dc2626" }} />Absent</span>
           <strong>{todayStats.absent} <small>({pct(todayStats.absent)})</small></strong>
         </div>
         <div className="emp-monthly-stat">
-          <span><span className="emp-stat-dot" style={{ background: "#7c3aed" }} />{t.employees.monthly.halfDay}</span>
+          <span><span className="emp-stat-dot" style={{ background: "#7c3aed" }} />Half Day</span>
           <strong>{todayStats.halfDay} <small>({pct(todayStats.halfDay)})</small></strong>
         </div>
         <div className="emp-monthly-stat emp-stat-pct">
-          <span>{t.employees.monthly.attendancePct}</span>
+          <span>Attendance %</span>
           <strong style={{ color: "#16a34a" }}>{attendancePct}</strong>
         </div>
       </div>
@@ -1375,13 +1260,13 @@ function MonthlyAttendanceSection({
           <table className="emp-monthly-grid app-data-table">
             <thead>
               <tr>
-                <th className="emp-monthly-name-th">{t.employees.monthly.employee}</th>
+                <th className="emp-monthly-name-th">Employee</th>
                 {visibleDays.map((day) => (
-                  <th key={day.date} className={`emp-monthly-day-th ${isPalestinianWeekend(day.dow) ? "emp-day-weekend" : ""}`}>
+                  <th key={day.date} className={`emp-monthly-day-th ${day.dow === 0 ? "emp-day-sunday" : ""}`}>
                     <span className="emp-day-dow">
-                      {new Date(`${day.date}T00:00:00`).toLocaleDateString(locale, { weekday: "short" })}
+                      {formatDateValue(new Date(`${day.date}T00:00:00`), { weekday: "short" }, "en-US")}
                     </span>
-                    <span className="emp-day-num">{new Date(`${day.date}T00:00:00`).toLocaleDateString(locale, { month: "short", day: "numeric" })}</span>
+                    <span className="emp-day-num">{formatDateValue(new Date(`${day.date}T00:00:00`), { month: "short", day: "numeric" }, "en-US")}</span>
                   </th>
                 ))}
                 <th className="emp-monthly-pct-th">%</th>
@@ -1409,27 +1294,23 @@ function MonthlyAttendanceSection({
                     </td>
                     {visibleDays.map((day) => {
                       const entry = getDailyAttendanceEntryByDate(emp, day.date);
-                      const leaveStatus = getEffectiveStatus(emp, day.date);
-                      const displayStatus: DailyAttendanceStatus | null = leaveStatus ?? entry?.status ?? null;
-                      const DOT_COLORS: Record<DailyAttendanceStatus, string> = {
-                        present: "#16a34a", late: "#d97706", absent: "#dc2626",
-                        "half-day": "#7c3aed", leave: "#2563eb", leave_pending: "#93c5fd",
-                      };
-                      const dotColor = displayStatus ? DOT_COLORS[displayStatus] : undefined;
-                      const hoursStr = (entry && !leaveStatus) ? `${Math.floor(Number(entry.workedHours))}h ${String(Math.round((Number(entry.workedHours) % 1) * 60)).padStart(2, "0")}m` : "";
+                      const dotColor = entry
+                        ? ({ present: "#16a34a", late: "#d97706", absent: "#dc2626", "half-day": "#7c3aed", leave: "#94a3b8", leave_pending: "#ca8a04" } as Record<string, string>)[entry.status] ?? "#94a3b8"
+                        : undefined;
+                      const hoursStr = entry ? `${Math.floor(Number(entry.workedHours))}h ${String(Math.round((Number(entry.workedHours) % 1) * 60)).padStart(2, "0")}m` : "";
                       return (
-                        <td key={day.date} className={isPalestinianWeekend(day.dow) ? "emp-day-weekend" : ""}>
+                        <td key={day.date} className={day.dow === 0 ? "emp-day-sunday" : ""}>
                           <button
                             type="button"
-                            className={`emp-monthly-day-btn ${displayStatus ? DAILY_STATUS_CLASS_MAP[displayStatus] : "is-empty"}`}
-                            onClick={() => !leaveStatus && onOpenEditor(emp, day.date)}
-                            title={displayStatus ? `${DAILY_STATUS_SHORT_LABELS[displayStatus]} – ${day.date}` : day.date}
+                            className={`emp-monthly-day-btn ${entry ? DAILY_STATUS_CLASS_MAP[entry.status] : "is-empty"}`}
+                            onClick={() => onOpenEditor(emp, day.date)}
+                            title={entry ? `${getStatusLabel(entry.status)} – ${day.date}` : day.date}
                           >
-                            {displayStatus && dotColor && (
+                            {entry && dotColor && (
                               <span className="emp-day-dot" style={{ background: dotColor }} />
                             )}
                             <span className="emp-day-short">
-                              {displayStatus ? DAILY_STATUS_SHORT_LABELS[displayStatus] : "-"}
+                              {entry ? DAILY_STATUS_SHORT_LABELS[entry.status] : "-"}
                             </span>
                             {hoursStr && <span className="emp-day-hours">{hoursStr}</span>}
                           </button>
@@ -1519,7 +1400,7 @@ function ReportsSection({
           <div>
             <span>{t.employees.reports.gross}</span>
             <strong>${payrollSummary.gross.toFixed(2)}</strong>
-            <small>{t.employees.reports.totalEarnings}</small>
+            <small>Total earnings</small>
           </div>
         </div>
         <div className="emp-rep-kpi-card">
@@ -1529,7 +1410,7 @@ function ReportsSection({
           <div>
             <span>{t.employees.cols.advance}</span>
             <strong>${payrollSummary.advance.toFixed(2)}</strong>
-            <small>{t.employees.reports.totalAdvances}</small>
+            <small>Total advances</small>
           </div>
         </div>
         <div className="emp-rep-kpi-card">
@@ -1539,7 +1420,7 @@ function ReportsSection({
           <div>
             <span>{t.employees.reports.net}</span>
             <strong>${payrollSummary.net.toFixed(2)}</strong>
-            <small>{t.employees.reports.netPayable}</small>
+            <small>Net payable</small>
           </div>
         </div>
         <div className="emp-rep-kpi-card">
@@ -1547,9 +1428,9 @@ function ReportsSection({
             <Calendar size={20} color="#7c3aed" />
           </div>
           <div>
-            <span>{t.employees.reports.range}</span>
+            <span>Range</span>
             <strong>{getRangeTitle(attendanceRange)}</strong>
-            <small>{t.employees.reports.selectedPeriod}</small>
+            <small>Selected period</small>
           </div>
         </div>
       </div>
@@ -1558,9 +1439,9 @@ function ReportsSection({
       <div className="emp-sheet-card">
         <div className="emp-sheet-head">
           <div>
-            <h3 className="emp-section-title">{t.employees.reports.attendancePayroll}</h3>
+            <h3 className="emp-section-title">Attendance &amp; Payroll Report</h3>
             <p className="emp-section-sub">
-              {t.employees.reports.summaryFor} <strong>{getRangeTitle(attendanceRange)}</strong>
+              Summary for <strong>{getRangeTitle(attendanceRange)}</strong>
             </p>
           </div>
         </div>
@@ -1601,8 +1482,11 @@ function ReportsSection({
             <div className="emp-empty-illustration">
               <BarChart2 size={52} color="#cbd5e1" />
             </div>
-            <strong>{t.employees.reports.noDataFound}</strong>
-            <span>{t.employees.reports.noDataDesc}</span>
+            <strong>No report data found</strong>
+            <span>
+              No daily attendance records are available for the selected period.
+              <br />Once attendance is recorded, your reports will appear here.
+            </span>
           </div>
         )}
       </div>
@@ -1689,32 +1573,32 @@ function EmployeesSection({
       {/* Table */}
       {filtered.length > 0 ? (
         <>
-          <div className="emp-table-wrap atlas-table-wrapper">
-            <table className="emp-table app-data-table atlas-table">
+          <div className="emp-table-wrap">
+            <table className="emp-table app-data-table">
               <colgroup>
-                <col />
-                <col className="col-w-100" />
-                <col className="col-w-130" />
-                <col className="col-w-110" />
-                <col className="col-w-100" />
-                <col className="col-w-90" />
-                <col className="col-actions" />
+                <col style={{ width: "26%" }} />
+                <col style={{ width: "12%" }} />
+                <col style={{ width: "16%" }} />
+                <col style={{ width: "11%" }} />
+                <col style={{ width: "14%" }} />
+                <col style={{ width: "12%" }} />
+                <col style={{ width: "9%" }} />
               </colgroup>
               <thead>
                 <tr>
-                  <th className="col-entity emp-sortable" onClick={() => toggleSort("name")}>
+                  <th className="emp-sortable" onClick={() => toggleSort("name")}>
                     {t.employees.cols.employee} {sortKey === "name" ? (sortDir === "asc" ? "↑" : "↓") : <span className="emp-sort-icon"><ChevronLeft size={10} style={{ transform: "rotate(-90deg)" }} /></span>}
                   </th>
-                  <th className="col-code emp-sortable" onClick={() => toggleSort("id")}>
-                    {t.employees.cols.empCode} {sortKey === "id" ? (sortDir === "asc" ? "↑" : "↓") : ""}
+                  <th className="emp-sortable" onClick={() => toggleSort("id")}>
+                    EMP CODE {sortKey === "id" ? (sortDir === "asc" ? "↑" : "↓") : ""}
                   </th>
                   <th className="emp-sortable" onClick={() => toggleSort("phone")}>
                     {t.common.phone} {sortKey === "phone" ? (sortDir === "asc" ? "↑" : "↓") : ""}
                   </th>
-                  <th className="col-badge">{t.employees.cols.shift}</th>
-                  <th className="col-num">{t.employees.cols.defaultHours}</th>
-                  <th className="col-badge">{t.employees.cols.status}</th>
-                  <th className="col-actions">{t.employees.cols.actions}</th>
+                  <th>SHIFT</th>
+                  <th>DEFAULT HOURS</th>
+                  <th>{t.employees.cols.status}</th>
+                  <th>{t.employees.cols.actions}</th>
                 </tr>
               </thead>
               <tbody>
@@ -1739,37 +1623,30 @@ function EmployeesSection({
                           </div>
                           <div>
                             <strong>{emp.name}</strong>
-                            <span className="emp-row-subtitle">
-                              {emp.jobTitle || emp.departmentId || t.employees.cols.employee}
-                            </span>
+                            <span>Employee</span>
                           </div>
                         </div>
                       </td>
                       <td className="emp-code-cell">{emp.id}</td>
                       <td>{emp.phone}</td>
-                      <td className="col-badge">
+                      <td>
                         <span
                           className="emp-shift-badge"
                           style={{ background: shiftColors.bg, color: shiftColors.color }}
                         >
                           {shift}
                         </span>
-                        {emp.contractType && (
-                          <span className={`emp-contract-badge emp-contract-${emp.contractType}`}>
-                            {t.employees.contractType[emp.contractType as ContractType]}
-                          </span>
-                        )}
                       </td>
-                      <td className="emp-hours-cell col-num">
+                      <td className="emp-hours-cell">
                         {emp.workStart} – {emp.workEnd}
                       </td>
-                      <td className="col-badge">
+                      <td>
                         <span className={`emp-status-badge ${isActive ? "active" : "inactive"}`}>
                           <span className="emp-status-dot" />
                           {isActive ? t.common.active : t.common.inactive}
                         </span>
                       </td>
-                      <td className="col-actions">
+                      <td>
                         <div className="emp-row-actions">
                           <Button variant="icon" size="sm" aria-label="View" title="View">
                             <Eye size={14} />
@@ -1930,25 +1807,7 @@ export default function Employees() {
   const openAddModal = () => { setEditingEmployee(null); setForm(EMPTY_FORM); setFormErrors({}); setShowEmployeeModal(true); };
   const openEditModal = (emp: Employee) => {
     setEditingEmployee(emp);
-    setForm({
-      name: emp.name,
-      phone: emp.phone,
-      workStart: emp.workStart,
-      workEnd: emp.workEnd,
-      salaryType: emp.salaryType,
-      hourlyRate: String(emp.hourlyRate ?? 0),
-      fixedSalary: String(emp.fixedSalary ?? 0),
-      dailyRate: String(emp.dailyRate ?? 0),
-      notes: emp.notes ?? "",
-      departmentId: emp.departmentId ?? "",
-      nationalId: emp.nationalId ?? "",
-      gender: (emp.gender ?? "") as EmployeeGender | "",
-      city: emp.city ?? "",
-      jobTitle: emp.jobTitle ?? "",
-      hireDate: emp.hireDate ?? "",
-      contractType: (emp.contractType ?? "") as ContractType | "",
-      currency: (emp.currency ?? "ILS") as "ILS" | "USD" | "JOD",
-    });
+    setForm({ name: emp.name, phone: emp.phone, workStart: emp.workStart, workEnd: emp.workEnd, salaryType: emp.salaryType, hourlyRate: String(emp.hourlyRate ?? 0), fixedSalary: String(emp.fixedSalary ?? 0), notes: emp.notes ?? "", departmentId: emp.departmentId ?? "" });
     setFormErrors({});
     setShowEmployeeModal(true);
   };
@@ -1958,31 +1817,8 @@ export default function Employees() {
     setFormErrors(errors);
     if (Object.keys(errors).length > 0) return;
 
-    const hrFields = {
-      nationalId: form.nationalId.trim() || undefined,
-      gender: (form.gender as EmployeeGender) || undefined,
-      city: form.city.trim() || undefined,
-      jobTitle: form.jobTitle.trim() || undefined,
-      hireDate: form.hireDate || undefined,
-      contractType: (form.contractType as ContractType) || undefined,
-      currency: (form.currency as "ILS" | "USD" | "JOD") || "ILS",
-    };
-
     if (editingEmployee) {
-      updateEmployee({
-        ...editingEmployee,
-        name: form.name.trim(),
-        phone: form.phone.trim(),
-        workStart: form.workStart,
-        workEnd: form.workEnd,
-        salaryType: form.salaryType,
-        hourlyRate: form.salaryType === "hourly" ? Number(form.hourlyRate) : undefined,
-        fixedSalary: form.salaryType === "fixed" ? Number(form.fixedSalary) : undefined,
-        dailyRate: form.salaryType === "daily" ? Number(form.dailyRate) : undefined,
-        notes: form.notes.trim(),
-        departmentId: form.departmentId || undefined,
-        ...hrFields,
-      });
+      updateEmployee({ ...editingEmployee, name: form.name.trim(), phone: form.phone.trim(), workStart: form.workStart, workEnd: form.workEnd, salaryType: form.salaryType, hourlyRate: form.salaryType === "hourly" ? Number(form.hourlyRate) : undefined, fixedSalary: form.salaryType === "fixed" ? Number(form.fixedSalary) : undefined, notes: form.notes.trim(), departmentId: form.departmentId || undefined });
       resetFormState();
       setToast({ type: "success", message: t.employees.toast.updated });
       return;
@@ -1997,7 +1833,6 @@ export default function Employees() {
       salaryType: form.salaryType,
       hourlyRate: form.salaryType === "hourly" ? Number(form.hourlyRate) : undefined,
       fixedSalary: form.salaryType === "fixed" ? Number(form.fixedSalary) : undefined,
-      dailyRate: form.salaryType === "daily" ? Number(form.dailyRate) : undefined,
       advance: 0,
       advances: [],
       notes: form.notes.trim(),
@@ -2005,7 +1840,6 @@ export default function Employees() {
       attendanceRecords: [],
       dailyAttendance: [],
       isDeleted: false,
-      ...hrFields,
     };
 
     addEmployee(newEmployee);
@@ -2082,6 +1916,7 @@ export default function Employees() {
         <div className="employees-header employees-lux-header">
           <div>
             <p className="dashboard-badge">Employee Management</p>
+            <h1 className="dashboard-title">{t.employees.pageTitle}</h1>
             <p className="dashboard-subtitle employees-hero-text">
               {t.employees.pageSubtitle}
             </p>

@@ -34,6 +34,7 @@ import {
 import { PALESTINIAN_GOVERNORATES } from "../config/palestineConfig";
 import { validatePhone } from "../utils/phoneValidation";
 import { translations } from "../i18n/translations";
+import { formatTimeValue } from "../utils/displayFormatters";
 import styles from "./AddCustomer.module.css";
 
 interface FormState {
@@ -513,7 +514,7 @@ function timeAgo(d: Date, t: T): string {
   if (sec < 60) return `${sec}${t.addCustomer.timeAgo.seconds}`;
   const min = Math.floor(sec / 60);
   if (min < 60) return `${min}${t.addCustomer.timeAgo.minutes}`;
-  return d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+  return formatTimeValue(d);
 }
 
 interface PreviewProps {

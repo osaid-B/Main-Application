@@ -1,4 +1,6 @@
-export const translations = {
+import { normalizeArabicTree } from "./arabicPolish";
+
+const rawTranslations = {
   en: {
     common: {
       add: "Add",
@@ -402,8 +404,8 @@ export const translations = {
       currencyJOD: "Jordanian Dinar (د.أ)",
       currencyUSD: "US Dollar ($)",
       vatApplyByDefault: "Apply VAT by default on new invoices",
-      arabicNumerals: "Use Arabic-Indic numerals (٠١٢٣٤٥٦٧٨٩)",
-      arabicNumeralsHint: "Numbers will display as: ١٢٣٤٥٦٧٨٩٠",
+      arabicNumerals: "Use Western digits (0123456789)",
+      arabicNumeralsHint: "Numbers display as: 1234567890",
     },
 
     header: {
@@ -3896,8 +3898,8 @@ export const translations = {
       currencyJOD: "دينار أردني (د.أ)",
       currencyUSD: "دولار أمريكي ($)",
       vatApplyByDefault: "تطبيق ضريبة القيمة المضافة تلقائياً على الفواتير الجديدة",
-      arabicNumerals: "استخدام الأرقام العربية الهندية (٠١٢٣٤٥٦٧٨٩)",
-      arabicNumeralsHint: "ستظهر الأرقام بالشكل: ١٢٣٤٥٦٧٨٩٠",
+      arabicNumerals: "استخدام الأرقام الغربية (0123456789)",
+      arabicNumeralsHint: "ستظهر الأرقام بالشكل: 1234567890",
     },
 
     header: {
@@ -6967,6 +6969,11 @@ export const translations = {
       },
     },
   },
+} as const;
+
+export const translations = {
+  ...rawTranslations,
+  ar: normalizeArabicTree(rawTranslations.ar),
 } as const;
 
 export type AppLanguage = keyof typeof translations;

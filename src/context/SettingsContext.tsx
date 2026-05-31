@@ -1,6 +1,11 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { translations, type AppLanguage } from "../i18n/translations";
 import { localizeDocument } from "../i18n/staticCopy";
+import {
+  formatCurrencyValue,
+  formatDateValue,
+  formatNumberValue,
+} from "../utils/displayFormatters";
 
 type ThemeMode = "light" | "dark";
 type TranslationShape = typeof translations.en;
@@ -22,6 +27,16 @@ type SettingsContextType = {
 };
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
+const WESTERN_DIGIT_INPUT_SELECTOR =
+  'input[type="number"], input[type="date"], input[type="tel"], input[inputmode="numeric"], input[inputmode="decimal"]';
+
+function enforceWesternDigitInputs(root: ParentNode) {
+  if (!("querySelectorAll" in root)) return;
+  root.querySelectorAll<HTMLInputElement>(WESTERN_DIGIT_INPUT_SELECTOR).forEach((input) => {
+    input.setAttribute("lang", "en");
+    input.setAttribute("dir", "ltr");
+  });
+}
 
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const [language, setLanguage] = useState<AppLanguage>(() => {
@@ -44,6 +59,33 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => localizeDocument(language), [language]);
 
   useEffect(() => {
+    enforceWesternDigitInputs(document);
+
+    const observer = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        mutation.addedNodes.forEach((node) => {
+          if (node instanceof HTMLInputElement && node.matches(WESTERN_DIGIT_INPUT_SELECTOR)) {
+            node.setAttribute("lang", "en");
+            node.setAttribute("dir", "ltr");
+            return;
+          }
+
+          if (node instanceof Element) {
+            enforceWesternDigitInputs(node);
+          }
+        });
+      }
+    });
+
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+    });
+
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
     localStorage.setItem("app-theme", theme);
     document.documentElement.setAttribute("data-theme", theme);
     document.body.classList.toggle("dark-mode", theme === "dark");
@@ -63,25 +105,21 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         setTheme((prev) => (prev === "light" ? "dark" : "light")),
       isArabic: language === "ar",
       formatCurrency: (value, currency = "ILS") =>
-        new Intl.NumberFormat(language === "ar" ? "ar-PS-u-nu-latn" : "en-US", {
-          style: "currency",
-          currency,
-          minimumFractionDigits: 2,
-        }).format(Number(value || 0)),
+        formatCurrencyValue(Number(value || 0), currency as "ILS" | "JOD" | "USD"),
       formatDate: (value, options) => {
         if (!value) return "";
-        const parsed = value instanceof Date ? value : new Date(value);
-        if (Number.isNaN(parsed.getTime())) return String(value);
-
-        return new Intl.DateTimeFormat(language === "ar" ? "ar" : "en-US", {
-          day: "2-digit",
-          month: "short",
-          year: "numeric",
-          ...options,
-        }).format(parsed);
+        return formatDateValue(
+          value,
+          {
+            day: "2-digit",
+            month: "short",
+            year: "numeric",
+            ...options,
+          },
+          language === "ar" ? "ar" : "en-US",
+        );
       },
-      formatNumber: (value) =>
-        new Intl.NumberFormat(language === "ar" ? "ar" : "en-US").format(Number(value || 0)),
+      formatNumber: (value) => formatNumberValue(Number(value || 0)),
       t: translations[language] as TranslationShape,
     }),
     [language, theme]

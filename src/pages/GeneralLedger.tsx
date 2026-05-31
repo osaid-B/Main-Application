@@ -27,7 +27,7 @@ function getMonthStart() {
 }
 
 export default function GeneralLedger() {
-  const { t, formatCurrency, isArabic } = useSettings();
+  const { t, formatCurrency, formatNumber, isArabic } = useSettings();
   const tc = t.generalLedger;
   const { invoices, payments, expenses } = useData();
 
@@ -153,7 +153,7 @@ export default function GeneralLedger() {
           </div>
           <div className={styles.kpi}>
             <span className={styles.kpiLabel}>{tc.entryCount}</span>
-            <strong className={styles.kpiValue}>{filtered.length.toLocaleString()}</strong>
+            <strong className={styles.kpiValue}>{formatNumber(filtered.length)}</strong>
           </div>
         </div>
 

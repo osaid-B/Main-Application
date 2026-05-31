@@ -30,6 +30,7 @@ import {
 } from "../data/storage";
 import { useData } from "../context/DataContext";
 import type { Customer, Employee, Product, Supplier } from "../data/types";
+import { formatCurrencyValue } from "../utils/displayFormatters";
 
 type TabKey = "customer" | "supplier" | "internal";
 type InvoiceStatus = "Paid" | "Partial" | "Unpaid";
@@ -168,11 +169,7 @@ function ModalPortal({ children }: { children: ReactNode }) {
 }
 
 function money(value: number, currency = "ILS") {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency,
-    maximumFractionDigits: 2,
-  }).format(Number.isFinite(value) ? value : 0);
+  return formatCurrencyValue(Number.isFinite(value) ? value : 0, currency as "USD" | "ILS" | "JOD");
 }
 
 function normalizeNumber(value: string | number) {

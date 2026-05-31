@@ -31,6 +31,7 @@ import { Input } from "../components/ui/Input";
 import { Select } from "../components/ui/Select";
 import { Modal } from "../components/ui/Modal";
 import { useData } from "../context/DataContext";
+import { formatCurrencyValue } from "../utils/displayFormatters";
 import {
   calculateInvoiceRemainingAmount,
   getCustomerById,
@@ -128,7 +129,7 @@ function normalizeStatus(status?: string): PaymentStatus {
 }
 
 function formatMoney(value: number) {
-  return new Intl.NumberFormat("ar-IL", { style: "currency", currency: "ILS", minimumFractionDigits: 2 }).format(roundMoney(value));
+  return formatCurrencyValue(roundMoney(value), "ILS");
 }
 
 function formatDate(value: string) {
