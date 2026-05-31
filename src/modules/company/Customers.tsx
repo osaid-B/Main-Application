@@ -78,7 +78,9 @@ export default function CustomersPage() {
   const [filterStatus, setFilterStatus] = useState("");
 
   const activeCustomers = useMemo(
-    () => (customers ?? []).filter((c) => !c.isDeleted),
+    // Also filter out any malformed records that are missing an id — those
+    // can reach localStorage when a customer is saved with an empty code field.
+    () => (customers ?? []).filter((c) => !c.isDeleted && typeof c.id === "string" && c.id !== ""),
     [customers]
   );
 
@@ -248,7 +250,7 @@ export default function CustomersPage() {
                         fontFamily: "Inter, monospace",
                       }}
                     >
-                      {customer.id.slice(0, 8)}
+                      {(customer.id ?? "").slice(0, 8)}
                     </div>
                   </td>
                   <td className="tc-text">{customer.phone ?? "—"}</td>
