@@ -132,6 +132,7 @@ export default function Sidebar({
   const ts = t.sidebar;
   const companyName = isArabic ? (companySettings.nameAr || "Atlas ERP") : (companySettings.nameEn || "Atlas ERP");
   const [editMode, setEditMode] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [undoToast, setUndoToast] = useState<{ path: string; label: string } | null>(null);
   const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -141,10 +142,30 @@ export default function Sidebar({
 
   const sections = SECTIONS_BY_WORKSPACE[workspace];
 
+  // ── Local sidebar search: filter nav items by label (Arabic + English) ────
+  const query = searchQuery.trim().toLowerCase();
+  const isSearching = query.length > 0;
+  function matchesQuery(item: NavItem) {
+    if (!isSearching) return true;
+    return (
+      item.label.toLowerCase().includes(query) ||
+      (item.labelAr ?? "").toLowerCase().includes(query)
+    );
+  }
+
   // Resolve pinned item metadata from any workspace's item list
   const pinnedItems = prefs.pinnedItems
     .map((path) => ALL_ITEMS.find((i) => i.path === path))
     .filter((i): i is NavItem => i !== undefined);
+  const visiblePinned = pinnedItems.filter(matchesQuery);
+
+  // Count matches across the active workspace's sections (for the empty state)
+  const matchCount = sections.reduce(
+    (n, sec) =>
+      n +
+      sec.items.filter((it) => matchesQuery(it) && (editMode || !prefs.isHidden(it.path))).length,
+    0,
+  );
 
   function sectionKey(title: string) {
     return `${workspace}:${title}`;
@@ -218,18 +239,20 @@ export default function Sidebar({
 
       {(!collapsed || mobile) && (
         <div className="atlas-sidebar-search">
-          <Search size={13} aria-hidden />
+          <Search size={16} aria-hidden />
           <input
             type="search"
-            placeholder={isArabic ? "ابحث…" : "Search…"}
-            aria-label={isArabic ? "ابحث" : "Search"}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder={isArabic ? "بحث سريع..." : "Quick search..."}
+            aria-label={isArabic ? "بحث سريع" : "Quick search"}
           />
         </div>
       )}
 
       <nav className="atlas-sidebar-nav" aria-label="Main navigation">
         {/* Pinned section — appears at top when user has pinned items */}
-        {!editMode && pinnedItems.length > 0 && (
+        {!editMode && visiblePinned.length > 0 && (
           <div className="atlas-nav-section">
             {(!collapsed || mobile) && (
               <div className="atlas-nav-section-header">
@@ -237,7 +260,7 @@ export default function Sidebar({
               </div>
             )}
             <ul className="atlas-nav-list">
-              {pinnedItems.map((item) => {
+              {visiblePinned.map((item) => {
                 const Icon = item.icon;
                 return (
                   <li key={item.path}>
@@ -261,12 +284,13 @@ export default function Sidebar({
 
         {sections.map((section) => {
           const key = sectionKey(section.title);
-          const isSectionCollapsed = !editMode && prefs.isSectionCollapsed(key);
-          const visibleItems = editMode
+          const isSectionCollapsed = !editMode && !isSearching && prefs.isSectionCollapsed(key);
+          const visibleItems = (editMode
             ? section.items
-            : section.items.filter((item) => !prefs.isHidden(item.path));
+            : section.items.filter((item) => !prefs.isHidden(item.path))
+          ).filter(matchesQuery);
 
-          if (!editMode && visibleItems.length === 0) return null;
+          if (visibleItems.length === 0 && (isSearching || !editMode)) return null;
 
           return (
             <div key={section.title} className="atlas-nav-section">
@@ -351,6 +375,12 @@ export default function Sidebar({
             </div>
           );
         })}
+
+        {isSearching && matchCount === 0 && (
+          <p className="atlas-sidebar-search-empty">
+            {isArabic ? "لا توجد نتائج مطابقة" : "No matching results"}
+          </p>
+        )}
       </nav>
 
       {(!collapsed || mobile) && (

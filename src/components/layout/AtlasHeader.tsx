@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useLocation, useNavigate } from "react-router-dom";
-import { ChevronRight, FileText, Moon, Package, Plus, Search, Sun, Truck, Users } from "lucide-react";
+import { Bell, ChevronRight, FileText, Moon, Package, Plus, Search, Sun, Truck, Users } from "lucide-react";
 import { Button } from "../ui/Button";
 import { useWorkspace, WORKSPACES, type Workspace } from "../../contexts/WorkspaceContext";
 import { useSettings } from "../../context/SettingsContext";
@@ -11,6 +11,14 @@ import { quickCreateActions } from "../../config/moduleRegistry";
 import "./AtlasHeader.css";
 
 const TABS: Workspace[] = ["company", "factory", "pos"];
+
+// Static demo notifications rotated in the header ticker (no backend).
+const HEADER_NOTIFICATIONS = [
+  "تنبيه: 3 فواتير بانتظار المراجعة",
+  "تحديث: تم تسجيل 12 عملية بيع اليوم",
+  "ملاحظة: مخزون المصنع يحتاج متابعة",
+  "تذكير: مراجعة حسابات الموردين قبل نهاية اليوم",
+] as const;
 
 type SearchItem = { id: string; label: string; sub?: string; path: string };
 type SearchGroup = { label: string; icon: typeof Users; items: SearchItem[] };
@@ -24,6 +32,7 @@ export default function AtlasHeader() {
   const { t, isArabic, theme, toggleTheme } = useSettings();
   const { customers, invoices, products, suppliers } = useData();
 
+  const [tickerIdx, setTickerIdx] = useState(0);
   const [query, setQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
@@ -33,6 +42,14 @@ export default function AtlasHeader() {
   const inputRef = useRef<HTMLInputElement>(null);
   const createBtnRef = useRef<HTMLButtonElement>(null);
   const createMenuRef = useRef<HTMLDivElement>(null);
+
+  // ── Rotate header notification ticker every 5s ────────────────────────────
+  useEffect(() => {
+    const id = setInterval(() => {
+      setTickerIdx(i => (i + 1) % HEADER_NOTIFICATIONS.length);
+    }, 5000);
+    return () => clearInterval(id);
+  }, []);
 
   // ── Position search dropdown under the search bar ─────────────────────────
   useEffect(() => {
@@ -209,8 +226,15 @@ export default function AtlasHeader() {
         </button>
       </div>
 
-      {/* Center: global search */}
+      {/* Center: rotating notifications ticker (global search kept hidden below) */}
       <div className="atlas-header-center">
+        <div className="atlas-header-ticker" role="status" aria-live="polite">
+          <Bell size={14} aria-hidden />
+          <span key={tickerIdx} className="atlas-ticker-text">
+            {HEADER_NOTIFICATIONS[tickerIdx]}
+          </span>
+        </div>
+
         <div className="atlas-search-wrap" ref={searchWrapRef}>
           <div className="atlas-global-search">
             <Search size={14} aria-hidden />

@@ -24,7 +24,47 @@
   flex: 1;
   min-width: 0;
   display: flex;
+  align-items: center;
   justify-content: center;
+}
+
+/* Rotating notifications ticker — fills the empty header center */
+.atlas-header-ticker {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--app-space-2);
+  max-width: min(100%, 460px);
+  height: 32px;
+  padding: 0 var(--app-space-3);
+  background: var(--app-surface-muted);
+  border: 1px solid var(--app-border);
+  border-radius: 999px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.atlas-header-ticker svg {
+  color: var(--app-accent);
+  flex-shrink: 0;
+}
+
+.atlas-ticker-text {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--app-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  animation: atlas-ticker-in 0.45s ease;
+}
+
+@keyframes atlas-ticker-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .atlas-ticker-text { animation: none; }
 }
 
 .atlas-header-right {
@@ -190,12 +230,10 @@
   border: 2px solid var(--app-surface);
 }
 
-/* Search wrap */
+/* Search wrap — hidden for the demo; the sidebar search is the single global
+   search surface. Markup/logic kept intact, removed visually. */
 .atlas-search-wrap {
-  position: relative;
-  display: flex;
-  justify-content: center;
-  width: 100%;
+  display: none;
 }
 
 /* Search dropdown (portal) */

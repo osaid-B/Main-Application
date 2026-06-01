@@ -34,6 +34,8 @@ const KPI_LABELS = {
   openInvoices: { en: "Open invoices", ar: "فواتير مفتوحة" },
 } as const;
 
+const CASH_FLOW_TICKS = [0, 70000, 140000, 210000, 280000];
+
 const REVENUE_SLICE_AR: Record<string, string> = {
   Wholesale: "الجملة",
   Supermarkets: "السوبرماركت",
@@ -59,7 +61,15 @@ function localizeRevenueSlice(name: string, isArabic: boolean) {
 }
 
 function formatCompactCurrency(value: number) {
-  return `$${(value / 1000).toFixed(0)}k`;
+  return `₪${(value / 1000).toFixed(0)}k`;
+}
+
+function CashFlowYTick({ x, y, payload }: { x?: number; y?: number; payload?: { value: number } }) {
+  return (
+    <text x={(x ?? 0) - 26} y={y ?? 0} dy={4} textAnchor="end" fontSize={11} fill="var(--app-text-muted)">
+      {formatCompactCurrency(payload?.value ?? 0)}
+    </text>
+  );
 }
 
 function downloadCsv(filename: string, headers: string[], rows: (string | number)[][]) {
@@ -237,13 +247,21 @@ export default function CompanyOverview() {
               <span className={styles.cardSub}>{t.company.cashFlow.subtitle}</span>
             </header>
             <ResponsiveContainer width="100%" height={240}>
-              <BarChart data={cashFlowData} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
+              <BarChart data={cashFlowData} margin={{ top: 12, right: 14, left: 6, bottom: 4 }}>
                 <CartesianGrid stroke="var(--app-border)" strokeDasharray="3 3" vertical={false} />
                 <XAxis dataKey="month" tick={{ fontSize: 11, fill: "var(--app-text-muted)" }} axisLine={false} tickLine={false} />
-                <YAxis tickFormatter={(v) => `$${(Number(v) / 1000).toFixed(0)}k`} tick={{ fontSize: 11, fill: "var(--app-text-muted)" }} axisLine={false} tickLine={false} width={48} />
+                <YAxis
+                  domain={[0, 280000]}
+                  ticks={CASH_FLOW_TICKS}
+                  tick={<CashFlowYTick />}
+                  axisLine={false}
+                  tickLine={false}
+                  interval={0}
+                  width={62}
+                />
                 <Tooltip
                   contentStyle={{ background: "var(--app-surface)", border: "1px solid var(--app-border)", borderRadius: 8, fontSize: 12 }}
-                  formatter={(v) => `$${(Number(v) / 1000).toFixed(0)}k`}
+                  formatter={(v) => formatCompactCurrency(Number(v))}
                 />
                 <Legend wrapperStyle={{ fontSize: 11 }} iconType="circle" />
                 <Bar dataKey="inflow"  name={t.company.cashFlow.inflow}  fill="var(--atlas-green)" radius={[4, 4, 0, 0]} />
@@ -258,26 +276,32 @@ export default function CompanyOverview() {
               <span className={styles.cardSub}>{t.company.revenueDept.subtitle}</span>
             </header>
             <div className={styles.donutWrap}>
-              <ResponsiveContainer width="100%" height={200}>
-                <PieChart>
-                  <Pie
-                    data={revenueSlices}
-                    dataKey="value"
-                    nameKey="displayName"
-                    innerRadius={50}
-                    outerRadius={80}
-                    paddingAngle={2}
-                    stroke="var(--app-surface)"
-                    strokeWidth={2}
-                  >
-                    {revenueSlices.map((s) => <Cell key={s.name} fill={s.color} />)}
-                  </Pie>
-                  <Tooltip
-                    contentStyle={{ background: "var(--app-surface)", border: "1px solid var(--app-border)", borderRadius: 8, fontSize: 12 }}
-                  formatter={(v) => formatCurrencyValue(Number(v), "USD")}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
+              <div className={styles.donutChartFrame}>
+                <ResponsiveContainer width="100%" height={200}>
+                  <PieChart>
+                    <Pie
+                      data={revenueSlices}
+                      dataKey="value"
+                      nameKey="displayName"
+                      innerRadius={50}
+                      outerRadius={80}
+                      paddingAngle={2}
+                      stroke="var(--app-surface)"
+                      strokeWidth={2}
+                    >
+                      {revenueSlices.map((s) => <Cell key={s.name} fill={s.color} />)}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{ background: "var(--app-surface)", border: "1px solid var(--app-border)", borderRadius: 8, fontSize: 12 }}
+                      formatter={(v) => formatCurrencyValue(Number(v), "ILS")}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className={styles.donutCenterLabel} aria-label="Dashboard currency: ILS Israeli Shekel">
+                  <span>₪</span>
+                  <small>ILS</small>
+                </div>
+              </div>
               <ul className={styles.donutLegend}>
                 {revenueSlices.map((s) => (
                   <li key={s.name}>

@@ -16,6 +16,18 @@ const TOOLTIP_STYLE = {
 
 const formatThousands = (v: number | string) => `₪${(Number(v) / 1000).toFixed(0)}k`;
 
+function RevenueYTick({ x, y, payload }: { x?: number; y?: number; payload?: { value: number } }) {
+  return (
+    <text x={(x ?? 0) - 20} y={y ?? 0} dy={4} textAnchor="end" fontSize={11} fill="var(--app-text-muted)">
+      {formatThousands(payload?.value ?? 0)}
+    </text>
+  );
+}
+
+/**
+ * Atlas revenue trend chart — 3 lines (Company / POS / Factory) over 14 days.
+ * Uses recharts with token-driven colors and a custom tooltip style.
+ */
 export function RevenueChart({ data }: Props) {
   const { isArabic } = useSettings();
   const chartData = isArabic
@@ -33,8 +45,7 @@ export function RevenueChart({ data }: Props) {
           axisLine={false}
         />
         <YAxis
-          tickFormatter={formatThousands}
-          tick={{ fontSize: 11, fill: "var(--app-text-muted)" }}
+          tick={<RevenueYTick />}
           tickLine={false}
           axisLine={false}
           width={48}
