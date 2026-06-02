@@ -4,7 +4,6 @@ import {
   AlertTriangle,
   Banknote,
   BrainCircuit,
-  ChevronLeft,
   ChevronRight,
   CreditCard,
   Eye,
@@ -12,12 +11,17 @@ import {
   Landmark,
   Lock,
   MoreVertical,
+  Plus,
   RefreshCcw,
   Search,
   ShieldCheck,
   Upload,
   X,
 } from "lucide-react";
+import { AddCheckModal } from "../components/treasury/AddCheckModal";
+import { AddTransferModal } from "../components/treasury/AddTransferModal";
+import { useTreasury } from "../context/TreasuryContext";
+import type { TreasuryInstrument, InstrumentStatus } from "../types/treasury";
 import { createPortal } from "react-dom";
 import OverflowContent from "../components/ui/OverflowContent";
 import { Button } from "../components/ui/Button";
@@ -203,33 +207,18 @@ function averageConfidence(fields: OCRFieldReview[]) {
   return fields.reduce((sum, item) => sum + item.confidence, 0) / fields.length;
 }
 
-function renderPages(page: number, total: number, setPage: (p: number) => void) {
-  if (total <= 1) return null;
-  const pages: (number | "…")[] = [];
-  if (total <= 5) {
-    for (let i = 1; i <= total; i++) pages.push(i);
-  } else {
-    pages.push(1);
-    if (page > 3) pages.push("…");
-    for (let i = Math.max(2, page - 1); i <= Math.min(total - 1, page + 1); i++) pages.push(i);
-    if (page < total - 2) pages.push("…");
-    pages.push(total);
-  }
-  return pages.map((p, idx) =>
-    p === "…" ? (
-      <span key={`e${idx}`} className="trs-pg-ellipsis">…</span>
-    ) : (
-      <Button
-        key={p}
-        type="button"
-        variant="ghost"
-        className={`trs-pg-btn${page === p ? " active" : ""}`}
-        onClick={() => setPage(p as number)}
-      >
-        {p}
-      </Button>
-    )
-  );
+function normInstrumentStatus(s: InstrumentStatus): string {
+  const m: Record<InstrumentStatus, string> = {
+    draft:              "Draft",
+    pending:            "Pending",
+    deposited:          "Deposited",
+    cleared:            "Cleared",
+    bounced:            "Bounced",
+    cancelled:          "Cancelled",
+    under_review:       "Under Collection",
+    partially_applied:  "Partially Applied",
+  };
+  return m[s] ?? String(s);
 }
 
 export default function Treasury() {
@@ -247,14 +236,18 @@ export default function Treasury() {
   const [ocrExtractions,   setOcrExtractions]   = useState(() => getOCRExtractions());
   const [auditEvents,      setAuditEvents]      = useState(() => getAuditEvents());
   const [reconciliationItems] = useState<ReconciliationItem[]>(() => getReconciliationItems());
-  const [activeTab,    setActiveTab]    = useState<TreasuryTab>("overview");
-  const [searchTerm,   setSearchTerm]   = useState("");
-  const [statusFilter, setStatusFilter] = useState("All");
-  const [detailRecord, setDetailRecord] = useState<DetailRecord | null>(null);
-  const [ocrTarget,    setOcrTarget]    = useState<OCRTarget | null>(null);
-  const [toast,        setToast]        = useState<string>("");
-  const [page,         setPage]         = useState(1);
-  const [rowsPerPage,  setRowsPerPage]  = useState(10);
+  const { instruments: ctxInstruments } = useTreasury();
+  const [initialCtxIds] = useState<Set<string>>(() => new Set(ctxInstruments.map(i => i.id)));
+
+  const [activeTab,         setActiveTab]         = useState<TreasuryTab>("overview");
+  const [searchTerm,        setSearchTerm]        = useState("");
+  const [statusFilter,      setStatusFilter]      = useState("All");
+  const [detailRecord,      setDetailRecord]      = useState<DetailRecord | null>(null);
+  const [ocrTarget,         setOcrTarget]         = useState<OCRTarget | null>(null);
+  const [toast,             setToast]             = useState<string>("");
+  const [showIncomingCheck, setShowIncomingCheck] = useState(false);
+  const [showOutgoingCheck, setShowOutgoingCheck] = useState(false);
+  const [showTransfer,      setShowTransfer]      = useState(false);
 
   const rolePreset = (localStorage.getItem("app-role-preset") as TreasuryRole) || "Admin";
   const access = ROLE_MATRIX[rolePreset] ?? ROLE_MATRIX.Admin;
@@ -306,6 +299,11 @@ export default function Treasury() {
   const ocrQueue = useMemo(() => {
     return ocrExtractions.filter((item) => item.status !== "Reviewed").sort((a, b) => a.averageConfidence - b.averageConfidence);
   }, [ocrExtractions]);
+
+  const showToast = (message: string) => {
+    setToast(message);
+    window.setTimeout(() => setToast(""), 2800);
+  };
 
   const unifiedRows = useMemo((): UnifiedRow[] => {
     const rows: UnifiedRow[] = [];
@@ -399,11 +397,35 @@ export default function Treasury() {
       });
     });
 
-    return rows;
-  }, [bankTransfers, customers, filteredIncoming, filteredOutgoing, filteredTransfers, incomingCheques, isArabic, ocrQueue, suppliers]);
+    // New instruments added via TreasuryContext modals (not in initial mock set)
+    const newInstruments = ctxInstruments.filter(i => !initialCtxIds.has(i.id));
+    const q = searchTerm.toLowerCase();
+    newInstruments.forEach((inst: TreasuryInstrument) => {
+      if (q && ![inst.checkNumber, inst.drawerName, inst.payeeName, inst.bankName, inst.notes]
+        .filter(Boolean).join(" ").toLowerCase().includes(q)) return;
+      const displayStatus = normInstrumentStatus(inst.status);
+      if (statusFilter !== "All" && displayStatus !== statusFilter) return;
+      rows.push({
+        id: inst.id,
+        avatarLabel: inst.type === "check" ? "CHQ" : "TRF",
+        avatarBg:    inst.type === "check" ? (inst.direction === "incoming" ? "#dbeafe" : "#ffedd5") : "#dcfce7",
+        avatarColor: inst.type === "check" ? (inst.direction === "incoming" ? "#1d4ed8" : "#ea580c") : "#16a34a",
+        reference:   inst.checkNumber ?? inst.referenceNumber ?? inst.id,
+        subLabel:    inst.type === "check" ? (isArabic ? "شيك" : "Cheque") : (isArabic ? "تحويل بنكي" : "Bank Transfer"),
+        typeLabel:   inst.direction === "incoming" ? (isArabic ? "وارد" : "Incoming") : (isArabic ? "صادر" : "Outgoing"),
+        typeBg:      inst.direction === "incoming" ? "#dbeafe" : "#ffedd5",
+        typeColor:   inst.direction === "incoming" ? "#1d4ed8" : "#ea580c",
+        party:       inst.direction === "incoming" ? inst.drawerName : inst.payeeName,
+        status:      displayStatus,
+        date:        inst.dueDate,
+        amount:      inst.amount,
+        currency:    inst.currency,
+        onView:      () => showToast(isArabic ? "تم الحفظ — سيتوفر عرض التفاصيل قريباً" : "Saved — detail view coming soon"),
+      });
+    });
 
-  const totalPages = Math.ceil(unifiedRows.length / rowsPerPage);
-  const pagedRows  = unifiedRows.slice((page - 1) * rowsPerPage, page * rowsPerPage);
+    return rows;
+  }, [bankTransfers, ctxInstruments, customers, filteredIncoming, filteredOutgoing, filteredTransfers, incomingCheques, initialCtxIds, isArabic, ocrQueue, searchTerm, statusFilter, suppliers]);
 
   const activeStatuses = useMemo(() => {
     const values = new Set<string>(["All"]);
@@ -415,11 +437,6 @@ export default function Treasury() {
     const next = [event, ...auditEvents];
     setAuditEvents(next);
     saveAuditEvents(next);
-  };
-
-  const showToast = (message: string) => {
-    setToast(message);
-    window.setTimeout(() => setToast(""), 2800);
   };
 
   const handleApproveCheque = (record: ChequeInstrument, direction: "incoming" | "outgoing") => {
@@ -492,19 +509,50 @@ export default function Treasury() {
     );
   };
 
-  const switchTab = (tab: TreasuryTab) => { setActiveTab(tab); setPage(1); };
+  const switchTab = (tab: TreasuryTab) => { setActiveTab(tab); };
 
   return (
     <div className="trs-page">
 
       {/* ── Header ─────────────────────────────────────────── */}
       <header className="trs-header">
-        <div className="trs-header-eyebrow">
-          <Landmark size={14} />
-          {t.treasury.pageTitle}
+        <div>
+          <div className="trs-header-eyebrow">
+            <Landmark size={14} />
+            {t.treasury.pageTitle}
+          </div>
+          <h1 className="trs-header-title">{t.treasury.pageTitle}</h1>
+          <p className="trs-header-sub">{t.treasury.pageSubtitle}</p>
         </div>
-        <h1 className="trs-header-title">{t.treasury.pageTitle}</h1>
-        <p className="trs-header-sub">{t.treasury.pageSubtitle}</p>
+        <div className="trs-header-actions">
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            leftIcon={<Plus size={14} />}
+            onClick={() => setShowIncomingCheck(true)}
+          >
+            {isArabic ? "شيك وارد" : "Incoming Cheque"}
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            leftIcon={<Plus size={14} />}
+            onClick={() => setShowOutgoingCheck(true)}
+          >
+            {isArabic ? "شيك صادر" : "Outgoing Cheque"}
+          </Button>
+          <Button
+            type="button"
+            variant="primary"
+            size="sm"
+            leftIcon={<Plus size={14} />}
+            onClick={() => setShowTransfer(true)}
+          >
+            {isArabic ? "حوالة بنكية" : "Bank Transfer"}
+          </Button>
+        </div>
       </header>
 
       {/* ── KPI Row ────────────────────────────────────────── */}
@@ -593,6 +641,10 @@ export default function Treasury() {
           {/* ── Overview / unified table ── */}
           {activeTab === "overview" && (
             <div className="trs-table-card">
+              <div className="trs-table-head">
+                <strong>{isArabic ? "جميع الأدوات المالية" : "All Instruments"}</strong>
+                <span className="trs-table-count">{unifiedRows.length} {isArabic ? "أداة" : "items"}</span>
+              </div>
               <div className="trs-table-wrap">
                 <table className="trs-table">
                   <colgroup>
@@ -616,7 +668,7 @@ export default function Treasury() {
                     </tr>
                   </thead>
                   <tbody>
-                    {pagedRows.map((row) => (
+                    {unifiedRows.map((row) => (
                       <tr key={row.id}>
                         <td>
                           <div className="trs-item-cell">
@@ -663,7 +715,7 @@ export default function Treasury() {
                         </td>
                       </tr>
                     ))}
-                    {pagedRows.length === 0 && (
+                    {unifiedRows.length === 0 && (
                       <tr>
                         <td colSpan={7} className="trs-empty-row">
                           {isArabic ? "لا توجد أدوات تطابق البحث." : "No instruments match your search."}
@@ -672,28 +724,6 @@ export default function Treasury() {
                     )}
                   </tbody>
                 </table>
-              </div>
-              <div className="trs-pagination">
-                <span className="trs-pg-meta">
-                  {isArabic
-                    ? `عرض ${unifiedRows.length === 0 ? 0 : (page - 1) * rowsPerPage + 1} إلى ${Math.min(page * rowsPerPage, unifiedRows.length)} من ${unifiedRows.length} عناصر`
-                    : `Showing ${unifiedRows.length === 0 ? 0 : (page - 1) * rowsPerPage + 1} to ${Math.min(page * rowsPerPage, unifiedRows.length)} of ${unifiedRows.length} items`}
-                </span>
-                <div className="trs-pg-controls">
-                  <Button type="button" variant="ghost" className="trs-pg-btn" onClick={() => setPage((p) => p - 1)} disabled={page === 1}>
-                    <ChevronLeft size={14} />
-                  </Button>
-                  {renderPages(page, totalPages, setPage)}
-                  <Button type="button" variant="ghost" className="trs-pg-btn" onClick={() => setPage((p) => p + 1)} disabled={page >= totalPages}>
-                    <ChevronRight size={14} />
-                  </Button>
-                </div>
-                <Select
-                  className="trs-rpp-select"
-                  value={String(rowsPerPage)}
-                  onChange={(e) => { setRowsPerPage(Number(e.target.value)); setPage(1); }}
-                  options={[5, 10, 20].map((n) => ({ value: String(n), label: isArabic ? `صفحة / ${n}` : `${n} / page` }))}
-                />
               </div>
             </div>
           )}
@@ -1035,6 +1065,24 @@ export default function Treasury() {
         : null}
 
       {toast ? <div className="treasury-toast">{toast}</div> : null}
+
+      <AddCheckModal
+        isOpen={showIncomingCheck}
+        onClose={() => setShowIncomingCheck(false)}
+        direction="incoming"
+        onSuccess={(msg) => { setShowIncomingCheck(false); showToast(msg); }}
+      />
+      <AddCheckModal
+        isOpen={showOutgoingCheck}
+        onClose={() => setShowOutgoingCheck(false)}
+        direction="outgoing"
+        onSuccess={(msg) => { setShowOutgoingCheck(false); showToast(msg); }}
+      />
+      <AddTransferModal
+        isOpen={showTransfer}
+        onClose={() => setShowTransfer(false)}
+        onSuccess={(msg) => { setShowTransfer(false); showToast(msg); }}
+      />
     </div>
   );
 }
