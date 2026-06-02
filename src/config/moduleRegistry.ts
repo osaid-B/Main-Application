@@ -1,17 +1,22 @@
 import {
+  ArrowDownToLine,
+  ArrowLeftRight,
   Boxes,
   Building2,
   CreditCard,
   Database,
   Factory,
   FileSpreadsheet,
+  FileText,
   LayoutDashboard,
   Landmark,
+  Receipt,
   ReceiptText,
   ScanLine,
   Settings,
   ShoppingCart,
   Truck,
+  UserPlus,
   Users,
   Wallet,
 } from "lucide-react";
@@ -35,6 +40,7 @@ export type QuickCreateAction = {
   label: string;
   description: string;
   path: string;
+  icon?: typeof LayoutDashboard;
 };
 
 export const moduleGroups: Record<ModuleGroupKey, string> = {
@@ -179,66 +185,77 @@ export const quickCreateActions: QuickCreateAction[] = [
     label: "New Invoice",
     description: "Create a receivable, payable, or internal invoice",
     path: "/invoices",
+    icon: FileText,
   },
   {
     id: "new-payment",
     label: "Record Payment",
     description: "Add a payment and link it to an invoice",
     path: "/payments",
+    icon: CreditCard,
   },
   {
     id: "new-transfer",
     label: "New Transfer",
     description: "Record a bank transfer with proof and verification",
     path: "/treasury",
+    icon: ArrowLeftRight,
   },
   {
     id: "new-cheque",
     label: "Register Cheque",
     description: "Capture an incoming or outgoing cheque instrument",
     path: "/treasury",
+    icon: ArrowDownToLine,
   },
   {
     id: "new-customer",
     label: "Add Customer",
     description: "Create a customer profile with financial details",
     path: "/customers/new",
+    icon: UserPlus,
   },
   {
     id: "new-product",
     label: "Add Product",
     description: "Create a product with pricing and stock rules",
     path: "/products",
+    icon: Boxes,
   },
   {
     id: "new-purchase",
     label: "New Purchase",
     description: "Create a supplier-linked purchase order",
     path: "/purchases",
+    icon: ShoppingCart,
   },
   {
     id: "new-supplier",
     label: "Add Supplier",
     description: "Create a supplier profile and payment terms",
     path: "/suppliers/new",
+    icon: Truck,
   },
   {
     id: "new-employee",
     label: "Add Employee",
     description: "Create an employee profile with payroll details",
     path: "/employees/new",
+    icon: Users,
   },
   {
     id: "new-expense",
     label: "Add Expense",
     description: "Record a business expense with supporting details",
     path: "/expenses",
+    icon: Receipt,
   },
   {
     id: "new-pos-sale",
     label: "New POS Sale",
     description: "Open POS checkout for a new retail transaction",
     path: "/pos/checkout",
+    icon: ScanLine,
   },
 ];
 

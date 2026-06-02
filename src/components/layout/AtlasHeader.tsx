@@ -375,38 +375,46 @@ export default function AtlasHeader() {
               {quickCreateActions
                 .filter(a => CREATE_GROUP_1.includes(a.id))
                 .sort((a, b) => CREATE_GROUP_1.indexOf(a.id) - CREATE_GROUP_1.indexOf(b.id))
-                .map(action => (
-                  <button
-                    key={action.id}
-                    type="button"
-                    role="menuitem"
-                    className="atlas-create-item"
-                    onClick={() => { navigate(action.path); setCreateOpen(false); }}
-                  >
-                    <span className="atlas-create-item-label">
-                      {t.shell.quickCreateItems[action.id as keyof typeof t.shell.quickCreateItems]?.label ?? action.label}
-                    </span>
-                    <ChevronRight size={12} aria-hidden />
-                  </button>
-                ))}
+                .map(action => {
+                  const Icon = action.icon;
+                  return (
+                    <button
+                      key={action.id}
+                      type="button"
+                      role="menuitem"
+                      className="atlas-create-item"
+                      onClick={() => { navigate(action.path); setCreateOpen(false); }}
+                    >
+                      {Icon && <Icon size={14} className="atlas-create-item-icon" aria-hidden />}
+                      <span className="atlas-create-item-label">
+                        {t.shell.quickCreateItems[action.id as keyof typeof t.shell.quickCreateItems]?.label ?? action.label}
+                      </span>
+                      <ChevronRight size={12} aria-hidden />
+                    </button>
+                  );
+                })}
               <div className="atlas-create-divider" role="separator" />
               {quickCreateActions
                 .filter(a => CREATE_GROUP_2.includes(a.id))
                 .sort((a, b) => CREATE_GROUP_2.indexOf(a.id) - CREATE_GROUP_2.indexOf(b.id))
-                .map(action => (
-                  <button
-                    key={action.id}
-                    type="button"
-                    role="menuitem"
-                    className="atlas-create-item"
-                    onClick={() => { navigate(action.path); setCreateOpen(false); }}
-                  >
-                    <span className="atlas-create-item-label">
-                      {t.shell.quickCreateItems[action.id as keyof typeof t.shell.quickCreateItems]?.label ?? action.label}
-                    </span>
-                    <ChevronRight size={12} aria-hidden />
-                  </button>
-                ))}
+                .map(action => {
+                  const Icon = action.icon;
+                  return (
+                    <button
+                      key={action.id}
+                      type="button"
+                      role="menuitem"
+                      className="atlas-create-item"
+                      onClick={() => { navigate(action.path); setCreateOpen(false); }}
+                    >
+                      {Icon && <Icon size={14} className="atlas-create-item-icon" aria-hidden />}
+                      <span className="atlas-create-item-label">
+                        {t.shell.quickCreateItems[action.id as keyof typeof t.shell.quickCreateItems]?.label ?? action.label}
+                      </span>
+                      <ChevronRight size={12} aria-hidden />
+                    </button>
+                  );
+                })}
             </div>,
             document.body
           )}

@@ -135,6 +135,116 @@
 .trs-stat-sub--red    { color: var(--app-danger);  font-weight: 600; }
 .trs-stat-sub--purple { color: #7c3aed;            font-weight: 600; }
 
+/* ── Smart search bar ────────────────────────────────────── */
+.treasury-search-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.treasury-search-wrap-inner {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 200px;
+}
+
+.treasury-search-icon {
+  position: absolute;
+  inset-inline-start: 10px;
+  color: var(--app-text-muted);
+  pointer-events: none;
+  flex-shrink: 0;
+}
+
+.treasury-search-input {
+  width: 100%;
+  height: 36px;
+  padding: 0 12px 0 34px;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-sm);
+  font-family: var(--font-arabic, "Cairo", sans-serif);
+  font-size: 13px;
+  direction: rtl;
+  background: var(--app-surface-muted);
+  color: var(--app-text);
+  transition: border-color var(--app-transition), box-shadow var(--app-transition), background var(--app-transition);
+}
+
+.treasury-search-input:focus {
+  outline: none;
+  border-color: #3B5BDB;
+  box-shadow: 0 0 0 3px rgba(59, 91, 219, 0.1);
+  background: var(--app-surface);
+}
+
+.treasury-search-input::placeholder { color: var(--app-text-light); }
+
+.treasury-filter-select {
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-sm);
+  font-family: var(--font-arabic, "Cairo", sans-serif);
+  font-size: 12px;
+  background: var(--app-surface);
+  color: var(--app-text);
+  min-width: 120px;
+  cursor: pointer;
+  transition: border-color var(--app-transition);
+}
+
+.treasury-filter-select:focus {
+  outline: none;
+  border-color: #3B5BDB;
+}
+
+.treasury-date-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--app-text-muted);
+  white-space: nowrap;
+}
+
+.treasury-date-group input[type="date"] {
+  height: 36px;
+  padding: 0 8px;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-sm);
+  font-size: 12px;
+  width: 130px;
+  background: var(--app-surface);
+  color: var(--app-text);
+  transition: border-color var(--app-transition);
+}
+
+.treasury-date-group input[type="date"]:focus {
+  outline: none;
+  border-color: #3B5BDB;
+}
+
+.treasury-result-count {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--app-text-muted);
+  background: var(--app-surface-muted);
+  border: 1px solid var(--app-border);
+  padding: 4px 10px;
+  border-radius: var(--app-radius-full);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* RTL: pad start side for the search icon */
+[dir="rtl"] .treasury-search-input {
+  padding-inline-start: 34px;
+  padding-inline-end: 12px;
+}
+
 /* ── Toolbar ─────────────────────────────────────────────── */
 .trs-toolbar {
   background: var(--app-surface);
@@ -1529,16 +1639,58 @@
   to   { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
 
+/* ── Hover animations ────────────────────────────────────── */
+.trs-kpi-card {
+  transition: transform 150ms ease, box-shadow 150ms ease;
+}
+
+.trs-kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.trs-table tbody tr {
+  transition: background 120ms ease;
+}
+
+/* Subtle left-edge accent on hover for table rows */
+.trs-table tbody tr:hover td:first-child::before {
+  background: #3b5bdb;
+}
+
+/* Header action buttons */
+.trs-header-actions .btn {
+  transition: transform 150ms ease, filter 150ms ease;
+}
+
+.trs-header-actions .btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  filter: brightness(1.05);
+}
+
+/* Empty state pulse (shown when table is empty) */
+.trs-empty-add {
+  animation: trs-pulse 2s ease-in-out infinite;
+}
+
+@keyframes trs-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.65; }
+}
+
 /* ── Responsive ──────────────────────────────────────────── */
 @media (max-width: 900px) {
   .trs-page { padding: 14px 14px 40px; }
   .trs-form-grid { grid-template-columns: 1fr; }
   .trs-form-grid-3 { grid-template-columns: 1fr 1fr; }
   .trs-panel-grid { grid-template-columns: 1fr; }
+  .treasury-search-bar { gap: 6px; }
+  .treasury-date-group { display: none; }
 }
 
 @media (max-width: 640px) {
   .trs-stat-row { grid-template-columns: 1fr 1fr; }
   .trs-form-grid-3 { grid-template-columns: 1fr; }
   .trs-actions-row { flex-direction: column; align-items: stretch; }
+  .treasury-filter-select { min-width: 90px; font-size: 11px; }
 }

@@ -26,7 +26,6 @@ import { createPortal } from "react-dom";
 import OverflowContent from "../components/ui/OverflowContent";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
-import { Select } from "../components/ui/Select";
 import { Modal } from "../components/ui/Modal";
 import { Badge } from "../components/ui/Badge";
 import { useAuth } from "../context/AuthContext";
@@ -93,6 +92,8 @@ type UnifiedRow = {
   date: string;
   amount: number | null;
   currency: string;
+  direction: "incoming" | "outgoing";
+  bankName: string;
   onView: () => void;
 };
 
@@ -248,6 +249,10 @@ export default function Treasury() {
   const [showIncomingCheck, setShowIncomingCheck] = useState(false);
   const [showOutgoingCheck, setShowOutgoingCheck] = useState(false);
   const [showTransfer,      setShowTransfer]      = useState(false);
+  const [bankFilter,        setBankFilter]        = useState("all");
+  const [directionFilter,   setDirectionFilter]   = useState("all");
+  const [dateFrom,          setDateFrom]          = useState("");
+  const [dateTo,            setDateTo]            = useState("");
 
   const rolePreset = (localStorage.getItem("app-role-preset") as TreasuryRole) || "Admin";
   const access = ROLE_MATRIX[rolePreset] ?? ROLE_MATRIX.Admin;
@@ -325,6 +330,8 @@ export default function Treasury() {
         date: r.dueDate,
         amount: r.amount,
         currency: r.currency,
+        direction: "incoming",
+        bankName: r.bankName ?? "",
         onView: () => setDetailRecord({ type: "incoming", record: r }),
       });
     });
@@ -346,6 +353,8 @@ export default function Treasury() {
         date: r.dueDate,
         amount: r.amount,
         currency: r.currency,
+        direction: "outgoing",
+        bankName: r.bankName ?? "",
         onView: () => setDetailRecord({ type: "outgoing", record: r }),
       });
     });
@@ -368,6 +377,8 @@ export default function Treasury() {
         date: r.transferDate,
         amount: r.amount,
         currency: r.currency,
+        direction: r.direction,
+        bankName: r.sourceBank ?? "",
         onView: () => setDetailRecord({ type: "transfer", record: r }),
       });
     });
@@ -388,6 +399,8 @@ export default function Treasury() {
         date: r.capturedAt,
         amount: null,
         currency: "USD",
+        direction: "incoming",
+        bankName: "",
         onView: () => {
           const transfer = bankTransfers.find((t) => t.ocrExtractionId === r.id);
           if (transfer) { setOcrTarget({ type: "transfer", record: transfer, extraction: r }); return; }
@@ -420,6 +433,8 @@ export default function Treasury() {
         date:        inst.dueDate,
         amount:      inst.amount,
         currency:    inst.currency,
+        direction:   inst.direction,
+        bankName:    inst.bankName ?? "",
         onView:      () => showToast(isArabic ? "تم الحفظ — سيتوفر عرض التفاصيل قريباً" : "Saved — detail view coming soon"),
       });
     });
@@ -432,6 +447,24 @@ export default function Treasury() {
     [...incomingCheques, ...outgoingCheques, ...bankTransfers].forEach((item) => values.add(item.status));
     return Array.from(values);
   }, [bankTransfers, incomingCheques, outgoingCheques]);
+
+  const availableBanks = useMemo(() => {
+    const banks = new Set<string>();
+    [...incomingCheques, ...outgoingCheques].forEach(c => { if (c.bankName) banks.add(c.bankName); });
+    bankTransfers.forEach(t => { if (t.sourceBank) banks.add(t.sourceBank); });
+    ctxInstruments.forEach(i => { if (i.bankName) banks.add(i.bankName); });
+    return Array.from(banks).sort();
+  }, [incomingCheques, outgoingCheques, bankTransfers, ctxInstruments]);
+
+  const displayRows = useMemo(() => {
+    return unifiedRows.filter(row => {
+      const matchBank = bankFilter === "all" || row.bankName === bankFilter;
+      const matchDir  = directionFilter === "all" || row.direction === directionFilter;
+      const matchFrom = !dateFrom || row.date >= dateFrom;
+      const matchTo   = !dateTo   || row.date <= dateTo;
+      return matchBank && matchDir && matchFrom && matchTo;
+    });
+  }, [unifiedRows, bankFilter, directionFilter, dateFrom, dateTo]);
 
   const postAudit = (event: AuditEvent) => {
     const next = [event, ...auditEvents];
@@ -605,22 +638,73 @@ export default function Treasury() {
 
           {/* Toolbar */}
           <div className="trs-toolbar">
-            <div className="trs-toolbar-top">
-              <div className="trs-search">
-                <Search size={15} />
-                <Input
-                  variant="search"
+            {/* Smart search + filters — one compact row */}
+            <div className="treasury-search-bar">
+              <div className="treasury-search-wrap-inner">
+                <Search size={14} className="treasury-search-icon" aria-hidden />
+                <input
+                  className="treasury-search-input"
+                  type="search"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   placeholder={t.treasury.searchPlaceholder}
+                  aria-label={t.treasury.searchPlaceholder}
                 />
               </div>
-              <Select
-                className="trs-status-select"
+              <select
+                className="treasury-filter-select"
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                options={activeStatuses.map((s) => ({ value: s, label: s === "All" ? (isArabic ? "الكل" : "All") : statusLabel(s, isArabic) }))}
-              />
+                aria-label={isArabic ? "تصفية الحالة" : "Filter by status"}
+              >
+                {activeStatuses.map((s) => (
+                  <option key={s} value={s}>
+                    {s === "All" ? (isArabic ? "كل الحالات" : "All statuses") : statusLabel(s, isArabic)}
+                  </option>
+                ))}
+              </select>
+              <select
+                className="treasury-filter-select"
+                value={bankFilter}
+                onChange={(e) => setBankFilter(e.target.value)}
+                aria-label={isArabic ? "تصفية البنك" : "Filter by bank"}
+              >
+                <option value="all">{isArabic ? "كل البنوك" : "All banks"}</option>
+                {availableBanks.map(b => <option key={b} value={b}>{b}</option>)}
+              </select>
+              <select
+                className="treasury-filter-select"
+                value={directionFilter}
+                onChange={(e) => setDirectionFilter(e.target.value)}
+                aria-label={isArabic ? "تصفية الاتجاه" : "Filter by direction"}
+              >
+                <option value="all">{isArabic ? "الاتجاهان" : "All"}</option>
+                <option value="incoming">{isArabic ? "وارد" : "Incoming"}</option>
+                <option value="outgoing">{isArabic ? "صادر" : "Outgoing"}</option>
+              </select>
+              <div className="treasury-date-group">
+                <span>{isArabic ? "من" : "From"}</span>
+                <input
+                  type="date"
+                  value={dateFrom}
+                  onChange={(e) => setDateFrom(e.target.value)}
+                  aria-label={isArabic ? "من تاريخ" : "Date from"}
+                />
+                <span>{isArabic ? "إلى" : "To"}</span>
+                <input
+                  type="date"
+                  value={dateTo}
+                  onChange={(e) => setDateTo(e.target.value)}
+                  aria-label={isArabic ? "إلى تاريخ" : "Date to"}
+                />
+              </div>
+              <span className="treasury-result-count">
+                {displayRows.length} {isArabic ? "سجل" : "records"}
+                {displayRows.length !== unifiedRows.length && ` ${isArabic ? "من" : "of"} ${unifiedRows.length}`}
+              </span>
+            </div>
+            {/* Tab groups */}
+            <div className="trs-toolbar-top">
               <div className="trs-tab-group">
                 {([["overview", t.treasury.tabs.overview], ["incoming", t.treasury.tabs.incoming], ["outgoing", t.treasury.tabs.outgoing]] as [TreasuryTab, string][]).map(([key, label]) => (
                   <Button key={key} type="button" variant="ghost" className={`trs-tab-btn${activeTab === key ? " active" : ""}`} onClick={() => switchTab(key)}>
@@ -643,7 +727,7 @@ export default function Treasury() {
             <div className="trs-table-card">
               <div className="trs-table-head">
                 <strong>{isArabic ? "جميع الأدوات المالية" : "All Instruments"}</strong>
-                <span className="trs-table-count">{unifiedRows.length} {isArabic ? "أداة" : "items"}</span>
+                <span className="trs-table-count">{displayRows.length} {isArabic ? "أداة" : "items"}</span>
               </div>
               <div className="trs-table-wrap">
                 <table className="trs-table">
@@ -668,7 +752,7 @@ export default function Treasury() {
                     </tr>
                   </thead>
                   <tbody>
-                    {unifiedRows.map((row) => (
+                    {displayRows.map((row) => (
                       <tr key={row.id}>
                         <td>
                           <div className="trs-item-cell">
@@ -715,7 +799,7 @@ export default function Treasury() {
                         </td>
                       </tr>
                     ))}
-                    {unifiedRows.length === 0 && (
+                    {displayRows.length === 0 && (
                       <tr>
                         <td colSpan={7} className="trs-empty-row">
                           {isArabic ? "لا توجد أدوات تطابق البحث." : "No instruments match your search."}
