@@ -293,6 +293,18 @@ const rawTranslations = {
           label: "Add Supplier",
           description: "Create a supplier profile and payment terms",
         },
+        "new-employee": {
+          label: "Add Employee",
+          description: "Create an employee profile with payroll details",
+        },
+        "new-expense": {
+          label: "Add Expense",
+          description: "Record a business expense with supporting details",
+        },
+        "new-pos-sale": {
+          label: "New POS Sale",
+          description: "Open POS checkout for a new retail transaction",
+        },
       },
     },
 
@@ -409,7 +421,7 @@ const rawTranslations = {
     },
 
     header: {
-      brand: "Atlas ERP",
+      brand: "Atlas",
       newAction: "New",
       openAI: "Open AI assistant",
       notifications: "Notifications",
@@ -3793,6 +3805,18 @@ const rawTranslations = {
           label: "مورد جديد",
           description: "أضف ملف مورد وشروط الدفع",
         },
+        "new-employee": {
+          label: "إضافة موظف",
+          description: "أضف بيانات موظف جديد",
+        },
+        "new-expense": {
+          label: "إضافة مصروف",
+          description: "سجّل مصروف مع التفاصيل",
+        },
+        "new-pos-sale": {
+          label: "عملية بيع جديدة",
+          description: "افتح الكاشير لبيع جديد",
+        },
       },
     },
 
@@ -3903,7 +3927,7 @@ const rawTranslations = {
     },
 
     header: {
-      brand: "Atlas ERP",
+      brand: "Atlas",
       newAction: "جديد",
       openAI: "فتح المساعد الذكي",
       notifications: "التنبيهات",

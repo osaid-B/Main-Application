@@ -202,7 +202,7 @@ export const quickCreateActions: QuickCreateAction[] = [
     id: "new-customer",
     label: "Add Customer",
     description: "Create a customer profile with financial details",
-    path: "/customers",
+    path: "/customers/new",
   },
   {
     id: "new-product",
@@ -220,7 +220,25 @@ export const quickCreateActions: QuickCreateAction[] = [
     id: "new-supplier",
     label: "Add Supplier",
     description: "Create a supplier profile and payment terms",
-    path: "/suppliers",
+    path: "/suppliers/new",
+  },
+  {
+    id: "new-employee",
+    label: "Add Employee",
+    description: "Create an employee profile with payroll details",
+    path: "/employees/new",
+  },
+  {
+    id: "new-expense",
+    label: "Add Expense",
+    description: "Record a business expense with supporting details",
+    path: "/expenses",
+  },
+  {
+    id: "new-pos-sale",
+    label: "New POS Sale",
+    description: "Open POS checkout for a new retail transaction",
+    path: "/pos/checkout",
   },
 ];
 

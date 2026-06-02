@@ -212,7 +212,7 @@ export default function Sidebar({
         </div>
         {(!collapsed || mobile) && (
           <div className="atlas-brand-info">
-            <h3>Atlas ERP</h3>
+            <h3>Atlas</h3>
             <p>{companyName}</p>
           </div>
         )}

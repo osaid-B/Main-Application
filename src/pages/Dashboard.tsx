@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Download, Plus } from "lucide-react";
+import { Download } from "lucide-react";
 import { Button } from "../components/ui/Button";
 import { Container } from "../components/layout/Container";
 import { Stack } from "../components/layout/Stack";
@@ -117,14 +117,6 @@ export default function Dashboard() {
               }
             >
               {t.dashboard.export}
-            </Button>
-            <Button
-              variant="primary"
-              size="sm"
-              leftIcon={<Plus size={14} />}
-              onClick={() => window.dispatchEvent(new CustomEvent("atlas:open-quick-create"))}
-            >
-              {t.dashboard.newAction}
             </Button>
           </div>
         </header>
