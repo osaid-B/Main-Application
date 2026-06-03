@@ -110,12 +110,12 @@ function AppRoutes() {
     <Routes>
       <Route
         path="/"
-        element={<Navigate to={isAuthenticated ? "/modules" : "/login"} replace />}
+        element={<Navigate to={isAuthenticated ? "/dashboard" : "/login"} replace />}
       />
 
       <Route
         path="/login"
-        element={isAuthenticated ? <Navigate to="/modules" replace /> : <Login />}
+        element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Login />}
       />
 
       <Route element={<ProtectedRoute />}>
@@ -190,6 +190,7 @@ function AppRoutes() {
 
           {/* POS workspace */}
           <Route path="/pos" element={<Navigate to="/pos/checkout" replace />} />
+          <Route path="/pos/dashboard" element={<PosDashboard />} />
           <Route path="/pos/checkout" element={<PosCheckout />} />
           <Route path="/pos/history" element={<SalesHistory />} />
           <Route path="/pos/refunds" element={<SalesRefunds />} />
@@ -238,7 +239,6 @@ function AppRoutes() {
 
         {/* POS module */}
         <Route element={<ModuleLayout />}>
-          <Route path="/pos/dashboard" element={<PosDashboard />} />
           <Route path="/pos/checkout" element={<PosModuleCheckout />} />
           <Route path="/pos/sales" element={<PosModuleSales />} />
           <Route path="/pos/products" element={<PosModuleProducts />} />

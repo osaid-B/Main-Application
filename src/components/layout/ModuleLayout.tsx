@@ -159,7 +159,7 @@ export default function ModuleLayout() {
               <button
                 type="button"
                 className="sidebar-link"
-                onClick={() => navigate("/")}
+                onClick={() => navigate("/modules")}
               >
                 تغيير الوحدة
               </button>

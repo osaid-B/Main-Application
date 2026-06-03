@@ -1,4 +1,5 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 
 export type Workspace = "company" | "pos" | "factory";
 
@@ -47,6 +48,11 @@ interface WorkspaceContextValue {
 const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);
 
 const STORAGE_KEY = "atlas-workspace";
+const WORKSPACE_DASHBOARD_ROUTES: Record<Workspace, string> = {
+  company: "/dashboard",
+  factory: "/factory/dashboard",
+  pos: "/pos/dashboard",
+};
 
 function readStored(): Workspace {
   if (typeof window === "undefined") return "company";
@@ -55,8 +61,37 @@ function readStored(): Workspace {
   return "company";
 }
 
+function resolveWorkspaceFromPathname(pathname: string): Workspace | null {
+  if (pathname === "/" || pathname === "/login" || pathname === "/modules") return null;
+  if (pathname.startsWith("/factory")) return "factory";
+  if (pathname.startsWith("/pos")) return "pos";
+  return "company";
+}
+
 export function WorkspaceProvider({ children }: { children: ReactNode }) {
-  const [workspace, setWorkspaceState] = useState<Workspace>(readStored);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [preferredWorkspace, setPreferredWorkspace] = useState<Workspace>(readStored);
+
+  const routeWorkspace = useMemo(
+    () => resolveWorkspaceFromPathname(location.pathname),
+    [location.pathname]
+  );
+
+  const workspace = routeWorkspace ?? preferredWorkspace;
+
+  const setWorkspace = useCallback((ws: Workspace) => {
+    setPreferredWorkspace(ws);
+    const targetRoute = WORKSPACE_DASHBOARD_ROUTES[ws];
+    if (location.pathname !== targetRoute) {
+      navigate(targetRoute);
+    }
+  }, [location.pathname, navigate]);
+
+  useEffect(() => {
+    if (!routeWorkspace || routeWorkspace === preferredWorkspace) return;
+    setPreferredWorkspace(routeWorkspace);
+  }, [preferredWorkspace, routeWorkspace]);
 
   useEffect(() => {
     document.body.setAttribute("data-workspace", workspace);
@@ -69,16 +104,16 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (!(e.metaKey || e.ctrlKey) || e.shiftKey || e.altKey) return;
-      if (e.key === "1") { e.preventDefault(); setWorkspaceState("company"); }
-      else if (e.key === "2") { e.preventDefault(); setWorkspaceState("factory"); }
-      else if (e.key === "3") { e.preventDefault(); setWorkspaceState("pos"); }
+      if (e.key === "1") { e.preventDefault(); setWorkspace("company"); }
+      else if (e.key === "2") { e.preventDefault(); setWorkspace("factory"); }
+      else if (e.key === "3") { e.preventDefault(); setWorkspace("pos"); }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, []);
+  }, [setWorkspace]);
 
   return (
-    <WorkspaceContext.Provider value={{ workspace, setWorkspace: setWorkspaceState, info: WORKSPACES[workspace] }}>
+    <WorkspaceContext.Provider value={{ workspace, setWorkspace, info: WORKSPACES[workspace] }}>
       {children}
     </WorkspaceContext.Provider>
   );

@@ -50,7 +50,7 @@ export const MODULE_META = {
     primaryVar: "var(--module-company-primary)",
     gradient: "var(--module-company-gradient)",
     cls: "module-company",
-    homeRoute: "/company/dashboard",
+    homeRoute: "/dashboard",
   },
   factory: {
     id: "factory" as const,
