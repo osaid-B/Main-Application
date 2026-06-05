@@ -107,48 +107,48 @@ export default function StockCounts() {
         <div className={`${styles.tableWrap} atlas-table-wrapper`}>
           <table className={`${styles.table} atlas-table`}>
             <colgroup>
-              <col className="col-w-110" />
-              <col className="col-date col-w-120" />
-              <col />
-              <col className="col-w-100" />
-              <col className="col-w-80" />
-              <col className="col-w-100" />
-              <col className="col-w-130" />
-              <col className="col-actions" />
+              <col style={{ width: "14%" }} />
+              <col style={{ width: "14%" }} />
+              <col style={{ width: "14%" }} />
+              <col style={{ width: "12%" }} />
+              <col style={{ width: "12%" }} />
+              <col style={{ width: "12%" }} />
+              <col style={{ width: "12%" }} />
+              <col style={{ width: "10%" }} />
             </colgroup>
             <thead>
               <tr>
-                <th className="col-code">{tc.cols.countId}</th>
-                <th className="col-date">{tc.cols.date}</th>
-                <th>{tc.cols.location}</th>
-                <th className="col-badge">{tc.cols.status}</th>
-                <th className="col-num">{tc.cols.items}</th>
-                <th className="col-num">{tc.cols.variance}</th>
-                <th>{tc.cols.countedBy}</th>
-                <th className="col-actions">{tc.cols.actions}</th>
+                <th className={`${styles.start} col-code`}>{tc.cols.countId}</th>
+                <th className={`${styles.start} col-date`}>{tc.cols.date}</th>
+                <th className={`${styles.start} col-entity`}>{tc.cols.location}</th>
+                <th className={`${styles.center} col-badge`}>{tc.cols.status}</th>
+                <th className={`${styles.numEnd} col-num`}>{tc.cols.items}</th>
+                <th className={`${styles.numEnd} col-num`}>{tc.cols.variance}</th>
+                <th className={`${styles.start} col-entity`}>{tc.cols.countedBy}</th>
+                <th className={`${styles.center} col-actions`}>{tc.cols.actions}</th>
               </tr>
             </thead>
             <tbody>
               {filtered.map((c) => (
                 <tr key={c.id}>
-                  <td className="col-code"><span className={styles.mono}>{c.id}</span></td>
-                  <td className={`${styles.mono} col-date`}>{c.date}</td>
-                  <td>{c.location}</td>
-                  <td className="col-badge">
+                  <td className={styles.start}><span className={styles.mono}>{c.id}</span></td>
+                  <td className={styles.start}><span className={styles.mono}>{c.date}</span></td>
+                  <td className={styles.start}>{c.location}</td>
+                  <td className={styles.center}>
                     <Badge variant={STATUS_VARIANT[c.status]} size="sm">
                       {tc.status[c.status === "in-progress" ? "inProgress" : c.status]}
                     </Badge>
                   </td>
-                  <td className={`${styles.numEnd} ${styles.mono} col-num`}>{c.itemsCount}</td>
-                  <td className={`${styles.numEnd} ${styles.mono} col-num`}>
+                  <td className={`${styles.numEnd} ${styles.mono}`}>{c.itemsCount}</td>
+                  <td className={`${styles.numEnd} ${styles.mono}`}>
                     {c.status === "completed" ? (
                       <span className={c.varianceValue < 0 ? styles.varNeg : c.varianceValue > 0 ? styles.varPos : styles.varZero}>
                         {c.varianceValue === 0 ? "—" : formatCurrency(Math.abs(c.varianceValue))}
                       </span>
                     ) : "—"}
                   </td>
-                  <td>{c.countedBy}</td>
-                  <td className="col-actions">
+                  <td className={styles.start}>{c.countedBy}</td>
+                  <td className={styles.center}>
                     <button type="button" className={styles.viewBtn} onClick={() => setDetail(c)}>
                       {tc.actions.view}
                     </button>

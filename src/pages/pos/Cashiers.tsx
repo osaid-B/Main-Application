@@ -118,14 +118,14 @@ export default function Cashiers() {
           <table className={styles.table}>
             <thead>
               <tr>
-                <th>{tc.cols.cashier}</th>
-                <th>{tc.cols.code}</th>
-                <th>{tc.cols.status}</th>
-                <th>{tc.cols.shift}</th>
-                <th className={styles.numEnd}>{tc.cols.todaySales}</th>
-                <th className={styles.numEnd}>{tc.cols.transactions}</th>
-                <th>{tc.cols.lastActive}</th>
-                <th>{tc.cols.actions}</th>
+                <th className="col-entity">{tc.cols.cashier}</th>
+                <th className="col-code">{tc.cols.code}</th>
+                <th className="col-badge">{tc.cols.status}</th>
+                <th className="col-badge">{tc.cols.shift}</th>
+                <th className={`${styles.numEnd} col-currency`}>{tc.cols.todaySales}</th>
+                <th className={`${styles.numEnd} col-num`}>{tc.cols.transactions}</th>
+                <th className="col-date">{tc.cols.lastActive}</th>
+                <th className="col-actions">{tc.cols.actions}</th>
               </tr>
             </thead>
             <tbody>

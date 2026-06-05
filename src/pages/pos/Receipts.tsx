@@ -176,9 +176,9 @@ export default function Receipts() {
               <tr>
                 <th className="col-code">{tc.cols.receipt}</th>
                 <th className="col-date">{tc.cols.dateTime}</th>
-                <th>{tc.cols.cashier}</th>
+                <th className="col-entity">{tc.cols.cashier}</th>
                 <th className="col-num">{tc.cols.items}</th>
-                <th className="col-num">{tc.cols.total}</th>
+                <th className="col-currency">{tc.cols.total}</th>
                 <th className="col-badge">{tc.cols.method}</th>
                 <th className="col-badge">{tc.cols.status}</th>
                 <th className="col-actions">{tc.cols.actions}</th>

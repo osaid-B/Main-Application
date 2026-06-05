@@ -97,9 +97,15 @@ export interface DataContextValue {
   addInvoice: (inv: Invoice) => void;
   updateInvoice: (inv: Invoice) => void;
 
+  // Purchase CRUD
+  addPurchase: (p: Purchase) => void;
+  updatePurchase: (p: Purchase) => void;
+  deletePurchase: (id: string) => void;
+
   // Stock Movements
   stockMovements: StockMovement[];
   addStockMovement: (m: StockMovement) => void;
+  deductStockOnSale: (items: Array<{ productId: string; productName: string; qty: number }>, sessionRef: string) => void;
 
   // Derived selectors (replace hard-coded dashboard numbers)
   totalRevenue: number;
@@ -165,7 +171,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     const next = [...customers, c];
     setCustomers(next);
     saveCustomers(next);
-    if (USE_SUPABASE) sbCreateCustomer({ id: c.id, name: c.name, phone: c.phone ?? "", code: c.code ?? null, tax_id: c.taxId ?? null, email: c.email ?? null, city: c.city ?? null, governorate: c.governorate ?? null, type: c.type ?? null, classification: c.classification ?? null, payment_terms: c.paymentTerms ?? null, currency: c.currency ?? "ILS", credit_limit: c.creditLimit ?? 0, outstanding_balance: c.outstandingBalance ?? 0, status: (c.status as CustomerRow["status"]) ?? "active", sales_rep: c.salesRep ?? null, notes: c.notes ?? null, joined_at: c.joinedAt ?? null, last_order_date: c.lastOrderDate ?? null, is_deleted: false }).catch((e) => { console.warn("[DataContext] addCustomer failed, reverting", e); setCustomers(prev); saveCustomers(prev); });
+    if (USE_SUPABASE) sbCreateCustomer({ id: c.id, name: c.name, phone: c.phone ?? "", code: c.code ?? null, tax_id: c.taxId ?? null, email: c.email ?? null, city: c.city ?? null, governorate: c.governorate ?? null, type: c.type ?? null, classification: c.classification ?? null, currency: c.currency ?? "ILS", credit_limit: c.creditLimit ?? 0, outstanding_balance: c.outstandingBalance ?? 0, status: (c.status as CustomerRow["status"]) ?? "active", sales_rep: c.salesRep ?? null, notes: c.notes ?? null, joined_at: c.joinedAt ?? null, last_order_date: c.lastOrderDate ?? null, is_deleted: false }).catch((e) => { console.warn("[DataContext] addCustomer failed, reverting", e); setCustomers(prev); saveCustomers(prev); });
   }
 
   function updateCustomer(c: Customer) {
@@ -173,7 +179,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     const next = customers.map((x) => (x.id === c.id ? c : x));
     setCustomers(next);
     saveCustomers(next);
-    if (USE_SUPABASE) sbUpdateCustomer(c.id, { name: c.name, phone: c.phone ?? "", code: c.code ?? null, tax_id: c.taxId ?? null, email: c.email ?? null, city: c.city ?? null, governorate: c.governorate ?? null, type: c.type ?? null, classification: c.classification ?? null, payment_terms: c.paymentTerms ?? null, currency: c.currency ?? "ILS", credit_limit: c.creditLimit ?? 0, outstanding_balance: c.outstandingBalance ?? 0, status: (c.status as CustomerRow["status"]) ?? "active", sales_rep: c.salesRep ?? null, notes: c.notes ?? null }).catch((e) => { console.warn("[DataContext] updateCustomer failed, reverting", e); setCustomers(prev); saveCustomers(prev); });
+    if (USE_SUPABASE) sbUpdateCustomer(c.id, { name: c.name, phone: c.phone ?? "", code: c.code ?? null, tax_id: c.taxId ?? null, email: c.email ?? null, city: c.city ?? null, governorate: c.governorate ?? null, type: c.type ?? null, classification: c.classification ?? null, currency: c.currency ?? "ILS", credit_limit: c.creditLimit ?? 0, outstanding_balance: c.outstandingBalance ?? 0, status: (c.status as CustomerRow["status"]) ?? "active", sales_rep: c.salesRep ?? null, notes: c.notes ?? null }).catch((e) => { console.warn("[DataContext] updateCustomer failed, reverting", e); setCustomers(prev); saveCustomers(prev); });
   }
 
   function deleteCustomer(id: string) {
@@ -358,6 +364,48 @@ export function DataProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  // ── Batch POS sale deduction ─────────────────────────────────────────────────
+
+  function deductStockOnSale(
+    items: Array<{ productId: string; productName: string; qty: number }>,
+    sessionRef: string,
+  ): void {
+    if (items.length === 0) return;
+    const today = new Date().toISOString().slice(0, 10);
+    const baseTs = Date.now();
+    const newMovements: StockMovement[] = [];
+    const productMap = new Map<string, Product>(products.map((p) => [p.id, { ...p }]));
+
+    items.forEach((item, idx) => {
+      const prod = productMap.get(item.productId);
+      if (!prod) return;
+      const stockAfter = Math.max(0, prod.stock - item.qty);
+      newMovements.push({
+        id: `MV-POS-${baseTs}-${idx}`,
+        productId: prod.id,
+        productName: item.productName,
+        type: "issue",
+        quantityIn: 0,
+        quantityOut: item.qty,
+        stockAfter,
+        reference: sessionRef,
+        reason: "بيع - نقطة بيع",
+        date: today,
+        createdBy: "POS",
+      });
+      productMap.set(prod.id, { ...prod, stock: stockAfter });
+    });
+
+    if (newMovements.length === 0) return;
+
+    const allMovements = [...newMovements, ...stockMovements];
+    setStockMovements(allMovements);
+    saveStockMovements(allMovements);
+    const updatedProducts = products.map((p) => productMap.get(p.id) ?? p);
+    setProducts(updatedProducts);
+    saveProducts(updatedProducts);
+  }
+
   // ── Invoice CRUD ─────────────────────────────────────────────────────────────
 
   function addInvoice(inv: Invoice) {
@@ -376,15 +424,24 @@ export function DataProvider({ children }: { children: ReactNode }) {
     if (USE_SUPABASE) sbUpdateInvoice(inv.id, { amount: inv.amount ?? inv.total ?? 0, remaining_amount: inv.remainingAmount ?? 0, status: inv.status ?? "Pending", date: inv.date, notes: inv.notes ?? null }).catch((e) => { console.warn("[DataContext] updateInvoice failed, reverting", e); setInvoices(prev); saveInvoices(prev); });
   }
 
-  // ── Purchase CRUD (internal) ─────────────────────────────────────────────────
-  // Exposed via context if needed; Purchases page can call savePurchases directly
-  // until it migrates to DataContext.
-  function _addPurchase(p: Purchase) {
+  // ── Purchase CRUD ─────────────────────────────────────────────────────────────
+  function addPurchase(p: Purchase) {
     const next = [...purchases, p];
     setPurchases(next);
     savePurchases(next);
   }
-  void _addPurchase; // suppress unused warning — available for future slice migration
+
+  function updatePurchase(p: Purchase) {
+    const next = purchases.map((x) => (x.id === p.id ? p : x));
+    setPurchases(next);
+    savePurchases(next);
+  }
+
+  function deletePurchase(id: string) {
+    const next = purchases.map((x) => (x.id === id ? { ...x, isDeleted: true } : x));
+    setPurchases(next);
+    savePurchases(next);
+  }
 
   // ── Derived selectors ────────────────────────────────────────────────────────
 
@@ -503,7 +560,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
     cashiers, addCashier, updateCashier,
     addExpense, updateExpense, deleteExpense,
     addInvoice, updateInvoice,
-    stockMovements, addStockMovement,
+    addPurchase, updatePurchase, deletePurchase,
+    stockMovements, addStockMovement, deductStockOnSale,
     totalRevenue,
     receivablesTotal,
     openInvoicesCount,

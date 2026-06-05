@@ -16,7 +16,7 @@ const CURRENCY_LABELS: Record<PalestinianCurrency, string> = { ILS: "₪ شيك�
 
 function formatBalance(amount: number, currency: PalestinianCurrency): string {
   const sym: Record<string, string> = { ILS: "₪", JOD: "د.أ", USD: "$" };
-  return `${sym[currency] ?? currency}${amount.toLocaleString("ar-PS", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return `${sym[currency] ?? currency}${amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 function maskAccount(num: string): string {

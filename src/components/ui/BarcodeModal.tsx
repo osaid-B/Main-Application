@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Copy, Download, Printer, X } from "lucide-react";
+import { Copy, Download, X } from "lucide-react";
 import JsBarcode from "jsbarcode";
 import QRCode from "qrcode";
 import "./BarcodeModal.css";
@@ -52,36 +52,6 @@ export function BarcodeModal({ product, onClose }: BarcodeModalProps) {
     }).catch(() => {
       toast("فشل النسخ", { type: "error" });
     });
-  }
-
-  function handlePrint() {
-    const svgEl = svgRef.current;
-    if (!svgEl) return;
-    const svgData = new XMLSerializer().serializeToString(svgEl);
-    const printWindow = window.open("", "_blank", "width=400,height=300");
-    if (!printWindow) return;
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>Barcode — ${product.name}</title>
-          <style>
-            @page { size: 5cm 3cm; margin: 0; }
-            body { margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 5cm; height: 3cm; font-family: Arial, sans-serif; }
-            .label-name { font-size: 9pt; font-weight: 700; text-align: center; margin-bottom: 2pt; max-width: 4.5cm; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-            .label-price { font-size: 8pt; margin-bottom: 3pt; }
-            svg { max-width: 4.5cm; }
-          </style>
-        </head>
-        <body>
-          <div class="label-name">${product.name}</div>
-          <div class="label-price">₪${(product.price ?? 0).toFixed(2)}</div>
-          ${svgData}
-          <script>window.onload = () => { window.print(); window.close(); }</script>
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
   }
 
   function handleDownload() {
@@ -169,10 +139,7 @@ export function BarcodeModal({ product, onClose }: BarcodeModalProps) {
             <Copy size={14} />
             نسخ الرمز
           </button>
-          <button type="button" className="barcode-action-btn" onClick={handlePrint}>
-            <Printer size={14} />
-            طباعة
-          </button>
+
           <button type="button" className="barcode-action-btn barcode-action-btn--primary" onClick={handleDownload}>
             <Download size={14} />
             تحميل PNG

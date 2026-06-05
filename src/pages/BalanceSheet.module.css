@@ -40,7 +40,8 @@
 .column + .column { border-inline-start: 1px solid var(--app-border); }
 
 .statTable { width: 100%; border-collapse: collapse; table-layout: fixed; }
-.statTable td { padding: 9px 24px; font-size: 13.5px; }
+.statTable th { padding: 10px 14px; font-size: 11px; font-weight: 600; color: var(--app-text-muted); text-align: start; border-bottom: 1px solid var(--app-border); }
+.statTable td { padding: 11px 14px; font-size: 13.5px; }
 .statTable td:last-child { text-align: end; min-width: 130px; font-variant-numeric: tabular-nums; font-family: var(--font-mono); }
 
 .sectionHeader td { background: var(--app-surface-muted); font-weight: 700; font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--app-text-muted); padding-block: 10px; border-top: 1px solid var(--app-border); border-bottom: 1px solid var(--app-border); }

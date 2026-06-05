@@ -61,13 +61,6 @@ export default function Reports() {
           <div className="report-card__link">عرض التقرير ←</div>
         </div>
 
-        <div className="report-card">
-          <div className="report-card__title">تقرير برنامج الولاء</div>
-          <p className="report-card__desc">
-            إحصائيات نقاط الولاء المكتسبة والمستردة لكل فترة
-          </p>
-          <div className="report-card__link">عرض التقرير ←</div>
-        </div>
       </div>
     </div>
   );

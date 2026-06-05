@@ -1,7 +1,6 @@
 import {
   ArrowDownToLine,
   ArrowLeftRight,
-  Boxes,
   Building2,
   CreditCard,
   Database,
@@ -67,15 +66,6 @@ export const moduleRegistry: ModuleRoute[] = [
     description: "CRM, balances, and account activity",
     path: "/customers",
     icon: Users,
-    group: "operations",
-    mobilePrimary: true,
-  },
-  {
-    key: "products",
-    label: "Products",
-    description: "Inventory, pricing, and SKU control",
-    path: "/products",
-    icon: Boxes,
     group: "operations",
     mobilePrimary: true,
   },
@@ -214,13 +204,6 @@ export const quickCreateActions: QuickCreateAction[] = [
     description: "Create a customer profile with financial details",
     path: "/customers/new",
     icon: UserPlus,
-  },
-  {
-    id: "new-product",
-    label: "Add Product",
-    description: "Create a product with pricing and stock rules",
-    path: "/products",
-    icon: Boxes,
   },
   {
     id: "new-purchase",

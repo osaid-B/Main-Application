@@ -1,4 +1,8 @@
 import "./Suppliers.css";
+import { TableActions } from "../components/ui/TableActions";
+import { Can } from "../components/Can";
+import { useAuth } from "../context/AuthContext";
+
 import { createPortal } from "react-dom";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -6,27 +10,22 @@ import {
   Archive,
   AlertTriangle,
   ArrowUpDown,
-  BadgeCheck,
+  Ban,
   Building2,
   ChevronDown,
   Eye,
   FileText,
   Filter,
-  MoreHorizontal,
   Plus,
   Search,
   ShieldCheck,
   Star,
   Truck,
-  Wallet,
   X,
 } from "lucide-react";
 import OverflowContent from "../components/ui/OverflowContent";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
-import { Select } from "../components/ui/Select";
-import { Badge, type BadgeVariant } from "../components/ui/Badge";
-import { SideDrawer } from "../components/ui/SideDrawer";
 import {
   getProductCategories,
   getPurchases,
@@ -35,6 +34,7 @@ import { useData } from "../context/DataContext";
 import { useSettings } from "../context/SettingsContext";
 import type { Purchase, Supplier } from "../data/types";
 import { formatCurrencyValue } from "../utils/displayFormatters";
+import { DeleteConfirmDialog } from "../components/ui/DeleteConfirmDialog";
 
 type SupplierStatus = "Active" | "Inactive" | "Preferred" | "Blocked";
 
@@ -46,7 +46,8 @@ type DetailTab =
   | "contacts"
   | "notes"
   | "documents"
-  | "history";
+  | "history"
+  | "policy";
 
 type SupplierContact = {
   id: string;
@@ -115,7 +116,6 @@ type SupplierProfile = {
   companyType: string;
   category: string;
   status: SupplierStatus;
-  paymentTerms: string;
   currency: string;
   country: string;
   city: string;
@@ -144,6 +144,8 @@ type SupplierProfile = {
   purchases: SupplierPurchaseEntry[];
   invoices: SupplierInvoiceEntry[];
   payments: SupplierPaymentEntry[];
+  returnPolicy?: string;
+  returnDays?: number;
 };
 
 type SupplierView = SupplierProfile & {
@@ -166,7 +168,6 @@ type SupplierFormState = {
   country: string;
   city: string;
   address: string;
-  paymentTerms: string;
   currency: string;
   taxNumber: string;
   registrationNumber: string;
@@ -184,7 +185,6 @@ type FormErrors = Partial<
 
 type FilterState = {
   status: string;
-  paymentTerms: string;
   currency: string;
   category: string;
   rating: string;
@@ -211,7 +211,6 @@ type SortField =
   | "supplierName"
   | "code"
   | "contactPerson"
-  | "paymentTerms"
   | "outstandingBalance"
   | "lastPurchaseDate"
   | "rating"
@@ -386,24 +385,9 @@ const LOCATION_AR_LABELS: Record<string, string> = {
 const formatLocationOption = (location: string) =>
   `${location} - ${LOCATION_AR_LABELS[location] || location}`;
 
-const PAYMENT_TERM_PRESETS = [
-  "Cash - نقداً",
-  "Partial payment - دفع جزئي",
-  "Half payment - دفع نصفي",
-  "Cheque - شيك",
-  "Due on Receipt",
-  "Net 7",
-  "Net 15",
-  "Net 30",
-  "Net 45",
-  "Net 60",
-  "50% upfront / 50% on delivery",
-  "Custom agreement",
-];
 
 const EMPTY_FILTERS: FilterState = {
   status: "",
-  paymentTerms: "",
   currency: "",
   category: "",
   rating: "",
@@ -428,7 +412,6 @@ const EMPTY_FORM: SupplierFormState = {
   country: "Palestine",
   city: "",
   address: "",
-  paymentTerms: "Net 30",
   currency: "USD",
   taxNumber: "",
   registrationNumber: "",
@@ -447,6 +430,12 @@ function buildNextSupplierCode(suppliers: Supplier[], profiles: SupplierProfile[
   return `SUP-${maxCodeNumber + 1}`;
 }
 
+function isValidPhone(phone: string): boolean {
+  const mobileRegex = /^0(5[0-9])\d{7}$/;
+  const landlineRegex = /^0(2|8|9)\d{7}$/;
+  return mobileRegex.test(phone) || landlineRegex.test(phone);
+}
+
 function buildNextRegistrationNumber(profiles: SupplierProfile[]) {
   const maxRegistrationNumber = profiles.reduce((max, profile) => {
     const match = String(profile.registrationNumber || "").match(/^REG-(\d+)$/i);
@@ -457,7 +446,7 @@ function buildNextRegistrationNumber(profiles: SupplierProfile[]) {
 }
 
 function money(value: number) {
-  return formatCurrencyValue(value || 0, "USD");
+  return formatCurrencyValue(value || 0, "ILS");
 }
 
 function formatDate(value: string) {
@@ -569,7 +558,6 @@ function buildDefaultProfile(
     companyType: categories[index % categories.length],
     category: categories[index % categories.length],
     status: statuses[index % statuses.length],
-    paymentTerms: ["Net 7", "Net 15", "Net 30", "Due on Receipt"][index % 4],
     currency: ["USD", "EUR", "ILS"][index % 3],
     country: countries[index % countries.length],
     city: cities[index % cities.length],
@@ -666,6 +654,8 @@ function buildDefaultProfile(
     purchases: supplierPurchases,
     invoices,
     payments,
+    returnPolicy: "",
+    returnDays: 14,
   };
 }
 
@@ -690,19 +680,6 @@ function readProfiles(suppliers: Supplier[], purchases: Purchase[]) {
 
 function saveProfiles(profiles: SupplierProfile[]) {
   window.localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(profiles));
-}
-
-function statusTone(status: SupplierStatus) {
-  switch (status) {
-    case "Active":
-      return "positive";
-    case "Preferred":
-      return "info";
-    case "Blocked":
-      return "danger";
-    default:
-      return "neutral";
-  }
 }
 
 function formatLocationDisplay(location: string, isArabic: boolean) {
@@ -730,14 +707,159 @@ function formatSupplierStatusLabel(status: SupplierStatus, isArabic: boolean) {
   }
 }
 
+function AnimatedNumber({ value, duration = 500 }: { value: number; duration?: number }) {
+  const [display, setDisplay] = useState(0);
+  const ref = useRef(0);
+  const reduced = useRef(
+    typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  );
+
+  useEffect(() => {
+    if (reduced.current) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setDisplay(value);
+      return;
+    }
+    let startTime: number | null = null;
+    ref.current = 0;
+    function tick(now: number) {
+      if (!startTime) startTime = now;
+      const t = Math.min((now - startTime) / duration, 1);
+      const eased = 1 - Math.pow(1 - t, 3);
+      setDisplay(Math.round(eased * value));
+      if (t < 1) requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  }, [value, duration]);
+
+  return <>{display.toLocaleString()}</>;
+}
+
+// ─── Supplier helpers ─────────────────────────────────────────────────────────
+
+const AVATAR_PALETTE = ["#3B82F6","#10B981","#F59E0B","#EF4444","#8B5CF6","#EC4899","#06B6D4","#14B8A6"];
+function supplierAvatarColor(name: string): string {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = name.charCodeAt(i) + ((h << 5) - h);
+  return AVATAR_PALETTE[Math.abs(h) % AVATAR_PALETTE.length];
+}
+
+const CAT_BG_PALETTE = ["#EFF6FF","#F0FDF4","#FEF3C7","#F5F3FF","#FEF2F2","#F0FDFA","#FFF7ED"];
+const CAT_FG_PALETTE = ["#2563EB","#16A34A","#D97706","#7C3AED","#DC2626","#0891B2","#EA580C"];
+function catHash(s: string): number {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = s.charCodeAt(i) + ((h << 5) - h);
+  return Math.abs(h);
+}
+function getCatBg(cat?: string): string { return cat ? CAT_BG_PALETTE[catHash(cat) % CAT_BG_PALETTE.length] : "#F1F5F9"; }
+function getCatColor(cat?: string): string { return cat ? CAT_FG_PALETTE[catHash(cat) % CAT_FG_PALETTE.length] : "#64748B"; }
+
+const SUPPLIER_CATEGORIES = [
+  { key: "food",        label: "مواد غذائية",      icon: "🥗" },
+  { key: "electronics", label: "إلكترونيات",         icon: "💻" },
+  { key: "clothing",    label: "ملابس وأقمشة",      icon: "👕" },
+  { key: "medical",     label: "طبي وصيدلاني",      icon: "💊" },
+  { key: "building",    label: "مواد البناء",         icon: "🏗️" },
+  { key: "stationery",  label: "قرطاسية ومكتبية",   icon: "📎" },
+  { key: "cleaning",    label: "منظفات ومستلزمات",  icon: "🧹" },
+  { key: "transport",   label: "نقل وشحن",           icon: "🚛" },
+  { key: "services",    label: "خدمات مهنية",        icon: "⚙️" },
+  { key: "mixed",       label: "متنوع / أخرى",       icon: "📦" },
+] as const;
+
+function SupplierPolicyTab({
+  profile, isArabic, onSave,
+}: {
+  profile: SupplierProfile;
+  isArabic: boolean;
+  onSave: (patch: Partial<SupplierProfile>) => void;
+}) {
+  const [returnPolicy, setReturnPolicy] = useState(profile.returnPolicy ?? "");
+  const [returnDays, setReturnDays] = useState<number>(profile.returnDays ?? 14);
+  const [saved, setSaved] = useState(false);
+
+  function handleSave() {
+    onSave({ returnPolicy, returnDays });
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2200);
+  }
+
+  const fieldStyle: React.CSSProperties = {
+    width: "100%", padding: "8px 12px", border: "1px solid #E2E8F0",
+    borderRadius: 8, fontSize: 13.5, color: "#0F172A", background: "#fff",
+    outline: "none", fontFamily: "inherit", boxSizing: "border-box",
+    transition: "border-color 120ms ease",
+  };
+  const labelStyle: React.CSSProperties = {
+    display: "block", marginBottom: 6, fontSize: 12.5,
+    fontWeight: 700, color: "#475569",
+  };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      <section className="detail-card">
+        <h3>{isArabic ? "سياسة الإرجاع والاسترداد" : "Return & Refund Policy"}</h3>
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          <div>
+            <label style={labelStyle}>{isArabic ? "مدة الإرجاع المسموح بها (أيام)" : "Return Window (days)"}</label>
+            <input
+              type="number"
+              min={0}
+              max={365}
+              value={returnDays}
+              onChange={(e) => setReturnDays(Math.max(0, Number(e.target.value)))}
+              style={{ ...fieldStyle, height: 40, width: 120 }}
+            />
+          </div>
+          <div>
+            <label style={labelStyle}>{isArabic ? "شروط وأحكام الإرجاع" : "Return Conditions"}</label>
+            <textarea
+              value={returnPolicy}
+              onChange={(e) => setReturnPolicy(e.target.value)}
+              placeholder={isArabic ? "مثال: يُقبل الإرجاع للبضائع غير المفتوحة فقط..." : "e.g. Returns accepted for unopened goods only..."}
+              rows={4}
+              style={{ ...fieldStyle, resize: "vertical", padding: "10px 12px" }}
+            />
+          </div>
+        </div>
+      </section>
+
+      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <button
+          type="button"
+          onClick={handleSave}
+          style={{
+            height: 40, padding: "0 22px", borderRadius: 9, border: "none",
+            background: "#2563EB", color: "#fff", fontSize: 13.5, fontWeight: 600,
+            cursor: "pointer", fontFamily: "inherit",
+            transition: "background 150ms ease",
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = "#1D4ED8"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = "#2563EB"; }}
+        >
+          {isArabic ? "حفظ السياسة" : "Save Policy"}
+        </button>
+        {saved && (
+          <span style={{ fontSize: 13, color: "#16A34A", fontWeight: 600 }}>
+            {isArabic ? "✓ تم الحفظ" : "✓ Saved"}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function Suppliers() {
   const { t, isArabic } = useSettings();
+  const { can } = useAuth();
   const navigate = useNavigate();
   const { suppliers, addSupplier, updateSupplier, deleteSupplier: deleteSupplierCtx } = useData();
   const [purchases] = useState<Purchase[]>(() => getPurchases());
   const [productCategories] = useState<string[]>(() => getProductCategories());
   const [profiles, setProfiles] = useState<SupplierProfile[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const [filters, setFilters] = useState<FilterState>(EMPTY_FILTERS);
   const [quickFilters, setQuickFilters] = useState<string[]>([]);
   const [sortField, setSortField] = useState<SortField>("supplierName");
@@ -745,10 +867,14 @@ export default function Suppliers() {
   const [detailSupplierId, setDetailSupplierId] = useState<string | null>(null);
   const [detailTab, setDetailTab] = useState<DetailTab>("overview");
   const [moreFiltersOpen, setMoreFiltersOpen] = useState(false);
+  const [panelStatus, setPanelStatus] = useState('');
+  const [panelCategory, setPanelCategory] = useState('');
+  const [panelBalance, setPanelBalance] = useState('');
   const [menuState, setMenuState] = useState<ActionMenuState | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [discardConfirmOpen, setDiscardConfirmOpen] = useState(false);
   const [confirmAction, setConfirmAction] = useState<SupplierConfirmAction>(null);
+  const [deleteConfirmItem, setDeleteConfirmItem] = useState<{ itemName: string; onConfirm: () => void } | null>(null);
   const [formMode, setFormMode] = useState<"add" | "edit">("add");
   const [editingSupplierId, setEditingSupplierId] = useState<string | null>(null);
   const [formState, setFormState] = useState<SupplierFormState>(EMPTY_FORM);
@@ -756,6 +882,10 @@ export default function Suppliers() {
   const [toast, setToast] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [viewError, setViewError] = useState<string | null>(null);
+  const [filterClosing, setFilterClosing] = useState(false);
+  const filterRef = useRef<HTMLDivElement | null>(null);
+  const [showCustomCatInput, setShowCustomCatInput] = useState(false);
+  const [customCatInput, setCustomCatInput] = useState("");
 
   const menuRef = useRef<HTMLDivElement | null>(null);
   const formInitialSnapshotRef = useRef("");
@@ -802,7 +932,6 @@ export default function Suppliers() {
         emailOptional: isArabic ? "البريد اختياري" : "Email Optional",
         emailPlaceholder: isArabic ? "بريد إلكتروني اختياري" : "Optional email address",
         locationPlaceholder: isArabic ? "ابحث عن مدينة أو بلدة فلسطينية" : "Search Palestinian city or village",
-        paymentPlaceholder: isArabic ? "نقداً، دفعة جزئية، شيك، أو شروط مخصصة" : "Cash, partial payment, cheque, or custom terms",
         taxNumber: isArabic ? "الرقم الضريبي" : "Tax Number",
         taxPlaceholder: isArabic ? "رقم التسجيل الضريبي" : "Tax registration number",
         registration: isArabic ? "رقم التسجيل" : "Registration Number",
@@ -897,6 +1026,14 @@ export default function Suppliers() {
           supplier.email,
           supplier.category,
           supplier.companyType,
+          supplier.city,
+          supplier.country,
+          supplier.currency,
+          supplier.status,
+          supplier.taxRegistered ? "yes" : "no",
+          String(supplier.rating),
+          money(supplier.outstandingBalance),
+          formatDate(supplier.lastPurchaseDate),
           supplier.notes.map((item) => item.text).join(" "),
           supplier.purchases.map((item) => item.poNumber).join(" "),
         ]
@@ -907,9 +1044,6 @@ export default function Suppliers() {
       }
 
       if (filters.status && supplier.status !== filters.status) return false;
-      if (filters.paymentTerms && supplier.paymentTerms !== filters.paymentTerms) {
-        return false;
-      }
       if (filters.currency && supplier.currency !== filters.currency) return false;
       if (filters.category && supplier.category !== filters.category) return false;
 
@@ -1042,26 +1176,11 @@ export default function Suppliers() {
     };
   }, [supplierViews]);
 
-  const topSuppliers = useMemo(() => {
-    const maxPurchased = Math.max(
-      ...supplierViews.map((supplier) => supplier.totalPurchased),
-      1
-    );
-
-    return [...supplierViews]
-      .sort((a, b) => b.totalPurchased - a.totalPurchased)
-      .slice(0, 5)
-      .map((supplier) => ({
-        ...supplier,
-        purchaseRatio: (supplier.totalPurchased / maxPurchased) * 100,
-      }));
-  }, [supplierViews]);
 
   const activeFilterEntries = useMemo(() => {
     const entries: Array<{ key: keyof FilterState; label: string; value: string }> = [];
     const labels: Record<keyof FilterState, string> = {
       status: isArabic ? "الحالة" : "Status",
-      paymentTerms: isArabic ? "الشروط" : "Terms",
       currency: isArabic ? "العملة" : "Currency",
       category: isArabic ? "التصنيف" : "Category",
       rating: isArabic ? "التقييم" : "Rating",
@@ -1103,30 +1222,63 @@ export default function Suppliers() {
     ? supplierViews.find((supplier) => supplier.supplierId === confirmAction.supplierId) || null
     : null;
 
+  function handleSearchChange(value: string) {
+    setSearchInput(value);
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    debounceTimer.current = setTimeout(() => setSearchTerm(value), 150);
+  }
+
+  function closeFilterPanel() {
+    setFilterClosing(true);
+    setTimeout(() => {
+      setMoreFiltersOpen(false);
+      setFilterClosing(false);
+    }, 120);
+  }
+
+  useEffect(() => {
+    if (moreFiltersOpen) {
+      setPanelStatus(filters.status);
+      setPanelCategory(filters.category);
+      setPanelBalance(filters.outstandingBalance);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [moreFiltersOpen]);
+
+  useEffect(() => {
+    if (!moreFiltersOpen) return;
+    function onKey(e: KeyboardEvent) { if (e.key === "Escape") closeFilterPanel(); }
+    function onClick(e: MouseEvent) {
+      if (filterRef.current && !filterRef.current.contains(e.target as Node)) {
+        closeFilterPanel();
+      }
+    }
+    document.addEventListener("keydown", onKey);
+    document.addEventListener("mousedown", onClick);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.removeEventListener("mousedown", onClick);
+    };
+  }, [moreFiltersOpen]);
+
+  useEffect(() => {
+    if (!formOpen) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        e.stopPropagation();
+        requestCloseForm();
+      }
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formOpen]);
+
   function clearFilters() {
     setFilters(EMPTY_FILTERS);
     setQuickFilters([]);
     setSearchTerm("");
-  }
-
-  function openMenu(id: string, trigger: HTMLButtonElement) {
-    if (menuState?.id === id) {
-      setMenuState(null);
-      return;
-    }
-
-    const rect = trigger.getBoundingClientRect();
-    const menuWidth = 220;
-    const gap = 8;
-
-    setMenuState({
-      id,
-      top: rect.bottom + gap,
-      left: Math.min(
-        window.innerWidth - menuWidth - 12,
-        Math.max(12, rect.right - menuWidth)
-      ),
-    });
+    setSearchInput("");
   }
 
   function openAddModal() {
@@ -1164,7 +1316,6 @@ export default function Suppliers() {
       country: supplier.country,
       city: supplier.city,
       address: "",
-      paymentTerms: supplier.paymentTerms,
       currency: supplier.currency,
       taxNumber: supplier.taxNumber,
       registrationNumber: supplier.registrationNumber,
@@ -1220,7 +1371,7 @@ export default function Suppliers() {
   }
 
   function saveSupplierForm(saveAsDraft = false) {
-    if (!validateSupplierForm()) return;
+    if (!saveAsDraft && !validateSupplierForm()) return;
 
     const code = editingSupplierId
       ? formState.supplierCode.trim()
@@ -1247,7 +1398,6 @@ export default function Suppliers() {
       companyType: formState.category,
       category: formState.category,
       status: saveAsDraft ? "Inactive" : formState.status,
-      paymentTerms: formState.paymentTerms,
       currency: formState.currency,
       country: formState.country.trim() || "Palestine",
       city: formState.city.trim(),
@@ -1349,11 +1499,6 @@ export default function Suppliers() {
       (item) => item.supplierId === confirmAction.supplierId
     );
 
-    if (confirmAction.type === "delete") {
-      deleteSupplierItem(confirmAction.supplierId);
-      return;
-    }
-
     setProfiles((prev) =>
       prev.map((p) => p.supplierId === confirmAction.supplierId ? { ...p, status: "Inactive" as SupplierStatus } : p),
     );
@@ -1396,189 +1541,222 @@ export default function Suppliers() {
             </div>
             <p>{t.suppliers.pageSubtitle}</p>
           </div>
-
-          <div className="suppliers-header-actions">
-            <Button variant="primary" size="md" type="button" onClick={openAddModal} leftIcon={<Plus size={16} />}>
-              {t.suppliers.addSupplier}
-            </Button>
+          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+            <Can permission="suppliers.create">
+              <Button variant="primary" size="sm" type="button" leftIcon={<Plus size={14} />} onClick={openAddModal}>
+                {t.suppliers.addSupplier}
+              </Button>
+            </Can>
           </div>
         </section>
 
-        <section className="suppliers-kpi-grid">
-          <article className="suppliers-kpi-card">
-            <div className="kpi-icon blue">
-              <Building2 size={18} />
-            </div>
-            <div>
-              <span>{supplierCopy.summary.total}</span>
-              <strong>{summary.totalSuppliers}</strong>
-              <small>{supplierCopy.summary.thisMonth}</small>
-            </div>
-          </article>
-
-          <article className="suppliers-kpi-card">
-            <div className="kpi-icon green">
-              <BadgeCheck size={18} />
-            </div>
-            <div>
-              <span>{supplierCopy.summary.active}</span>
-              <strong>{summary.activeSuppliers}</strong>
-              <small>{supplierCopy.summary.updatedToday}</small>
-            </div>
-          </article>
-
-          <article className="suppliers-kpi-card">
-            <div className="kpi-icon amber">
-              <Wallet size={18} />
-            </div>
-            <div>
-              <span>{supplierCopy.summary.outstanding}</span>
-              <strong>{money(summary.outstandingPayables)}</strong>
-              <small>{supplierCopy.summary.acrossVendors}</small>
-            </div>
-          </article>
-
-          <article className="suppliers-kpi-card">
-            <div className="kpi-icon slate">
-              <Star size={18} />
-            </div>
-            <div>
-              <span>{supplierCopy.summary.topRated}</span>
-              <strong>{summary.topRatedSuppliers}</strong>
-              <small>{supplierCopy.summary.ratingHint}</small>
-            </div>
-          </article>
+        <section className="suppliers-stat-grid">
+          {([
+            { key: "total", label: isArabic ? "إجمالي الموردين" : "Total Suppliers", value: summary.totalSuppliers, icon: Building2, iconColor: "#2563EB", iconBg: "#EFF6FF", filterKey: null as string | null },
+            { key: "preferred", label: isArabic ? "المفضلون" : "Preferred", value: summary.preferred, icon: Star, iconColor: "#D97706", iconBg: "#FFFBEB", filterKey: "Preferred" },
+            { key: "blocked", label: isArabic ? "المحظورون" : "Blocked", value: summary.blocked, icon: Ban, iconColor: "#DC2626", iconBg: "#FEF2F2", filterKey: "Blocked" },
+          ]).map((card, idx) => (
+            <article
+              key={card.key}
+              className={`sup-stat-card${quickFilters.includes(card.filterKey ?? "") ? " active" : ""}`}
+              style={{ animationDelay: `${idx * 70}ms` } as React.CSSProperties}
+              onClick={() => { if (card.filterKey) toggleQuickFilter(card.filterKey); }}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); if (card.filterKey) toggleQuickFilter(card.filterKey); } }}
+            >
+              <div className="sup-stat-inner">
+                <div className="sup-stat-info">
+                  <span className="sup-stat-label">{card.label}</span>
+                  <strong className="sup-stat-value"><AnimatedNumber value={card.value} /></strong>
+                </div>
+                <div className="sup-stat-icon-wrap" style={{ background: card.iconBg }}>
+                  <card.icon size={18} color={card.iconColor} />
+                </div>
+              </div>
+            </article>
+          ))}
         </section>
 
-        <div className="suppliers-layout">
-          <section className="suppliers-main-column">
-            <div className={`suppliers-filter-card ${moreFiltersOpen ? "filters-open" : ""}`}>
+
+        <div className={`suppliers-filter-card ${moreFiltersOpen ? "filters-open" : ""}`}>
               <div className="supplier-toolbar">
                 <Input
                   variant="search"
                   size="md"
                   leftIcon={<Search size={18} />}
                   className="supplier-search-field"
-                  value={searchTerm}
-                  onChange={(event) => setSearchTerm(event.target.value)}
+                  value={searchInput}
+                  onChange={(event) => handleSearchChange(event.target.value)}
                   placeholder={t.suppliers.searchPlaceholder}
                 />
 
                 <div className="supplier-toolbar-actions">
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    className={`supplier-toolbar-btn ${moreFiltersOpen ? "active" : ""}`}
-                    type="button"
-                    onClick={() => setMoreFiltersOpen((current) => !current)}
-                    aria-expanded={moreFiltersOpen}
-                    leftIcon={<Filter size={15} />}
-                    rightIcon={<ChevronDown size={15} />}
-                  >
-                    {t.suppliers.filterBtn}
-                  </Button>
+                  <div style={{ position: "relative" }} ref={filterRef}>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      className={`supplier-toolbar-btn ${moreFiltersOpen ? "active" : ""}`}
+                      type="button"
+                      onClick={() => setMoreFiltersOpen((current) => !current)}
+                      aria-expanded={moreFiltersOpen}
+                      leftIcon={<Filter size={15} />}
+                      rightIcon={<ChevronDown size={15} />}
+                    >
+                      {t.suppliers.filterBtn}
+                    </Button>
+
+                    {moreFiltersOpen && (
+                      <div
+                        className={`supplier-filter-dropdown${filterClosing ? " closing" : ""}`}
+                        style={{
+                          position: "absolute",
+                          top: "calc(100% + 8px)",
+                          right: 0,
+                          width: 280,
+                          background: "white",
+                          border: "1px solid #E2E8F0",
+                          borderRadius: 12,
+                          boxShadow: "0 8px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06)",
+                          padding: 16,
+                          zIndex: 9999,
+                          direction: "rtl",
+                          animation: "dropdownIn 160ms cubic-bezier(0.16,1,0.3,1)",
+                        }}
+                        onClick={e => e.stopPropagation()}
+                      >
+
+                        {/* Panel Header */}
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, paddingBottom: 12, borderBottom: "1px solid #F1F5F9" }}>
+                          <span style={{ fontSize: 13, fontWeight: 700, color: "#0F172A", display: "flex", alignItems: "center", gap: 6 }}>
+                            <i className="ti ti-adjustments-horizontal" style={{ fontSize: 14, color: "#64748B" }} />
+                            تصفية النتائج
+                          </span>
+                          <button
+                            type="button"
+                            onClick={closeFilterPanel}
+                            style={{ width: 22, height: 22, borderRadius: 6, border: "none", background: "transparent", cursor: "pointer", color: "#94A3B8", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, transition: "all 120ms ease" }}
+                            onMouseEnter={e => { e.currentTarget.style.background = "#FEF2F2"; e.currentTarget.style.color = "#DC2626"; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#94A3B8"; }}
+                          >✕</button>
+                        </div>
+
+                        {/* الحالة */}
+                        <div style={{ marginBottom: 12 }}>
+                          <label style={{ fontSize: 11, fontWeight: 600, color: "#64748B", display: "block", marginBottom: 6, letterSpacing: "0.3px", textTransform: "uppercase" }}>
+                            الحالة
+                          </label>
+                          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                            {([
+                              { value: "",           label: "كل الحالات", dot: "#CBD5E1" },
+                              { value: "Active",     label: "نشط",        dot: "#16A34A" },
+                              { value: "Preferred",  label: "مفضل",       dot: "#D97706" },
+                              { value: "Blocked",    label: "محظور",      dot: "#DC2626" },
+                            ] as const).map(opt => (
+                              <button
+                                key={opt.value}
+                                type="button"
+                                onClick={() => setPanelStatus(opt.value)}
+                                style={{ width: "100%", padding: "7px 10px", border: `1px solid ${panelStatus === opt.value ? "#BFDBFE" : "transparent"}`, borderRadius: 7, background: panelStatus === opt.value ? "#EFF6FF" : "transparent", color: panelStatus === opt.value ? "#1D4ED8" : "#374151", fontSize: 13, fontWeight: panelStatus === opt.value ? 600 : 400, cursor: "pointer", textAlign: "right", display: "flex", alignItems: "center", gap: 8, transition: "all 120ms ease" }}
+                                onMouseEnter={e => { if (panelStatus !== opt.value) e.currentTarget.style.background = "#F8FAFC"; }}
+                                onMouseLeave={e => { if (panelStatus !== opt.value) e.currentTarget.style.background = "transparent"; }}
+                              >
+                                <span style={{ width: 7, height: 7, borderRadius: "50%", background: opt.dot, flexShrink: 0 }} />
+                                {opt.label}
+                                {panelStatus === opt.value && (
+                                  <i className="ti ti-check" style={{ fontSize: 12, marginRight: "auto", color: "#2563EB" }} />
+                                )}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div style={{ height: 1, background: "#F1F5F9", margin: "12px 0" }} />
+
+                        {/* التصنيف */}
+                        <div style={{ marginBottom: 12 }}>
+                          <label style={{ fontSize: 11, fontWeight: 600, color: "#64748B", display: "block", marginBottom: 6, letterSpacing: "0.3px", textTransform: "uppercase" }}>
+                            التصنيف
+                          </label>
+                          <select
+                            value={panelCategory}
+                            onChange={e => setPanelCategory(e.target.value)}
+                            style={{ width: "100%", height: 36, border: `1px solid ${panelCategory ? "#BFDBFE" : "#E2E8F0"}`, borderRadius: 8, padding: "0 10px", fontSize: 13, color: panelCategory ? "#1D4ED8" : "#374151", background: panelCategory ? "#EFF6FF" : "white", direction: "rtl", cursor: "pointer", outline: "none", transition: "all 150ms ease" }}
+                            onFocus={e => { e.target.style.borderColor = "#2563EB"; e.target.style.boxShadow = "0 0 0 3px rgba(37,99,235,0.10)"; }}
+                            onBlur={e => { e.target.style.borderColor = panelCategory ? "#BFDBFE" : "#E2E8F0"; e.target.style.boxShadow = "none"; }}
+                          >
+                            <option value="">كل التصنيفات</option>
+                            {categoryOptions.map(cat => (
+                              <option key={cat} value={cat}>{cat}</option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div style={{ height: 1, background: "#F1F5F9", margin: "12px 0" }} />
+
+                        {/* الرصيد */}
+                        <div style={{ marginBottom: 16 }}>
+                          <label style={{ fontSize: 11, fontWeight: 600, color: "#64748B", display: "block", marginBottom: 6, letterSpacing: "0.3px", textTransform: "uppercase" }}>
+                            الرصيد
+                          </label>
+                          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                            {([
+                              { value: "",     label: "كل الأرصدة",  dot: "#CBD5E1" },
+                              { value: "open", label: "له رصيد",     dot: "#16A34A" },
+                              { value: "high", label: "رصيد مرتفع",  dot: "#94A3B8" },
+                            ] as const).map(opt => (
+                              <button
+                                key={opt.value}
+                                type="button"
+                                onClick={() => setPanelBalance(opt.value)}
+                                style={{ width: "100%", padding: "7px 10px", border: `1px solid ${panelBalance === opt.value ? "#BFDBFE" : "transparent"}`, borderRadius: 7, background: panelBalance === opt.value ? "#EFF6FF" : "transparent", color: panelBalance === opt.value ? "#1D4ED8" : "#374151", fontSize: 13, fontWeight: panelBalance === opt.value ? 600 : 400, cursor: "pointer", textAlign: "right", display: "flex", alignItems: "center", gap: 8, transition: "all 120ms ease" }}
+                                onMouseEnter={e => { if (panelBalance !== opt.value) e.currentTarget.style.background = "#F8FAFC"; }}
+                                onMouseLeave={e => { if (panelBalance !== opt.value) e.currentTarget.style.background = "transparent"; }}
+                              >
+                                <span style={{ width: 7, height: 7, borderRadius: "50%", background: opt.dot, flexShrink: 0 }} />
+                                {opt.label}
+                                {panelBalance === opt.value && (
+                                  <i className="ti ti-check" style={{ fontSize: 12, marginRight: "auto", color: "#2563EB" }} />
+                                )}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Footer */}
+                        <div style={{ display: "flex", gap: 8, paddingTop: 12, borderTop: "1px solid #F1F5F9" }}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setFilters(c => ({ ...c, status: panelStatus, category: panelCategory, outstandingBalance: panelBalance }));
+                              closeFilterPanel();
+                            }}
+                            style={{ flex: 1, height: 34, background: "#2563EB", color: "white", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer", transition: "background 150ms ease" }}
+                            onMouseEnter={e => { e.currentTarget.style.background = "#1D4ED8"; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = "#2563EB"; }}
+                          >
+                            تطبيق
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setPanelStatus(""); setPanelCategory(""); setPanelBalance("");
+                              clearFilters();
+                              closeFilterPanel();
+                            }}
+                            style={{ padding: "0 12px", height: 34, border: "1px solid #E2E8F0", background: "white", color: "#64748B", borderRadius: 8, fontSize: 13, cursor: "pointer", transition: "all 150ms ease" }}
+                            onMouseEnter={e => { e.currentTarget.style.color = "#DC2626"; e.currentTarget.style.borderColor = "#FECACA"; e.currentTarget.style.background = "#FEF2F2"; }}
+                            onMouseLeave={e => { e.currentTarget.style.color = "#64748B"; e.currentTarget.style.borderColor = "#E2E8F0"; e.currentTarget.style.background = "white"; }}
+                          >
+                            مسح
+                          </button>
+                        </div>
+
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
-
-              {moreFiltersOpen && (
-                <div className="supplier-filter-popover">
-                  <div className="supplier-filter-popover-head">
-                    <div>
-                      <strong>{t.suppliers.filterBtn}</strong>
-                      <span>{supplierCopy.filters.helper}</span>
-                    </div>
-                    <Button
-                      variant="icon"
-                      size="sm"
-                      type="button"
-                      onClick={() => setMoreFiltersOpen(false)}
-                      aria-label={supplierCopy.filters.closeFilters}
-                    >
-                      <X size={16} />
-                    </Button>
-                  </div>
-
-                  <div className="supplier-filter-popover-grid">
-                    <div className="supplier-field">
-                      <span>{supplierCopy.filters.status}</span>
-                      <Select
-                        size="md"
-                        fullWidth
-                        value={filters.status}
-                        onChange={(event) =>
-                          setFilters((current) => ({
-                            ...current,
-                            status: event.target.value,
-                          }))
-                        }
-                        options={[
-                          { value: "", label: t.suppliers.filters.allStatuses },
-                          { value: "Active", label: t.suppliers.filters.active },
-                          { value: "Inactive", label: t.suppliers.filters.inactive },
-                          { value: "Preferred", label: t.suppliers.filters.preferred },
-                          { value: "Blocked", label: t.suppliers.filters.blocked },
-                        ]}
-                      />
-                    </div>
-
-                    <div className="supplier-field">
-                      <span>{supplierCopy.filters.category}</span>
-                      <Select
-                        size="md"
-                        fullWidth
-                        value={filters.category}
-                        onChange={(event) =>
-                          setFilters((current) => ({
-                            ...current,
-                            category: event.target.value,
-                          }))
-                        }
-                        options={[
-                          { value: "", label: t.suppliers.filters.allCategories },
-                          ...categoryOptions.map((category) => ({
-                            value: category,
-                            label: category,
-                          })),
-                        ]}
-                      />
-                    </div>
-
-                    <div className="supplier-field">
-                      <span>{supplierCopy.filters.balance}</span>
-                      <Select
-                        size="md"
-                        fullWidth
-                        value={filters.outstandingBalance}
-                        onChange={(event) =>
-                          setFilters((current) => ({
-                            ...current,
-                            outstandingBalance: event.target.value,
-                          }))
-                        }
-                        options={[
-                          { value: "", label: supplierCopy.filters.allBalances },
-                          { value: "open", label: supplierCopy.filters.outstandingOnly },
-                          { value: "high", label: supplierCopy.filters.highBalance },
-                        ]}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="supplier-filter-popover-footer">
-                    <Button variant="secondary" size="md" type="button" onClick={clearFilters}>
-                      {t.common.reset}
-                    </Button>
-                    <Button
-                      variant="primary"
-                      size="md"
-                      type="button"
-                      onClick={() => setMoreFiltersOpen(false)}
-                    >
-                      {t.common.apply}
-                    </Button>
-                  </div>
-                </div>
-              )}
 
               {(activeFilterEntries.length > 0 || quickFilters.length > 0) && (
                 <div className="active-filter-row">
@@ -1638,7 +1816,7 @@ export default function Suppliers() {
                       : (isArabic ? "أنشئ أول ملف مورد لبدء إجراءات الشراء." : "Create your first supplier profile to start procurement workflows.")}
                   </p>
 
-                  {searchTerm || activeFilterEntries.length > 0 || quickFilters.length > 0 ? (
+                  {(searchTerm || activeFilterEntries.length > 0 || quickFilters.length > 0) && (
                     <Button
                       variant="secondary"
                       size="md"
@@ -1647,33 +1825,23 @@ export default function Suppliers() {
                     >
                       {isArabic ? "مسح الفلاتر" : "Clear Filters"}
                     </Button>
-                  ) : (
-                    <Button
-                      variant="primary"
-                      size="md"
-                      type="button"
-                      onClick={openAddModal}
-                      leftIcon={<Plus size={16} />}
-                    >
-                      {t.suppliers.addSupplier}
-                    </Button>
                   )}
                 </div>
               ) : (
-                <div className="suppliers-table-wrap app-table-wrap">
-                  <table className="suppliers-table app-data-table">
+                <div className="suppliers-table-wrap app-table-wrap atlas-table-wrapper">
+                  <table className="suppliers-table app-data-table atlas-table">
                     <colgroup>
-                      <col className="supplier-col" />
-                      <col className="phone-col" />
-                      <col className="location-col" />
-                      <col className="balance-col" />
-                      <col className="status-col" />
-                      <col className="actions-col" />
+                      <col style={{ width: "28%" }} />
+                      <col style={{ width: "18%" }} />
+                      <col style={{ width: "14%" }} />
+                      <col style={{ width: "12%" }} />
+                      <col style={{ width: "14%" }} />
+                      <col style={{ width: "14%" }} />
                     </colgroup>
 
                     <thead>
                       <tr>
-                        <th>
+                        <th className="col-entity px-3 py-3 whitespace-nowrap truncate">
                           <button
                             type="button"
                             className="table-sort-btn"
@@ -1683,11 +1851,13 @@ export default function Suppliers() {
                           </button>
                         </th>
 
-                        <th>{t.common.phone}</th>
+                        <th className="col-code px-3 py-3 whitespace-nowrap truncate">{t.common.phone}</th>
 
-                        <th>{isArabic ? "الموقع" : "Location"}</th>
+                        <th className="col-flex px-3 py-3 whitespace-nowrap truncate">{isArabic ? "الموقع" : "Location"}</th>
 
-                        <th>
+                        <th className="col-badge px-3 py-3 whitespace-nowrap truncate">{isArabic ? "التصنيف" : "Category"}</th>
+
+                        <th className="col-currency px-3 py-3 whitespace-nowrap truncate">
                           <button
                             type="button"
                             className="table-sort-btn"
@@ -1697,17 +1867,7 @@ export default function Suppliers() {
                           </button>
                         </th>
 
-                        <th>
-                          <button
-                            type="button"
-                            className="table-sort-btn"
-                            onClick={() => handleSort("status")}
-                          >
-                            {t.suppliers.cols.status} <ArrowUpDown size={13} />
-                          </button>
-                        </th>
-
-                        <th>{t.suppliers.cols.actions}</th>
+                        <th className="col-actions px-3 py-3 whitespace-nowrap truncate">{t.suppliers.cols.actions}</th>
                       </tr>
                     </thead>
 
@@ -1719,82 +1879,72 @@ export default function Suppliers() {
                             setDetailSupplierId(supplier.supplierId);
                             setDetailTab("overview");
                           }}
+                          className="odd:bg-white even:bg-slate-50/30"
                         >
-                          <td>
-                            <div className="supplier-table-cell supplier-main-cell">
-                              <strong>{supplier.supplierName}</strong>
-                              <span>
-                                {supplier.code} · {supplier.companyType}
+                          <td className="col-entity px-3 py-3 whitespace-nowrap truncate">
+                            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                              <div style={{
+                                width: 34, height: 34, borderRadius: 8, flexShrink: 0,
+                                background: supplierAvatarColor(supplier.supplierName),
+                                display: "flex", alignItems: "center", justifyContent: "center",
+                                color: "white", fontWeight: 700, fontSize: 14,
+                              }}>
+                                {supplier.supplierName.charAt(0).toUpperCase()}
+                              </div>
+                              <div style={{ minWidth: 0 }}>
+                                <div style={{ fontSize: 13, fontWeight: 600, color: "#0F172A", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                  {supplier.supplierName}
+                                </div>
+                                <div style={{ fontSize: 11, color: "#94A3B8", fontFamily: "monospace" }}>
+                                  {supplier.code}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+
+                          <td className="col-code px-3 py-3 whitespace-nowrap truncate">
+                            <span style={{ fontSize: 13, color: "#0F172A" }}>
+                              {supplier.phone || (isArabic ? "بدون هاتف" : "No phone")}
+                            </span>
+                          </td>
+
+                          <td className="col-flex px-3 py-3 whitespace-nowrap truncate">
+                            <span style={{ fontSize: 13, color: "#475569" }}>
+                              {formatLocationDisplay(supplier.city, isArabic)}
+                            </span>
+                          </td>
+
+                          <td className="col-badge px-3 py-3 whitespace-nowrap truncate">
+                            {supplier.category ? (
+                              <span style={{
+                                display: "inline-flex", alignItems: "center",
+                                padding: "3px 10px", borderRadius: 99,
+                                fontSize: 11, fontWeight: 500,
+                                background: getCatBg(supplier.category),
+                                color: getCatColor(supplier.category),
+                                whiteSpace: "nowrap",
+                              }}>
+                                {supplier.category}
                               </span>
-                              <small>{supplier.category}</small>
-                            </div>
+                            ) : (
+                              <span style={{ color: "#94A3B8" }}>—</span>
+                            )}
                           </td>
 
-                          <td>
-                            <div className="supplier-table-cell phone-stack">
-                              <strong className="numeric-cell">
-                                {supplier.phone || (isArabic ? "بدون هاتف" : "No phone")}
-                              </strong>
-                            </div>
+                          <td className="col-currency px-3 py-3 whitespace-nowrap truncate">
+                            <strong className={`balance-cell${supplier.outstandingBalance === 0 ? " zero" : ""}${supplier.outstandingBalance < 0 ? " negative" : ""}`}>
+                              {supplier.outstandingBalance === 0
+                                ? <span style={{ color: "#94A3B8" }}>—</span>
+                                : money(supplier.outstandingBalance)}
+                            </strong>
                           </td>
 
-                          <td>
-                            <div className="supplier-table-cell location-stack">
-                              <strong>{formatLocationDisplay(supplier.city, isArabic)}</strong>
-                            </div>
-                          </td>
-
-                          <td>
-                            <div className="supplier-table-cell balance-stack">
-                              <strong className="balance-cell">
-                                {money(supplier.outstandingBalance)}
-                              </strong>
-                            </div>
-                          </td>
-
-                          <td>
-                            <div className="supplier-table-cell status-stack">
-                              <Badge
-                                variant={
-                                  (
-                                    {
-                                      positive: "success",
-                                      info: "info",
-                                      danger: "danger",
-                                      neutral: "neutral",
-                                    } as const
-                                  )[statusTone(supplier.status)] as BadgeVariant
-                                }
-                                size="sm"
-                                className={`supplier-status-badge ${statusTone(
-                                  supplier.status
-                                )}`}
-                              >
-                                {formatSupplierStatusLabel(supplier.status, isArabic)}
-                              </Badge>
-
-                            </div>
-                          </td>
-
-                          <td className="supplier-actions-cell">
-                            <div className="supplier-actions-menu-wrap">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                type="button"
-                                className={`supplier-sticker-action ${
-                                  menuState?.id === supplier.supplierId ? "active" : ""
-                                }`}
-                                onClick={(event) => {
-                                  event.stopPropagation();
-                                  openMenu(supplier.supplierId, event.currentTarget);
-                                }}
-                                aria-label={isArabic ? "فتح إجراءات المورد" : "Open supplier actions"}
-                                title={isArabic ? "إجراءات" : "Actions"}
-                              >
-                                <MoreHorizontal size={17} />
-                              </Button>
-                            </div>
+                          <td className="col-actions px-3 py-3 whitespace-nowrap" style={{ overflow: "visible" }}>
+                            <TableActions
+                              onView={() => { setDetailSupplierId(supplier.supplierId); setDetailTab("overview"); }}
+                              onEdit={can("suppliers.edit") ? () => openEditModal(supplier.supplierId) : undefined}
+                              onDelete={can("suppliers.delete") ? () => setDeleteConfirmItem({ itemName: supplier.supplierName, onConfirm: () => deleteSupplierItem(supplier.supplierId) }) : undefined}
+                            />
                           </td>
                         </tr>
                       ))}
@@ -1811,58 +1961,7 @@ export default function Suppliers() {
                 </span>
               </div>
             </div>
-          </section>
-
-          <aside className="suppliers-side-column">
-            <section className="side-widget">
-              <div className="side-widget-head">
-                <h3>{isArabic ? "ملخص الموردين" : "Supplier Summary"}</h3>
-                <span>{isArabic ? "هذا الشهر" : "This month"}</span>
-              </div>
-
-              <div className="side-stat-list">
-                <div>
-                  <span>{isArabic ? "إجمالي الموردين" : "Total suppliers"}</span>
-                  <strong>{summary.totalSuppliers}</strong>
-                </div>
-                <div>
-                  <span>{isArabic ? "المفضلون" : "Preferred"}</span>
-                  <strong>{summary.preferred}</strong>
-                </div>
-                <div>
-                  <span>{isArabic ? "المحظورون" : "Blocked"}</span>
-                  <strong>{summary.blocked}</strong>
-                </div>
-                <div>
-                  <span>{isArabic ? "مستحقات مفتوحة" : "Outstanding payables"}</span>
-                  <strong>{money(summary.outstandingPayables)}</strong>
-                </div>
-              </div>
-            </section>
-
-            <section className="side-widget">
-              <div className="side-widget-head">
-                <h3>{isArabic ? "أفضل الموردين" : "Top Suppliers"}</h3>
-                <span>{isArabic ? "حسب قيمة الشراء" : "By purchase value"}</span>
-              </div>
-
-              <div className="top-suppliers-list">
-                {topSuppliers.map((supplier) => (
-                  <div key={supplier.supplierId} className="top-supplier-item">
-                    <div className="top-supplier-row">
-                      <span>{supplier.supplierName}</span>
-                      <strong>{money(supplier.totalPurchased)}</strong>
-                    </div>
-                    <div className="top-supplier-progress">
-                      <div style={{ width: `${supplier.purchaseRatio}%` }} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </section>
-          </aside>
-        </div>
-      </div>
+          </div>
 
       {menuState &&
         menuSupplier &&
@@ -1927,11 +2026,13 @@ export default function Suppliers() {
               className="danger"
               leftIcon={<X size={15} />}
               onClick={() => {
-                setConfirmAction({
-                  type: "delete",
-                  supplierId: menuSupplier.supplierId,
+                setDeleteConfirmItem({
+                  itemName: menuSupplier.supplierName,
+                  onConfirm: () => {
+                    deleteSupplierItem(menuSupplier.supplierId);
+                    setMenuState(null);
+                  },
                 });
-                setMenuState(null);
               }}
             >
               {isArabic ? "حذف المورد" : "Delete Supplier"}
@@ -1972,6 +2073,7 @@ export default function Suppliers() {
                   "notes",
                   "documents",
                   "history",
+                  "policy",
                 ] as DetailTab[]
               ).map((tab) => (
                 <button
@@ -2048,16 +2150,12 @@ export default function Suppliers() {
                     <h3>{isArabic ? "المعلومات المالية" : "Financial Information"}</h3>
                     <dl>
                       <div>
-                        <dt>{isArabic ? "شروط الدفع" : "Payment Terms"}</dt>
-                        <dd>{detailSupplier.paymentTerms}</dd>
-                      </div>
-                      <div>
                         <dt>{isArabic ? "العملة" : "Preferred Currency"}</dt>
                         <dd className="numeric-cell">{detailSupplier.currency}</dd>
                       </div>
                       <div>
                         <dt>{isArabic ? "الرصيد المستحق" : "Outstanding Balance"}</dt>
-                        <dd className="balance-cell">{money(detailSupplier.outstandingBalance)}</dd>
+                        <dd className={`balance-cell${detailSupplier.outstandingBalance === 0 ? " zero" : ""}${detailSupplier.outstandingBalance < 0 ? " negative" : ""}`}>{money(detailSupplier.outstandingBalance)}</dd>
                       </div>
                       <div>
                         <dt>{isArabic ? "إجمالي المشتريات" : "Total Purchased"}</dt>
@@ -2115,12 +2213,12 @@ export default function Suppliers() {
                   <table className="detail-table">
                     <thead>
                       <tr>
-                        <th>PO Number</th>
-                        <th>{t.common.date}</th>
-                        <th>Total</th>
-                        <th>Received</th>
-                        <th>Payment Status</th>
-                        <th>Status</th>
+                        <th className="col-code">PO Number</th>
+                        <th className="col-date">{t.common.date}</th>
+                        <th className="col-currency">Total</th>
+                        <th className="col-num">Received</th>
+                        <th className="col-badge">Payment Status</th>
+                        <th className="col-badge">Status</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -2145,12 +2243,12 @@ export default function Suppliers() {
                   <table className="detail-table">
                     <thead>
                       <tr>
-                        <th>Invoice Number</th>
-                        <th>{t.common.date}</th>
-                        <th>Due Date</th>
-                        <th>{t.common.total}</th>
-                        <th>Remaining</th>
-                        <th>{t.common.status}</th>
+                        <th className="col-code">Invoice Number</th>
+                        <th className="col-date">{t.common.date}</th>
+                        <th className="col-date">Due Date</th>
+                        <th className="col-currency">{t.common.total}</th>
+                        <th className="col-currency">Remaining</th>
+                        <th className="col-badge">{t.common.status}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -2175,11 +2273,11 @@ export default function Suppliers() {
                   <table className="detail-table">
                     <thead>
                       <tr>
-                        <th>Payment Date</th>
-                        <th>{t.common.amount}</th>
-                        <th>{t.common.method}</th>
-                        <th>Reference</th>
-                        <th>{t.common.notes}</th>
+                        <th className="col-date">Payment Date</th>
+                        <th className="col-currency">{t.common.amount}</th>
+                        <th className="col-badge">{t.common.method}</th>
+                        <th className="col-code">Reference</th>
+                        <th className="col-truncate">{t.common.notes}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -2214,11 +2312,11 @@ export default function Suppliers() {
                   <table className="detail-table">
                     <thead>
                       <tr>
-                        <th>{t.common.name}</th>
-                        <th>Role</th>
-                        <th>{t.common.phone}</th>
-                        <th>{t.common.email}</th>
-                        <th>{t.common.notes}</th>
+                        <th className="col-entity">{t.common.name}</th>
+                        <th className="col-flex">Role</th>
+                        <th className="col-code">{t.common.phone}</th>
+                        <th className="col-code">{t.common.email}</th>
+                        <th className="col-truncate">{t.common.notes}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -2263,11 +2361,11 @@ export default function Suppliers() {
                   <table className="detail-table">
                     <thead>
                       <tr>
-                        <th>File Name</th>
-                        <th>Type</th>
-                        <th>Uploaded Date</th>
-                        <th>Uploaded By</th>
-                        <th>{t.suppliers.cols.actions}</th>
+                        <th className="col-entity">File Name</th>
+                        <th className="col-badge">Type</th>
+                        <th className="col-date">Uploaded Date</th>
+                        <th className="col-entity">Uploaded By</th>
+                        <th className="col-actions">{t.suppliers.cols.actions}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -2298,49 +2396,83 @@ export default function Suppliers() {
                   ))}
                 </div>
               )}
+
+              {detailTab === "policy" && (
+                <SupplierPolicyTab
+                  profile={detailSupplier}
+                  isArabic={isArabic}
+                  onSave={(patch) => {
+                    setProfiles((prev) => {
+                      const next = prev.map((p) =>
+                        p.supplierId === detailSupplier.supplierId ? { ...p, ...patch } : p
+                      );
+                      saveProfiles(next);
+                      return next;
+                    });
+                  }}
+                />
+              )}
             </div>
           </aside>
         </div>,
         document.body
       )}
 
-      <SideDrawer
-        isOpen={formOpen}
-        onClose={requestCloseForm}
-        side="left"
-        title={formMode === "add" ? t.suppliers.form.createTitle : t.suppliers.form.editTitle}
-        subtitle={supplierCopy.form.subtitle}
-        closeLabel={supplierCopy.form.closeForm}
-        className="supplier-form-drawer"
-        footer={
-          <>
-            <Button
-              variant="secondary"
-              size="md"
-              type="button"
-              onClick={requestCloseForm}
-            >
-              {t.common.cancel}
-            </Button>
-            <Button
-              variant="secondary"
-              size="md"
-              type="button"
-              onClick={() => saveSupplierForm(true)}
-            >
-              {t.common.saveAsDraft}
-            </Button>
-            <Button
-              variant="primary"
-              size="md"
-              type="button"
-              onClick={() => saveSupplierForm(false)}
-            >
-              {formMode === "add" ? t.suppliers.addSupplier : t.common.save}
-            </Button>
-          </>
-        }
-      >
+      {formOpen && createPortal(
+        <div
+          dir="rtl"
+          style={{
+            position: "fixed", inset: 0, zIndex: 9100,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            background: "rgba(15,23,42,0.48)", backdropFilter: "blur(4px)",
+          }}
+          onClick={() => { if (!discardConfirmOpen) requestCloseForm(); }}
+        >
+          <div
+            style={{
+              background: "white", borderRadius: 20,
+              width: "min(560px, 94vw)", maxHeight: "88vh",
+              display: "flex", flexDirection: "column",
+              boxShadow: "0 25px 60px rgba(0,0,0,0.15)",
+              animation: "supplierModalIn 220ms cubic-bezier(0.16,1,0.3,1) forwards",
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Modal header */}
+            <div style={{
+              position: "sticky", top: 0, zIndex: 1, background: "white",
+              padding: "20px 24px 16px",
+              borderBottom: "1px solid #F1F5F9",
+              display: "flex", justifyContent: "space-between", alignItems: "flex-start",
+              borderRadius: "20px 20px 0 0",
+            }}>
+              <div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: "#0F172A" }}>
+                  {formMode === "add" ? t.suppliers.form.createTitle : t.suppliers.form.editTitle}
+                </div>
+                <div style={{ fontSize: 12, color: "#94A3B8", marginTop: 2 }}>
+                  {supplierCopy.form.subtitle}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={requestCloseForm}
+                aria-label={supplierCopy.form.closeForm}
+                style={{
+                  width: 32, height: 32, borderRadius: "50%", border: "none",
+                  background: "transparent", cursor: "pointer",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  color: "#64748B", transition: "all 150ms ease",
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background = "#FEE2E2"; e.currentTarget.style.color = "#DC2626"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#64748B"; }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Modal body */}
+            <div style={{ flex: 1, overflowY: "auto" }}>
             <div className="supplier-form-body">
               <section className="supplier-form-section">
                 <h3>{supplierCopy.form.basic}</h3>
@@ -2396,44 +2528,64 @@ export default function Suppliers() {
                     />
                   </label>
 
-                  <label className="supplier-field">
+                  <div className="supplier-field full">
                     <span>{t.suppliers.form.category}</span>
-                    <select
-                      className="app-select-control"
-                      value={formState.category}
-                      onChange={(event) =>
-                        setFormState((current) => ({
-                          ...current,
-                          category: event.target.value,
-                        }))
-                      }
-                    >
-                      {categoryOptions.map((category) => (
-                        <option key={category} value={category}>
-                          {category}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 7, marginTop: 6 }}>
+                      {SUPPLIER_CATEGORIES.map(cat => {
+                        const active = formState.category === cat.label;
+                        return (
+                          <button
+                            key={cat.key}
+                            type="button"
+                            style={{
+                              display: "inline-flex", alignItems: "center", gap: 5,
+                              padding: "6px 13px", borderRadius: 99, fontSize: 12,
+                              cursor: "pointer", fontFamily: "inherit",
+                              border: active ? "1.5px solid #2563EB" : "1.5px solid #E2E8F0",
+                              background: active ? "#EFF6FF" : "white",
+                              color: active ? "#1D4ED8" : "#475569",
+                              fontWeight: active ? 600 : 400,
+                              transition: "all 120ms ease",
+                            }}
+                            onClick={() => setFormState(c => ({ ...c, category: cat.label }))}
+                          >
+                            <span>{cat.icon}</span>
+                            <span>{cat.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {!showCustomCatInput && (
+                      <button
+                        type="button"
+                        style={{ marginTop: 8, fontSize: 12, color: "#2563EB", background: "none", border: "none", cursor: "pointer", padding: 0, fontFamily: "inherit" }}
+                        onClick={() => setShowCustomCatInput(true)}
+                      >
+                        + إضافة تصنيف جديد
+                      </button>
+                    )}
+                    {showCustomCatInput && (
+                      <div style={{ display: "flex", gap: 6, marginTop: 8, alignItems: "center" }}>
+                        <input
+                          autoFocus
+                          style={{ flex: 1, height: 34, border: "1px solid #E2E8F0", borderRadius: 8, padding: "0 10px", fontSize: 13, fontFamily: "inherit", outline: "none" }}
+                          placeholder="اسم التصنيف"
+                          value={customCatInput}
+                          onChange={e => setCustomCatInput(e.target.value)}
+                          onKeyDown={e => {
+                            if (e.key === "Enter" && customCatInput.trim()) {
+                              setFormState(c => ({ ...c, category: customCatInput.trim() }));
+                              setCustomCatInput("");
+                              setShowCustomCatInput(false);
+                            }
+                            if (e.key === "Escape") { setShowCustomCatInput(false); setCustomCatInput(""); }
+                          }}
+                        />
+                        <button type="button" style={{ fontSize: 12, color: "#64748B", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit" }} onClick={() => { setShowCustomCatInput(false); setCustomCatInput(""); }}>إلغاء</button>
+                      </div>
+                    )}
+                  </div>
 
-                  <label className="supplier-field">
-                    <span>{t.suppliers.form.status}</span>
-                    <select
-                      className="app-select-control"
-                      value={formState.status}
-                      onChange={(event) =>
-                        setFormState((current) => ({
-                          ...current,
-                          status: event.target.value as SupplierStatus,
-                        }))
-                      }
-                    >
-                      <option value="Active">{formatSupplierStatusLabel("Active", isArabic)}</option>
-                      <option value="Inactive">{formatSupplierStatusLabel("Inactive", isArabic)}</option>
-                      <option value="Preferred">{formatSupplierStatusLabel("Preferred", isArabic)}</option>
-                      <option value="Blocked">{formatSupplierStatusLabel("Blocked", isArabic)}</option>
-                    </select>
-                  </label>
                 </div>
               </section>
 
@@ -2443,18 +2595,36 @@ export default function Suppliers() {
                   <label className="supplier-field">
                     <span>{supplierCopy.form.phoneOrEmail}</span>
                     <input
-                      placeholder={supplierCopy.form.phonePlaceholder}
+                      type="tel"
+                      inputMode="numeric"
+                      maxLength={10}
+                      placeholder="059XXXXXXX"
                       value={formState.phone}
                       onChange={(event) => {
-                        const value = event.target.value;
-                        setFormState((current) => ({
-                          ...current,
-                          phone: value,
-                        }));
-                        setFormErrors((current) => ({
-                          ...current,
-                          phone: undefined,
-                        }));
+                        const digits = event.target.value.replace(/[^0-9]/g, "");
+                        if (digits.length <= 10) {
+                          setFormState((current) => ({ ...current, phone: digits }));
+                          setFormErrors((current) => ({ ...current, phone: undefined }));
+                        }
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.ctrlKey || e.metaKey) return;
+                        const allowed = ["Backspace","Delete","Tab","Enter","ArrowLeft","ArrowRight","ArrowUp","ArrowDown","Home","End"];
+                        if (!allowed.includes(e.key) && !/^\d$/.test(e.key)) e.preventDefault();
+                      }}
+                      onPaste={(e) => {
+                        e.preventDefault();
+                        const pasted = e.clipboardData.getData("text").replace(/[^0-9]/g, "");
+                        const val = (formState.phone + pasted).slice(0, 10);
+                        setFormState((current) => ({ ...current, phone: val }));
+                      }}
+                      style={{
+                        width: "100%", height: 40,
+                        border: `1px solid ${!formState.phone ? "#E2E8F0" : isValidPhone(formState.phone) ? "#BBF7D0" : "#FECACA"}`,
+                        borderRadius: 8, padding: "0 12px", fontSize: 14,
+                        direction: "ltr", textAlign: "left", fontFamily: "monospace",
+                        background: !formState.phone ? "white" : isValidPhone(formState.phone) ? "#F0FDF4" : "#FEF2F2",
+                        outline: "none", transition: "all 150ms ease", boxSizing: "border-box",
                       }}
                     />
                     {formErrors.phone && (
@@ -2515,77 +2685,6 @@ export default function Suppliers() {
               </section>
 
               <section className="supplier-form-section">
-                <h3>{supplierCopy.form.finance}</h3>
-                <div className="supplier-form-grid">
-                  <label className="supplier-field">
-                    <span>{t.suppliers.form.paymentTerms}</span>
-                    <input
-                      list="supplier-payment-term-options"
-                      placeholder={supplierCopy.form.paymentPlaceholder}
-                      value={formState.paymentTerms}
-                      onChange={(event) =>
-                        setFormState((current) => ({
-                          ...current,
-                          paymentTerms: event.target.value,
-                        }))
-                      }
-                    />
-                    <datalist id="supplier-payment-term-options">
-                      {PAYMENT_TERM_PRESETS.map((term) => (
-                        <option key={term} value={term} />
-                      ))}
-                    </datalist>
-                  </label>
-
-                  <label className="supplier-field">
-                    <span>{isArabic ? "العملة" : "Currency"}</span>
-                    <select
-                      className="app-select-control"
-                      value={formState.currency}
-                      onChange={(event) =>
-                        setFormState((current) => ({
-                          ...current,
-                          currency: event.target.value,
-                        }))
-                      }
-                    >
-                      <option>USD</option>
-                      <option>EUR</option>
-                      <option>ILS</option>
-                    </select>
-                  </label>
-
-                  <label className="supplier-field">
-                    <span>{supplierCopy.form.taxNumber}</span>
-                    <input
-                      placeholder={supplierCopy.form.taxPlaceholder}
-                      value={formState.taxNumber}
-                      onChange={(event) =>
-                        setFormState((current) => ({
-                          ...current,
-                          taxNumber: event.target.value,
-                        }))
-                      }
-                    />
-                  </label>
-
-                  <label className="supplier-field">
-                    <span>{supplierCopy.form.registration}</span>
-                    <input
-                      placeholder={supplierCopy.form.registrationPlaceholder}
-                      value={
-                        formState.registrationNumber ||
-                        (!editingSupplierId && formState.companyName.trim()
-                          ? buildNextRegistrationNumber(profiles)
-                          : "")
-                      }
-                      readOnly
-                    />
-                  </label>
-                </div>
-              </section>
-
-              <section className="supplier-form-section">
                 <h3>{t.suppliers.form.notes}</h3>
                 <div className="supplier-form-grid">
                   <label className="supplier-field full">
@@ -2605,11 +2704,33 @@ export default function Suppliers() {
                 </div>
               </section>
             </div>
-      </SideDrawer>
+            </div>
+
+            {/* Modal footer */}
+            <div style={{
+              position: "sticky", bottom: 0, background: "white",
+              borderTop: "1px solid #F1F5F9", padding: "16px 24px",
+              display: "flex", gap: 10, justifyContent: "flex-end",
+              borderRadius: "0 0 20px 20px",
+            }}>
+              <Button variant="secondary" size="md" type="button" onClick={requestCloseForm}>
+                {t.common.cancel}
+              </Button>
+              <Button variant="secondary" size="md" type="button" onClick={() => saveSupplierForm(true)}>
+                {t.common.saveAsDraft}
+              </Button>
+              <Button variant="primary" size="md" type="button" onClick={() => saveSupplierForm(false)}>
+                {formMode === "add" ? t.suppliers.addSupplier : t.common.save}
+              </Button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
 
       {discardConfirmOpen &&
         createPortal(
-          <div className="supplier-overlay supplier-confirm-overlay" onClick={() => setDiscardConfirmOpen(false)}>
+          <div className="supplier-overlay supplier-confirm-overlay" style={{ zIndex: 9200 }} onClick={() => setDiscardConfirmOpen(false)}>
             <div className="supplier-confirm-modal" onClick={(event) => event.stopPropagation()}>
               <div className="supplier-confirm-icon">
                 <AlertTriangle size={22} />
@@ -2640,24 +2761,28 @@ export default function Suppliers() {
           document.body
         )}
 
+      <DeleteConfirmDialog
+        isOpen={!!deleteConfirmItem}
+        itemName={deleteConfirmItem?.itemName ?? ""}
+        onConfirm={() => { const cb = deleteConfirmItem?.onConfirm; setDeleteConfirmItem(null); if (cb) cb(); }}
+        onCancel={() => setDeleteConfirmItem(null)}
+      />
+
       {confirmAction &&
+        confirmAction.type !== "delete" &&
         createPortal(
           <div className="supplier-overlay supplier-confirm-overlay" onClick={() => setConfirmAction(null)}>
             <div className="supplier-confirm-modal" onClick={(event) => event.stopPropagation()}>
               <div className="supplier-confirm-icon">
-                {confirmAction.type === "delete" ? <X size={22} /> : <Archive size={22} />}
+                <Archive size={22} />
               </div>
               <div>
                 <span>Supplier action</span>
                 <h3>
-                  {confirmAction.type === "delete"
-                    ? "Delete this supplier?"
-                    : "Archive this supplier?"}
+                  {"Archive this supplier?"}
                 </h3>
                 <p>
-                  {confirmAction.type === "delete"
-                    ? `This will remove ${confirmSupplier?.supplierName || "this supplier"} from the suppliers table.`
-                    : `${confirmSupplier?.supplierName || "This supplier"} will be marked as archived for your workflow.`}
+                  {`${confirmSupplier?.supplierName || "This supplier"} will be marked as archived for your workflow.`}
                 </p>
               </div>
               <div className="supplier-confirm-actions">
@@ -2670,17 +2795,13 @@ export default function Suppliers() {
                   {t.common.cancel}
                 </Button>
                 <Button
-                  variant={confirmAction.type === "delete" ? "danger" : "primary"}
+                  variant="primary"
                   size="md"
                   type="button"
-                  className={
-                    confirmAction.type === "delete"
-                      ? "supplier-danger-btn"
-                      : "suppliers-primary-btn"
-                  }
+                  className="suppliers-primary-btn"
                   onClick={confirmSupplierAction}
                 >
-                  {confirmAction.type === "delete" ? `${t.common.delete} ${t.suppliers.cols.supplier}` : `${t.common.archived} ${t.suppliers.cols.supplier}`}
+                  {`${t.common.archived} ${t.suppliers.cols.supplier}`}
                 </Button>
               </div>
             </div>

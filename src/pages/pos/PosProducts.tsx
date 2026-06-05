@@ -149,17 +149,17 @@ export default function PosProducts() {
             <table className={`${styles.table} atlas-table`}>
               <colgroup>
                 <col />
-                <col className="col-w-100" />
-                <col className="col-w-110" />
-                <col className="col-currency col-w-120" />
-                <col className="col-w-90" />
-                <col className="col-w-90" />
-                <col className="col-actions" />
+                <col />
+                <col />
+                <col />
+                <col />
+                <col />
+                <col />
               </colgroup>
               <thead>
                 <tr>
                   <th>{tc.cols.name}</th>
-                  <th className="col-code">ID</th>
+                  <th className="col-code">{tc.cols.sku}</th>
                   <th>{tc.cols.category}</th>
                   <th className="col-num">{tc.cols.price}</th>
                   <th className="col-num">{tc.cols.stock}</th>

@@ -89,18 +89,18 @@ export default function FactoryCosting() {
             <table className={styles.table}>
               <thead>
                 <tr>
-                  <th>{tc.cols.costId}</th>
-                  <th>{tc.cols.order}</th>
-                  <th>{tc.cols.product}</th>
-                  <th>{tc.cols.period}</th>
-                  <th className={styles.numEnd}>{tc.cols.rawMaterial}</th>
-                  <th className={styles.numEnd}>{tc.cols.labor}</th>
-                  <th className={styles.numEnd}>{tc.cols.overhead}</th>
-                  <th className={styles.numEnd}>{tc.cols.total}</th>
-                  <th className={styles.numEnd}>{tc.cols.units}</th>
-                  <th className={styles.numEnd}>{tc.cols.perUnit}</th>
-                  <th className={styles.numEnd}>{tc.cols.variance}</th>
-                  <th className={styles.numEnd}>{tc.cols.liveBomCost}</th>
+                  <th className="col-code">{tc.cols.costId}</th>
+                  <th className="col-entity">{tc.cols.order}</th>
+                  <th className="col-entity">{tc.cols.product}</th>
+                  <th className="col-date">{tc.cols.period}</th>
+                  <th className="col-currency">{tc.cols.rawMaterial}</th>
+                  <th className="col-currency">{tc.cols.labor}</th>
+                  <th className="col-currency">{tc.cols.overhead}</th>
+                  <th className="col-currency">{tc.cols.total}</th>
+                  <th className="col-num">{tc.cols.units}</th>
+                  <th className="col-currency">{tc.cols.perUnit}</th>
+                  <th className="col-currency">{tc.cols.variance}</th>
+                  <th className="col-currency">{tc.cols.liveBomCost}</th>
                 </tr>
               </thead>
               <tbody>

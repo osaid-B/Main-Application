@@ -24,6 +24,7 @@
 
 .tableWrap { background: var(--app-surface); border: 1px solid var(--app-border); border-radius: var(--app-radius-lg); overflow-x: auto; box-shadow: var(--app-shadow-soft); }
 .table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 12px; }
+.table th, .table td { width: calc(100% / 7) !important; }
 .table thead { background: var(--app-surface-muted); }
 .table th { text-align: start; padding: 10px 14px; font-size: 10px; font-weight: 600; color: var(--app-text-muted); letter-spacing: .04em; text-transform: uppercase; border-bottom: 1px solid var(--app-border); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .table td { padding: 11px 14px; border-bottom: 1px solid var(--app-border); vertical-align: middle; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

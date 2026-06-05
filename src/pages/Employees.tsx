@@ -1,2061 +1,1244 @@
-import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { numericInputProps } from "../lib/inputUtils";
+import { BaseModal } from "../components/ui/BaseModal";
 import "./Employees.css";
 import { useSettings } from "../context/SettingsContext";
 import {
-  BarChart2,
-  Calendar,
-  ChevronLeft,
-  ChevronRight,
-  CreditCard,
-  DollarSign,
-  Download,
-  Eye,
-  FileText,
-  Filter,
-  MoreVertical,
-  Pencil,
-  RotateCcw,
+  Clock,
+  Plus,
   Search,
-  Send,
-  Trash2,
-  TrendingUp,
-  Upload,
-  UserCheck,
-  UserX,
   Users,
-  Wallet,
+  X,
 } from "lucide-react";
 import { Button } from "../components/ui/Button";
+import { TableActions } from "../components/ui/TableActions";
+import { DeleteConfirmDialog } from "../components/ui/DeleteConfirmDialog";
 import { useData } from "../context/DataContext";
 import type {
-  Employee,
-  EmployeeAdvance,
-  SalaryType,
   DailyAttendanceEntry,
   DailyAttendanceStatus,
+  ContractType,
+  Employee,
+  EmployeeAdvance,
+  EmployeeGender,
 } from "../data/types";
-import { formatDateValue } from "../utils/displayFormatters";
+import { formatCurrencyValue } from "../utils/displayFormatters";
+import { PALESTINIAN_GOVERNORATES } from "../config/palestineConfig";
+
+// ─── Types ───────────────────────────────────────────────────────────────────
 
 type EmployeeForm = {
-  name: string;
-  phone: string;
-  workStart: string;
-  workEnd: string;
-  salaryType: SalaryType;
-  hourlyRate: string;
-  fixedSalary: string;
-  notes: string;
-  departmentId: string;
+  name: string; phone: string; nationalId: string; birthDate: string;
+  gender: EmployeeGender; city: string; jobTitle: string; departmentId: string;
+  hireDate: string; contractType: ContractType; fixedSalary: string;
+  workStart: string; workEnd: string; annualLeave: string;
+  transportation: string; housing: string; notes: string;
 };
 
 type EmployeeFormErrors = {
-  name?: string;
-  phone?: string;
-  workStart?: string;
-  workEnd?: string;
-  hourlyRate?: string;
-  fixedSalary?: string;
+  name?: string; phone?: string; nationalId?: string;
+  jobTitle?: string; departmentId?: string; fixedSalary?: string;
 };
 
-type ToastState = {
-  message: string;
-  type: "success" | "error" | "warning" | "info";
-} | null;
+type ToastState = { message: string; type: "success" | "error" | "warning" | "info" } | null;
+type StatusFilter = DailyAttendanceStatus | "all";
+type ModalState = { type: "add" | "edit" | "view" | null; employeeId?: string };
 
-type DeleteDialogState =
-  | {
-      employeeId: string;
-      employeeName: string;
-      confirmText: string;
-    }
-  | null;
-
-type MainTab = "today" | "monthly" | "reports" | "employees";
-type AttendanceRange = "today" | "week" | "month";
-type MonthlyViewMode = "week" | "month";
-
-type ReportSortKey =
-  | "name"
-  | "present"
-  | "late"
-  | "absent"
-  | "halfDay"
-  | "leave"
-  | "totalHours"
-  | "gross"
-  | "advance"
-  | "net";
-
-type ReportSortDirection = "asc" | "desc";
-
-type MonthlyEditorState =
-  | {
-      employeeId: string;
-      employeeName: string;
-      date: string;
-      status: DailyAttendanceStatus;
-      workedHours: string;
-      advanceAmount: string;
-      notes: string;
-    }
-  | null;
+// ─── Constants ────────────────────────────────────────────────────────────────
 
 const EMPTY_FORM: EmployeeForm = {
-  name: "",
-  phone: "",
-  workStart: "08:00",
-  workEnd: "17:00",
-  salaryType: "hourly",
-  hourlyRate: "10",
-  fixedSalary: "0",
-  notes: "",
-  departmentId: "",
+  name: "", phone: "", nationalId: "", birthDate: "", gender: "male", city: "",
+  jobTitle: "", departmentId: "", hireDate: new Date().toISOString().slice(0, 10),
+  contractType: "full-time", fixedSalary: "0", workStart: "08:00", workEnd: "17:00",
+  annualLeave: "14", transportation: "0", housing: "0", notes: "",
 };
 
-const DELETE_CONFIRMATION_CODE = "123";
-
-const DAILY_STATUS_OPTIONS: Array<{
-  value: DailyAttendanceStatus;
-  label: string;
-}> = [
-  { value: "present", label: "Present" },
-  { value: "late", label: "Late" },
-  { value: "absent", label: "Absent" },
-  { value: "half-day", label: "Half Day" },
-  { value: "leave", label: "Leave" },
+const AVATAR_THEMES = [
+  { bg: "linear-gradient(135deg, #60A5FA 0%, #2563EB 100%)", ring: "rgba(191,219,254,0.9)" },
+  { bg: "linear-gradient(135deg, #4ADE80 0%, #059669 100%)", ring: "rgba(187,247,208,0.9)" },
+  { bg: "linear-gradient(135deg, #FBBF24 0%, #F97316 100%)", ring: "rgba(253,230,138,0.9)" },
+  { bg: "linear-gradient(135deg, #C084FC 0%, #7C3AED 100%)", ring: "rgba(233,213,255,0.9)" },
+  { bg: "linear-gradient(135deg, #FB7185 0%, #DB2777 100%)", ring: "rgba(254,205,211,0.9)" },
 ];
 
-const DAILY_STATUS_SHORT_LABELS: Record<DailyAttendanceStatus, string> = {
-  present: "P",
-  late: "L",
-  absent: "A",
-  "half-day": "H",
-  leave: "V",
-  leave_pending: "?",
+const STATUS_CONFIG: Record<string, { bg: string; color: string; label: string }> = {
+  present:      { bg: "#dcfce7", color: "#15803d", label: "حاضر" },
+  late:         { bg: "#fef3c7", color: "#b45309", label: "متأخر" },
+  absent:       { bg: "#fee2e2", color: "#b91c1c", label: "غائب" },
+  leave:        { bg: "#dbeafe", color: "#1d4ed8", label: "إجازة" },
+  leave_pending:{ bg: "#fef9c3", color: "#a16207", label: "قيد الإجازة" },
+  "half-day":   { bg: "#f3e8ff", color: "#6d28d9", label: "نصف يوم" },
 };
 
-const DAILY_STATUS_CLASS_MAP: Record<DailyAttendanceStatus, string> = {
-  present: "is-present",
-  late: "is-late",
-  absent: "is-absent",
-  "half-day": "is-half-day",
-  leave: "is-leave",
-  leave_pending: "is-leave",
-};
+const MINI_BAR_WEIGHTS = [0.55, 0.70, 0.60, 0.85, 0.72, 0.90, 1.0];
 
-const EMP_AVATAR_COLORS = [
-  "#2563eb", "#7c3aed", "#0891b2", "#059669",
-  "#d97706", "#dc2626", "#db2777", "#65a30d",
-];
-
-function getEmpAvatarBg(name: string) {
-  let h = 0;
-  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) & 0xffff;
-  return EMP_AVATAR_COLORS[h % EMP_AVATAR_COLORS.length];
-}
-
-function getEmpInitials(name: string) {
-  return (
-    name.trim().split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("") || "?"
-  );
-}
-
-function getShiftLabel(workStart: string): "Morning" | "Evening" | "Night" {
-  const [h] = workStart.split(":").map(Number);
-  if (h >= 6 && h < 14) return "Morning";
-  if (h >= 14 && h < 22) return "Evening";
-  return "Night";
-}
-
-const timeToMinutes = (time: string) => {
-  const [h, m] = time.split(":").map(Number);
-  return h * 60 + m;
-};
-
-const calculateShiftHours = (start: string, end: string) => {
-  const diff = timeToMinutes(end) - timeToMinutes(start);
-  return Math.max(diff / 60, 0);
-};
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const getTodayDate = () => new Date().toISOString().slice(0, 10);
+const getAvatarTheme = (name: string) => AVATAR_THEMES[(name[0]?.charCodeAt(0) ?? 0) % 5];
+const getEmpInitials = (name: string) =>
+  name.trim().split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("") || "?";
 
-
-function getStartOfWeek(date = new Date()) {
-  const d = new Date(date);
-  const day = d.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  d.setDate(d.getDate() + diff);
-  d.setHours(0, 0, 0, 0);
-  return d;
+function getDailyAttendanceEntries(emp: Employee): DailyAttendanceEntry[] {
+  return Array.isArray(emp.dailyAttendance) ? emp.dailyAttendance : [];
+}
+function getDailyAttendanceEntryByDate(emp: Employee, date: string) {
+  return getDailyAttendanceEntries(emp).find((e) => e.date === date);
+}
+function getEmployeeAdvances(emp: Employee): EmployeeAdvance[] {
+  return Array.isArray(emp.advances) ? emp.advances : [];
+}
+function getUnpaidAdvancesTotal(emp: Employee): number {
+  return getEmployeeAdvances(emp).reduce((s, a) => s + Number(a.amount || 0), 0);
+}
+function getLeaveBalance(emp: Employee): number {
+  const used = getDailyAttendanceEntries(emp).filter((e) => e.status === "leave").length;
+  return Math.max(0, 14 - used);
+}
+function getDailyWage(emp: Employee): number { return (emp.fixedSalary ?? 0) / 22; }
+function getTodayStatus(emp: Employee): DailyAttendanceStatus | "none" {
+  return getDailyAttendanceEntryByDate(emp, getTodayDate())?.status || "none";
 }
 
-function getStartOfMonth(date = new Date()) {
-  const d = new Date(date.getFullYear(), date.getMonth(), 1);
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
+const DEPT_COLORS = [
+  { bg: "#E0F2FE", text: "#0369A1" }, { bg: "#FCE7F3", text: "#BE185D" },
+  { bg: "#D1FAE5", text: "#047857" }, { bg: "#FEF3C7", text: "#B45309" },
+  { bg: "#EDE9FE", text: "#6D28D9" }, { bg: "#FEE2E2", text: "#B91C1C" },
+  { bg: "#DBEAFE", text: "#1D4ED8" }, { bg: "#F5F5F4", text: "#44403C" },
+];
+// ─── useCountUp ───────────────────────────────────────────────────────────────
 
-function isDateInRange(dateStr: string, range: AttendanceRange) {
-  const target = new Date(`${dateStr}T00:00:00`);
-  const today = new Date();
-  today.setHours(23, 59, 59, 999);
-
-  if (range === "today") return dateStr === getTodayDate();
-  if (range === "week") return target >= getStartOfWeek() && target <= today;
-  return target >= getStartOfMonth() && target <= today;
-}
-
-function getRangeTitle(range: AttendanceRange) {
-  if (range === "today") return "Today";
-  if (range === "week") return "This Week";
-  return "This Month";
-}
-
-function getAttendanceRangeLabel(range: AttendanceRange) {
-  if (range === "today") return "today";
-  if (range === "week") return "this-week";
-  return "this-month";
-}
-
-function getMonthDays(baseDate: string) {
-  const ref = new Date(`${baseDate}T00:00:00`);
-  const year = ref.getFullYear();
-  const month = ref.getMonth();
-  const lastDay = new Date(year, month + 1, 0).getDate();
-
-  const days = Array.from({ length: lastDay }, (_, index) => {
-    const day = index + 1;
-    const date = new Date(year, month, day).toISOString().slice(0, 10);
-    const dow = new Date(year, month, day).getDay();
-    return { day, date, dow };
-  });
-
-  return {
-    monthLabel: formatDateValue(ref, { month: "long", year: "numeric" }, "en-US"),
-    days,
-  };
-}
-
-function groupDaysIntoWeeks(days: Array<{ day: number; date: string; dow: number }>) {
-  const weeks: Array<Array<{ day: number; date: string; dow: number }>> = [];
-  for (let index = 0; index < days.length; index += 7) {
-    weeks.push(days.slice(index, index + 7));
-  }
-  return weeks;
-}
-
-function downloadTextFile(filename: string, content: string, type = "text/plain") {
-  const blob = new Blob([content], { type });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
-}
-
-function toCsvValue(value: string | number) {
-  const stringValue = String(value ?? "");
-  const escaped = stringValue.replace(/"/g, '""');
-  return `"${escaped}"`;
-}
-
-function validateEmployeeForm(values: EmployeeForm): EmployeeFormErrors {
-  const errors: EmployeeFormErrors = {};
-  if (!values.name.trim()) errors.name = "Employee name is required.";
-  if (!values.phone.trim()) {
-    errors.phone = "Phone number is required.";
-  } else if (!(values.phone.startsWith("059") || values.phone.startsWith("056"))) {
-    errors.phone = "Phone number must start with 059 or 056.";
-  } else if (values.phone.length !== 10) {
-    errors.phone = "Phone number must be exactly 10 digits.";
-  }
-  if (!values.workStart) errors.workStart = "Work start time is required.";
-  if (!values.workEnd) {
-    errors.workEnd = "Work end time is required.";
-  } else if (values.workStart && timeToMinutes(values.workEnd) <= timeToMinutes(values.workStart)) {
-    errors.workEnd = "Work end time must be later than work start time.";
-  }
-  if (values.salaryType === "hourly") {
-    if (values.hourlyRate === "") {
-      errors.hourlyRate = "Hourly rate is required.";
-    } else if (Number.isNaN(Number(values.hourlyRate)) || Number(values.hourlyRate) < 0) {
-      errors.hourlyRate = "Hourly rate must be a valid positive number.";
-    }
-  }
-  if (values.salaryType === "fixed") {
-    if (values.fixedSalary === "") {
-      errors.fixedSalary = "Fixed salary is required.";
-    } else if (Number.isNaN(Number(values.fixedSalary)) || Number(values.fixedSalary) < 0) {
-      errors.fixedSalary = "Fixed salary must be a valid positive number.";
-    }
-  }
-  return errors;
-}
-
-function getEmployeeAdvances(employee: Employee): EmployeeAdvance[] {
-  return Array.isArray(employee.advances) ? employee.advances : [];
-}
-
-function getDailyAttendanceEntries(employee: Employee): DailyAttendanceEntry[] {
-  return Array.isArray(employee.dailyAttendance) ? employee.dailyAttendance : [];
-}
-
-function getDailyAttendanceEntryByDate(employee: Employee, date: string) {
-  return getDailyAttendanceEntries(employee).find((item) => item.date === date);
-}
-
-function getDefaultWorkedHours(employee: Employee, status: DailyAttendanceStatus) {
-  const fullShift = calculateShiftHours(employee.workStart, employee.workEnd);
-  if (status === "absent" || status === "leave") return 0;
-  if (status === "half-day") return Number((fullShift / 2).toFixed(2));
-  return Number(fullShift.toFixed(2));
-}
-
-function getStatusLabel(status: DailyAttendanceStatus) {
-  return DAILY_STATUS_OPTIONS.find((item) => item.value === status)?.label || status;
-}
-
-function upsertDailyAttendance(employee: Employee, entry: DailyAttendanceEntry): Employee {
-  const currentEntries = getDailyAttendanceEntries(employee);
-  const existingIndex = currentEntries.findIndex((item) => item.date === entry.date);
-  const nextEntries =
-    existingIndex >= 0
-      ? currentEntries.map((item, index) => (index === existingIndex ? entry : item))
-      : [entry, ...currentEntries];
-  return { ...employee, dailyAttendance: nextEntries };
-}
-
-function getDailyAttendanceSummaryForRange(employee: Employee, range: AttendanceRange) {
-  const entries = getDailyAttendanceEntries(employee).filter((item) =>
-    isDateInRange(item.date, range)
+function useCountUp(target: number, duration = 900) {
+  const [reduced] = useState(() =>
+    typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches
   );
-  return entries.reduce(
-    (acc, item) => {
-      if (item.status === "present") acc.present += 1;
-      if (item.status === "late") acc.late += 1;
-      if (item.status === "absent") acc.absent += 1;
-      if (item.status === "half-day") acc.halfDay += 1;
-      if (item.status === "leave") acc.leave += 1;
-      acc.totalHours += Number(item.workedHours || 0);
-      acc.advance += Number(item.advanceAmount || 0);
-      return acc;
-    },
-    { present: 0, late: 0, absent: 0, halfDay: 0, leave: 0, totalHours: 0, advance: 0 }
-  );
-}
-
-function getEmployeePayrollForRange(employee: Employee, range: AttendanceRange) {
-  const summary = getDailyAttendanceSummaryForRange(employee, range);
-  const gross =
-    employee.salaryType === "hourly"
-      ? summary.totalHours * Number(employee.hourlyRate || 0)
-      : Number(employee.fixedSalary || 0);
-  const net = gross - summary.advance;
-  return { totalHours: summary.totalHours, gross, advance: summary.advance, net };
-}
-
-function getEmployeeReportRow(employee: Employee, range: AttendanceRange) {
-  const summary = getDailyAttendanceSummaryForRange(employee, range);
-  const payroll = getEmployeePayrollForRange(employee, range);
-  return {
-    id: employee.id,
-    name: employee.name,
-    phone: employee.phone,
-    present: summary.present,
-    late: summary.late,
-    absent: summary.absent,
-    halfDay: summary.halfDay,
-    leave: summary.leave,
-    totalHours: summary.totalHours,
-    gross: payroll.gross,
-    advance: payroll.advance,
-    net: payroll.net,
-  };
-}
-
-// ─── Modals (unchanged) ───────────────────────────────────────────────────────
-
-function EmployeeFormModal({
-  title, description, values, errors, onChange, onClose, onSubmit, submitLabel,
-}: {
-  title: string;
-  description: string;
-  values: EmployeeForm;
-  errors: EmployeeFormErrors;
-  onChange: (field: keyof EmployeeForm, value: string) => void;
-  onClose: () => void;
-  onSubmit: () => void;
-  submitLabel: string;
-}) {
-  const { t } = useSettings();
-  const { departments } = useData();
-  return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-card employees-modal-card" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <div>
-            <h2>{title}</h2>
-            <p>{description}</p>
-          </div>
-          <Button variant="icon" size="md" aria-label="Close" onClick={onClose}>×</Button>
-        </div>
-        <form className="modal-form" onSubmit={(e) => { e.preventDefault(); onSubmit(); }}>
-          <div className="employees-form-grid">
-            <div>
-              <label className="modal-label">{t.employees.form.name}</label>
-              <input className="modal-input" type="text" value={values.name} onChange={(e) => onChange("name", e.target.value)} />
-              {errors.name && <p className="form-error">{errors.name}</p>}
-            </div>
-            <div>
-              <label className="modal-label">{t.employees.form.phone}</label>
-              <input className="modal-input" type="text" value={values.phone} onChange={(e) => onChange("phone", e.target.value.replace(/\D/g, "").slice(0, 10))} />
-              {errors.phone && <p className="form-error">{errors.phone}</p>}
-            </div>
-            <div>
-              <label className="modal-label">{t.employees.form.workStart}</label>
-              <input className="modal-input" type="time" value={values.workStart} onChange={(e) => onChange("workStart", e.target.value)} />
-              {errors.workStart && <p className="form-error">{errors.workStart}</p>}
-            </div>
-            <div>
-              <label className="modal-label">{t.employees.form.workEnd}</label>
-              <input className="modal-input" type="time" value={values.workEnd} onChange={(e) => onChange("workEnd", e.target.value)} />
-              {errors.workEnd && <p className="form-error">{errors.workEnd}</p>}
-            </div>
-            <div>
-              <label className="modal-label">{t.employees.form.salaryType}</label>
-              <select className="modal-input" value={values.salaryType} onChange={(e) => onChange("salaryType", e.target.value as SalaryType)}>
-                <option value="hourly">{t.employees.salaryType.hourly}</option>
-                <option value="fixed">{t.employees.salaryType.fixed}</option>
-              </select>
-            </div>
-            {values.salaryType === "hourly" ? (
-              <div>
-                <label className="modal-label">{t.employees.form.hourlyRate}</label>
-                <input className="modal-input" type="number" min="0" step="1" value={values.hourlyRate} onChange={(e) => onChange("hourlyRate", e.target.value)} />
-                {errors.hourlyRate && <p className="form-error">{errors.hourlyRate}</p>}
-              </div>
-            ) : (
-              <div>
-                <label className="modal-label">{t.employees.form.fixedSalary}</label>
-                <input className="modal-input" type="number" min="0" step="1" value={values.fixedSalary} onChange={(e) => onChange("fixedSalary", e.target.value)} />
-                {errors.fixedSalary && <p className="form-error">{errors.fixedSalary}</p>}
-              </div>
-            )}
-            <div>
-              <label className="modal-label">{t.employees.form.department ?? "Department"}</label>
-              <select className="modal-input" value={values.departmentId} onChange={(e) => onChange("departmentId", e.target.value)}>
-                <option value="">{t.departments?.form?.none ?? "—"}</option>
-                {departments.filter((d) => d.status === "active").map((d) => (
-                  <option key={d.id} value={d.id}>{d.name}</option>
-                ))}
-              </select>
-            </div>
-            <div className="employees-form-grid-full">
-              <label className="modal-label">{t.employees.form.notes}</label>
-              <textarea className="modal-input" rows={4} value={values.notes} onChange={(e) => onChange("notes", e.target.value)} />
-            </div>
-          </div>
-          <div className="modal-actions">
-            <Button variant="secondary" size="md" onClick={onClose}>{t.common.cancel}</Button>
-            <Button variant="primary" size="md" type="submit">{submitLabel}</Button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
-
-function DeleteConfirmModal({
-  state, onChange, onClose, onConfirm,
-}: {
-  state: NonNullable<DeleteDialogState>;
-  onChange: (value: string) => void;
-  onClose: () => void;
-  onConfirm: () => void;
-}) {
-  const { t } = useSettings();
-  const isValid = state.confirmText === DELETE_CONFIRMATION_CODE;
-  return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-card confirm-dialog-card employees-danger-modal" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <div>
-            <h2>{t.employees.delete.title}</h2>
-            <p>Danger zone</p>
-          </div>
-          <Button variant="icon" size="md" aria-label="Close" onClick={onClose}>×</Button>
-        </div>
-        <div className="employees-confirm-body">
-          <p className="employees-danger-text">
-            You are about to permanently delete <strong>{state.employeeName}</strong>.
-          </p>
-          <label className="modal-label">Type <strong>{DELETE_CONFIRMATION_CODE}</strong> to confirm</label>
-          <input className="modal-input" type="text" value={state.confirmText} onChange={(e) => onChange(e.target.value)} />
-        </div>
-        <div className="modal-actions">
-          <Button variant="secondary" size="md" onClick={onClose}>{t.common.cancel}</Button>
-          <Button variant="danger" size="md" disabled={!isValid} onClick={onConfirm} style={{ opacity: isValid ? 1 : 0.5, cursor: isValid ? "pointer" : "not-allowed" }}>
-            {t.common.delete}
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function MonthlyAttendanceEditorModal({
-  state, employee, onClose, onSave,
-}: {
-  state: NonNullable<MonthlyEditorState>;
-  employee: Employee;
-  onClose: () => void;
-  onSave: (payload: { employeeId: string; date: string; status: DailyAttendanceStatus; workedHours: number; advanceAmount: number; notes?: string }) => void;
-}) {
-  const { t } = useSettings();
-  const [status, setStatus] = useState<DailyAttendanceStatus>(state.status);
-  const [workedHours, setWorkedHours] = useState(state.workedHours);
-  const [advanceAmount, setAdvanceAmount] = useState(state.advanceAmount);
-  const [notes, setNotes] = useState(state.notes);
-
+  const [display, setDisplay] = useState(reduced ? target : 0);
   useEffect(() => {
-    setStatus(state.status);
-    setWorkedHours(state.workedHours);
-    setAdvanceAmount(state.advanceAmount);
-    setNotes(state.notes);
-  }, [state]);
+    if (reduced) return;
+    let start: number | null = null;
+    function tick(now: number) {
+      if (!start) start = now;
+      const t = Math.min((now - start) / duration, 1);
+      const eased = 1 - Math.pow(1 - t, 3);
+      setDisplay(Math.round(eased * target));
+      if (t < 1) requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  }, [target, duration, reduced]);
+  return display;
+}
 
-  return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-card confirm-dialog-card" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <div>
-            <h2>{state.employeeName}</h2>
-            <p>{state.date}</p>
-          </div>
-          <Button variant="icon" size="md" aria-label="Close" onClick={onClose}>×</Button>
+// ─── EmployeeModal (portal wrapper) ──────────────────────────────────────────
+
+function EmployeeModal({
+  isOpen, onClose, title, children, footer, width = "600px",
+}: {
+  isOpen: boolean; onClose: () => void; title: string;
+  children: React.ReactNode; footer?: React.ReactNode; width?: string;
+}) {
+  useEffect(() => {
+    if (!isOpen) return;
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [isOpen, onClose]);
+
+  if (!isOpen) return null;
+
+  return createPortal(
+    <div
+      style={{
+        position: "fixed", inset: 0, zIndex: 9000,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        backgroundColor: "rgba(15,23,42,0.5)", backdropFilter: "blur(4px)",
+        WebkitBackdropFilter: "blur(4px)",
+      }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div
+        style={{
+          background: "white", borderRadius: 20,
+          width, maxWidth: "92vw", maxHeight: "88vh",
+          display: "flex", flexDirection: "column",
+          boxShadow: "0 25px 60px rgba(0,0,0,0.18)",
+          animation: "empModalIn 220ms cubic-bezier(0.16,1,0.3,1) forwards",
+          overflow: "hidden",
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div style={{
+          padding: "20px 24px 16px", borderBottom: "1px solid #F1F5F9",
+          display: "flex", justifyContent: "space-between", alignItems: "center",
+          flexShrink: 0, direction: "rtl",
+        }}>
+          <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: "#0F172A" }}>{title}</h2>
+          <button
+            onClick={onClose}
+            style={{
+              width: 32, height: 32, borderRadius: 8, border: "none",
+              background: "transparent", cursor: "pointer", fontSize: 18,
+              color: "#94A3B8", display: "flex", alignItems: "center", justifyContent: "center",
+              flexShrink: 0,
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = "#FEF2F2"; e.currentTarget.style.color = "#DC2626"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#94A3B8"; }}
+          >✕</button>
         </div>
-        <div className="modal-form">
-          <div>
-            <label className="modal-label">{t.common.status}</label>
-            <select className="modal-input" value={status} onChange={(e) => { const s = e.target.value as DailyAttendanceStatus; setStatus(s); setWorkedHours(String(getDefaultWorkedHours(employee, s))); }}>
-              {DAILY_STATUS_OPTIONS.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="modal-label">{t.employees.cols.workHours}</label>
-            <input className="modal-input" type="number" min="0" step="0.25" value={workedHours} onChange={(e) => setWorkedHours(e.target.value)} />
-          </div>
-          <div>
-            <label className="modal-label">{t.employees.cols.advance}</label>
-            <input className="modal-input" type="number" min="0" step="1" value={advanceAmount} onChange={(e) => setAdvanceAmount(e.target.value)} />
-          </div>
-          <div>
-            <label className="modal-label">{t.employees.form.notes}</label>
-            <textarea className="modal-input" rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} />
-          </div>
-          <div className="modal-actions">
-            <Button variant="secondary" size="md" onClick={onClose}>{t.common.cancel}</Button>
-            <Button variant="primary" size="md" onClick={() => onSave({ employeeId: state.employeeId, date: state.date, status, workedHours: Number(workedHours || 0), advanceAmount: Number(advanceAmount || 0), notes: notes.trim() || undefined })}>
-              {t.common.save}
-            </Button>
-          </div>
+        {/* Body */}
+        <div style={{ overflowY: "auto", flex: 1, padding: "20px 24px" }} dir="rtl">
+          {children}
         </div>
+        {/* Footer */}
+        {footer && (
+          <div style={{
+            padding: "16px 24px", borderTop: "1px solid #F1F5F9",
+            flexShrink: 0, direction: "rtl",
+          }}>
+            {footer}
+          </div>
+        )}
       </div>
-    </div>
+      <style>{`
+        @keyframes empModalIn {
+          from { opacity: 0; transform: scale(0.94); }
+          to   { opacity: 1; transform: scale(1); }
+        }
+      `}</style>
+    </div>,
+    document.body,
   );
 }
 
-// ─── Donut chart helper ───────────────────────────────────────────────────────
+// ─── StatCards ────────────────────────────────────────────────────────────────
 
-function DonutChart({ present, late, absent, total }: { present: number; late: number; absent: number; total: number }) {
-  if (total === 0) {
-    return (
-      <div className="emp-donut-empty">
-        <svg viewBox="0 0 100 100" width="130" height="130">
-          <circle cx="50" cy="50" r="38" fill="none" stroke="#e2e8f0" strokeWidth="14" />
+function StatCards({ stats }: { stats: { total: number; present: number; late: number; absent: number } }) {
+  const totalDisplay   = useCountUp(stats.total);
+  const presentDisplay = useCountUp(stats.present);
+  const lateDisplay    = useCountUp(stats.late);
+  const absentDisplay  = useCountUp(stats.absent);
+  const safeTotal = stats.total || 1;
+
+  return (
+    <div className="emp-stat-grid">
+      <div className="emp-stat-card emp-stat-card--ring" style={{ animationDelay: "240ms" }}>
+        <div className="emp-stat-body">
+          <span className="emp-stat-label">غائب</span>
+          <strong className="emp-stat-value" style={{ color: "#DC2626" }}>{absentDisplay.toLocaleString()}</strong>
+          <span className="emp-stat-sublabel">من {stats.total} موظف</span>
+        </div>
+        <svg viewBox="0 0 120 120" width="90" height="90" style={{ flexShrink: 0 }}>
+          <circle cx="60" cy="60" r="45" fill="none" stroke="#FEE2E2" strokeWidth="12" />
+          <circle cx="60" cy="60" r="45" fill="none" stroke="#DC2626" strokeWidth="12" strokeLinecap="round"
+            strokeDasharray={`${(stats.absent / safeTotal) * 283} 283`} transform="rotate(-90 60 60)"
+            style={{ transition: "stroke-dasharray 800ms ease-out" }} />
+          <text x="60" y="60" textAnchor="middle" dominantBaseline="middle" fontSize="18" fontWeight="bold" fill="#DC2626">{stats.absent}</text>
         </svg>
       </div>
-    );
-  }
-  const r = 38;
-  const circ = 2 * Math.PI * r;
-  const presentArc = (present / total) * circ;
-  const lateArc = (late / total) * circ;
-  const absentArc = (absent / total) * circ;
-  const restArc = circ - presentArc - lateArc - absentArc;
-  const presentOffset = circ * 0.25;
-  const lateOffset = presentOffset - presentArc;
-  const absentOffset = lateOffset - lateArc;
-  const restOffset = absentOffset - absentArc;
-  return (
-    <svg viewBox="0 0 100 100" width="130" height="130" style={{ transform: "rotate(-90deg)" }}>
-      <circle cx="50" cy="50" r={r} fill="none" stroke="#f1f5f9" strokeWidth="14" />
-      {presentArc > 0 && (
-        <circle cx="50" cy="50" r={r} fill="none" stroke="#16a34a" strokeWidth="14"
-          strokeDasharray={`${presentArc} ${circ}`} strokeDashoffset={presentOffset} />
-      )}
-      {lateArc > 0 && (
-        <circle cx="50" cy="50" r={r} fill="none" stroke="#f59e0b" strokeWidth="14"
-          strokeDasharray={`${lateArc} ${circ}`} strokeDashoffset={lateOffset} />
-      )}
-      {absentArc > 0 && (
-        <circle cx="50" cy="50" r={r} fill="none" stroke="#ef4444" strokeWidth="14"
-          strokeDasharray={`${absentArc} ${circ}`} strokeDashoffset={absentOffset} />
-      )}
-      {restArc > 0 && (
-        <circle cx="50" cy="50" r={r} fill="none" stroke="#e2e8f0" strokeWidth="14"
-          strokeDasharray={`${restArc} ${circ}`} strokeDashoffset={restOffset} />
-      )}
-    </svg>
+
+      <div className="emp-stat-card emp-stat-card--hex" style={{ animationDelay: "160ms" }}>
+        <div className="emp-stat-body">
+          <span className="emp-stat-label">متأخر</span>
+          <strong className="emp-stat-value" style={{ color: "#D97706" }}>{lateDisplay.toLocaleString()}</strong>
+          <span className="emp-stat-sublabel">هذا اليوم</span>
+        </div>
+        <div className="emp-hex-icon"><Clock size={18} color="#fff" /></div>
+      </div>
+
+      <div className="emp-stat-card emp-stat-card--ring" style={{ animationDelay: "80ms" }}>
+        <div className="emp-stat-body">
+          <span className="emp-stat-label">حاضر اليوم</span>
+          <strong className="emp-stat-value" style={{ color: "#16A34A" }}>{presentDisplay.toLocaleString()}</strong>
+          <span className="emp-stat-sublabel">من {stats.total} موظف</span>
+        </div>
+        <svg viewBox="0 0 120 120" width="90" height="90" style={{ flexShrink: 0 }}>
+          <circle cx="60" cy="60" r="45" fill="none" stroke="#DCFCE7" strokeWidth="12" />
+          <circle cx="60" cy="60" r="45" fill="none" stroke="#16A34A" strokeWidth="12" strokeLinecap="round"
+            strokeDasharray={`${(stats.present / safeTotal) * 283} 283`} transform="rotate(-90 60 60)"
+            style={{ transition: "stroke-dasharray 800ms ease-out" }} />
+          <text x="60" y="60" textAnchor="middle" dominantBaseline="middle" fontSize="18" fontWeight="bold" fill="#16A34A">{stats.present}</text>
+        </svg>
+      </div>
+
+      <div className="emp-stat-card emp-stat-card--total" style={{ animationDelay: "0ms" }}>
+        <div className="emp-stat-card-top">
+          <div className="emp-stat-icon" style={{ background: "#EFF6FF" }}><Users size={18} color="#2563EB" /></div>
+          <span className="emp-stat-label">إجمالي الموظفين</span>
+        </div>
+        <strong className="emp-stat-value" style={{ color: "#2563EB" }}>{totalDisplay.toLocaleString()}</strong>
+        <div className="emp-stat-chart">
+          <svg width="100%" height="28" viewBox="0 0 91 28" preserveAspectRatio="none">
+            {MINI_BAR_WEIGHTS.map((w, i) => {
+              const barH = Math.max(4, Math.round(w * 26));
+              return <rect key={i} x={i * 13} y={28 - barH} width="9" height={barH} rx="2.5" fill={i === 6 ? "#2563EB" : "#BFDBFE"} />;
+            })}
+          </svg>
+          </div>
+        </div>
+      </div>
   );
 }
 
-function getMiniCalWeeks(dateStr: string) {
-  const ref = new Date(`${dateStr.slice(0, 7)}-01T00:00:00`);
-  const year = ref.getFullYear();
-  const month = ref.getMonth();
-  const firstDow = new Date(year, month, 1).getDay();
-  const offset = firstDow === 0 ? -6 : 1 - firstDow;
-  const start = new Date(year, month, 1 + offset);
-  const weeks: Array<Array<{ date: string; dayNum: number; isCurrentMonth: boolean; dow: number }>> = [];
-  const cur = new Date(start);
-  while (weeks.length < 6) {
-    const week = [];
-    for (let d = 0; d < 7; d++) {
-      week.push({
-        date: cur.toISOString().slice(0, 10),
-        dayNum: cur.getDate(),
-        isCurrentMonth: cur.getMonth() === month,
-        dow: cur.getDay(),
-      });
-      cur.setDate(cur.getDate() + 1);
-    }
-    weeks.push(week);
-    if (cur.getMonth() > month && weeks.length >= 4) break;
-  }
-  return weeks;
-}
+// ─── EmployeeFormModal ────────────────────────────────────────────────────────
 
-// ─── Today Attendance ─────────────────────────────────────────────────────────
-
-function TodayAttendanceSection({
-  employees, selectedDate, onChangeDate, onApplyPresentToAll, onUpdateEmployeeDay, onSaveSheet,
+function EmployeeFormModal({
+  isOpen, title, values, errors, onChange, onClose, onSubmit, onSaveDraft, submitLabel,
 }: {
-  employees: Employee[];
-  selectedDate: string;
-  onChangeDate: (date: string) => void;
-  onApplyPresentToAll: () => void;
-  onUpdateEmployeeDay: (employeeId: string, payload: { status: DailyAttendanceStatus; workedHours: number; advanceAmount: number; notes?: string }) => void;
-  onSaveSheet: () => void;
+  isOpen: boolean; title: string; values: EmployeeForm; errors: EmployeeFormErrors;
+  onChange: (field: keyof EmployeeForm, value: string) => void;
+  onClose: () => void; onSubmit: () => void; onSaveDraft?: () => void; submitLabel: string;
 }) {
-  const { t } = useSettings();
-  const [page, setPage] = useState(1);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [sheetSearch, setSheetSearch] = useState("");
+  const { isArabic } = useSettings();
+  const { departments } = useData();
 
-  const todaySummary = useMemo(() => {
-    return employees.reduce(
-      (acc, emp) => {
-        const entry = getDailyAttendanceEntryByDate(emp, selectedDate);
-        if (!entry) return acc;
-        if (entry.status === "present") acc.present++;
-        if (entry.status === "late") acc.late++;
-        if (entry.status === "absent") acc.absent++;
-        acc.advance += Number(entry.advanceAmount || 0);
-        return acc;
-      },
-      { present: 0, late: 0, absent: 0, advance: 0 }
-    );
-  }, [employees, selectedDate]);
-
-  const filtered = useMemo(() => {
-    if (!sheetSearch.trim()) return employees;
-    const q = sheetSearch.toLowerCase();
-    return employees.filter((e) => [e.name, e.id].join(" ").toLowerCase().includes(q));
-  }, [employees, sheetSearch]);
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / rowsPerPage));
-  const safePage = Math.min(page, totalPages);
-  const paginated = filtered.slice((safePage - 1) * rowsPerPage, safePage * rowsPerPage);
-
-  const total = employees.length;
-  const pct = (n: number) => total > 0 ? `${Math.round((n / total) * 100)}%` : "0%";
-
-  const dateLabel = formatDateValue(new Date(`${selectedDate}T00:00:00`), {
-    month: "long", day: "numeric", year: "numeric",
-  }, "en-US");
-
-  const miniCalWeeks = useMemo(() => getMiniCalWeeks(selectedDate), [selectedDate]);
-
-  const STATUS_BADGE_STYLE: Record<DailyAttendanceStatus, { bg: string; color: string }> = {
-    present:      { bg: "#dcfce7", color: "#15803d" },
-    late:         { bg: "#fef3c7", color: "#b45309" },
-    absent:       { bg: "#fee2e2", color: "#b91c1c" },
-    "half-day":   { bg: "#ede9fe", color: "#6d28d9" },
-    leave:        { bg: "#f1f5f9", color: "#475569" },
-    leave_pending:{ bg: "#fef9c3", color: "#a16207" },
-  };
-
-  return (
-    <div className="emp-today-layout">
-      {/* ── LEFT MAIN ── */}
-      <div className="emp-today-main">
-        {/* KPI row */}
-        <div className="emp-today-kpi-grid">
-          <div className="emp-kpi-card emp-kpi-present">
-            <div className="emp-kpi-icon-wrap" style={{ background: "#dcfce7" }}>
-              <UserCheck size={20} color="#16a34a" />
-            </div>
-            <div>
-              <span>{t.employees.attendance.present}</span>
-              <strong>{todaySummary.present}</strong>
-              <small className="emp-kpi-pct">{pct(todaySummary.present)} of total <TrendingUp size={11} /></small>
-            </div>
-          </div>
-          <div className="emp-kpi-card emp-kpi-late">
-            <div className="emp-kpi-icon-wrap" style={{ background: "#fef3c7" }}>
-              <UserX size={20} color="#d97706" />
-            </div>
-            <div>
-              <span>{t.employees.attendance.late}</span>
-              <strong>{todaySummary.late}</strong>
-              <small className="emp-kpi-pct">{pct(todaySummary.late)} of total <TrendingUp size={11} /></small>
-            </div>
-          </div>
-          <div className="emp-kpi-card emp-kpi-absent">
-            <div className="emp-kpi-icon-wrap" style={{ background: "#fee2e2" }}>
-              <UserX size={20} color="#dc2626" />
-            </div>
-            <div>
-              <span>{t.employees.attendance.absent}</span>
-              <strong>{todaySummary.absent}</strong>
-              <small className="emp-kpi-pct">{pct(todaySummary.absent)} of total <TrendingUp size={11} /></small>
-            </div>
-          </div>
-          <div className="emp-kpi-card emp-kpi-advance">
-            <div className="emp-kpi-icon-wrap" style={{ background: "#ede9fe" }}>
-              <Wallet size={20} color="#7c3aed" />
-            </div>
-            <div>
-              <span>Advances Today</span>
-              <strong>${todaySummary.advance.toFixed(2)}</strong>
-              <small>Total advances</small>
-            </div>
-          </div>
-        </div>
-
-        {/* Daily Sheet */}
-        <div className="emp-sheet-card">
-          <div className="emp-sheet-head">
-            <div>
-              <h3 className="emp-section-title">Daily Sheet</h3>
-              <p className="emp-section-sub">Edit only employees who differ from the default attendance.</p>
-            </div>
-          </div>
-
-          {/* Sheet toolbar */}
-          <div className="emp-sheet-subtoolbar">
-            <div className="emp-sheet-search">
-              <Search size={14} />
-              <input
-                type="text"
-                placeholder="Search employee..."
-                value={sheetSearch}
-                onChange={(e) => { setSheetSearch(e.target.value); setPage(1); }}
-              />
-            </div>
-            <select className="emp-dept-select">
-              <option>All Departments</option>
-            </select>
-          </div>
-
-          {filtered.length > 0 ? (
-            <>
-              <div className="emp-table-wrap">
-                <table className="emp-sheet-table app-data-table">
-                  <thead>
-                    <tr>
-                      <th>{t.employees.cols.employee}</th>
-                      <th>Shift</th>
-                      <th>{t.employees.cols.status}</th>
-                      <th>{t.employees.cols.workHours}</th>
-                      <th>{t.employees.cols.advance}</th>
-                      <th>{t.employees.form.notes}</th>
-                      <th>{t.employees.cols.actions}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {paginated.map((emp) => {
-                      const current = getDailyAttendanceEntryByDate(emp, selectedDate) || {
-                        date: selectedDate,
-                        status: "present" as DailyAttendanceStatus,
-                        workedHours: getDefaultWorkedHours(emp, "present"),
-                        advanceAmount: 0,
-                        notes: "",
-                      };
-                      const badge = STATUS_BADGE_STYLE[current.status] || STATUS_BADGE_STYLE.leave;
-                      const isAbsent = current.status === "absent";
-
-                      return (
-                        <tr key={emp.id}>
-                          <td>
-                            <div className="emp-row-user">
-                              <div className="emp-row-avatar" style={{ background: getEmpAvatarBg(emp.name) }}>
-                                {getEmpInitials(emp.name)}
-                              </div>
-                              <div>
-                                <strong>{emp.name}</strong>
-                                <span>{emp.id}</span>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="emp-shift-cell">{emp.workStart} - {emp.workEnd}</td>
-                          <td>
-                            <select
-                              className="emp-badge-select"
-                              style={{ background: badge.bg, color: badge.color }}
-                              value={current.status}
-                              onChange={(e) => {
-                                const ns = e.target.value as DailyAttendanceStatus;
-                                onUpdateEmployeeDay(emp.id, {
-                                  status: ns,
-                                  workedHours: getDefaultWorkedHours(emp, ns),
-                                  advanceAmount: current.advanceAmount,
-                                  notes: current.notes,
-                                });
-                              }}
-                            >
-                              {DAILY_STATUS_OPTIONS.map((opt) => (
-                                <option key={opt.value} value={opt.value}>{opt.label}</option>
-                              ))}
-                            </select>
-                          </td>
-                          <td>
-                            {isAbsent ? (
-                              <span className="emp-absent-dash">–</span>
-                            ) : (
-                              <div className="emp-hours-input-wrap">
-                                <input
-                                  className="emp-num-input"
-                                  type="number"
-                                  min="0"
-                                  step="0.25"
-                                  value={current.workedHours}
-                                  onChange={(e) =>
-                                    onUpdateEmployeeDay(emp.id, {
-                                      status: current.status,
-                                      workedHours: Number(e.target.value || 0),
-                                      advanceAmount: current.advanceAmount,
-                                      notes: current.notes,
-                                    })
-                                  }
-                                />
-                              </div>
-                            )}
-                          </td>
-                          <td>
-                            <input
-                              className="emp-num-input"
-                              type="number"
-                              min="0"
-                              step="1"
-                              value={current.advanceAmount}
-                              onChange={(e) =>
-                                onUpdateEmployeeDay(emp.id, {
-                                  status: current.status,
-                                  workedHours: current.workedHours,
-                                  advanceAmount: Number(e.target.value || 0),
-                                  notes: current.notes,
-                                })
-                              }
-                            />
-                          </td>
-                          <td>
-                            <input
-                              className="emp-note-input"
-                              type="text"
-                              value={current.notes || ""}
-                              placeholder={isAbsent ? "Absent" : "Optional note"}
-                              onChange={(e) =>
-                                onUpdateEmployeeDay(emp.id, {
-                                  status: current.status,
-                                  workedHours: current.workedHours,
-                                  advanceAmount: current.advanceAmount,
-                                  notes: e.target.value,
-                                })
-                              }
-                            />
-                          </td>
-                          <td>
-                            <div className="emp-row-actions">
-                              <Button variant="icon" size="sm" aria-label="Save record" title="Save record" onClick={onSaveSheet}>
-                                <FileText size={14} />
-                              </Button>
-                              <Button variant="icon" size="sm" aria-label="Reset to default" title="Reset to default"
-                                onClick={() => onUpdateEmployeeDay(emp.id, {
-                                  status: "present",
-                                  workedHours: getDefaultWorkedHours(emp, "present"),
-                                  advanceAmount: 0,
-                                  notes: "",
-                                })}>
-                                <RotateCcw size={14} />
-                              </Button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-
-              <div className="emp-pg-footer">
-                <span className="emp-pg-meta">
-                  Showing {filtered.length === 0 ? 0 : (safePage - 1) * rowsPerPage + 1} to{" "}
-                  {Math.min(safePage * rowsPerPage, filtered.length)} of {filtered.length} employees
-                </span>
-                <div className="emp-pg-controls">
-                  <Button variant="icon" size="sm" aria-label="Previous page" disabled={safePage <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
-                    <ChevronLeft size={14} />
-                  </Button>
-                  {Array.from({ length: totalPages }, (_, i) => i + 1)
-                    .filter((p) => p === 1 || p === totalPages || Math.abs(p - safePage) <= 1)
-                    .reduce<(number | "…")[]>((acc, p, idx, arr) => {
-                      if (idx > 0 && p - (arr[idx - 1] as number) > 1) acc.push("…");
-                      acc.push(p);
-                      return acc;
-                    }, [])
-                    .map((p, idx) =>
-                      p === "…" ? (
-                        <span key={`e${idx}`} className="emp-pg-ellipsis">…</span>
-                      ) : (
-                        <Button key={p} variant="icon" size="sm" className={safePage === p ? "active" : ""} aria-label={`Page ${p}`} onClick={() => setPage(p as number)}>
-                          {p}
-                        </Button>
-                      )
-                    )}
-                  <Button variant="icon" size="sm" aria-label="Next page" disabled={safePage >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>
-                    <ChevronRight size={14} />
-                  </Button>
-                </div>
-                <select
-                  className="emp-rpp-select"
-                  value={rowsPerPage}
-                  onChange={(e) => { setRowsPerPage(Number(e.target.value)); setPage(1); }}
-                >
-                  {[5, 10, 20, 50].map((n) => <option key={n} value={n}>{n} / page</option>)}
-                </select>
-              </div>
-            </>
-          ) : (
-            <div className="emp-empty-state">
-              <Users size={40} color="#cbd5e1" />
-              <strong>No employees found.</strong>
-              <span>Add your first employee to start managing attendance.</span>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* ── RIGHT SIDEBAR ── */}
-      <aside className="emp-today-sidebar">
-        {/* Date + action buttons */}
-        <div className="emp-sidebar-date-card">
-          <div className="emp-sidebar-date-row">
-            <Calendar size={15} color="#64748b" />
-            <input
-              type="date"
-              className="emp-sidebar-date-input"
-              value={selectedDate}
-              onChange={(e) => onChangeDate(e.target.value)}
-            />
-            <span>{dateLabel}</span>
-            <ChevronRight size={14} color="#94a3b8" />
-          </div>
-          <div className="emp-sidebar-date-actions">
-            <Button variant="secondary" size="sm" style={{ flex: 1 }} onClick={onApplyPresentToAll}>
-              Prepare Day
-            </Button>
-            <Button variant="primary" size="sm" style={{ flex: 1 }} onClick={onSaveSheet}>
-              Save Day
-            </Button>
-          </div>
-        </div>
-
-        {/* Monthly Overview */}
-        <div className="emp-sidebar-card">
-          <div className="emp-sidebar-card-head">
-            <div className="emp-sidebar-card-title">
-              <Calendar size={15} color="#2563eb" />
-              <span>Monthly Overview</span>
-            </div>
-            <select className="emp-sidebar-period-select">
-              <option>This Month</option>
-            </select>
-          </div>
-          <div className="emp-mini-cal-month">
-            {formatDateValue(new Date(`${selectedDate}T00:00:00`), { month: "long", year: "numeric" }, "en-US")}
-          </div>
-          <div className="emp-mini-cal">
-            <div className="emp-mini-cal-header">
-              {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => (
-                <span key={d}>{d}</span>
-              ))}
-            </div>
-            {miniCalWeeks.map((week, wi) => (
-              <div key={wi} className="emp-mini-cal-week">
-                {week.map((day) => {
-                  const isToday = day.date === getTodayDate();
-                  const presentCount = employees.filter(
-                    (e) => getDailyAttendanceEntryByDate(e, day.date)?.status === "present"
-                  ).length;
-                  const hasSomePresent = presentCount > 0 && day.isCurrentMonth;
-                  const isWeekend = day.dow === 5 || day.dow === 6;
-                  return (
-                    <span
-                      key={day.date}
-                      className={[
-                        "emp-mini-cal-day",
-                        !day.isCurrentMonth ? "emp-cal-other-month" : "",
-                        isToday ? "emp-cal-today" : "",
-                        hasSomePresent && !isToday ? "emp-cal-has-present" : "",
-                        isWeekend && !isToday ? "emp-cal-weekend" : "",
-                      ].filter(Boolean).join(" ")}
-                    >
-                      {day.dayNum}
-                    </span>
-                  );
-                })}
-              </div>
-            ))}
-          </div>
-          <div className="emp-cal-legend">
-            <span><span className="emp-cal-dot" style={{ background: "#16a34a" }} />Present</span>
-            <span><span className="emp-cal-dot" style={{ background: "#f59e0b" }} />Late</span>
-            <span><span className="emp-cal-dot" style={{ background: "#ef4444" }} />Absent</span>
-            <span><span className="emp-cal-dot" style={{ background: "#cbd5e1" }} />Weekend</span>
-          </div>
-        </div>
-
-        {/* Quick Actions */}
-        <div className="emp-sidebar-card">
-          <div className="emp-sidebar-card-head">
-            <div className="emp-sidebar-card-title">
-              <Calendar size={15} color="#2563eb" />
-              <span>Quick Actions</span>
-            </div>
-          </div>
-          <div className="emp-quick-actions-grid">
-            <Button variant="secondary" size="sm">
-              <Upload size={18} />
-              <span>Import Attendance</span>
-            </Button>
-            <Button variant="secondary" size="sm" onClick={() => {
-              const rows = employees.map((e) => {
-                const entry = getDailyAttendanceEntryByDate(e, selectedDate);
-                return [e.id, e.name, e.departmentId ?? "", entry?.status ?? "absent", String(entry?.workedHours ?? 0)].join(",");
-              });
-              const csv = ["ID,Name,Department,Status,Hours", ...rows].join("\n");
-              const a = Object.assign(document.createElement("a"), {
-                href: URL.createObjectURL(new Blob([csv], { type: "text/csv" })),
-                download: `attendance-${selectedDate}.csv`,
-              });
-              a.click();
-              URL.revokeObjectURL(a.href);
-            }}>
-              <Download size={18} />
-              <span>Export Report</span>
-            </Button>
-            <Button variant="secondary" size="sm">
-              <DollarSign size={18} />
-              <span>Bulk Advance</span>
-            </Button>
-            <Button variant="secondary" size="sm">
-              <Send size={18} />
-              <span>Send Notice</span>
-            </Button>
-          </div>
-        </div>
-
-        {/* Today's Summary */}
-        <div className="emp-sidebar-card">
-          <div className="emp-sidebar-card-head">
-            <div className="emp-sidebar-card-title">
-              <span>Today's Summary</span>
-            </div>
-          </div>
-          <div className="emp-summary-donut-wrap">
-            <DonutChart
-              present={todaySummary.present}
-              late={todaySummary.late}
-              absent={todaySummary.absent}
-              total={total}
-            />
-          </div>
-          <div className="emp-summary-legend">
-            <div>
-              <span className="emp-cal-dot" style={{ background: "#16a34a" }} />
-              <span>Present</span>
-              <strong>{todaySummary.present} ({pct(todaySummary.present)})</strong>
-            </div>
-            <div>
-              <span className="emp-cal-dot" style={{ background: "#f59e0b" }} />
-              <span>Late</span>
-              <strong>{todaySummary.late} ({pct(todaySummary.late)})</strong>
-            </div>
-            <div>
-              <span className="emp-cal-dot" style={{ background: "#ef4444" }} />
-              <span>Absent</span>
-              <strong>{todaySummary.absent} ({pct(todaySummary.absent)})</strong>
-            </div>
-          </div>
-        </div>
-      </aside>
+  const footer = (
+    <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, direction: "rtl" }}>
+      <Button variant="primary" size="md" type="button" onClick={onSubmit}>{submitLabel}</Button>
+      <Button variant="secondary" size="md" type="button" onClick={onSaveDraft ?? onClose}>حفظ كمسودة</Button>
+      <Button variant="secondary" size="md" type="button" onClick={onClose}>إلغاء</Button>
     </div>
   );
-}
-
-// ─── Monthly Attendance ───────────────────────────────────────────────────────
-
-function MonthlyAttendanceSection({
-  employees, monthDate, viewMode, weekIndex,
-  onChangeMonthDate, onChangeViewMode, onChangeWeekIndex, onOpenEditor,
-}: {
-  employees: Employee[];
-  monthDate: string;
-  viewMode: MonthlyViewMode;
-  weekIndex: number;
-  onChangeMonthDate: (date: string) => void;
-  onChangeViewMode: (mode: MonthlyViewMode) => void;
-  onChangeWeekIndex: (index: number) => void;
-  onOpenEditor: (employee: Employee, date: string) => void;
-}) {
-  const { days } = useMemo(() => getMonthDays(monthDate), [monthDate]);
-  const weeks = useMemo(() => groupDaysIntoWeeks(days), [days]);
-  const safeWeekIndex = Math.min(Math.max(weekIndex, 0), Math.max(weeks.length - 1, 0));
-  const visibleDays = viewMode === "month" ? days : (weeks[safeWeekIndex] || []);
-
-  const todayStats = useMemo(() => {
-    const today = getTodayDate();
-    return employees.reduce(
-      (acc, emp) => {
-        const entry = getDailyAttendanceEntryByDate(emp, today);
-        if (entry?.status === "present") acc.present++;
-        else if (entry?.status === "late") acc.late++;
-        else if (entry?.status === "absent") acc.absent++;
-        else if (entry?.status === "half-day") acc.halfDay++;
-        return acc;
-      },
-      { present: 0, late: 0, absent: 0, halfDay: 0 }
-    );
-  }, [employees]);
-
-  const total = employees.length;
-  const pct = (n: number) => total > 0 ? `${((n / total) * 100).toFixed(1)}%` : "0%";
-  const attendancePct = total > 0
-    ? `${(((todayStats.present + todayStats.late) / total) * 100).toFixed(1)}%`
-    : "0%";
-
-  const weekLabel = (() => {
-    if (!visibleDays.length) return "";
-    const first = visibleDays[0].date;
-    const last = visibleDays[visibleDays.length - 1].date;
-    const fmt = (d: string) => formatDateValue(new Date(`${d}T00:00:00`), {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    }, "en-US");
-    return `Week ${safeWeekIndex + 1} (${fmt(first)} – ${fmt(last)})`;
-  })();
 
   return (
-    <>
-      {/* Toolbar */}
-      <div className="emp-monthly-toolbar">
-        <div className="emp-monthly-toolbar-left">
-          <div className="emp-month-picker">
-            <Calendar size={14} />
-            <select
-              value={monthDate.slice(0, 7)}
-              onChange={(e) => onChangeMonthDate(`${e.target.value}-01`)}
-            >
-              {Array.from({ length: 12 }, (_, i) => {
-                const d = new Date(`${monthDate.slice(0, 4)}-01-01`);
-                d.setMonth(i);
-                return d.toISOString().slice(0, 7);
-              }).map((ym) => (
-                <option key={ym} value={ym}>
-                  {formatDateValue(new Date(`${ym}-01`), { month: "long", year: "numeric" }, "en-US")}
-                </option>
-              ))}
+    <EmployeeModal isOpen={isOpen} onClose={onClose} title={title} width="560px" footer={footer}>
+      <form onSubmit={(e) => { e.preventDefault(); onSubmit(); }} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        <h3 className="emp-form-section-title">البيانات الشخصية</h3>
+        <div className="emp-form-grid">
+          <div className="emp-form-field">
+            <label className="emp-form-label">الاسم الكامل <span className="emp-req">*</span></label>
+            <input className="emp-form-input" type="text" value={values.name} onChange={(e) => onChange("name", e.target.value)} placeholder="اسم الموظف" />
+            {errors.name && <p className="emp-form-error">{errors.name}</p>}
+          </div>
+          <div className="emp-form-field">
+            <label className="emp-form-label">رقم الهاتف</label>
+            <input
+              className="emp-form-input"
+              type="tel"
+              inputMode="numeric"
+              maxLength={10}
+              value={values.phone}
+              onChange={(e) => onChange("phone", e.target.value.replace(/[^0-9]/g, "").slice(0, 10))}
+              onKeyDown={(e) => {
+                if (e.ctrlKey || e.metaKey) return;
+                const allowed = ["Backspace","Delete","Tab","Enter","ArrowLeft","ArrowRight","ArrowUp","ArrowDown","Home","End"];
+                if (!allowed.includes(e.key) && !/^\d$/.test(e.key)) e.preventDefault();
+              }}
+              onPaste={(e) => {
+                e.preventDefault();
+                const pasted = e.clipboardData.getData("text").replace(/[^0-9]/g, "");
+                onChange("phone", (values.phone + pasted).slice(0, 10));
+              }}
+              placeholder="059XXXXXXX"
+              style={{ direction: "ltr", textAlign: "left", fontFamily: "monospace" }}
+            />
+            {errors.phone && <p className="emp-form-error">{errors.phone}</p>}
+          </div>
+          <div className="emp-form-field">
+            <label className="emp-form-label">رقم الهوية</label>
+            <input className="emp-form-input" type="text" value={values.nationalId} onChange={(e) => onChange("nationalId", e.target.value.replace(/\D/g, "").slice(0, 9))} placeholder="9 أرقام" />
+            {errors.nationalId && <p className="emp-form-error">{errors.nationalId}</p>}
+          </div>
+          <div className="emp-form-field">
+            <label className="emp-form-label">تاريخ الميلاد</label>
+            <input className="emp-form-input" type="date" value={values.birthDate} onChange={(e) => onChange("birthDate", e.target.value)} />
+          </div>
+          <div className="emp-form-field">
+            <label className="emp-form-label">الجنس</label>
+            <div className="emp-form-radio-group">
+              <label className="emp-form-radio"><input type="radio" name="gender" value="male" checked={values.gender === "male"} onChange={() => onChange("gender", "male")} /> ذكر</label>
+              <label className="emp-form-radio"><input type="radio" name="gender" value="female" checked={values.gender === "female"} onChange={() => onChange("gender", "female")} /> أنثى</label>
+            </div>
+          </div>
+          <div className="emp-form-field">
+            <label className="emp-form-label">المدينة / المحافظة</label>
+            <select className="emp-form-input" value={values.city} onChange={(e) => onChange("city", e.target.value)}>
+              <option value="">اختر المدينة</option>
+              {PALESTINIAN_GOVERNORATES.map((g) => <option key={g.nameAr} value={g.nameAr}>{g.nameAr}</option>)}
             </select>
           </div>
+        </div>
 
-          <div className="emp-view-toggle-group">
-            <button type="button" className={`emp-view-toggle-btn ${viewMode === "week" ? "active" : ""}`} onClick={() => onChangeViewMode("week")}>
-              Week
-            </button>
-            <button type="button" className={`emp-view-toggle-btn ${viewMode === "month" ? "active" : ""}`} onClick={() => onChangeViewMode("month")}>
-              Month
-            </button>
+        <h3 className="emp-form-section-title">بيانات التوظيف</h3>
+        <div className="emp-form-grid">
+          <div className="emp-form-field">
+            <label className="emp-form-label">المسمى الوظيفي <span className="emp-req">*</span></label>
+            <input className="emp-form-input" type="text" value={values.jobTitle} onChange={(e) => onChange("jobTitle", e.target.value)} placeholder="مثال: محاسب" />
+            {errors.jobTitle && <p className="emp-form-error">{errors.jobTitle}</p>}
           </div>
-
-          {viewMode === "week" && (
-            <>
-              <Button variant="secondary" size="sm" onClick={() => { onChangeWeekIndex(Math.max(safeWeekIndex - 1, 0)); }} disabled={safeWeekIndex === 0}>
-                <ChevronLeft size={14} /> Previous
-              </Button>
-              <span className="emp-week-label">{weekLabel}</span>
-              <Button variant="secondary" size="sm" onClick={() => { onChangeWeekIndex(Math.min(safeWeekIndex + 1, weeks.length - 1)); }} disabled={safeWeekIndex === weeks.length - 1}>
-                Next <ChevronRight size={14} />
-              </Button>
-            </>
-          )}
+          <div className="emp-form-field">
+            <label className="emp-form-label">القسم <span className="emp-req">*</span></label>
+            <select className="emp-form-input" value={values.departmentId} onChange={(e) => onChange("departmentId", e.target.value)}>
+              <option value="">اختر القسم</option>
+              {departments.filter((d) => d.status === "active").map((d) => (
+                <option key={d.id} value={d.id}>{isArabic ? d.nameAr || d.name : d.name}</option>
+              ))}
+            </select>
+            {errors.departmentId && <p className="emp-form-error">{errors.departmentId}</p>}
+          </div>
+          <div className="emp-form-field">
+            <label className="emp-form-label">تاريخ التوظيف <span className="emp-req">*</span></label>
+            <input className="emp-form-input" type="date" value={values.hireDate} onChange={(e) => onChange("hireDate", e.target.value)} />
+          </div>
+          <div className="emp-form-field">
+            <label className="emp-form-label">نوع العقد</label>
+            <div className="emp-form-radio-group">
+              <label className="emp-form-radio"><input type="radio" name="contractType" value="full-time" checked={values.contractType === "full-time"} onChange={() => onChange("contractType", "full-time")} /> دوام كامل</label>
+              <label className="emp-form-radio"><input type="radio" name="contractType" value="part-time" checked={values.contractType === "part-time"} onChange={() => onChange("contractType", "part-time")} /> جزئي</label>
+              <label className="emp-form-radio"><input type="radio" name="contractType" value="temporary" checked={values.contractType === "temporary"} onChange={() => onChange("contractType", "temporary")} /> مؤقت</label>
+            </div>
+          </div>
+          <div className="emp-form-field">
+            <label className="emp-form-label">الراتب الشهري (₪) <span className="emp-req">*</span></label>
+            <input className="emp-form-input" type="text" {...numericInputProps} value={values.fixedSalary} onChange={(e) => onChange("fixedSalary", e.target.value.replace(/[^0-9.]/g, ""))} placeholder="0.00" />
+            {errors.fixedSalary && <p className="emp-form-error">{errors.fixedSalary}</p>}
+          </div>
+          <div className="emp-form-field">
+            <label className="emp-form-label">وقت الدوام</label>
+            <div className="emp-form-time-range">
+              <label className="emp-form-label-sm">من</label>
+              <input className="emp-form-input" type="time" value={values.workStart} onChange={(e) => onChange("workStart", e.target.value)} />
+              <label className="emp-form-label-sm">إلى</label>
+              <input className="emp-form-input" type="time" value={values.workEnd} onChange={(e) => onChange("workEnd", e.target.value)} />
+            </div>
+          </div>
         </div>
 
-        <div className="emp-monthly-toolbar-right">
-          <Button variant="secondary" size="sm">
-            <Filter size={14} /> Filters
-          </Button>
-          <span className="emp-filter-chip">All Departments</span>
-          <span className="emp-filter-chip">All Shifts</span>
-          <Button variant="ghost" size="sm">Clear</Button>
+        <h3 className="emp-form-section-title">الاستحقاقات والمزايا</h3>
+        <div className="emp-form-grid">
+          <div className="emp-form-field">
+            <label className="emp-form-label">رصيد الإجازة السنوية (أيام)</label>
+            <input className="emp-form-input" type="number" min="0" value={values.annualLeave} onChange={(e) => onChange("annualLeave", e.target.value)} />
+          </div>
+          <div className="emp-form-field">
+            <label className="emp-form-label">السلف المسموح بها</label>
+            <input className="emp-form-input" type="text" value={`₪ ${Number(values.fixedSalary || 0).toFixed(2)}`} disabled style={{ background: "#f1f5f9", cursor: "not-allowed" }} />
+          </div>
+          <div className="emp-form-field">
+            <label className="emp-form-label">بدل المواصلات (₪)</label>
+            <input className="emp-form-input" type="text" {...numericInputProps} value={values.transportation} onChange={(e) => onChange("transportation", e.target.value.replace(/[^0-9.]/g, ""))} placeholder="0" />
+          </div>
+          <div className="emp-form-field">
+            <label className="emp-form-label">بدل السكن (₪)</label>
+            <input className="emp-form-input" type="text" {...numericInputProps} value={values.housing} onChange={(e) => onChange("housing", e.target.value.replace(/[^0-9.]/g, ""))} placeholder="0" />
+          </div>
         </div>
-      </div>
-
-      {/* Stats row */}
-      <div className="emp-monthly-stats-row">
-        <div className="emp-monthly-stat">
-          <span>Total Employees</span>
-          <strong>{total}</strong>
+        <div className="emp-form-field" style={{ marginTop: 8 }}>
+          <label className="emp-form-checkbox">
+            <input type="checkbox" defaultChecked /> تطبيق العطل الرسمية الفلسطينية
+          </label>
         </div>
-        <div className="emp-monthly-stat emp-stat-present">
-          <span><span className="emp-stat-dot" style={{ background: "#16a34a" }} />Present</span>
-          <strong>{todayStats.present} <small>({pct(todayStats.present)})</small></strong>
-        </div>
-        <div className="emp-monthly-stat emp-stat-late">
-          <span><span className="emp-stat-dot" style={{ background: "#d97706" }} />Late</span>
-          <strong>{todayStats.late} <small>({pct(todayStats.late)})</small></strong>
-        </div>
-        <div className="emp-monthly-stat emp-stat-absent">
-          <span><span className="emp-stat-dot" style={{ background: "#dc2626" }} />Absent</span>
-          <strong>{todayStats.absent} <small>({pct(todayStats.absent)})</small></strong>
-        </div>
-        <div className="emp-monthly-stat">
-          <span><span className="emp-stat-dot" style={{ background: "#7c3aed" }} />Half Day</span>
-          <strong>{todayStats.halfDay} <small>({pct(todayStats.halfDay)})</small></strong>
-        </div>
-        <div className="emp-monthly-stat emp-stat-pct">
-          <span>Attendance %</span>
-          <strong style={{ color: "#16a34a" }}>{attendancePct}</strong>
-        </div>
-      </div>
-
-      {/* Grid */}
-      {employees.length > 0 ? (
-        <div className="emp-monthly-grid-wrap app-table-wrap">
-          <table className="emp-monthly-grid app-data-table">
-            <thead>
-              <tr>
-                <th className="emp-monthly-name-th">Employee</th>
-                {visibleDays.map((day) => (
-                  <th key={day.date} className={`emp-monthly-day-th ${day.dow === 0 ? "emp-day-sunday" : ""}`}>
-                    <span className="emp-day-dow">
-                      {formatDateValue(new Date(`${day.date}T00:00:00`), { weekday: "short" }, "en-US")}
-                    </span>
-                    <span className="emp-day-num">{formatDateValue(new Date(`${day.date}T00:00:00`), { month: "short", day: "numeric" }, "en-US")}</span>
-                  </th>
-                ))}
-                <th className="emp-monthly-pct-th">%</th>
-                <th className="emp-monthly-more-th" />
-              </tr>
-            </thead>
-            <tbody>
-              {employees.map((emp) => {
-                const visibleEntries = visibleDays.map((day) => getDailyAttendanceEntryByDate(emp, day.date)).filter(Boolean);
-                const attDays = visibleEntries.filter((e) => e!.status === "present" || e!.status === "late").length;
-                const attPct = visibleDays.length > 0 ? Math.round((attDays / visibleDays.length) * 100) : 0;
-
-                return (
-                  <tr key={emp.id}>
-                    <td className="emp-monthly-name-td">
-                      <div className="emp-row-user">
-                        <div className="emp-row-avatar" style={{ background: getEmpAvatarBg(emp.name) }}>
-                          {getEmpInitials(emp.name)}
-                        </div>
-                        <div>
-                          <strong>{emp.name}</strong>
-                          <span>{emp.id} · {emp.workStart}–{emp.workEnd}</span>
-                        </div>
-                      </div>
-                    </td>
-                    {visibleDays.map((day) => {
-                      const entry = getDailyAttendanceEntryByDate(emp, day.date);
-                      const dotColor = entry
-                        ? ({ present: "#16a34a", late: "#d97706", absent: "#dc2626", "half-day": "#7c3aed", leave: "#94a3b8", leave_pending: "#ca8a04" } as Record<string, string>)[entry.status] ?? "#94a3b8"
-                        : undefined;
-                      const hoursStr = entry ? `${Math.floor(Number(entry.workedHours))}h ${String(Math.round((Number(entry.workedHours) % 1) * 60)).padStart(2, "0")}m` : "";
-                      return (
-                        <td key={day.date} className={day.dow === 0 ? "emp-day-sunday" : ""}>
-                          <button
-                            type="button"
-                            className={`emp-monthly-day-btn ${entry ? DAILY_STATUS_CLASS_MAP[entry.status] : "is-empty"}`}
-                            onClick={() => onOpenEditor(emp, day.date)}
-                            title={entry ? `${getStatusLabel(entry.status)} – ${day.date}` : day.date}
-                          >
-                            {entry && dotColor && (
-                              <span className="emp-day-dot" style={{ background: dotColor }} />
-                            )}
-                            <span className="emp-day-short">
-                              {entry ? DAILY_STATUS_SHORT_LABELS[entry.status] : "-"}
-                            </span>
-                            {hoursStr && <span className="emp-day-hours">{hoursStr}</span>}
-                          </button>
-                        </td>
-                      );
-                    })}
-                    <td className="emp-monthly-pct-td">
-                      <span className={`emp-att-pct ${attPct >= 80 ? "good" : attPct >= 60 ? "warn" : "bad"}`}>
-                        {attPct}%
-                      </span>
-                    </td>
-                    <td>
-                      <Button variant="icon" size="sm" aria-label="More options">
-                        <MoreVertical size={14} />
-                      </Button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      ) : (
-        <div className="emp-empty-state">
-          <Users size={40} color="#cbd5e1" />
-          <strong>No employees found.</strong>
-          <span>Add your first employee to start managing the monthly schedule.</span>
-        </div>
-      )}
-
-      <div className="emp-pg-footer">
-        <span className="emp-pg-meta">Showing 1 to {employees.length} of {employees.length} employees</span>
-        <select className="emp-rpp-select" defaultValue={10}>
-          {[5, 10, 20, 50].map((n) => <option key={n} value={n}>Rows per page {n}</option>)}
-        </select>
-      </div>
-    </>
+      </form>
+    </EmployeeModal>
   );
 }
 
-// ─── Reports ──────────────────────────────────────────────────────────────────
+// ─── EmployeeViewModal ────────────────────────────────────────────────────────
 
-function ReportsSection({
-  attendanceRange, onChangeRange, attendanceReportRows, payrollSummary,
-  getReportSortIndicator, toggleReportSort, handleExportReportCsv,
+function EmployeeViewModal({
+  isOpen, emp, onClose, onEdit, isArabic: arabicMode,
 }: {
-  attendanceRange: AttendanceRange;
-  onChangeRange: (range: AttendanceRange) => void;
-  attendanceReportRows: Array<{
-    id: string; name: string; phone: string;
-    present: number; late: number; absent: number; halfDay: number; leave: number;
-    totalHours: number; gross: number; advance: number; net: number;
-  }>;
-  payrollSummary: { gross: number; advance: number; net: number };
-  getReportSortIndicator: (key: ReportSortKey) => string;
-  toggleReportSort: (key: ReportSortKey) => void;
-  handleExportReportCsv: () => void;
+  isOpen: boolean; emp: Employee | null; onClose: () => void;
+  onEdit: () => void; isArabic: boolean;
 }) {
-  const { t } = useSettings();
+  const { departments } = useData();
+  const [activeTab, setActiveTab] = useState(0);
+  const tabs = ["البيانات الشخصية", "بيانات التوظيف", "الاستحقاقات"];
+
+  if (!emp) return null;
+
+  const dept = departments.find((d) => d.id === emp.departmentId);
+  const theme = getAvatarTheme(emp.name);
+  const unpaidAdvances = getUnpaidAdvancesTotal(emp);
+  const leaveBalance = getLeaveBalance(emp);
+  const dailyWage = getDailyWage(emp);
+  const todayStatus = getTodayStatus(emp);
+  const statusConf = todayStatus !== "none" ? STATUS_CONFIG[todayStatus] : null;
+  const contractLabels: Record<string, string> = {
+    "full-time": "دوام كامل", "part-time": "دوام جزئي",
+    "daily": "يومي", "temporary": "مؤقت",
+  };
+  const genderLabel = emp.gender === "female" ? "أنثى" : "ذكر";
+
+  const footer = (
+    <div style={{ display: "flex", gap: 8 }}>
+      <button
+        type="button"
+        onClick={onEdit}
+        style={{
+          padding: "8px 18px", borderRadius: 9, border: "none",
+          background: "#2563EB", color: "#fff", fontFamily: "inherit",
+          fontSize: 13.5, fontWeight: 600, cursor: "pointer",
+          transition: "background 150ms ease",
+        }}
+        onMouseEnter={(e) => { e.currentTarget.style.background = "#1D4ED8"; }}
+        onMouseLeave={(e) => { e.currentTarget.style.background = "#2563EB"; }}
+      >
+        ✏ تعديل
+      </button>
+      <button
+        type="button"
+        onClick={onClose}
+        style={{
+          padding: "8px 16px", borderRadius: 9, border: "none",
+          background: "transparent", color: "#64748B", fontFamily: "inherit",
+          fontSize: 13.5, fontWeight: 500, cursor: "pointer",
+          transition: "color 150ms ease",
+        }}
+        onMouseEnter={(e) => { e.currentTarget.style.color = "#0F172A"; }}
+        onMouseLeave={(e) => { e.currentTarget.style.color = "#64748B"; }}
+      >
+        إغلاق
+      </button>
+    </div>
+  );
+
   return (
-    <>
-      {/* Range tabs + export */}
-      <div className="emp-reports-topbar">
-        <div className="emp-range-tabs">
-          {(["today", "week", "month"] as AttendanceRange[]).map((r) => (
-            <button
-              key={r}
-              type="button"
-              className={`emp-range-tab ${attendanceRange === r ? "active" : ""}`}
-              onClick={() => onChangeRange(r)}
-            >
-              {getRangeTitle(r)}
-            </button>
+    <EmployeeModal isOpen={isOpen} onClose={onClose} title="ملف الموظف" width="580px" footer={footer}>
+      {/* Employee header */}
+      <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 20, paddingBottom: 20, borderBottom: "1px solid #F1F5F9" }}>
+        <div style={{
+          width: 64, height: 64, borderRadius: 16, background: theme.bg,
+          boxShadow: `0 0 0 3px #fff, 0 0 0 5px ${theme.ring}`,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          fontSize: 20, fontWeight: 800, color: "#fff", flexShrink: 0,
+        }}>
+          {getEmpInitials(emp.name)}
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <h3 style={{ margin: "0 0 4px", fontSize: 22, fontWeight: 700, color: "#0F172A" }}>{emp.name}</h3>
+          <code style={{ fontSize: 13, color: "#94A3B8", display: "block", marginBottom: 6 }}>{emp.id}</code>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+            {statusConf && (
+              <span style={{ background: statusConf.bg, color: statusConf.color, borderRadius: 999, padding: "2px 10px", fontSize: 11, fontWeight: 700 }}>
+                {statusConf.label}
+              </span>
+            )}
+            {dept && (
+              <span style={{ background: "#F1F5F9", color: "#475569", borderRadius: 999, padding: "2px 10px", fontSize: 11, fontWeight: 600 }}>
+                {arabicMode ? (dept.nameAr || dept.name) : dept.name}
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Tab bar */}
+      <div className="emp-view-tabs">
+        {tabs.map((tab, i) => (
+          <button
+            key={tab}
+            type="button"
+            className={`emp-view-tab ${activeTab === i ? "active" : ""}`}
+            onClick={() => setActiveTab(i)}
+          >
+            {tab}
+          </button>
+        ))}
+      </div>
+
+      {/* Tab 1 — البيانات الشخصية */}
+      {activeTab === 0 && (
+        <div className="emp-view-grid">
+          {[
+            ["الاسم الكامل", emp.name],
+            ["رقم الهوية", emp.nationalId || "—"],
+            ["تاريخ الميلاد", "—"],
+            ["رقم الهاتف", emp.phone || "—"],
+            ["الجنس", genderLabel],
+            ["المدينة / المحافظة", emp.city || "—"],
+          ].map(([k, v]) => (
+            <div key={k} className="emp-view-kv">
+              <span className="emp-view-key">{k}</span>
+              <span className="emp-view-val">{v}</span>
+            </div>
           ))}
         </div>
-        <Button variant="secondary" size="md" onClick={handleExportReportCsv}>
-          <Download size={14} /> {t.common.export} CSV
-        </Button>
-      </div>
+      )}
 
-      {/* KPI cards */}
-      <div className="emp-reports-kpi-row">
-        <div className="emp-rep-kpi-card">
-          <div className="emp-rep-kpi-icon" style={{ background: "#dcfce7" }}>
-            <BarChart2 size={20} color="#16a34a" />
-          </div>
-          <div>
-            <span>{t.employees.reports.gross}</span>
-            <strong>${payrollSummary.gross.toFixed(2)}</strong>
-            <small>Total earnings</small>
-          </div>
-        </div>
-        <div className="emp-rep-kpi-card">
-          <div className="emp-rep-kpi-icon" style={{ background: "#fff7ed" }}>
-            <CreditCard size={20} color="#ea580c" />
-          </div>
-          <div>
-            <span>{t.employees.cols.advance}</span>
-            <strong>${payrollSummary.advance.toFixed(2)}</strong>
-            <small>Total advances</small>
-          </div>
-        </div>
-        <div className="emp-rep-kpi-card">
-          <div className="emp-rep-kpi-icon" style={{ background: "#eff6ff" }}>
-            <Wallet size={20} color="#2563eb" />
-          </div>
-          <div>
-            <span>{t.employees.reports.net}</span>
-            <strong>${payrollSummary.net.toFixed(2)}</strong>
-            <small>Net payable</small>
-          </div>
-        </div>
-        <div className="emp-rep-kpi-card">
-          <div className="emp-rep-kpi-icon" style={{ background: "#f5f3ff" }}>
-            <Calendar size={20} color="#7c3aed" />
-          </div>
-          <div>
-            <span>Range</span>
-            <strong>{getRangeTitle(attendanceRange)}</strong>
-            <small>Selected period</small>
-          </div>
-        </div>
-      </div>
-
-      {/* Report table */}
-      <div className="emp-sheet-card">
-        <div className="emp-sheet-head">
-          <div>
-            <h3 className="emp-section-title">Attendance &amp; Payroll Report</h3>
-            <p className="emp-section-sub">
-              Summary for <strong>{getRangeTitle(attendanceRange)}</strong>
-            </p>
-          </div>
-        </div>
-
-        {attendanceReportRows.length > 0 ? (
-          <div className="emp-table-wrap">
-            <table className="emp-table app-data-table">
-              <thead>
-                <tr>
-                  {(["name", "present", "late", "absent", "halfDay", "leave", "totalHours", "gross", "advance", "net"] as ReportSortKey[]).map((k) => (
-                    <th key={k} className="emp-sortable" onClick={() => toggleReportSort(k)}>
-                      {{ name: t.employees.cols.employee, present: t.employees.reports.present, late: t.employees.reports.late, absent: t.employees.reports.absent, halfDay: t.employees.reports.halfDay, leave: t.employees.reports.leave, totalHours: t.employees.reports.totalHours, gross: t.employees.reports.gross, advance: t.employees.cols.advance, net: t.employees.reports.net }[k]}
-                      {" "}{getReportSortIndicator(k)}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {attendanceReportRows.map((row) => (
-                  <tr key={row.id}>
-                    <td>{row.name}</td>
-                    <td>{row.present}</td>
-                    <td>{row.late}</td>
-                    <td>{row.absent}</td>
-                    <td>{row.halfDay}</td>
-                    <td>{row.leave}</td>
-                    <td>{row.totalHours.toFixed(2)} h</td>
-                    <td>${row.gross.toFixed(2)}</td>
-                    <td>${row.advance.toFixed(2)}</td>
-                    <td>${row.net.toFixed(2)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <div className="emp-empty-state emp-empty-report">
-            <div className="emp-empty-illustration">
-              <BarChart2 size={52} color="#cbd5e1" />
+      {/* Tab 2 — بيانات التوظيف */}
+      {activeTab === 1 && (
+        <div className="emp-view-grid">
+          {[
+            ["المسمى الوظيفي", emp.jobTitle || "—"],
+            ["القسم", dept ? (arabicMode ? dept.nameAr || dept.name : dept.name) : "—"],
+            ["تاريخ التوظيف", emp.hireDate || "—"],
+            ["نوع العقد", contractLabels[emp.contractType ?? ""] || "—"],
+            ["الأجر الشهري", `₪ ${(emp.fixedSalary ?? 0).toLocaleString()}`],
+            ["الأجر اليومي (÷22)", `₪ ${dailyWage.toFixed(2)}`],
+            ["وقت الدوام", `${emp.workStart} – ${emp.workEnd}`],
+          ].map(([k, v]) => (
+            <div key={k} className="emp-view-kv">
+              <span className="emp-view-key">{k}</span>
+              <span className="emp-view-val">{v}</span>
             </div>
-            <strong>No report data found</strong>
-            <span>
-              No daily attendance records are available for the selected period.
-              <br />Once attendance is recorded, your reports will appear here.
-            </span>
-          </div>
-        )}
-      </div>
-    </>
-  );
-}
-
-// ─── Employees List ───────────────────────────────────────────────────────────
-
-function EmployeesSection({
-  employees, onEdit, onDelete,
-}: {
-  employees: Employee[];
-  onEdit: (employee: Employee) => void;
-  onDelete: (employee: Employee) => void;
-}) {
-  const { t } = useSettings();
-  const [localSearch, setLocalSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("active");
-  const [page, setPage] = useState(1);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [sortKey, setSortKey] = useState<"name" | "id" | "phone">("name");
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
-
-  const filtered = useMemo(() => {
-    let result = [...employees];
-    if (localSearch.trim()) {
-      const q = localSearch.toLowerCase();
-      result = result.filter((e) => [e.name, e.id, e.phone].join(" ").toLowerCase().includes(q));
-    }
-    if (statusFilter === "active") result = result.filter((e) => !e.isDeleted);
-    if (statusFilter === "inactive") result = result.filter((e) => e.isDeleted);
-    result.sort((a, b) => {
-      let cmp = 0;
-      if (sortKey === "name") cmp = a.name.localeCompare(b.name);
-      else if (sortKey === "id") cmp = a.id.localeCompare(b.id);
-      else if (sortKey === "phone") cmp = a.phone.localeCompare(b.phone);
-      return sortDir === "asc" ? cmp : -cmp;
-    });
-    return result;
-  }, [employees, localSearch, statusFilter, sortKey, sortDir]);
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / rowsPerPage));
-  const safePage = Math.min(page, totalPages);
-  const paginated = filtered.slice((safePage - 1) * rowsPerPage, safePage * rowsPerPage);
-
-  const toggleSort = (key: typeof sortKey) => {
-    if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    else { setSortKey(key); setSortDir("asc"); }
-  };
-
-  return (
-    <div className="emp-list-card">
-      {/* Toolbar */}
-      <div className="emp-list-toolbar">
-        <div className="emp-list-search">
-          <Search size={14} />
-          <input
-            type="text"
-            placeholder="Search by name, code, or phone..."
-            value={localSearch}
-            onChange={(e) => { setLocalSearch(e.target.value); setPage(1); }}
-          />
-        </div>
-        <Button variant="secondary" size="sm">
-          <Filter size={14} /> Filters
-        </Button>
-        {statusFilter !== "all" && (
-          <span className="emp-active-chip">
-            {statusFilter === "active" ? "Active" : "Inactive"}
-            <button type="button" onClick={() => setStatusFilter("all")}>×</button>
-          </span>
-        )}
-        <div className="emp-list-toolbar-right">
-          <span className="emp-total-count">
-            Total Employees <strong>{filtered.length}</strong>
-          </span>
-          <Button variant="icon" size="sm" aria-label="Download">
-            <Download size={15} />
-          </Button>
-        </div>
-      </div>
-
-      {/* Table */}
-      {filtered.length > 0 ? (
-        <>
-          <div className="emp-table-wrap">
-            <table className="emp-table app-data-table">
-              <colgroup>
-                <col style={{ width: "26%" }} />
-                <col style={{ width: "12%" }} />
-                <col style={{ width: "16%" }} />
-                <col style={{ width: "11%" }} />
-                <col style={{ width: "14%" }} />
-                <col style={{ width: "12%" }} />
-                <col style={{ width: "9%" }} />
-              </colgroup>
-              <thead>
-                <tr>
-                  <th className="emp-sortable" onClick={() => toggleSort("name")}>
-                    {t.employees.cols.employee} {sortKey === "name" ? (sortDir === "asc" ? "↑" : "↓") : <span className="emp-sort-icon"><ChevronLeft size={10} style={{ transform: "rotate(-90deg)" }} /></span>}
-                  </th>
-                  <th className="emp-sortable" onClick={() => toggleSort("id")}>
-                    EMP CODE {sortKey === "id" ? (sortDir === "asc" ? "↑" : "↓") : ""}
-                  </th>
-                  <th className="emp-sortable" onClick={() => toggleSort("phone")}>
-                    {t.common.phone} {sortKey === "phone" ? (sortDir === "asc" ? "↑" : "↓") : ""}
-                  </th>
-                  <th>SHIFT</th>
-                  <th>DEFAULT HOURS</th>
-                  <th>{t.employees.cols.status}</th>
-                  <th>{t.employees.cols.actions}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {paginated.map((emp) => {
-                  const shift = getShiftLabel(emp.workStart);
-                  const shiftColors = {
-                    Morning: { bg: "#eff6ff", color: "#1d4ed8" },
-                    Evening: { bg: "#fefce8", color: "#a16207" },
-                    Night: { bg: "#f5f3ff", color: "#6d28d9" },
-                  }[shift];
-                  const isActive = !emp.isDeleted;
-
-                  return (
-                    <tr key={emp.id}>
-                      <td>
-                        <div className="emp-row-user">
-                          <div
-                            className="emp-row-avatar"
-                            style={{ background: getEmpAvatarBg(emp.name) }}
-                          >
-                            {getEmpInitials(emp.name)}
-                          </div>
-                          <div>
-                            <strong>{emp.name}</strong>
-                            <span>Employee</span>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="emp-code-cell">{emp.id}</td>
-                      <td>{emp.phone}</td>
-                      <td>
-                        <span
-                          className="emp-shift-badge"
-                          style={{ background: shiftColors.bg, color: shiftColors.color }}
-                        >
-                          {shift}
-                        </span>
-                      </td>
-                      <td className="emp-hours-cell">
-                        {emp.workStart} – {emp.workEnd}
-                      </td>
-                      <td>
-                        <span className={`emp-status-badge ${isActive ? "active" : "inactive"}`}>
-                          <span className="emp-status-dot" />
-                          {isActive ? t.common.active : t.common.inactive}
-                        </span>
-                      </td>
-                      <td>
-                        <div className="emp-row-actions">
-                          <Button variant="icon" size="sm" aria-label="View" title="View">
-                            <Eye size={14} />
-                          </Button>
-                          <Button variant="icon" size="sm" aria-label="Edit" title="Edit" onClick={() => onEdit(emp)}>
-                            <Pencil size={14} />
-                          </Button>
-                          <Button variant="icon" size="sm" aria-label="Delete" title="Delete" onClick={() => onDelete(emp)}>
-                            <Trash2 size={14} />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="emp-pg-footer">
-            <span className="emp-pg-meta">
-              Showing {filtered.length === 0 ? 0 : (safePage - 1) * rowsPerPage + 1} to{" "}
-              {Math.min(safePage * rowsPerPage, filtered.length)} of {filtered.length} employees
-            </span>
-            <div className="emp-pg-controls">
-              <Button variant="icon" size="sm" aria-label="Previous page" disabled={safePage <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
-                <ChevronLeft size={14} />
-              </Button>
-              {Array.from({ length: totalPages }, (_, i) => i + 1)
-                .filter((p) => p === 1 || p === totalPages || Math.abs(p - safePage) <= 1)
-                .reduce<(number | "…")[]>((acc, p, idx, arr) => {
-                  if (idx > 0 && p - (arr[idx - 1] as number) > 1) acc.push("…");
-                  acc.push(p);
-                  return acc;
-                }, [])
-                .map((p, idx) =>
-                  p === "…" ? (
-                    <span key={`e${idx}`} className="emp-pg-ellipsis">…</span>
-                  ) : (
-                    <Button key={p} variant="icon" size="sm" className={safePage === p ? "active" : ""} aria-label={`Page ${p}`} onClick={() => setPage(p as number)}>
-                      {p}
-                    </Button>
-                  )
-                )}
-              <Button variant="icon" size="sm" aria-label="Next page" disabled={safePage >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>
-                <ChevronRight size={14} />
-              </Button>
-            </div>
-            <select
-              className="emp-rpp-select"
-              value={rowsPerPage}
-              onChange={(e) => { setRowsPerPage(Number(e.target.value)); setPage(1); }}
-            >
-              {[5, 10, 20, 50].map((n) => <option key={n} value={n}>Rows per page {n}</option>)}
-            </select>
-          </div>
-        </>
-      ) : (
-        <div className="emp-empty-state">
-          <Users size={40} color="#cbd5e1" />
-          <strong>{t.employees.noEmployees}</strong>
-          <span>Add your first employee to get started.</span>
+          ))}
         </div>
       )}
-    </div>
+
+      {/* Tab 3 — الاستحقاقات */}
+      {activeTab === 2 && (
+        <div className="emp-view-grid">
+          <div className="emp-view-kv">
+            <span className="emp-view-key">رصيد الإجازة السنوية</span>
+            <span className="emp-view-val">{leaveBalance} يوم</span>
+          </div>
+          <div className="emp-view-kv">
+            <span className="emp-view-key">السلف المتبقية</span>
+            <span className="emp-view-val" style={{ color: unpaidAdvances > 0 ? "#DC2626" : "#16A34A", fontWeight: 700 }}>
+              {unpaidAdvances > 0 ? `₪ ${unpaidAdvances.toLocaleString()}` : "لا يوجد"}
+            </span>
+          </div>
+          <div className="emp-view-kv">
+            <span className="emp-view-key">بدل مواصلات</span>
+            <span className="emp-view-val">—</span>
+          </div>
+          <div className="emp-view-kv">
+            <span className="emp-view-key">بدل سكن</span>
+            <span className="emp-view-val">—</span>
+          </div>
+        </div>
+      )}
+    </EmployeeModal>
   );
 }
 
-// ─── Main component ───────────────────────────────────────────────────────────
+// ─── Employee Advance Modal ───────────────────────────────────────────────────
+
+function EmployeeAdvanceModal({
+  employee,
+  isOpen,
+  onClose,
+  onSave,
+}: {
+  employee: Employee | null;
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: (emp: Employee, amount: number, month: string, reason: string) => void;
+}) {
+  const defaultMonth = new Date().toISOString().slice(0, 7);
+  const [amount, setAmount] = useState("");
+  const [month, setMonth]   = useState(defaultMonth);
+  const [reason, setReason] = useState("");
+  const [error, setError]   = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isOpen) { setAmount(""); setMonth(defaultMonth); setReason(""); setError(null); }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
+
+  const salary    = employee?.fixedSalary ?? 0;
+  const maxAmount = salary * 0.5;
+  const amountNum = parseFloat(amount) || 0;
+  const isValid   = amountNum > 0 && amountNum <= maxAmount;
+
+  const monthLabel = (() => {
+    const [y, m] = month.split("-");
+    return new Date(Number(y), Number(m) - 1, 1).toLocaleDateString("ar-SA", { month: "long", year: "numeric" });
+  })();
+
+  const handleSubmit = () => {
+    if (!employee) return;
+    if (amountNum <= 0) { setError("أدخل مبلغاً صحيحاً"); return; }
+    if (amountNum > maxAmount) { setError(`الحد الأقصى للسلفة هو ₪${maxAmount.toLocaleString()} (50% من الراتب)`); return; }
+    onSave(employee, amountNum, month, reason);
+    onClose();
+  };
+
+  const footer = (
+    <div style={{ display: "flex", gap: 8, direction: "rtl" }}>
+      <button
+        type="button"
+        onClick={handleSubmit}
+        style={{
+          flex: 1, height: 40, border: "none", borderRadius: 10,
+          backgroundColor: isValid ? "#2563EB" : "#CBD5E1",
+          color: "white", fontSize: 14, fontWeight: 600,
+          cursor: isValid ? "pointer" : "not-allowed",
+          transition: "background-color 150ms",
+        }}
+        onMouseEnter={(e) => { if (isValid) e.currentTarget.style.backgroundColor = "#1D4ED8"; }}
+        onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = isValid ? "#2563EB" : "#CBD5E1"; }}
+      >
+        تسجيل السلفة
+      </button>
+      <button
+        type="button"
+        onClick={onClose}
+        style={{
+          padding: "0 20px", height: 40,
+          border: "1px solid #E2E8F0", backgroundColor: "white", color: "#64748B",
+          borderRadius: 10, fontSize: 14, cursor: "pointer", transition: "all 150ms",
+        }}
+        onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "#F8FAFC"; e.currentTarget.style.borderColor = "#CBD5E1"; }}
+        onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "white"; e.currentTarget.style.borderColor = "#E2E8F0"; }}
+      >
+        إلغاء
+      </button>
+    </div>
+  );
+
+  return (
+    <BaseModal
+      isOpen={isOpen && employee !== null}
+      onClose={onClose}
+      title="سلفة موظف"
+      subtitle={employee?.name}
+      width={440}
+      footer={footer}
+    >
+      {/* Salary info card */}
+      <div style={{
+        backgroundColor: "#F0FDF4", border: "1px solid #BBF7D0",
+        borderRadius: 10, padding: "12px 14px", marginBottom: 16,
+        display: "flex", flexDirection: "column", gap: 6,
+      }}>
+        <div style={{ display: "flex", justifyContent: "space-between" }}>
+          <span style={{ fontSize: 12, color: "#64748B" }}>الراتب الشهري</span>
+          <span style={{ fontSize: 13, fontWeight: 700, color: "#16A34A" }}>₪ {salary.toLocaleString()}</span>
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between" }}>
+          <span style={{ fontSize: 12, color: "#64748B" }}>الحد الأقصى للسلفة (50%)</span>
+          <span style={{ fontSize: 13, fontWeight: 700, color: "#D97706" }}>₪ {maxAmount.toLocaleString()}</span>
+        </div>
+      </div>
+
+      {/* Form fields */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+
+        {/* Amount */}
+        <div>
+          <label style={{ fontSize: 13, fontWeight: 600, color: "#374151", display: "block", marginBottom: 6 }}>
+            مبلغ السلفة (₪) *
+          </label>
+          <input
+            type="text"
+            inputMode="numeric"
+            value={amount}
+            onChange={(e) => { setAmount(e.target.value.replace(/[^0-9.]/g, "")); setError(null); }}
+            onKeyDown={(e) => {
+              if (e.ctrlKey || e.metaKey) return;
+              const allowed = ["Backspace","Delete","Tab","Enter","Escape","ArrowLeft","ArrowRight","Home","End","."];
+              if (!allowed.includes(e.key) && !/^\d$/.test(e.key)) e.preventDefault();
+            }}
+            placeholder="0.00"
+            style={{
+              width: "100%", height: 44, boxSizing: "border-box",
+              border: `1.5px solid ${!amount ? "#E2E8F0" : isValid ? "#BBF7D0" : "#FECACA"}`,
+              borderRadius: 10, padding: "0 14px",
+              fontSize: 18, fontWeight: 700, color: "#0F172A",
+              backgroundColor: !amount ? "white" : isValid ? "#F0FDF4" : "#FEF2F2",
+              outline: "none", direction: "ltr", textAlign: "left",
+              fontVariantNumeric: "tabular-nums", transition: "all 150ms",
+            } as React.CSSProperties}
+          />
+          {/* Progress bar */}
+          {amountNum > 0 && (
+            <div style={{ marginTop: 6 }}>
+              <div style={{ height: 4, borderRadius: 99, backgroundColor: "#F1F5F9", overflow: "hidden" }}>
+                <div style={{
+                  height: "100%", borderRadius: 99,
+                  backgroundColor: amountNum > maxAmount ? "#DC2626" : amountNum > maxAmount * 0.75 ? "#D97706" : "#16A34A",
+                  width: `${Math.min((amountNum / (maxAmount || 1)) * 100, 100)}%`,
+                  transition: "width 300ms ease, background-color 300ms ease",
+                }} />
+              </div>
+              <p style={{ fontSize: 11, margin: "3px 0 0", color: amountNum > maxAmount ? "#DC2626" : "#64748B", textAlign: "left" }}>
+                {amountNum > maxAmount
+                  ? `⚠ يتجاوز الحد بـ ₪${(amountNum - maxAmount).toLocaleString()}`
+                  : `${((amountNum / (salary || 1)) * 100).toFixed(0)}% من الراتب`}
+              </p>
+            </div>
+          )}
+          {error && (
+            <div style={{ marginTop: 6, padding: "8px 12px", backgroundColor: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 8, fontSize: 13, color: "#DC2626" }}>
+              {error}
+            </div>
+          )}
+        </div>
+
+        {/* Month */}
+        <div>
+          <label style={{ fontSize: 13, fontWeight: 600, color: "#374151", display: "block", marginBottom: 6 }}>
+            شهر الخصم
+          </label>
+          <input
+            type="month"
+            value={month}
+            onChange={(e) => setMonth(e.target.value)}
+            style={{
+              width: "100%", height: 40, boxSizing: "border-box",
+              border: "1px solid #E2E8F0", borderRadius: 10, padding: "0 14px",
+              fontSize: 14, color: "#0F172A", backgroundColor: "white",
+              outline: "none", cursor: "pointer", transition: "border-color 150ms",
+            } as React.CSSProperties}
+          />
+          <p style={{ fontSize: 11, color: "#94A3B8", margin: "4px 0 0" }}>سيتم خصم السلفة من راتب هذا الشهر</p>
+        </div>
+
+        {/* Reason */}
+        <div>
+          <label style={{ fontSize: 13, fontWeight: 600, color: "#374151", display: "block", marginBottom: 6 }}>
+            السبب <span style={{ color: "#94A3B8", fontWeight: 400 }}>(اختياري)</span>
+          </label>
+          <textarea
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            placeholder="سبب طلب السلفة..."
+            rows={3}
+            style={{
+              width: "100%", boxSizing: "border-box",
+              border: "1px solid #E2E8F0", borderRadius: 10, padding: "10px 14px",
+              fontSize: 13, color: "#0F172A", resize: "vertical",
+              outline: "none", direction: "rtl", lineHeight: 1.6,
+              transition: "border-color 150ms", fontFamily: "inherit",
+            } as React.CSSProperties}
+          />
+        </div>
+
+        {/* Deduction notice */}
+        {isValid && (
+          <div style={{
+            backgroundColor: "#FEF3C7", border: "1px solid #FDE68A",
+            borderRadius: 10, padding: "10px 14px",
+            fontSize: 13, color: "#92400E", lineHeight: 1.6,
+          }}>
+            <strong>تنبيه:</strong> سيتم خصم <strong>₪ {amountNum.toLocaleString()}</strong> تلقائياً من راتب <strong>{monthLabel}</strong>
+          </div>
+        )}
+      </div>
+    </BaseModal>
+  );
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function Employees() {
-  const { t } = useSettings();
-  const { employees, addEmployee, updateEmployee, deleteEmployee: deleteEmployeeCtx } = useData();
-  const [searchTerm, setSearchTerm] = useState("");
-  const [activeTab, setActiveTab] = useState<MainTab>("today");
-  const [attendanceRange, setAttendanceRange] = useState<AttendanceRange>("today");
-  const [selectedAttendanceDate, setSelectedAttendanceDate] = useState(getTodayDate());
-  const [selectedMonthDate, setSelectedMonthDate] = useState(getTodayDate());
-  const [monthlyViewMode, setMonthlyViewMode] = useState<MonthlyViewMode>("week");
-  const [selectedMonthWeekIndex, setSelectedMonthWeekIndex] = useState(0);
+  const { t, isArabic } = useSettings();
+  const { employees, departments, addEmployee, updateEmployee, deleteEmployee: deleteEmployeeCtx } = useData();
 
-  const [showEmployeeModal, setShowEmployeeModal] = useState(false);
-  const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
-  const [form, setForm] = useState<EmployeeForm>(EMPTY_FORM);
-  const [formErrors, setFormErrors] = useState<EmployeeFormErrors>({});
-  const [toast, setToast] = useState<ToastState>(null);
-  const [deleteDialog, setDeleteDialog] = useState<DeleteDialogState>(null);
-  const [monthlyEditor, setMonthlyEditor] = useState<MonthlyEditorState>(null);
-  const [reportSortKey, setReportSortKey] = useState<ReportSortKey>("name");
-  const [reportSortDirection, setReportSortDirection] = useState<ReportSortDirection>("asc");
+  // ── Core state ────────────────────────────────────────────────────────────
+  const [searchInput, setSearchInput]     = useState("");
+  const [searchTerm, setSearchTerm]       = useState("");
+  const [statusFilter, setStatusFilter]   = useState<StatusFilter>("all");
+  const [departmentFilter, setDepartmentFilter] = useState("all");
+  const [showDeptMenu, setShowDeptMenu]    = useState(false);
 
+  const [modalState, setModalState]       = useState<ModalState>({ type: null });
+  const [form, setForm]                   = useState<EmployeeForm>(EMPTY_FORM);
+  const [formErrors, setFormErrors]       = useState<EmployeeFormErrors>({});
+  const [toast, setToast]                 = useState<ToastState>(null);
+  const [deleteConfirmItem, setDeleteConfirmItem] = useState<{ itemName: string; onConfirm: () => void } | null>(null);
+  const [advanceModalEmployee, setAdvanceModalEmployee] = useState<Employee | null>(null);
 
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const deptMenuRef = useRef<HTMLDivElement>(null);
+
+  // ── Derived state ─────────────────────────────────────────────────────────
+  const today = getTodayDate();
+  const editingEmployee = modalState.type === "edit" && modalState.employeeId
+    ? employees.find((e) => e.id === modalState.employeeId) ?? null
+    : null;
+  const viewingEmployee = modalState.type === "view" && modalState.employeeId
+    ? employees.find((e) => e.id === modalState.employeeId) ?? null
+    : null;
+
+  const activeEmployees = useMemo(() => employees.filter((e) => !e.isDeleted), [employees]);
+
+  const stats = useMemo(() => {
+    let present = 0, late = 0, absent = 0;
+    activeEmployees.forEach((emp) => {
+      const s = getDailyAttendanceEntryByDate(emp, today)?.status;
+      if (s === "present") present++;
+      else if (s === "late") late++;
+      else if (s === "absent") absent++;
+    });
+    return { total: activeEmployees.length, present, late, absent };
+  }, [activeEmployees, today]);
+
+  // ── Toast ─────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!toast) return;
     const timer = window.setTimeout(() => setToast(null), 2500);
     return () => window.clearTimeout(timer);
   }, [toast]);
 
-  const filteredEmployees = useMemo(() => {
-    const value = searchTerm.trim().toLowerCase();
-    if (!value) return employees;
-    return employees.filter((emp) =>
-      [emp.id, emp.name, emp.phone, emp.notes || ""].join(" ").toLowerCase().includes(value)
-    );
-  }, [employees, searchTerm]);
-
-  const payrollSummary = useMemo(() => {
-    return employees.reduce(
-      (acc, emp) => {
-        const p = getEmployeePayrollForRange(emp, attendanceRange);
-        acc.gross += p.gross;
-        acc.advance += p.advance;
-        acc.net += p.net;
-        return acc;
-      },
-      { gross: 0, advance: 0, net: 0 }
-    );
-  }, [employees, attendanceRange]);
-
-  const attendanceReportRows = useMemo(() => {
-    const rows = employees
-      .map((emp) => getEmployeeReportRow(emp, attendanceRange))
-      .filter((r) => r.present > 0 || r.late > 0 || r.absent > 0 || r.halfDay > 0 || r.leave > 0 || r.totalHours > 0);
-    return [...rows].sort((a, b) => {
-      if (reportSortKey === "name") {
-        const res = a.name.localeCompare(b.name);
-        return reportSortDirection === "asc" ? res : -res;
+  // ── Close dept menu on outside click ─────────
+  useEffect(() => {
+    if (!showDeptMenu) return;
+    const handler = (e: MouseEvent) => {
+      if (deptMenuRef.current && !deptMenuRef.current.contains(e.target as Node)) {
+        setShowDeptMenu(false);
       }
-      const res = Number(a[reportSortKey] as number) - Number(b[reportSortKey] as number);
-      return reportSortDirection === "asc" ? res : -res;
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [showDeptMenu]);
+
+  // ── Handlers ──────────────────────────────────────────────────────────────
+  const handleSearchChange = (value: string) => {
+    setSearchInput(value);
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    debounceTimer.current = setTimeout(() => setSearchTerm(value), 150);
+  };
+
+  const filteredEmployees = useMemo(() => {
+    const query = searchTerm.trim().toLowerCase();
+    return activeEmployees.filter((emp) => {
+      if (query) {
+        const dept = departments.find((d) => d.id === emp.departmentId);
+        const statusLabel = STATUS_CONFIG[getTodayStatus(emp)]?.label || "";
+        const haystack = [emp.name, emp.id, emp.jobTitle || "", dept?.name || "", dept?.nameAr || "", emp.phone, statusLabel].join(" ").toLowerCase();
+        if (!haystack.includes(query)) return false;
+      }
+      if (departmentFilter !== "all" && emp.departmentId !== departmentFilter) return false;
+      if (statusFilter !== "all") {
+        if (getTodayStatus(emp) !== statusFilter) return false;
+      }
+      return true;
     });
-  }, [employees, attendanceRange, reportSortKey, reportSortDirection]);
+  }, [activeEmployees, searchTerm, departmentFilter, statusFilter, departments]);
 
-  const currentMonthlyEditorEmployee = monthlyEditor
-    ? employees.find((emp) => emp.id === monthlyEditor.employeeId) || null
-    : null;
-
-  const handleMonthDateChange = (date: string) => { setSelectedMonthDate(date); setSelectedMonthWeekIndex(0); };
-  const handleMonthViewChange = (mode: MonthlyViewMode) => { setMonthlyViewMode(mode); setSelectedMonthWeekIndex(0); };
-
-  const getReportSortIndicator = (key: ReportSortKey) => {
-    if (reportSortKey !== key) return "";
-    return reportSortDirection === "asc" ? "↑" : "↓";
+  const handleSaveAdvance = (emp: Employee, amount: number, month: string, reason: string) => {
+    const newAdvance: EmployeeAdvance = {
+      id: `adv-${Date.now()}`,
+      amount,
+      date: `${month}-01`,
+      notes: reason || undefined,
+    };
+    updateEmployee({ ...emp, advances: [...(emp.advances ?? []), newAdvance] });
+    setToast({ type: "success", message: `تم تسجيل سلفة ₪${amount.toLocaleString()} لـ ${emp.name}` });
   };
 
-  const toggleReportSort = (key: ReportSortKey) => {
-    if (reportSortKey === key) { setReportSortDirection((p) => (p === "asc" ? "desc" : "asc")); return; }
-    setReportSortKey(key);
-    setReportSortDirection(key === "name" ? "asc" : "desc");
+  const resetFormState = () => {
+    setModalState({ type: null });
+    setForm(EMPTY_FORM);
+    setFormErrors({});
   };
+
+  const openEdit = (emp: Employee) => {
+    setForm({
+      name: emp.name, phone: emp.phone, nationalId: emp.nationalId ?? "",
+      birthDate: "", gender: emp.gender ?? "male", city: emp.city ?? "",
+      jobTitle: emp.jobTitle ?? "", departmentId: emp.departmentId ?? "",
+      hireDate: emp.hireDate ?? today, contractType: emp.contractType ?? "full-time",
+      fixedSalary: String(emp.fixedSalary ?? 0), workStart: emp.workStart,
+      workEnd: emp.workEnd, annualLeave: "14", transportation: "0", housing: "0",
+      notes: emp.notes ?? "",
+    });
+    setFormErrors({});
+    setModalState({ type: "edit", employeeId: emp.id });
+  };
+
+  const openView = (emp: Employee) => setModalState({ type: "view", employeeId: emp.id });
 
   const setField = (field: keyof EmployeeForm, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
     setFormErrors((prev) => ({ ...prev, [field]: undefined }));
   };
 
-  const resetFormState = () => { setShowEmployeeModal(false); setEditingEmployee(null); setForm(EMPTY_FORM); setFormErrors({}); };
-  const openAddModal = () => { setEditingEmployee(null); setForm(EMPTY_FORM); setFormErrors({}); setShowEmployeeModal(true); };
-  const openEditModal = (emp: Employee) => {
-    setEditingEmployee(emp);
-    setForm({ name: emp.name, phone: emp.phone, workStart: emp.workStart, workEnd: emp.workEnd, salaryType: emp.salaryType, hourlyRate: String(emp.hourlyRate ?? 0), fixedSalary: String(emp.fixedSalary ?? 0), notes: emp.notes ?? "", departmentId: emp.departmentId ?? "" });
-    setFormErrors({});
-    setShowEmployeeModal(true);
+  const validateForm = (): boolean => {
+    const errs: EmployeeFormErrors = {};
+    if (!form.name.trim())     errs.name = "الاسم مطلوب";
+    if (!form.jobTitle.trim()) errs.jobTitle = "المسمى الوظيفي مطلوب";
+    if (!form.departmentId)    errs.departmentId = "القسم مطلوب";
+    if (!form.fixedSalary || Number(form.fixedSalary) < 0) errs.fixedSalary = "أدخل راتباً صحيحاً";
+    setFormErrors(errs);
+    return Object.keys(errs).length === 0;
   };
 
   const handleSaveEmployee = () => {
-    const errors = validateEmployeeForm(form);
-    setFormErrors(errors);
-    if (Object.keys(errors).length > 0) return;
-
+    if (!validateForm()) return;
     if (editingEmployee) {
-      updateEmployee({ ...editingEmployee, name: form.name.trim(), phone: form.phone.trim(), workStart: form.workStart, workEnd: form.workEnd, salaryType: form.salaryType, hourlyRate: form.salaryType === "hourly" ? Number(form.hourlyRate) : undefined, fixedSalary: form.salaryType === "fixed" ? Number(form.fixedSalary) : undefined, notes: form.notes.trim(), departmentId: form.departmentId || undefined });
+      updateEmployee({
+        ...editingEmployee,
+        name: form.name.trim(), phone: form.phone.trim(),
+        nationalId: form.nationalId.trim() || undefined,
+        gender: form.gender, city: form.city || undefined,
+        jobTitle: form.jobTitle.trim(), departmentId: form.departmentId || undefined,
+        hireDate: form.hireDate || undefined, contractType: form.contractType,
+        fixedSalary: Number(form.fixedSalary), workStart: form.workStart, workEnd: form.workEnd,
+        notes: form.notes.trim() || undefined,
+      });
       resetFormState();
       setToast({ type: "success", message: t.employees.toast.updated });
       return;
     }
-
     const newEmployee: Employee = {
       id: `EMP-${1000 + employees.length + 1}`,
-      name: form.name.trim(),
-      phone: form.phone.trim(),
-      workStart: form.workStart,
-      workEnd: form.workEnd,
-      salaryType: form.salaryType,
-      hourlyRate: form.salaryType === "hourly" ? Number(form.hourlyRate) : undefined,
-      fixedSalary: form.salaryType === "fixed" ? Number(form.fixedSalary) : undefined,
-      advance: 0,
-      advances: [],
-      notes: form.notes.trim(),
-      departmentId: form.departmentId || undefined,
-      attendanceRecords: [],
-      dailyAttendance: [],
-      isDeleted: false,
+      name: form.name.trim(), phone: form.phone.trim(),
+      workStart: form.workStart, workEnd: form.workEnd,
+      salaryType: "fixed", fixedSalary: Number(form.fixedSalary),
+      advance: 0, advances: [], notes: form.notes.trim() || undefined,
+      departmentId: form.departmentId || undefined, attendanceRecords: [], dailyAttendance: [],
+      isDeleted: false, nationalId: form.nationalId.trim() || undefined,
+      gender: form.gender, city: form.city || undefined,
+      jobTitle: form.jobTitle.trim(), hireDate: form.hireDate || undefined,
+      contractType: form.contractType,
     };
-
     addEmployee(newEmployee);
     resetFormState();
     setToast({ type: "success", message: t.employees.toast.created });
   };
 
-  const handleApplyPresentToAll = () => {
-    employees.forEach((emp) => {
-      updateEmployee(upsertDailyAttendance(emp, {
-        date: selectedAttendanceDate,
-        status: "present",
-        workedHours: getDefaultWorkedHours(emp, "present"),
-        advanceAmount: 0,
-        notes: "",
-      }));
-    });
-    setToast({ type: "success", message: "Default present attendance applied to all employees." });
-  };
-
-  const handleUpdateEmployeeDayByDate = (
-    employeeId: string,
-    date: string,
-    payload: { status: DailyAttendanceStatus; workedHours: number; advanceAmount: number; notes?: string }
-  ) => {
-    const emp = employees.find((e) => e.id === employeeId);
-    if (!emp) return;
-    const updated = upsertDailyAttendance(emp, { date, status: payload.status, workedHours: payload.workedHours, advanceAmount: payload.advanceAmount, notes: payload.notes?.trim() || undefined });
-    const nextAdvances = getEmployeeAdvances(updated).filter((item) => item.date !== date);
-    if (payload.advanceAmount > 0) {
-      nextAdvances.unshift({ id: `ADV-${employeeId}-${date}`, amount: payload.advanceAmount, date, notes: payload.notes?.trim() || "Daily attendance advance" });
-    }
-    updateEmployee({ ...updated, advances: nextAdvances, advance: nextAdvances.reduce((sum, item) => sum + Number(item.amount || 0), 0) });
-  };
-
-  const handleUpdateEmployeeDay = (
-    employeeId: string,
-    payload: { status: DailyAttendanceStatus; workedHours: number; advanceAmount: number; notes?: string }
-  ) => { handleUpdateEmployeeDayByDate(employeeId, selectedAttendanceDate, payload); };
-
-  const handleSaveDailyRegister = () => {
-    setToast({ type: "success", message: `Daily register for ${selectedAttendanceDate} saved successfully.` });
-  };
-
-  const handleExportReportCsv = () => {
-    if (attendanceReportRows.length === 0) {
-      setToast({ type: "warning", message: "No report data available to export." });
+  const handleSaveDraft = () => {
+    if (!form.name.trim()) {
+      setFormErrors({ name: "الاسم مطلوب للحفظ كمسودة" });
       return;
     }
-    const headers = ["Employee", "Employee ID", "Phone", "Present", "Late", "Absent", "Half Day", "Leave", "Total Hours", "Gross Payroll", "Advance", "Net Payroll"];
-    const rows = attendanceReportRows.map((row) => [row.name, row.id, row.phone, row.present, row.late, row.absent, row.halfDay, row.leave, row.totalHours.toFixed(2), row.gross.toFixed(2), row.advance.toFixed(2), row.net.toFixed(2)]);
-    const csvContent = [headers.map(toCsvValue).join(","), ...rows.map((r) => r.map(toCsvValue).join(","))].join("\n");
-    downloadTextFile(`daily-attendance-report-${getAttendanceRangeLabel(attendanceRange)}.csv`, csvContent, "text/csv;charset=utf-8;");
-    setToast({ type: "success", message: "Attendance report exported successfully." });
+    const draftId = editingEmployee?.id ?? `EMP-${1000 + employees.length + 1}`;
+    const draft: Employee = {
+      id: draftId,
+      name: form.name.trim(), phone: form.phone.trim(),
+      workStart: form.workStart, workEnd: form.workEnd,
+      salaryType: "fixed", fixedSalary: form.fixedSalary ? Number(form.fixedSalary) : undefined,
+      advance: 0, advances: [], notes: form.notes.trim() || undefined,
+      departmentId: form.departmentId || undefined, attendanceRecords: [], dailyAttendance: [],
+      isDeleted: false, nationalId: form.nationalId.trim() || undefined,
+      gender: form.gender, city: form.city || undefined,
+      jobTitle: form.jobTitle.trim() || undefined, hireDate: form.hireDate || undefined,
+      contractType: form.contractType,
+    };
+    if (editingEmployee) {
+      updateEmployee(draft);
+    } else {
+      addEmployee(draft);
+    }
+    resetFormState();
+    setToast({ type: "success", message: editingEmployee ? t.employees.toast.updated : t.employees.toast.created });
   };
 
-  const openMonthlyEditor = (emp: Employee, date: string) => {
-    const entry = getDailyAttendanceEntryByDate(emp, date);
-    setMonthlyEditor({
-      employeeId: emp.id,
-      employeeName: emp.name,
-      date,
-      status: entry?.status || "present",
-      workedHours: String(entry?.workedHours ?? getDefaultWorkedHours(emp, "present")),
-      advanceAmount: String(entry?.advanceAmount ?? 0),
-      notes: entry?.notes || "",
-    });
-  };
+  // ── Dept pills ────────────────────────────────────────────────────────────
+  const DEPT_PILLS = useMemo(() => [
+    { id: "all", label: "كل الأقسام" },
+    ...departments.filter((d) => d.status === "active").map((d) => ({
+      id: d.id, label: isArabic ? (d.nameAr || d.name) : d.name,
+    })),
+  ], [departments, isArabic]);
 
+  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <>
-      <div className="employees-page employees-lux-page">
-        {/* Header */}
-        <div className="employees-header employees-lux-header">
-          <div>
-            <p className="dashboard-badge">Employee Management</p>
-            <h1 className="dashboard-title">{t.employees.pageTitle}</h1>
-            <p className="dashboard-subtitle employees-hero-text">
-              {t.employees.pageSubtitle}
-            </p>
+      <div className="emp-page">
+        {/* Top Bar */}
+        <div className="emp-topbar">
+          <div className="emp-topbar-left">
+            <h1 className="emp-page-title">الموظفون</h1>
+            <p className="emp-page-subtitle">سجلات الموظفين وشؤون الموارد البشرية</p>
           </div>
-          <div className="employees-header-actions">
-            <div className="emp-header-search">
-              <Search size={15} />
+          <div className="emp-topbar-right">
+            <button type="button" className="emp-add-btn" onClick={() => { setForm(EMPTY_FORM); setFormErrors({}); setModalState({ type: "add" }); }}>
+              <Plus size={16} /> إضافة موظف
+            </button>
+          </div>
+        </div>
+
+        {/* Stat Cards */}
+        <StatCards stats={stats} />
+
+        {/* ─── Employee Table ──────────────────────────────────────────────── */}
+        <div className="emp-search-wrap">
+              <Search size={18} color="#94A3B8" />
               <input
-                type="text"
-                placeholder={t.employees.searchPlaceholder}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                className="emp-search-input" type="text"
+                placeholder="ابحث بالاسم أو الكود أو القسم أو المسمى الوظيفي..."
+                value={searchInput} onChange={(e) => handleSearchChange(e.target.value)}
               />
+              {searchInput && (
+                <button type="button" className="emp-search-clear" onClick={() => { setSearchInput(""); setSearchTerm(""); }}>
+                  <X size={16} />
+                </button>
+              )}
             </div>
-            <Button variant="primary" size="lg" onClick={openAddModal}>
-              + {t.employees.addEmployee}
-            </Button>
-          </div>
-        </div>
 
-        {/* Main card */}
-        <div className="dashboard-card employees-main-card">
-          {/* Tabs */}
-          <div className="emp-main-tabs">
-            {([
-              ["today", t.employees.tabs.today],
-              ["monthly", t.employees.tabs.monthly],
-              ["reports", t.employees.tabs.reports],
-              ["employees", t.employees.tabs.employees],
-            ] as [MainTab, string][]).map(([key, label]) => (
-              <button
-                key={key}
-                type="button"
-                className={`emp-main-tab ${activeTab === key ? "active" : ""}`}
-                onClick={() => setActiveTab(key)}
-              >
-                {key === "today" && <Calendar size={14} />}
-                {key === "monthly" && <Calendar size={14} />}
-                {key === "reports" && <BarChart2 size={14} />}
-                {key === "employees" && <Users size={14} />}
-                {label}
+            <div className="emp-dept-dropdown" ref={deptMenuRef}>
+              <button type="button" className="emp-dept-trigger" onClick={() => setShowDeptMenu((p) => !p)}>
+                {DEPT_PILLS.find((p) => p.id === departmentFilter)?.label ?? "كل الأقسام"}
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
               </button>
-            ))}
+              {showDeptMenu && (
+                <div className="emp-dept-menu">
+                  {DEPT_PILLS.map((pill) => (
+                    <button key={pill.id} type="button"
+                      className={`emp-dept-item ${departmentFilter === pill.id ? "active" : ""}`}
+                      onClick={() => { setDepartmentFilter(pill.id); setShowDeptMenu(false); }}>
+                      {pill.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="emp-table-card">
+              <div className="emp-table-header">
+                <span className="emp-table-count">
+                  عرض جميع الموظفين — <strong>{filteredEmployees.length}</strong> موظف
+                </span>
+                <div className="emp-status-chips">
+                  {([
+                    { value: "all", label: "الكل" }, { value: "present", label: "حاضر" },
+                    { value: "late", label: "متأخر" }, { value: "absent", label: "غائب" },
+                    { value: "leave", label: "إجازة" },
+                  ] as const).map((s) => (
+                    <button key={s.value} type="button"
+                      className={`emp-status-chip ${statusFilter === s.value ? "active" : ""}`}
+                      onClick={() => setStatusFilter(s.value)}>
+                      <span className="emp-chip-dot" style={{
+                        background: s.value === "all" ? "#94A3B8" : s.value === "present" ? "#16A34A" : s.value === "late" ? "#D97706" : s.value === "absent" ? "#DC2626" : "#2563EB"
+                      }} />
+                      {s.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {filteredEmployees.length > 0 ? (
+                <div className="emp-table-wrap">
+                  <table className="emp-table atlas-table">
+                    <colgroup>
+                      <col style={{ width: "20%" }} />
+                      <col style={{ width: "11%" }} />
+                      <col style={{ width: "12%" }} />
+                      <col style={{ width: "14%" }} />
+                      <col style={{ width: "14%" }} />
+                      <col style={{ width: "9%" }} />
+                      <col style={{ width: "10%" }} />
+                      <col style={{ width: "10%" }} />
+                    </colgroup>
+                    <thead>
+                      <tr>
+                        <th className="col-entity" style={{ textAlign: "right" }}>الاسم الكامل</th>
+                        <th className="col-flex">ساعات الدوام</th>
+                        <th className="col-code">رقم الهاتف</th>
+                        <th className="col-badge">القسم</th>
+                        <th className="col-currency">الراتب</th>
+                        <th className="col-num">الإجازات</th>
+                        <th className="col-currency">السلف</th>
+                        <th className="col-actions">إجراءات</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredEmployees.map((emp) => {
+                        const unpaidAdv    = getUnpaidAdvancesTotal(emp);
+                        const leaveBalance = getLeaveBalance(emp);
+                        const dept         = departments.find((d) => d.id === emp.departmentId);
+                        const deptColor    = dept ? DEPT_COLORS[parseInt(dept.id.replace(/\D/g, "") || "0", 10) % DEPT_COLORS.length] : null;
+                        const theme        = getAvatarTheme(emp.name);
+                        return (
+                          <tr key={emp.id}>
+                            <td>
+                              <div className="emp-row-user">
+                                <div className="emp-row-avatar"
+                                  style={{ background: theme.bg, boxShadow: `0 0 0 2px #fff, 0 0 0 4px ${theme.ring}` }}>
+                                  {getEmpInitials(emp.name)}
+                                </div>
+                                <div>
+                                  <strong>{emp.name}</strong>
+                                  <span className="emp-row-code">{emp.id}</span>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="emp-cell-text" style={{ fontVariantNumeric: "tabular-nums", direction: "ltr" }}>
+                              {emp.workStart} – {emp.workEnd}
+                            </td>
+                            <td className="emp-cell-text" style={{ direction: "ltr", fontVariantNumeric: "tabular-nums" }}>
+                              {emp.phone || <span style={{ color: "#CBD5E1" }}>—</span>}
+                            </td>
+                            <td style={{ textAlign: "center" }}>
+                              {dept ? (
+                                <button type="button" className="emp-dept-pill-inline emp-row-dept-badge--clickable"
+                                  style={{ background: deptColor?.bg || "#F1F5F9", color: deptColor?.text || "#475569" }}
+                                  onClick={() => setDepartmentFilter(dept.id)}>
+                                  {isArabic ? (dept.nameAr || dept.name) : dept.name}
+                                </button>
+                              ) : (
+                                <span style={{ color: "#CBD5E1", fontSize: 12 }}>—</span>
+                              )}
+                            </td>
+                            <td style={{ textAlign: "center" }}>
+                              <strong className="emp-salary-amount">{formatCurrencyValue(emp.fixedSalary ?? 0, "ILS")}</strong>
+                            </td>
+                            <td className={`emp-cell-num ${leaveBalance < 5 ? "emp-leave-warn" : "emp-leave-ok"}`}>
+                              {leaveBalance} يوم
+                            </td>
+                            <td className="emp-cell-num">
+                              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                                <span style={{ color: unpaidAdv > 0 ? "#DC2626" : "#16A34A" }}>
+                                  {unpaidAdv > 0 ? formatCurrencyValue(unpaidAdv, "ILS") : "لا يوجد"}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => setAdvanceModalEmployee(emp)}
+                                  title="إضافة سلفة"
+                                  style={{
+                                    background: "var(--app-surface-2)", border: "1px solid var(--app-border)",
+                                    borderRadius: "var(--app-radius-sm)", cursor: "pointer",
+                                    padding: "2px 7px", fontSize: 11, fontWeight: 700,
+                                    color: "var(--app-text-secondary)", lineHeight: 1.4,
+                                  }}
+                                >
+                                  + سلفة
+                                </button>
+                              </div>
+                            </td>
+                            <td>
+                              <TableActions
+                                onView={() => openView(emp)}
+                                onEdit={() => openEdit(emp)}
+                                onDelete={() => setDeleteConfirmItem({ itemName: emp.name, onConfirm: () => { deleteEmployeeCtx(emp.id); setToast({ type: "success", message: t.employees.toast.deleted }); } })}
+                              />
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="emp-empty-state">
+                  <div className="emp-empty-icon"><Search size={32} /></div>
+                  <p className="emp-empty-text">لا توجد نتائج{searchTerm ? ` لـ «${searchTerm}»` : ""}</p>
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* Tab content */}
-          <div className="emp-tab-content">
-            {activeTab === "today" && (
-              <TodayAttendanceSection
-                employees={filteredEmployees}
-                selectedDate={selectedAttendanceDate}
-                onChangeDate={setSelectedAttendanceDate}
-                onApplyPresentToAll={handleApplyPresentToAll}
-                onUpdateEmployeeDay={handleUpdateEmployeeDay}
-                onSaveSheet={handleSaveDailyRegister}
-              />
-            )}
-            {activeTab === "monthly" && (
-              <MonthlyAttendanceSection
-                employees={filteredEmployees}
-                monthDate={selectedMonthDate}
-                viewMode={monthlyViewMode}
-                weekIndex={selectedMonthWeekIndex}
-                onChangeMonthDate={handleMonthDateChange}
-                onChangeViewMode={handleMonthViewChange}
-                onChangeWeekIndex={setSelectedMonthWeekIndex}
-                onOpenEditor={openMonthlyEditor}
-              />
-            )}
-            {activeTab === "reports" && (
-              <ReportsSection
-                attendanceRange={attendanceRange}
-                onChangeRange={setAttendanceRange}
-                attendanceReportRows={attendanceReportRows}
-                payrollSummary={payrollSummary}
-                getReportSortIndicator={getReportSortIndicator}
-                toggleReportSort={toggleReportSort}
-                handleExportReportCsv={handleExportReportCsv}
-              />
-            )}
-            {activeTab === "employees" && (
-              <EmployeesSection
-                employees={employees}
-                onEdit={openEditModal}
-                onDelete={(emp) =>
-                  setDeleteDialog({ employeeId: emp.id, employeeName: emp.name, confirmText: "" })
-                }
-              />
-            )}
-          </div>
-        </div>
-      </div>
+      {/* ── Modals ─────────────────────────────────────────────────────────── */}
+      <EmployeeFormModal
+        isOpen={modalState.type === "add" || modalState.type === "edit"}
+        title={editingEmployee ? "تعديل بيانات الموظف" : "إضافة موظف جديد"}
+        values={form} errors={formErrors} onChange={setField}
+        onClose={resetFormState} onSubmit={handleSaveEmployee}
+        onSaveDraft={handleSaveDraft}
+        submitLabel={editingEmployee ? "حفظ التغييرات" : "حفظ الموظف"}
+      />
 
-      {showEmployeeModal && (
-        <EmployeeFormModal
-          title={editingEmployee ? t.employees.form.editTitle : t.employees.form.createTitle}
-          description={editingEmployee ? "Update the selected employee information." : "Enter the new employee information."}
-          values={form}
-          errors={formErrors}
-          onChange={setField}
-          onClose={resetFormState}
-          onSubmit={handleSaveEmployee}
-          submitLabel={editingEmployee ? t.common.saveChanges : t.employees.addEmployee}
-        />
-      )}
+      <EmployeeViewModal
+        isOpen={modalState.type === "view"}
+        emp={viewingEmployee}
+        isArabic={isArabic}
+        onClose={() => setModalState({ type: null })}
+        onEdit={() => {
+          if (viewingEmployee) {
+            openEdit(viewingEmployee);
+          }
+        }}
+      />
 
-      {deleteDialog && (
-        <DeleteConfirmModal
-          state={deleteDialog}
-          onChange={(value) => setDeleteDialog((prev) => prev ? { ...prev, confirmText: value } : prev)}
-          onClose={() => setDeleteDialog(null)}
-          onConfirm={() => {
-            if (!deleteDialog || deleteDialog.confirmText !== DELETE_CONFIRMATION_CODE) return;
-            deleteEmployeeCtx(deleteDialog.employeeId);
-            setDeleteDialog(null);
-            setToast({ type: "success", message: t.employees.toast.deleted });
-          }}
-        />
-      )}
+      <DeleteConfirmDialog
+        isOpen={deleteConfirmItem !== null}
+        itemName={deleteConfirmItem?.itemName ?? ""}
+        onConfirm={() => { deleteConfirmItem?.onConfirm(); setDeleteConfirmItem(null); }}
+        onCancel={() => setDeleteConfirmItem(null)}
+      />
 
-      {monthlyEditor && currentMonthlyEditorEmployee && (
-        <MonthlyAttendanceEditorModal
-          state={monthlyEditor}
-          employee={currentMonthlyEditorEmployee}
-          onClose={() => setMonthlyEditor(null)}
-          onSave={(payload) => {
-            handleUpdateEmployeeDayByDate(payload.employeeId, payload.date, {
-              status: payload.status,
-              workedHours: payload.workedHours,
-              advanceAmount: payload.advanceAmount,
-              notes: payload.notes,
-            });
-            setMonthlyEditor(null);
-            setToast({ type: "success", message: t.employees.toast.attendanceMarked });
-          }}
-        />
-      )}
+      <EmployeeAdvanceModal
+        employee={advanceModalEmployee}
+        isOpen={advanceModalEmployee !== null}
+        onClose={() => setAdvanceModalEmployee(null)}
+        onSave={handleSaveAdvance}
+      />
 
-      {toast && <div className={`toast toast-${toast.type}`}>{toast.message}</div>}
+      {toast && <div className={`emp-toast emp-toast-${toast.type}`}>{toast.message}</div>}
     </>
   );
 }

@@ -8,17 +8,17 @@ import { CitySearch } from '../ui/CitySearch';
 import { useData } from '../../context/DataContext';
 import type { Customer } from '../../data/types';
 import {
-  PAYMENT_TERMS_LABELS,
   SALES_REPS,
   TYPE_LABELS,
   CLASSIFICATION_LABELS,
 } from '../../data/customersMock';
-import type { PaymentTerms } from '../../data/customersMock';
 
 interface Props {
   customer: Customer;
   onClose: () => void;
 }
+
+// Parent must use key={customer.id} to remount on customer change
 
 type FormState = {
   name: string;
@@ -29,9 +29,6 @@ type FormState = {
   email: string;
   city: string;
   governorate: string;
-  taxId: string;
-  paymentTerms: PaymentTerms;
-  paymentTermsCustom: string;
   creditLimit: string;
   currency: string;
   salesRep: string;
@@ -49,9 +46,6 @@ function toForm(c: Customer): FormState {
     email:              c.email ?? '',
     city:               c.city ?? '',
     governorate:        c.governorate ?? '',
-    taxId:              c.taxId ?? '',
-    paymentTerms:       (c.paymentTerms as PaymentTerms) ?? 'cash',
-    paymentTermsCustom: c.paymentTermsCustom ?? '',
     creditLimit:        String(c.creditLimit ?? ''),
     currency:           c.currency ?? 'ILS',
     salesRep:           c.salesRep ?? '',
@@ -60,18 +54,11 @@ function toForm(c: Customer): FormState {
   };
 }
 
-const PAYMENT_TERMS_OPTIONS = (Object.keys(PAYMENT_TERMS_LABELS) as PaymentTerms[]).map(v => ({
-  value: v,
-  label: PAYMENT_TERMS_LABELS[v],
-}));
-
 export function EditCustomerDrawer({ customer, onClose }: Props) {
   const { updateCustomer } = useData();
   const [form, setForm] = useState<FormState>(toForm(customer));
   const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({});
   const [saving, setSaving] = useState(false);
-
-  useEffect(() => { setForm(toForm(customer)); setErrors({}); }, [customer]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) { if (e.key === 'Escape') onClose(); }
@@ -106,9 +93,6 @@ export function EditCustomerDrawer({ customer, onClose }: Props) {
       email:             form.email.trim() || undefined,
       city:              form.city.trim() || undefined,
       governorate:       form.governorate.trim() || undefined,
-      taxId:             form.taxId.trim() || undefined,
-      paymentTerms:      form.paymentTerms as Customer['paymentTerms'],
-      paymentTermsCustom: form.paymentTerms === 'custom' ? form.paymentTermsCustom.trim() || undefined : undefined,
       creditLimit:       form.creditLimit ? Number(form.creditLimit) : undefined,
       currency:          form.currency || undefined,
       salesRep:          form.salesRep || undefined,
@@ -228,24 +212,6 @@ export function EditCustomerDrawer({ customer, onClose }: Props) {
               المحافظة: <strong style={{ color: '#0f172a' }}>{form.governorate}</strong>
             </div>
           )}
-
-          {/* Tax ID */}
-          {field('الرقم الضريبي', 'taxId')}
-
-          {/* Payment terms */}
-          <div>
-            <Select
-              label="شروط الدفع"
-              value={form.paymentTerms}
-              onChange={e => set('paymentTerms', e.target.value)}
-              options={PAYMENT_TERMS_OPTIONS}
-            />
-            {form.paymentTerms === 'custom' && (
-              <div style={{ marginTop: 8 }}>
-                {field('وصف شروط الدفع المخصصة', 'paymentTermsCustom')}
-              </div>
-            )}
-          </div>
 
           {/* Credit limit + Currency */}
           <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 12 }}>

@@ -93,13 +93,13 @@ export default function FactoryOrders() {
             <table className={styles.table}>
               <thead>
                 <tr>
-                  <th>{tc.cols.orderId}</th>
-                  <th>{tc.cols.product}</th>
-                  <th className={styles.numEnd}>{tc.cols.quantity}</th>
-                  <th>{tc.cols.startDate}</th>
-                  <th>{tc.cols.dueDate}</th>
-                  <th>{tc.cols.status}</th>
-                  <th>{tc.cols.actions}</th>
+                  <th className="col-code">{tc.cols.orderId}</th>
+                  <th className="col-entity">{tc.cols.product}</th>
+                  <th className="col-num">{tc.cols.quantity}</th>
+                  <th className="col-date">{tc.cols.startDate}</th>
+                  <th className="col-date">{tc.cols.dueDate}</th>
+                  <th className="col-badge">{tc.cols.status}</th>
+                  <th className="col-actions">{tc.cols.actions}</th>
                 </tr>
               </thead>
               <tbody>

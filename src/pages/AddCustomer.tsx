@@ -1,15 +1,15 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { useEffect, useRef, useState, useCallback } from "react";
 import type { KeyboardEvent as ReactKeyboardEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useData } from "../context/DataContext";
 import { useSettings } from "../context/SettingsContext";
 import type { Customer } from "../data/types";
 import {
+  AlertTriangle,
   ArrowLeft,
   Briefcase,
   Building2,
-  CheckCircle2,
-  Crown,
   RefreshCw,
   Save,
   User as UserIcon,
@@ -18,18 +18,13 @@ import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
 import { PhoneInput } from "../components/ui/PhoneInput";
 import { Select } from "../components/ui/Select";
-import { Badge } from "../components/ui/Badge";
 import { Container } from "../components/layout/Container";
 import { FormSection } from "../components/forms/FormSection";
-import { ButtonGroup } from "../components/forms/ButtonGroup";
 import { RadioCardGroup } from "../components/forms/RadioCardGroup";
-import { TagInput } from "../components/forms/TagInput";
 import {
   SALES_REPS,
-  type CustomerClassification,
   type CustomerType,
   type Currency,
-  type PaymentTerms,
 } from "../data/customersMock";
 import { PALESTINIAN_GOVERNORATES } from "../config/palestineConfig";
 import { validatePhone } from "../utils/phoneValidation";
@@ -47,11 +42,10 @@ interface FormState {
   email: string;
   governorate: string;
   city: string;
-  paymentTerms: PaymentTerms;
   currency: Currency;
   creditLimit: string;
   salesRep: string;
-  classification: CustomerClassification;
+  classification: "standard" | "vip" | "risk";
   defaultDiscount: string;
   alerts: string[];
 }
@@ -66,7 +60,6 @@ const INITIAL: FormState = {
   email: "",
   governorate: "",
   city: "",
-  paymentTerms: "net30",
   currency: "ILS",
   creditLimit: "",
   salesRep: SALES_REPS[0],
@@ -96,18 +89,12 @@ function blockNonDigits(e: ReactKeyboardEvent<HTMLInputElement>) {
   if (!allowed.includes(e.key)) e.preventDefault();
 }
 
-function blockNonDecimal(e: ReactKeyboardEvent<HTMLInputElement>) {
-  if (e.ctrlKey || e.metaKey) return;
-  const allowed = ["0","1","2","3","4","5","6","7","8","9",".","Backspace","Delete","Tab","ArrowLeft","ArrowRight","Home","End"];
-  if (!allowed.includes(e.key)) e.preventDefault();
-}
-
 export default function AddCustomer() {
   const navigate = useNavigate();
   const { id: editId } = useParams<{ id: string }>();
   const isEditMode = !!editId;
   const { addCustomer, updateCustomer, customers } = useData();
-  const { t, isArabic } = useSettings();
+  const { t } = useSettings();
 
   const existingCustomer = isEditMode
     ? customers.find((c) => (c.id === editId || c.code === editId) && !c.isDeleted) ?? null
@@ -132,7 +119,6 @@ export default function AddCustomer() {
         email: existingCustomer.email ?? "",
         governorate: existingCustomer.governorate ?? "",
         city: existingCustomer.city ?? "",
-        paymentTerms: (existingCustomer.paymentTerms as FormState["paymentTerms"]) ?? "net30",
         currency: (existingCustomer.currency as FormState["currency"]) ?? "ILS",
         creditLimit: existingCustomer.creditLimit != null ? String(existingCustomer.creditLimit) : "",
         salesRep: existingCustomer.salesRep ?? SALES_REPS[0],
@@ -176,22 +162,22 @@ export default function AddCustomer() {
     return () => window.removeEventListener("keydown", handler);
   }, []);
 
-  const completion = useMemo(() => {
-    const TOTAL_FIELDS = 15;
-    const filled = (Object.keys(form) as Array<keyof FormState>).reduce((sum, k) => {
-      const v = form[k];
-      if (Array.isArray(v)) return sum + (v.length > 0 ? 1 : 0);
-      if (typeof v === "string") return sum + (v.trim() ? 1 : 0);
-      return sum;
-    }, 0);
-    return { filled, total: TOTAL_FIELDS, pct: Math.round((filled / TOTAL_FIELDS) * 100) };
-  }, [form]);
-
-  // Section completeness flags (drive the green ✓ on FormSection)
+  // Section completeness flags
   const sec1Complete = !!form.name && !!form.code && !!form.type;
   const sec2Complete = !!form.phonePrimary;
   const sec3Complete = !!form.governorate;
-  const sec4Complete = !!form.paymentTerms && !!form.currency;
+
+  const [showExitWarning, setShowExitWarning] = useState(false);
+
+  const isDirty = useCallback(() => {
+    return Object.keys(form).some((key) => {
+      const k = key as keyof FormState;
+      const v = form[k];
+      const initial = (INITIAL[k] ?? "") as typeof v;
+      if (Array.isArray(v) && Array.isArray(initial)) return v.length !== initial.length || v.some((item, i) => item !== initial[i]);
+      return v !== initial;
+    });
+  }, [form]);
 
   const missing = REQUIRED_KEYS.filter((k) => {
     const v = form[k];
@@ -227,7 +213,6 @@ export default function AddCustomer() {
         classification: form.classification,
         governorate: form.governorate,
         city: form.city,
-        paymentTerms: form.paymentTerms,
         currency: form.currency,
         creditLimit: form.creditLimit ? Number(form.creditLimit) : undefined,
         salesRep: form.salesRep || undefined,
@@ -251,7 +236,6 @@ export default function AddCustomer() {
       governorate: form.governorate,
       city: form.city,
       address: undefined,
-      paymentTerms: form.paymentTerms,
       currency: form.currency,
       creditLimit: form.creditLimit ? Number(form.creditLimit) : undefined,
       salesRep: form.salesRep || undefined,
@@ -281,13 +265,12 @@ export default function AddCustomer() {
       </header>
 
       <div className={styles.layout}>
-        {/* ─── Left: Form ─── */}
         <div className={styles.formCol}>
           <FormSection
             number={1}
             title={t.addCustomer.sections.basic.title}
             subtitle={t.addCustomer.sections.basic.subtitle}
-            progress={sec1Complete ? "4 / 4 ✓" : `${[form.name, form.type, form.code, form.taxId].filter(Boolean).length} / 4`}
+            progress={sec1Complete ? "3 / 3 ✓" : `${[form.name, form.type, form.code].filter(Boolean).length} / 3`}
             isComplete={sec1Complete}
           >
             <Input
@@ -336,7 +319,6 @@ export default function AddCustomer() {
                 onChange={(e) => update("taxId", e.target.value.replace(/[^\d]/g, "").slice(0, 9))}
                 placeholder={t.addCustomer.fields.taxIdPlaceholder}
                 hint={t.addCustomer.fields.taxIdHint}
-                error={form.taxId && form.taxId.length !== 9 ? t.addCustomer.fields.taxIdError : undefined}
               />
             </div>
           </FormSection>
@@ -396,212 +378,76 @@ export default function AddCustomer() {
               />
             </div>
           </FormSection>
-
-          <FormSection
-            number={4}
-            title={t.addCustomer.sections.commercial.title}
-            subtitle={t.addCustomer.sections.commercial.subtitle}
-            isComplete={sec4Complete}
-          >
-            <ButtonGroup<PaymentTerms>
-              label={t.addCustomer.fields.paymentTerms}
-              value={form.paymentTerms}
-              onChange={(v) => update("paymentTerms", v)}
-              options={[
-                { value: "cash",  label: t.addCustomer.fields.termCash },
-                { value: "net30", label: t.addCustomer.fields.termNet30 },
-                { value: "net60", label: t.addCustomer.fields.termNet60 },
-                { value: "net90", label: t.addCustomer.fields.termNet90 },
-              ]}
-            />
-            <ButtonGroup<Currency>
-              label={t.addCustomer.fields.currency}
-              value={form.currency}
-              onChange={(v) => update("currency", v)}
-              options={[
-                { value: "ILS", label: "₪ ILS" },
-                { value: "USD", label: "$ USD" },
-                { value: "JOD", label: "د.أ JOD" },
-              ]}
-            />
-            <Input
-              label={t.addCustomer.fields.creditLimit}
-              variant="number"
-              value={form.creditLimit}
-              onKeyDown={blockNonDecimal}
-              onChange={(e) => update("creditLimit", e.target.value.replace(/[^\d.]/g, "").replace(/(\.\d{2})\d+/, "$1"))}
-              placeholder="0"
-              hint={`${t.addCustomer.fields.creditLimitHint} (${form.currency})`}
-            />
-          </FormSection>
-
-          <FormSection
-            number={5}
-            title={t.addCustomer.sections.advanced.title}
-            subtitle={t.addCustomer.sections.advanced.subtitle}
-            collapsible
-            defaultCollapsed
-          >
-            <Input
-              label={t.addCustomer.fields.salesRep}
-              value={form.salesRep}
-              onChange={(e) => update("salesRep", e.target.value)}
-              hint={t.addCustomer.fields.salesRepHint}
-            />
-            <ButtonGroup<CustomerClassification>
-              label={t.addCustomer.fields.classification}
-              value={form.classification}
-              onChange={(v) => update("classification", v)}
-              options={[
-                { value: "standard", label: t.addCustomer.fields.classificationStandard },
-                { value: "vip",      label: "VIP" },
-                { value: "risk",     label: t.addCustomer.fields.classificationRisk },
-              ]}
-            />
-            <Input
-              label={t.addCustomer.fields.defaultDiscount}
-              variant="number"
-              value={form.defaultDiscount}
-              onKeyDown={blockNonDigits}
-              onChange={(e) => {
-                const v = e.target.value.replace(/[^\d]/g, "").slice(0, 3);
-                update("defaultDiscount", Number(v) > 100 ? "100" : v);
-              }}
-              placeholder="0"
-              hint={t.addCustomer.fields.defaultDiscountHint}
-            />
-            <TagInput
-              label={t.addCustomer.fields.alerts}
-              value={form.alerts}
-              onChange={(v) => update("alerts", v)}
-              hint={t.addCustomer.fields.alertsHint}
-              suggestions={isArabic
-                ? ["رصيد مرتفع", "متأخر الدفع", "تحذير ائتماني", "حساب جديد"]
-                : ["High balance", "Overdue", "Credit warning", "New account"]}
-            />
-          </FormSection>
         </div>
-
-        {/* ─── Right: Live Preview ─── */}
-        <aside className={styles.previewCol}>
-          <CustomerPreviewCard form={form} completion={completion} />
-        </aside>
       </div>
 
-      {/* Floating save bar */}
+      {/* Save bar */}
       <div className={styles.saveBar}>
-        <span className={styles.autosave}>
+        <div className={styles.saveBarStart}>
           <span className={`status-dot status-dot--${savedAt ? "green" : "gray"}`} aria-hidden />
-          {savedAt ? `${t.addCustomer.autosaveSaved} (${timeAgo(savedAt, t)})` : t.addCustomer.autosaveUnsaved}
-        </span>
-        <div className={styles.saveBarActions}>
-          <Button variant="secondary" size="sm" onClick={() => navigate("/customers")}>{t.addCustomer.cancel}</Button>
-          {!isEditMode && <Button variant="secondary" size="sm">{t.addCustomer.saveAsDraft}</Button>}
-          <Button variant="primary" size="sm" leftIcon={<Save size={14} />} disabled={!canSave} onClick={handleSave}>
-            {isEditMode ? t.common.saveChanges : t.addCustomer.saveCustomer} <kbd className={styles.kbd}>⌘S</kbd>
+          <span className={styles.autosaveText}>
+            {savedAt ? `${t.addCustomer.autosaveSaved} (${timeAgo(savedAt, t)})` : t.addCustomer.autosaveUnsaved}
+          </span>
+        </div>
+        <div className={styles.saveBarEnd}>
+          <Button variant="secondary" size="sm" onClick={() => { if (isDirty()) setShowExitWarning(true); else navigate("/customers"); }}>{t.addCustomer.cancel}</Button>
+          <Button variant="secondary" size="sm" onClick={() => navigate("/customers")}>حفظ كمسودة</Button>
+          <Button variant="primary" size="sm" leftIcon={<Save size={13} />} disabled={!canSave} onClick={handleSave}>
+            {isEditMode ? t.common.saveChanges : t.addCustomer.saveCustomer}
           </Button>
         </div>
       </div>
+
+      {showExitWarning && createPortal(
+        <div
+          style={{ position: "fixed", inset: 0, zIndex: 1200, background: "rgba(15,23,42,0.48)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 18 }}
+          onClick={() => setShowExitWarning(false)}
+        >
+          <div
+            style={{ width: "min(420px, 92vw)", background: "var(--app-surface-1)", borderRadius: "var(--app-radius-xl)", boxShadow: "var(--app-shadow-xl)", padding: "var(--app-space-6)", direction: "rtl" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: "flex", alignItems: "flex-start", gap: "var(--app-space-3)" }}>
+              <div style={{ width: 40, height: 40, borderRadius: "var(--app-radius-md)", background: "#FEF3C7", color: "#D97706", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <AlertTriangle size={20} />
+              </div>
+              <div>
+                <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: "var(--app-text-primary)" }}>تغييرات غير محفوظة</h3>
+                <p style={{ margin: "6px 0 0", fontSize: 13, color: "var(--app-text-muted)", lineHeight: 1.6 }}>
+                  هل أنت متأكد من المغادرة؟ سيتم فقدان أي بيانات لم يتم حفظها.
+                </p>
+              </div>
+            </div>
+            <div style={{ height: 1, background: "var(--app-border)", margin: "var(--app-space-4) 0" }} />
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "var(--app-space-2)" }}>
+              <button
+                type="button"
+                onClick={() => setShowExitWarning(false)}
+                style={{ border: "1.5px solid var(--app-border)", background: "var(--app-surface-1)", color: "var(--app-text-secondary)", font: "inherit", fontSize: 13, fontWeight: 600, padding: "8px 18px", borderRadius: "var(--app-radius-md)", cursor: "pointer" }}
+              >
+                {t.common.cancel}
+              </button>
+              <button
+                type="button"
+                onClick={() => { setShowExitWarning(false); navigate("/customers"); }}
+                style={{ border: "none", background: "#EF4444", color: "#fff", font: "inherit", fontSize: 13, fontWeight: 700, padding: "8px 18px", borderRadius: "var(--app-radius-md)", cursor: "pointer" }}
+              >
+                مغادرة بدون حفظ
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body,
+      )}
     </Container>
   );
 }
 
-type T = typeof translations.en;
-
-function timeAgo(d: Date, t: T): string {
+function timeAgo(d: Date, t: typeof translations.en): string {
   const sec = Math.floor((Date.now() - d.getTime()) / 1000);
   if (sec < 5) return t.addCustomer.timeAgo.now;
   if (sec < 60) return `${sec}${t.addCustomer.timeAgo.seconds}`;
   const min = Math.floor(sec / 60);
   if (min < 60) return `${min}${t.addCustomer.timeAgo.minutes}`;
   return formatTimeValue(d);
-}
-
-interface PreviewProps {
-  form: FormState;
-  completion: { filled: number; total: number; pct: number };
-}
-
-function CustomerPreviewCard({ form, completion }: PreviewProps) {
-  const { t } = useSettings();
-  const initials = form.name
-    .trim()
-    .split(/\s+/)
-    .map((w) => w[0])
-    .slice(0, 2)
-    .join("")
-    .toUpperCase() || "؟";
-
-  return (
-    <section className={styles.previewCard}>
-      <header className={styles.previewHeader}>
-        <h3>{t.addCustomer.preview.title}</h3>
-        <Badge variant={completion.pct >= 80 ? "success" : completion.pct >= 50 ? "info" : "neutral"} size="sm">
-          {completion.pct}% {t.addCustomer.preview.complete}
-        </Badge>
-      </header>
-      <div className={styles.previewProgress}>
-        <div className={styles.previewBar} style={{ width: `${completion.pct}%` }} />
-      </div>
-      <p className={styles.previewMeta}>{completion.filled} / {completion.total} {t.addCustomer.preview.fields}</p>
-
-      <div className={styles.previewBody}>
-        <div className={styles.previewAvatar}>
-          <span>{initials}</span>
-          {form.classification === "vip" && <Crown size={12} className={styles.previewCrown} aria-hidden />}
-        </div>
-        <div className={styles.previewIdentity}>
-          <strong>{form.name || t.addCustomer.preview.customerName}</strong>
-          <span>{form.code}</span>
-        </div>
-        <div className={styles.previewTags}>
-          <Badge variant="info" size="sm">{typeLabel(form.type, t)}</Badge>
-          {form.classification === "vip" && <Badge variant="warning" size="sm">VIP</Badge>}
-          {form.classification === "risk" && <Badge variant="danger" size="sm">{t.addCustomer.fields.classificationRisk}</Badge>}
-          <Badge variant="neutral" size="sm">{paymentLabel(form.paymentTerms, t)}</Badge>
-          <Badge variant="neutral" size="sm">{form.currency}</Badge>
-        </div>
-
-        <Row label={t.addCustomer.preview.phone}        value={form.phonePrimary || "—"} />
-        <Row label={t.addCustomer.preview.email}        value={form.email || "—"} />
-        <Row label={t.addCustomer.preview.governorate}  value={form.governorate || "—"} />
-        <Row label={t.addCustomer.preview.city}         value={form.city || "—"} />
-        <Row label={t.addCustomer.preview.taxId}        value={form.taxId || "—"} />
-        <Row label={t.addCustomer.preview.creditLimit}  value={form.creditLimit ? `${form.creditLimit} ${form.currency}` : "—"} />
-        <Row label={t.addCustomer.preview.salesRep}     value={form.salesRep} />
-        <Row
-          label={t.addCustomer.preview.alertsLabel}
-          value={form.alerts.length > 0 ? form.alerts.join(" · ") : "—"}
-        />
-      </div>
-
-      {completion.pct === 100 && (
-        <div className={styles.previewOK}>
-          <CheckCircle2 size={14} /> {t.addCustomer.preview.allComplete}
-        </div>
-      )}
-    </section>
-  );
-}
-
-function Row({ label, value }: { label: string; value: string }) {
-  return (
-    <div className={styles.previewRow}>
-      <span>{label}</span>
-      <strong>{value}</strong>
-    </div>
-  );
-}
-
-function typeLabel(type: CustomerType, t: T): string {
-  if (type === "individual") return t.addCustomer.fields.typeIndividual;
-  if (type === "company") return t.addCustomer.fields.typeCompany;
-  return t.addCustomer.fields.typeInstitution;
-}
-
-function paymentLabel(p: PaymentTerms, t: T): string {
-  if (p === "cash") return t.addCustomer.fields.termCash;
-  if (p === "net30") return t.addCustomer.fields.termNet30;
-  if (p === "net60") return t.addCustomer.fields.termNet60;
-  return t.addCustomer.fields.termNet90;
 }

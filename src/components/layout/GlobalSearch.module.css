@@ -1,0 +1,103 @@
+.wrapper {
+  position: relative;
+  width: min(100%, 420px);
+}
+
+.dropdown {
+  background: var(--app-surface-strong);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-lg);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06);
+  padding: var(--app-space-2) 0;
+  max-height: 70vh;
+  overflow-y: auto;
+  animation: dropIn 0.15s ease-out;
+}
+
+@keyframes dropIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.group + .group {
+  border-block-start: 1px solid var(--app-border);
+  margin-block-start: var(--app-space-1);
+  padding-block-start: var(--app-space-1);
+}
+
+.groupLabel {
+  display: flex;
+  align-items: center;
+  gap: var(--app-space-2);
+  padding: var(--app-space-1) var(--app-space-3);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--app-text-muted);
+}
+
+.result {
+  display: flex;
+  align-items: center;
+  gap: var(--app-space-2);
+  width: 100%;
+  padding: var(--app-space-2) var(--app-space-3);
+  background: transparent;
+  border: 0;
+  font: inherit;
+  color: var(--app-text);
+  cursor: pointer;
+  text-align: start;
+  transition: background 0.1s;
+}
+
+.resultActive {
+  background: var(--app-accent-subtle);
+}
+
+.resultLabel {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.resultSub {
+  flex-shrink: 0;
+  font-size: 11px;
+  color: var(--app-text-muted);
+  font-family: var(--font-mono);
+  direction: ltr;
+  display: inline-block;
+}
+
+.resultChevron {
+  flex-shrink: 0;
+  color: var(--app-text-subtle);
+  transition: transform 0.15s, color 0.15s;
+}
+
+.result:hover .resultChevron,
+.resultActive .resultChevron {
+  color: var(--app-accent);
+  transform: translateX(2px);
+}
+
+[dir="rtl"] .result:hover .resultChevron,
+[dir="rtl"] .resultActive .resultChevron {
+  transform: translateX(-2px);
+}
+
+.empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--app-space-6) var(--app-space-3);
+  font-size: 13px;
+  color: var(--app-text-muted);
+}

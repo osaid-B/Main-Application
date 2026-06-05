@@ -1,21 +1,24 @@
+import { createPortal } from "react-dom";
 import { useMemo, useState } from "react";
 import "./Leaves.css";
 import {
   Calendar,
   CalendarDays,
-  CheckCircle,
   ChevronLeft,
   ChevronRight,
   Clock,
   FileText,
+  Loader2,
   Paperclip,
   Settings2,
   Shield,
+  Trash2,
   Users,
-  X,
   XCircle,
 } from "lucide-react";
 import { Button } from "../components/ui/Button";
+import { TableActions } from "../components/ui/TableActions";
+
 import { useSettings } from "../context/SettingsContext";
 import { useData } from "../context/DataContext";
 import { useNotifications } from "../context/NotificationsContext";
@@ -79,18 +82,31 @@ const LEAVE_COLORS: Record<LeaveType, string> = {
 
 const LEAVE_TYPES: LeaveType[] = ["annual", "sick", "maternity", "paternity", "emergency", "hajj", "unpaid"];
 
-const STATUS_VARIANT: Record<LeaveStatus, string> = {
-  pending: "lv-badge-pending",
-  approved: "lv-badge-approved",
-  rejected: "lv-badge-rejected",
-  cancelled: "lv-badge-cancelled",
-};
-
 function formatDMY(iso: string): string {
   if (!iso) return "—";
   const [y, m, d] = iso.split("-");
   return `${d}/${m}/${y}`;
 }
+
+function avatarGradient(name: string): string {
+  if (!name) return "linear-gradient(135deg, #E2E8F0, #CBD5E1)";
+  const idx = name.charCodeAt(0) % 6;
+  const palettes = [
+    ["#3B82F6", "#1D4ED8"],
+    ["#10B981", "#059669"],
+    ["#F59E0B", "#D97706"],
+    ["#8B5CF6", "#6D28D9"],
+    ["#EF4444", "#B91C1C"],
+    ["#06B6D4", "#0891B2"],
+  ];
+  const [c1, c2] = palettes[idx];
+  return `linear-gradient(135deg, ${c1}, ${c2})`;
+}
+
+const LEAVE_BADGE_ICON: Record<LeaveType, string> = {
+  annual: "📅", sick: "🏥", maternity: "👶", paternity: "👶",
+  emergency: "⚡", hajj: "🕋", unpaid: "—",
+};
 
 function getCurrentMonthISO() {
   const now = new Date();
@@ -100,7 +116,7 @@ function getCurrentMonthISO() {
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 function RequestsTab({
-  requests, employees, t, isArabic, onApprove, onReject, onCancel,
+  requests, employees, t, isArabic, onApprove, onReject, onDelete, onView,
 }: {
   requests: LeaveRequest[];
   employees: ReturnType<typeof useData>["employees"];
@@ -108,7 +124,8 @@ function RequestsTab({
   isArabic: boolean;
   onApprove: (id: string) => void;
   onReject: (id: string, reason: string) => void;
-  onCancel: (id: string) => void;
+  onDelete: (id: string) => void;
+  onView: (req: LeaveRequest) => void;
 }) {
   const [filter, setFilter] = useState<LeaveStatus | "all">("all");
   const [rejectingId, setRejectingId] = useState<string | null>(null);
@@ -144,71 +161,70 @@ function RequestsTab({
         <div className="lv-table-wrap atlas-table-wrapper">
           <table className="lv-table app-data-table atlas-table">
             <colgroup>
-              <col />
-              <col className="col-w-110" />
-              <col className="col-date" />
-              <col className="col-date" />
-              <col className="col-w-72" />
-              <col className="col-w-140" />
-              <col className="col-w-90" />
-              <col className="col-actions" />
+              <col style={{ width: "18%" }} />
+              <col style={{ width: "13%" }} />
+              <col style={{ width: "11%" }} />
+              <col style={{ width: "11%" }} />
+              <col style={{ width: "7%" }} />
+              <col style={{ width: "16%" }} />
+              <col style={{ width: "9%" }} />
+              <col style={{ width: "15%" }} />
             </colgroup>
             <thead>
               <tr>
-                <th>{t.leaves.cols.employee}</th>
-                <th>{t.leaves.cols.type}</th>
+                <th className="col-entity">{t.leaves.cols.employee}</th>
+                <th className="col-badge">{t.leaves.cols.type}</th>
                 <th className="col-date">{t.leaves.cols.start}</th>
                 <th className="col-date">{t.leaves.cols.end}</th>
                 <th className="col-num">{t.leaves.cols.days}</th>
-                <th>{t.leaves.cols.reason}</th>
-                <th>{t.leaves.cols.status}</th>
+                <th className="col-truncate">{t.leaves.cols.reason}</th>
+                <th className="col-badge">{t.leaves.cols.status}</th>
                 <th className="col-actions">{t.leaves.cols.actions}</th>
               </tr>
             </thead>
             <tbody>
               {filtered.map((req) => {
                 const emp = employees.find((e) => e.id === req.employeeId);
-                const Icon = LEAVE_ICONS[req.leaveType] ?? CalendarDays;
+                const name = emp?.name || req.employeeId;
+                const code = emp?.id || req.employeeId;
+                const initials = name ? name[0] : "?";
+                const grad = avatarGradient(name);
                 return (
-                  <tr key={req.id}>
+                  <tr key={req.id} className="lv-row" onClick={() => onView(req)}>
                     <td>
                       <div className="lv-emp-cell">
-                        <div className="lv-emp-avatar">{emp?.name?.[0] ?? "?"}</div>
-                        <div>
-                          <strong>{emp?.name ?? req.employeeId}</strong>
-                          <span>{emp?.jobTitle ?? "—"}</span>
+                        <div className="lv-emp-avatar" style={{ background: grad, width: 38, height: 38, borderRadius: 10, fontSize: 13, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }}>
+                          {initials}
+                        </div>
+                        <div className="lv-emp-text">
+                          <p className="lv-emp-name">{name}</p>
+                          <p className="lv-emp-code">{code}</p>
                         </div>
                       </div>
                     </td>
                     <td>
-                      <span className="lv-type-chip" style={{ background: `${LEAVE_COLORS[req.leaveType]}18`, color: LEAVE_COLORS[req.leaveType] }}>
-                        <Icon size={12} />
-                        {t.leaves.types[req.leaveType]}
+                      <span className={`lv-type-badge ${req.leaveType}`}>
+                        {LEAVE_BADGE_ICON[req.leaveType]} {t.leaves.types[req.leaveType]}
                       </span>
                     </td>
-                    <td>{formatDMY(req.startDate)}</td>
-                    <td>{formatDMY(req.endDate)}</td>
-                    <td className="lv-days-cell">{req.totalDays}</td>
-                    <td className="lv-reason-cell">{req.reason}</td>
+                    <td className="lv-date-cell">{formatDMY(req.startDate)}</td>
+                    <td className="lv-date-cell">{formatDMY(req.endDate)}</td>
                     <td>
-                      <span className={`lv-status-badge ${STATUS_VARIANT[req.status]}`}>
+                      <div className="lv-days-badge">{req.totalDays}</div>
+                    </td>
+                    <td className="lv-reason-cell" title={req.reason}>{req.reason}</td>
+                    <td>
+                      <span className={`lv-status-badge lv-status-${req.status}`}>
                         {t.leaves.status[req.status]}
                       </span>
                     </td>
-                    <td>
-                      {req.status === "pending" && (
-                        <div className="lv-row-actions">
-                          <Button variant="icon" size="sm" title={t.leaves.actions.approve} onClick={() => onApprove(req.id)}>
-                            <CheckCircle size={15} color="#16a34a" />
-                          </Button>
-                          <Button variant="icon" size="sm" title={t.leaves.actions.reject} onClick={() => { setRejectingId(req.id); setRejectReason(""); }}>
-                            <XCircle size={15} color="#dc2626" />
-                          </Button>
-                          <Button variant="icon" size="sm" title={t.leaves.actions.cancel} onClick={() => onCancel(req.id)}>
-                            <X size={15} color="#94a3b8" />
-                          </Button>
-                        </div>
-                      )}
+                    <td onClick={(e) => e.stopPropagation()}>
+                      <TableActions
+                        onApprove={req.status === "pending" ? () => onApprove(req.id) : undefined}
+                        onReject={req.status === "pending" ? () => { setRejectingId(req.id); setRejectReason(""); } : undefined}
+                        onView={() => onView(req)}
+                        onDelete={req.status !== "cancelled" ? () => onDelete(req.id) : undefined}
+                      />
                     </td>
                   </tr>
                 );
@@ -218,7 +234,7 @@ function RequestsTab({
         </div>
       )}
 
-      {rejectingId && (
+      {rejectingId && createPortal(
         <div className="modal-overlay" onClick={() => setRejectingId(null)}>
           <div className="modal-card confirm-dialog-card" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
@@ -241,7 +257,8 @@ function RequestsTab({
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );
@@ -329,6 +346,7 @@ function CalendarTab({
   t: ReturnType<typeof useSettings>["t"];
   locale: string;
 }) {
+  const displayLocale = locale === "ar" ? "ar-u-nu-latn" : locale;
   const [calDate, setCalDate] = useState(() => getCurrentMonthISO());
 
   const { year, month } = calDate;
@@ -343,7 +361,7 @@ function CalendarTab({
     return { year: d.getFullYear(), month: d.getMonth() };
   });
 
-  const monthLabel = new Date(year, month, 1).toLocaleDateString(locale, { month: "long", year: "numeric" });
+  const monthLabel = new Date(year, month, 1).toLocaleDateString(displayLocale, { month: "long", year: "numeric" });
 
   const activeEmployees = employees.filter((e) => !e.isDeleted);
   const approvedReqs = requests.filter((r) => r.status === "approved");
@@ -378,7 +396,7 @@ function CalendarTab({
                 ].filter(Boolean).join(" ")}>
                   <span className="lv-cal-day-num">{new Date(d.date + "T00:00:00").getDate()}</span>
                   <span className="lv-cal-day-dow">
-                    {new Date(d.date + "T00:00:00").toLocaleDateString(locale, { weekday: "short" })}
+                    {new Date(d.date + "T00:00:00").toLocaleDateString(displayLocale, { weekday: "short" })}
                   </span>
                 </th>
               ))}
@@ -492,7 +510,7 @@ function LeaveRequestModal({
   const canSubmit = step === 3 && reason.trim() && !balanceError && totalDays > 0 &&
     (leaveType !== "sick" || totalDays <= policy.medCertAfterDays || attachmentName);
 
-  return (
+  return createPortal(
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-card lv-modal-card" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
@@ -651,6 +669,144 @@ function LeaveRequestModal({
           )}
         </div>
       </div>
+    </div>,
+    document.body,
+  );
+}
+
+// ─── View Leave Modal ─────────────────────────────────────────────────────────
+
+function ViewLeaveModal({
+  req, employees, t, onClose, onApprove, onReject,
+}: {
+  req: LeaveRequest;
+  employees: ReturnType<typeof useData>["employees"];
+  t: ReturnType<typeof useSettings>["t"];
+  onClose: () => void;
+  onApprove?: (id: string) => void;
+  onReject?: (id: string, reason: string) => void;
+}) {
+  const emp = employees.find((e) => e.id === req.employeeId);
+  const name = emp?.name || req.employeeId;
+  const initials = name ? name[0] : "?";
+  const grad = avatarGradient(name);
+  const [rejecting, setRejecting] = useState(false);
+  const [rejectReason, setRejectReason] = useState("");
+
+  return (
+    <>
+      <ViewLeaveRejectDialog
+        isOpen={rejecting}
+        reason={rejectReason}
+        onChangeReason={setRejectReason}
+        onCancel={() => setRejecting(false)}
+        onConfirm={() => { onReject?.(req.id, rejectReason); setRejecting(false); onClose(); }}
+        t={t}
+      />
+      {createPortal(
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-card" style={{ width: 520, maxHeight: "92vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <div>
+            <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>{t.leaves.cols.employee}</h2>
+          </div>
+          <Button variant="icon" size="md" onClick={onClose}>×</Button>
+        </div>
+
+        <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 20 }}>
+          {/* Top: avatar + name + type + status */}
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={{ width: 48, height: 48, borderRadius: 12, background: grad, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 700, color: "#fff", flexShrink: 0 }}>
+              {initials}
+            </div>
+            <div style={{ flex: 1 }}>
+              <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: "#0F172A" }}>{name}</p>
+              <p style={{ margin: "2px 0 0", fontSize: 12, color: "#94A3B8", fontFamily: "monospace" }}>{emp?.id || req.employeeId}</p>
+            </div>
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <span className={`lv-type-badge ${req.leaveType}`} style={{ fontSize: 14, padding: "4px 14px" }}>
+                {LEAVE_BADGE_ICON[req.leaveType]} {t.leaves.types[req.leaveType]}
+              </span>
+              <span className={`lv-status-badge lv-status-${req.status}`} style={{ fontSize: 13, padding: "4px 14px" }}>
+                {t.leaves.status[req.status]}
+              </span>
+            </div>
+          </div>
+
+          <hr style={{ border: "none", borderTop: "1px solid #E2E8F0", margin: 0 }} />
+
+          {/* Details grid */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <DetailField label={t.leaves.cols.start} value={formatDMY(req.startDate)} />
+            <DetailField label={t.leaves.cols.end} value={formatDMY(req.endDate)} />
+            <DetailField label={t.leaves.cols.days} value={`${req.totalDays} يوم`} />
+            <DetailField label={t.leaves.cols.type} value={`${LEAVE_BADGE_ICON[req.leaveType]} ${t.leaves.types[req.leaveType]}`} />
+            <DetailField label={t.leaves.cols.reason} value={req.reason} fullWidth />
+            <DetailField label={t.leaves.cols.status} value={t.leaves.status[req.status]} />
+            <DetailField label={t.leaves.cols.submittedOn} value={formatDMY(req.createdAt.slice(0, 10))} />
+            <DetailField label={t.leaves.cols.reviewedBy} value={req.reviewedBy || "—"} />
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="modal-actions" style={{ padding: "12px 20px", borderTop: "1px solid #E2E8F0" }}>
+          {req.status === "pending" && (
+            <>
+              <Button variant="primary" size="md" onClick={() => { onApprove?.(req.id); onClose(); }} style={{ background: "#16A34A" }}>
+                {t.leaves.actions.approve}
+              </Button>
+              <Button variant="danger" size="md" onClick={() => setRejecting(true)}>
+                {t.leaves.actions.reject}
+              </Button>
+            </>
+          )}
+          <Button variant="secondary" size="md" onClick={onClose}>{t.common.close}</Button>
+        </div>
+      </div>
+
+    </div>,
+    document.body,
+    )}
+    </>
+  );
+}
+// ─── (reject sub-dialog for ViewLeaveModal) ───────────────────────────────────
+function ViewLeaveRejectDialog({
+  isOpen, reason, onChangeReason, onCancel, onConfirm, t,
+}: {
+  isOpen: boolean; reason: string;
+  onChangeReason: (v: string) => void;
+  onCancel: () => void; onConfirm: () => void;
+  t: ReturnType<typeof useSettings>["t"];
+}) {
+  if (!isOpen) return null;
+  return createPortal(
+    <div className="modal-overlay" onClick={onCancel}>
+      <div className="modal-card confirm-dialog-card" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <div><h2>{t.leaves.actions.rejectionReason}</h2></div>
+          <Button variant="icon" size="md" onClick={onCancel}>×</Button>
+        </div>
+        <div className="modal-form">
+          <textarea className="modal-input" rows={3} value={reason} placeholder={t.leaves.actions.rejectionPlaceholder} onChange={(e) => onChangeReason(e.target.value)} />
+          <div className="modal-actions">
+            <Button variant="secondary" size="md" onClick={onCancel}>{t.common.cancel}</Button>
+            <Button variant="danger" size="md" disabled={!reason.trim()} onClick={onConfirm}>
+              {t.leaves.actions.confirmReject}
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
+function DetailField({ label, value, fullWidth }: { label: string; value: string; fullWidth?: boolean }) {
+  return (
+    <div style={fullWidth ? { gridColumn: "1 / -1" } : {}}>
+      <p style={{ margin: 0, fontSize: 11, fontWeight: 600, color: "#94A3B8", letterSpacing: "0.05em" }}>{label}</p>
+      <p style={{ margin: "4px 0 0", fontSize: 14, fontWeight: 600, color: "#0F172A" }}>{value}</p>
     </div>
   );
 }
@@ -667,6 +823,11 @@ export default function Leaves() {
   const [balances, setBalances] = useState<LeaveBalance[]>(() => getLeaveBalances());
   const [policy, setPolicy] = useState<LeavePolicy>(() => getLeavePolicy());
   const [showModal, setShowModal] = useState(false);
+  const [viewReq, setViewReq] = useState<LeaveRequest | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<LeaveRequest | null>(null);
+  const [pinValue, setPinValue] = useState("");
+  const [pinError, setPinError] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [toast, setToast] = useState("");
 
   const showToast = (msg: string) => { setToast(msg); window.setTimeout(() => setToast(""), 3000); };
@@ -731,21 +892,6 @@ export default function Leaves() {
     showToast(t.leaves.toast.rejected);
   };
 
-  const handleCancel = (id: string) => {
-    const req = requests.find((r) => r.id === id);
-    const next = requests.map((r) => r.id === id ? { ...r, status: "cancelled" as LeaveStatus } : r);
-    setRequests(next); saveLeaveRequests(next);
-    if (req) {
-      const nextBal = balances.map((b) => {
-        if (b.employeeId !== req.employeeId) return b;
-        const entry = b[req.leaveType];
-        return { ...b, [req.leaveType]: { ...entry, pending: Math.max(0, entry.pending - req.totalDays) } };
-      });
-      setBalances(nextBal); saveLeaveBalances(nextBal);
-    }
-    showToast(t.leaves.toast.cancelled);
-  };
-
   const handleSubmitRequest = (payload: Omit<LeaveRequest, "id" | "createdAt" | "status">) => {
     const id = `LR-${Date.now()}`;
     const newReq: LeaveRequest = { ...payload, id, status: "pending", createdAt: new Date().toISOString() };
@@ -786,6 +932,23 @@ export default function Leaves() {
     showToast(t.leaves.toast.submitted);
   };
 
+  const handleDeleteLeave = (id: string) => {
+    setDeleteTarget(requests.find((r) => r.id === id) ?? null);
+    setPinValue("");
+    setPinError(false);
+  };
+
+  const confirmDelete = () => {
+    if (!deleteTarget) return;
+    if (pinValue !== "123") { setPinError(true); return; }
+    setPinError(false); setDeleting(true);
+    try {
+      const next = requests.filter((r) => r.id !== deleteTarget.id);
+      setRequests(next); saveLeaveRequests(next);
+      showToast(t.leaves.toast.cancelled);
+    } catch { /* ignore */ } finally { setDeleting(false); setDeleteTarget(null); setPinValue(""); }
+  };
+
   const handleSavePolicy = (p: LeavePolicy) => {
     setPolicy(p); saveLeavePolicy(p);
     showToast(t.leaves.toast.policySaved);
@@ -812,33 +975,33 @@ export default function Leaves() {
 
       {/* KPI row */}
       <div className="lv-kpi-row">
-        <div className="lv-kpi-card lv-kpi-amber">
-          <Clock size={20} />
+        <div className="lv-kpi-card-new">
           <div>
-            <span>{t.leaves.kpi.pending}</span>
-            <strong>{kpi.pending}</strong>
+            <p className="lv-kpi-label">{t.leaves.kpi.totalRequests}</p>
+            <p className="lv-kpi-value">{kpi.total}</p>
           </div>
+          <div className="lv-kpi-icon-wrap lv-kpi-icon-total"><i className="ti ti-files" /></div>
         </div>
-        <div className="lv-kpi-card lv-kpi-green">
-          <CheckCircle size={20} />
+        <div className="lv-kpi-card-new">
           <div>
-            <span>{t.leaves.kpi.approved}</span>
-            <strong>{kpi.approved}</strong>
+            <p className="lv-kpi-label">{t.leaves.kpi.onLeaveToday}</p>
+            <p className="lv-kpi-value">{kpi.onLeaveToday}</p>
           </div>
+          <div className="lv-kpi-icon-wrap lv-kpi-icon-leave"><i className="ti ti-user-check" /></div>
         </div>
-        <div className="lv-kpi-card lv-kpi-blue">
-          <Users size={20} />
+        <div className="lv-kpi-card-new">
           <div>
-            <span>{t.leaves.kpi.onLeaveToday}</span>
-            <strong>{kpi.onLeaveToday}</strong>
+            <p className="lv-kpi-label">{t.leaves.kpi.approved}</p>
+            <p className="lv-kpi-value">{kpi.approved}</p>
           </div>
+          <div className="lv-kpi-icon-wrap lv-kpi-icon-approved"><i className="ti ti-circle-check" /></div>
         </div>
-        <div className="lv-kpi-card lv-kpi-slate">
-          <CalendarDays size={20} />
+        <div className="lv-kpi-card-new">
           <div>
-            <span>{t.leaves.kpi.totalRequests}</span>
-            <strong>{kpi.total}</strong>
+            <p className="lv-kpi-label">{t.leaves.kpi.pending}</p>
+            <p className="lv-kpi-value">{kpi.pending}</p>
           </div>
+          <div className="lv-kpi-icon-wrap lv-kpi-icon-pending"><i className="ti ti-clock" /></div>
         </div>
       </div>
 
@@ -862,7 +1025,7 @@ export default function Leaves() {
       <div className="lv-tab-content">
         {activeTab === "requests" && (
           <RequestsTab requests={requests} employees={employees} t={t} isArabic={isArabic}
-            onApprove={handleApprove} onReject={handleReject} onCancel={handleCancel} />
+            onApprove={handleApprove} onReject={handleReject} onDelete={handleDeleteLeave} onView={setViewReq} />
         )}
         {activeTab === "balances" && (
           <BalancesTab balances={balances} employees={employees} t={t} />
@@ -882,6 +1045,60 @@ export default function Leaves() {
           onClose={() => setShowModal(false)}
           onSubmit={handleSubmitRequest}
         />
+      )}
+
+      {/* View Leave Modal */}
+      {viewReq && (
+        <ViewLeaveModal req={viewReq} employees={employees} t={t}
+          onClose={() => setViewReq(null)}
+          onApprove={handleApprove}
+          onReject={handleReject}
+        />
+      )}
+
+      {/* Delete PIN confirmation */}
+      {deleteTarget && createPortal(
+        <div className="modal-overlay" onClick={() => { setDeleteTarget(null); setPinValue(""); setPinError(false); }}>
+          <div className="modal-card confirm-dialog-card" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div><h2>{t.common.delete}</h2></div>
+              <Button variant="icon" size="md" onClick={() => { setDeleteTarget(null); setPinValue(""); setPinError(false); }}>×</Button>
+            </div>
+            <div className="modal-form">
+              <p style={{ fontSize: 13, color: "#64748B", margin: 0 }}>أدخل رمز التأكيد لحذف الإجازة</p>
+              <p style={{ fontSize: 14, fontWeight: 600, color: "#0F172A", margin: "8px 0 0" }}>{deleteTarget.employeeId}</p>
+              <div style={{ marginTop: 12 }}>
+                <label style={{ fontSize: 12, fontWeight: 500, color: "#64748B" }}>رمز التأكيد</label>
+                <input
+                  type="password"
+                  inputMode="numeric"
+                  maxLength={3}
+                  value={pinValue}
+                  onChange={(e) => { setPinValue(e.target.value.replace(/\D/g, "").slice(0, 3)); setPinError(false); }}
+                  autoFocus
+                  style={{
+                    width: "100%", marginTop: 4, height: 40, borderRadius: 6,
+                    border: pinError ? "2px solid #DC2626" : "1px solid #E2E8F0",
+                    textAlign: "center", fontSize: 18, letterSpacing: 8, fontFamily: "monospace",
+                    outline: "none", background: "#fff",
+                  }}
+                />
+                {pinError && <p style={{ fontSize: 12, color: "#DC2626", margin: "4px 0 0" }}>رمز غير صحيح. الرمز المطلوب: 123</p>}
+              </div>
+              <div className="modal-actions" style={{ marginTop: 16 }}>
+                <Button variant="secondary" size="md" onClick={() => { setDeleteTarget(null); setPinValue(""); setPinError(false); }}>
+                  {t.common.cancel}
+                </Button>
+                <Button variant="primary" size="md" disabled={deleting || pinValue.length !== 3}
+                  onClick={confirmDelete} style={{ background: "#DC2626" }}>
+                  {deleting ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                  {t.common.delete}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>,
+        document.body,
       )}
 
       {/* Toast */}

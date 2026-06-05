@@ -10,7 +10,7 @@ import {
   FileImage,
   Info,
   Link2,
-  Printer,
+
   TriangleAlert,
   Upload,
   X,
@@ -27,8 +27,8 @@ const TODAY = new Date();
 
 function fmtDateTime(iso: string) {
   const d = new Date(iso);
-  return d.toLocaleDateString("ar-PS", { day: "2-digit", month: "2-digit" })
-    + " " + d.toLocaleTimeString("ar-PS", { hour: "2-digit", minute: "2-digit" });
+  return d.toLocaleDateString("ar-PS-u-nu-latn", { day: "2-digit", month: "2-digit" })
+    + " " + d.toLocaleTimeString("ar-PS-u-nu-latn", { hour: "2-digit", minute: "2-digit" });
 }
 
 function daysDiff(isoOrDDMMYYYY: string): number {
@@ -54,7 +54,7 @@ const CURRENCY_SYMBOL: Record<string, string> = { ILS: "₪", JOD: "د.أ", USD:
 
 function formatMoney(amount: number, currency: string) {
   const sym = CURRENCY_SYMBOL[currency] ?? currency;
-  return `${sym}${amount.toLocaleString("ar-PS", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return `${sym}${amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 // Status flow steps for progress bar
@@ -509,13 +509,7 @@ export function TreasuryDetailPanel({
           )}
 
           {/* Secondary actions */}
-          <Button
-            variant="ghost"
-            size="sm"
-            leftIcon={<Printer size={13} />}
-          >
-            طباعة
-          </Button>
+
           <Button
             variant="ghost"
             size="sm"

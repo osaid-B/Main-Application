@@ -11,6 +11,7 @@ import { useLoadingDelay } from "../hooks/useLoadingDelay";
 import { ROLES } from "../data/permissionsMock";
 
 const PERMISSIONS_STORAGE_KEY = "dashboard_permissions_roles";
+import { DeleteConfirmDialog } from "../components/ui/DeleteConfirmDialog";
 import { type Role, type PermissionAction, type PermissionModule } from "../data/types";
 import styles from "./Permissions.module.css";
 
@@ -32,7 +33,6 @@ const SIDEBAR_SECTIONS = [
   { workspace: "Company",  title: "ADMIN" },
   { workspace: "POS",      title: "REGISTER" },
   { workspace: "POS",      title: "CATALOG" },
-  { workspace: "POS",      title: "LOYALTY" },
   { workspace: "POS",      title: "ADMIN" },
   { workspace: "Factory",  title: "OPERATIONS" },
   { workspace: "Factory",  title: "INVENTORY" },
@@ -78,7 +78,7 @@ export default function Permissions() {
   });
   const [selectedRoleId, setSelectedRoleId] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<Role | null>(null);
+  const [deleteConfirmItem, setDeleteConfirmItem] = useState<{ itemName: string; onConfirm: () => void } | null>(null);
   const [sidebarConfig, setSidebarConfig] = useState<SidebarRoleConfig>(loadSidebarRoleConfig);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -126,7 +126,6 @@ export default function Permissions() {
 
   function deleteRole(role: Role) {
     setRoles((prev) => prev.filter((r) => r.id !== role.id));
-    setDeleteTarget(null);
     if (selectedRoleId === role.id) setSelectedRoleId(null);
     toast(tc.confirm.deletedToast ?? `Role "${role.name}" deleted.`, { type: "success" });
   }
@@ -173,7 +172,7 @@ export default function Permissions() {
                   <button
                     type="button"
                     className={styles.deleteRoleBtn}
-                    onClick={(e) => { e.stopPropagation(); setDeleteTarget(role); }}
+                    onClick={(e) => { e.stopPropagation(); setDeleteConfirmItem({ itemName: role.name, onConfirm: () => deleteRole(role) }); }}
                   >
                     {tc.roles.deleteRole}
                   </button>
@@ -329,27 +328,12 @@ export default function Permissions() {
         />
       )}
 
-      {/* Delete confirmation */}
-      {deleteTarget && (
-        <Modal
-          isOpen
-          onClose={() => setDeleteTarget(null)}
-          title={tc.confirm.deleteTitle}
-          size="sm"
-          footer={
-            <div className={styles.confirmFooter}>
-              <Button variant="ghost" onClick={() => setDeleteTarget(null)}>{t.common.cancel}</Button>
-              <Button variant="primary" onClick={() => deleteRole(deleteTarget)}>
-                {tc.roles.deleteRole}
-              </Button>
-            </div>
-          }
-        >
-          <p className={styles.confirmMsg}>
-            {tc.confirm.deleteMsg.replace("{{n}}", String(deleteTarget.userCount))}
-          </p>
-        </Modal>
-      )}
+      <DeleteConfirmDialog
+        isOpen={!!deleteConfirmItem}
+        itemName={deleteConfirmItem?.itemName ?? ""}
+        onConfirm={() => { const cb = deleteConfirmItem?.onConfirm; setDeleteConfirmItem(null); if (cb) cb(); }}
+        onCancel={() => { setDeleteConfirmItem(null); }}
+      />
     </Container>
   );
 }

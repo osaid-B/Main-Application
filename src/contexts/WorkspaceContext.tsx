@@ -33,7 +33,7 @@ export const WORKSPACES: Record<Workspace, WorkspaceInfo> = {
     id: "pos",
     name: "POS",
     nameAr: "نقطة البيع",
-    description: "Supermarket checkout, products & loyalty coins.",
+    description: "Supermarket checkout, products & cashiers.",
     shortcut: "⌘3",
     color: "green",
   },

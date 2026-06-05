@@ -40,9 +40,26 @@
   border-color: var(--app-text-subtle);
 }
 
+/* Search variant — no hover color change */
+.field[data-variant="search"]:hover:not(.fieldDisabled) {
+  border-color: var(--app-border-strong);
+}
+
 .field:focus-within {
   border-color: var(--app-accent);
   box-shadow: 0 0 0 3px var(--app-accent-subtle);
+}
+
+/* Search variant — subtle, no ring */
+.field[data-variant="search"]:focus-within {
+  border-color: var(--app-border-strong);
+  box-shadow: none;
+}
+
+.field[data-variant="search"] .input:focus,
+.field[data-variant="search"] .input:focus-visible {
+  outline: none;
+  box-shadow: none;
 }
 
 .fieldError {

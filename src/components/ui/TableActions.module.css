@@ -1,0 +1,55 @@
+/* ── Wrapper ─────────────────────────────────────────────── */
+.wrap {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+/* ── Divider between groups ──────────────────────────────── */
+.divider {
+  width: 1px;
+  height: 16px;
+  background: #E2E8F0;
+  margin: 0 4px;
+  flex-shrink: 0;
+}
+
+/* ── Action button ───────────────────────────────────────── */
+.btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  color: #64748B;
+  flex-shrink: 0;
+  transition: background 150ms ease, color 150ms ease;
+}
+
+.btn:hover {
+  background: var(--ta-hover-bg, rgba(37, 99, 235, 0.08));
+  color: var(--ta-hover-color, #2563EB);
+}
+
+.btn:active {
+  transform: scale(0.92);
+}
+
+/* Delete button starts slightly dimmer */
+.btnDelete {
+  color: #94A3B8;
+}
+
+/* ── Row hover: nudge icon color up slightly ─────────────── */
+:global(tr:hover) .wrap .btn:not(:hover) {
+  color: #475569;
+}
+
+:global(tr:hover) .wrap .btnDelete:not(:hover) {
+  color: #64748B;
+}

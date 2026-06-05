@@ -8,7 +8,8 @@ import { useData } from "../context/DataContext";
 import type { StockMovement, MovementType } from "../data/types";
 import styles from "./InventoryMovements.module.css";
 
-const PAGE_SIZE = 25;
+
+const PAGE_SIZE = 200;
 
 function daysAgo(n: number): string {
   const d = new Date();

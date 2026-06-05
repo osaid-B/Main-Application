@@ -2,11 +2,11 @@ import { createContext, useCallback, useContext, useMemo, useState } from "react
 import type { ReactNode } from "react";
 import { useData } from "./DataContext";
 import { useFactory } from "./FactoryContext";
-import { POS_REFUNDS, LOYALTY_PROFILES, LOYALTY_SETTINGS_DEFAULT } from "../data/posMock";
-import { formatCurrencyValue, formatIntegerValue } from "../utils/displayFormatters";
+import { POS_REFUNDS } from "../data/posMock";
+import { formatCurrencyValue } from "../utils/displayFormatters";
 
 export type NotificationSeverity = "info" | "warning" | "error" | "success";
-export type NotificationCategory = "invoice" | "inventory" | "factory" | "pos" | "loyalty" | "system" | "hr";
+export type NotificationCategory = "invoice" | "inventory" | "factory" | "pos" | "system" | "hr";
 
 export interface Notification {
   id: string;
@@ -193,34 +193,6 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
         actionLabelAr: "مراجعة",
         actionRoute: "/pos/refunds",
       });
-    }
-
-    // ── Loyalty coins expiring ────────────────────────────────────────────────
-    const ls = LOYALTY_SETTINGS_DEFAULT;
-    if (ls.expiryEnabled && ls.expiryMonths > 0) {
-      const warnDays = ls.expiryWarningDays ?? 30;
-      for (const profile of LOYALTY_PROFILES) {
-        if (!profile.coinsBalance || profile.coinsBalance <= 0) continue;
-        const expiryDate = new Date(profile.memberSince);
-        expiryDate.setMonth(expiryDate.getMonth() + ls.expiryMonths);
-        const daysLeft = Math.floor((expiryDate.getTime() - today.getTime()) / 86_400_000);
-        if (daysLeft >= 0 && daysLeft <= warnDays) {
-          list.push({
-            id: `notif:loyalty:expiry:${profile.customerId}`,
-            entityId: profile.customerId,
-            category: "loyalty",
-            severity: "info",
-            title: "Coins Expiring Soon",
-            titleAr: "نقاط الولاء على وشك الانتهاء",
-            body: `${profile.customerName} — ${formatIntegerValue(profile.coinsBalance)} coins expire in ${daysLeft} day${daysLeft !== 1 ? "s" : ""}`,
-            bodyAr: `${profile.customerName} — ${formatIntegerValue(profile.coinsBalance)} نقطة تنتهي خلال ${daysLeft} يوم`,
-            timestamp: expiryDate,
-            actionLabel: "View Profile",
-            actionLabelAr: "عرض الملف",
-            actionRoute: `/pos/loyalty/profile?id=${profile.customerId}`,
-          });
-        }
-      }
     }
 
     return list.sort((a, b) => SEV_RANK[a.severity] - SEV_RANK[b.severity] || b.timestamp.getTime() - a.timestamp.getTime());

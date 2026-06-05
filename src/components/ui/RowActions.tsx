@@ -94,7 +94,7 @@ export function RowActions({ onView, primary, items = [] }: RowActionsProps) {
             className={`ra-overflow-btn${open ? " ra-overflow-btn--open" : ""}`}
             onClick={(e) => {
               e.stopPropagation();
-              open ? setOpen(false) : openMenu();
+              if (open) { setOpen(false); } else { openMenu(); }
             }}
             title="المزيد"
           >

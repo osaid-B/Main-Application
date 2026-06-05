@@ -2,8 +2,13 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import type { ReactNode } from "react";
 import { USE_SUPABASE } from "../lib/supabase";
 import { signIn as sbSignIn, signOut as sbSignOut, getSession } from "../services/auth";
+import type { Role, Permission } from "../lib/permissions";
+import { hasPermission, hasAnyPermission } from "../lib/permissions";
 
-export type UserRole = "Admin" | "Manager" | "Finance" | "Factory" | "Cashier";
+// UserRole is now the full 8-role enum from the RBAC system.
+// Legacy role names (Admin, Manager, Finance, Factory, Cashier) are remapped at
+// login time via CREDENTIALS / BACKEND_ROLE_MAP below.
+export type UserRole = Role;
 
 type User = {
   username: string;
@@ -14,14 +19,13 @@ type AuthContextType = {
   user: User | null;
   isAuthenticated: boolean;
   hasRole: (...roles: UserRole[]) => boolean;
+  can: (permission: Permission) => boolean;
+  canAny: (permissions: Permission[]) => boolean;
   login: (username: string, password: string) => Promise<boolean>;
   logout: () => void;
 };
 
 // ── Django backend auth ────────────────────────────────────────────────────
-// Active when VITE_API_URL is set (see .env.local). Takes priority over
-// Supabase and mock paths. Vite proxy forwards /api/* to the Django server
-// so no CORS headers are needed in development.
 const USE_DJANGO = !!import.meta.env.VITE_API_URL;
 
 const DJANGO_ACCESS_KEY  = "atlas_access";
@@ -47,19 +51,30 @@ interface DjangoMeResponse {
   role: string | null;
 }
 
-// Maps backend role codes (lowercase) to frontend UserRole (PascalCase).
-// Falls back to "Admin" for unknown codes so the app never gets stuck.
+// Maps backend role codes to frontend UserRole.
+// Includes legacy PascalCase codes for backward compatibility.
 const BACKEND_ROLE_MAP: Record<string, UserRole> = {
-  admin:   "Admin",
-  manager: "Manager",
-  finance: "Finance",
-  factory: "Factory",
-  cashier: "Cashier",
+  super_admin:  "super_admin",
+  admin:        "admin",
+  Admin:        "admin",         // legacy
+  manager:      "admin",         // legacy → maps to admin
+  Manager:      "admin",         // legacy
+  accountant:   "accountant",
+  finance:      "accountant",    // legacy
+  Finance:      "accountant",    // legacy
+  sales:        "sales",
+  warehouse:    "warehouse",
+  factory:      "warehouse",     // legacy
+  Factory:      "warehouse",     // legacy
+  hr:           "hr",
+  cashier:      "cashier",
+  Cashier:      "cashier",       // legacy
+  viewer:       "viewer",
 };
 
 function mapBackendRole(code: string | null): UserRole {
-  if (!code) return "Admin";
-  return BACKEND_ROLE_MAP[code.toLowerCase()] ?? "Admin";
+  if (!code) return "viewer";
+  return BACKEND_ROLE_MAP[code] ?? BACKEND_ROLE_MAP[code.toLowerCase()] ?? "viewer";
 }
 
 /** Returns the stored JWT access token for use in API calls outside this context. */
@@ -72,7 +87,10 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const AUTH_STORAGE_KEY = "dashboard_auth_user";
 
-const VALID_ROLES: UserRole[] = ["Admin", "Manager", "Finance", "Factory", "Cashier"];
+const VALID_ROLES: UserRole[] = [
+  "super_admin", "admin", "accountant", "sales",
+  "warehouse", "hr", "cashier", "viewer",
+];
 
 function isValidUser(value: unknown): value is User {
   return (
@@ -85,18 +103,28 @@ function isValidUser(value: unknown): value is User {
   );
 }
 
-// Mock credentials — used when neither Django nor Supabase is configured
+// Mock credentials — used when neither Django nor Supabase is configured.
+// Includes legacy usernames mapped to the closest new role.
 const CREDENTIALS: Record<string, { password: string; role: UserRole }> = {
-  admin:   { password: "1234", role: "Admin" },
-  manager: { password: "1234", role: "Manager" },
-  finance: { password: "1234", role: "Finance" },
-  factory: { password: "1234", role: "Factory" },
-  cashier: { password: "1234", role: "Cashier" },
-  "admin@atlas-erp.com":   { password: "Admin1234!",   role: "Admin" },
-  "manager@atlas-erp.com": { password: "Manager1234!", role: "Manager" },
-  "finance@atlas-erp.com": { password: "Finance1234!", role: "Finance" },
-  "factory@atlas-erp.com": { password: "Factory1234!", role: "Factory" },
-  "cashier@atlas-erp.com": { password: "Cashier1234!", role: "Cashier" },
+  // Legacy usernames (still work)
+  admin:   { password: "1234", role: "super_admin" },
+  manager: { password: "1234", role: "admin" },
+  finance: { password: "1234", role: "accountant" },
+  factory: { password: "1234", role: "warehouse" },
+  cashier: { password: "1234", role: "cashier" },
+  // New role usernames
+  super_admin: { password: "1234", role: "super_admin" },
+  accountant:  { password: "1234", role: "accountant" },
+  sales:       { password: "1234", role: "sales" },
+  warehouse:   { password: "1234", role: "warehouse" },
+  hr:          { password: "1234", role: "hr" },
+  viewer:      { password: "1234", role: "viewer" },
+  // Email credentials
+  "admin@atlas-erp.com":      { password: "Admin1234!",      role: "super_admin" },
+  "manager@atlas-erp.com":    { password: "Manager1234!",    role: "admin" },
+  "finance@atlas-erp.com":    { password: "Finance1234!",    role: "accountant" },
+  "factory@atlas-erp.com":    { password: "Factory1234!",    role: "warehouse" },
+  "cashier@atlas-erp.com":    { password: "Cashier1234!",    role: "cashier" },
 };
 
 function readStoredUser(): User | null {
@@ -105,6 +133,22 @@ function readStoredUser(): User | null {
   try {
     const parsedUser: unknown = JSON.parse(storedUser);
     if (isValidUser(parsedUser)) return parsedUser;
+    // Attempt to migrate legacy role names stored in localStorage
+    if (
+      typeof parsedUser === "object" &&
+      parsedUser !== null &&
+      "username" in parsedUser &&
+      "role" in parsedUser
+    ) {
+      const legacyRole = (parsedUser as { role: string }).role;
+      const mappedRole = mapBackendRole(legacyRole);
+      const migrated: User = {
+        username: (parsedUser as { username: string }).username,
+        role: mappedRole,
+      };
+      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(migrated));
+      return migrated;
+    }
   } catch {
     // fall through
   }
@@ -115,9 +159,6 @@ function readStoredUser(): User | null {
 // ── Provider ───────────────────────────────────────────────────────────────
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(() => {
-    // Django and mock paths both persist the user shape in AUTH_STORAGE_KEY.
-    // For the Django path we additionally require the access token to be present;
-    // if it has been cleared (e.g. cleared by logout or browser) treat as logged out.
     if (USE_SUPABASE) return null;
     const stored = readStoredUser();
     if (USE_DJANGO && !localStorage.getItem(DJANGO_ACCESS_KEY)) {
@@ -130,8 +171,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // ── Session restore on mount ─────────────────────────────────────────────
   useEffect(() => {
     if (USE_DJANGO) {
-      // Verify the stored access token is still valid via /api/v1/auth/me/.
-      // If invalid, wipe all stored credentials so the user sees the login page.
       const token = localStorage.getItem(DJANGO_ACCESS_KEY);
       if (!token) return;
       fetch("/api/v1/auth/me/", {
@@ -157,7 +196,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       getSession()
         .then((authUser) => {
           if (!authUser) return;
-          const role = (authUser.role ?? "Cashier") as UserRole;
+          const role = mapBackendRole(authUser.role ?? null);
           setUser({ username: authUser.email, role });
         })
         .catch(() => {});
@@ -166,8 +205,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // ── login ────────────────────────────────────────────────────────────────
   const login = useCallback(async (username: string, password: string): Promise<boolean> => {
-    const trimmed  = username.trim();
-    const pwd      = password.trim();
+    const trimmed = username.trim();
+    const pwd     = password.trim();
 
     // ── 1. Django path ───────────────────────────────────────────────────
     if (USE_DJANGO) {
@@ -199,7 +238,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const key = trimmed.toLowerCase();
       try {
         const authUser = await sbSignIn(key, pwd);
-        const role = (authUser.role ?? "Cashier") as UserRole;
+        const role = mapBackendRole(authUser.role ?? null);
         setUser({ username: authUser.email, role });
         return true;
       } catch {
@@ -209,7 +248,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // ── 3. Mock path ─────────────────────────────────────────────────────
     const key  = trimmed.toLowerCase();
-    const cred = CREDENTIALS[key];
+    const cred = CREDENTIALS[key] ?? CREDENTIALS[trimmed];
     if (cred && pwd === cred.password) {
       const loggedInUser: User = { username: key, role: cred.role };
       setUser(loggedInUser);
@@ -227,7 +266,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (USE_DJANGO) {
       const access  = localStorage.getItem(DJANGO_ACCESS_KEY);
       const refresh = localStorage.getItem(DJANGO_REFRESH_KEY);
-      // Fire-and-forget: blacklist the refresh token on the server
       if (access && refresh) {
         fetch("/api/v1/auth/logout/", {
           method: "POST",
@@ -248,14 +286,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // ── permission helpers ───────────────────────────────────────────────────
   const hasRole = useCallback((...roles: UserRole[]) => {
     if (!user) return false;
     return roles.includes(user.role);
   }, [user]);
 
+  const can = useCallback((permission: Permission): boolean => {
+    if (!user) return false;
+    return hasPermission(user.role, permission);
+  }, [user]);
+
+  const canAny = useCallback((permissions: Permission[]): boolean => {
+    if (!user) return false;
+    return hasAnyPermission(user.role, permissions);
+  }, [user]);
+
   const value = useMemo(
-    () => ({ user, isAuthenticated: !!user, hasRole, login, logout }),
-    [hasRole, login, logout, user]
+    () => ({ user, isAuthenticated: !!user, hasRole, can, canAny, login, logout }),
+    [can, canAny, hasRole, login, logout, user],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -266,3 +315,13 @@ export function useAuth() {
   if (!context) throw new Error("useAuth must be used within an AuthProvider");
   return context;
 }
+
+// Convenience hook — returns whether the current user has a given permission.
+export function useCan(permission: Permission): boolean {
+  const { can } = useAuth();
+  return can(permission);
+}
+
+// Re-export for convenience
+export type { Permission } from "../lib/permissions";
+export type { Role } from "../lib/permissions";

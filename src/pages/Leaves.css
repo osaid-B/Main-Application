@@ -37,63 +37,55 @@
   gap: var(--app-space-4, 16px);
 }
 
-.lv-kpi-card {
+.lv-kpi-card-new {
+  height: 80px;
+  border-radius: 12px;
+  border: 1px solid #E2E8F0;
+  background: #fff;
+  padding: 16px 20px;
   display: flex;
   align-items: center;
-  gap: var(--app-space-3, 12px);
-  padding: var(--app-space-4, 16px);
-  border-radius: var(--app-radius-lg, 12px);
-  border: 1px solid transparent;
+  justify-content: space-between;
+  transition: transform 200ms ease, box-shadow 200ms ease;
+  cursor: pointer;
 }
 
-.lv-kpi-card > div {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+.lv-kpi-card-new:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
 }
 
-.lv-kpi-card span {
-  font-size: 12px;
+.lv-kpi-label {
+  font-size: 11px;
+  color: #94A3B8;
+  margin: 0 0 4px;
   font-weight: 500;
 }
 
-.lv-kpi-card strong {
-  font-size: 22px;
-  font-weight: 800;
-  line-height: 1;
+.lv-kpi-value {
+  font-size: 26px;
+  font-weight: 700;
+  color: #0F172A;
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
 }
 
-.lv-kpi-amber {
-  background: #fef3c7;
-  border-color: #fde68a;
-  color: #92400e;
+.lv-kpi-icon-wrap {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
 }
 
-.lv-kpi-amber svg { color: #d97706; }
-
-.lv-kpi-green {
-  background: #dcfce7;
-  border-color: #bbf7d0;
-  color: #14532d;
-}
-
-.lv-kpi-green svg { color: #16a34a; }
-
-.lv-kpi-blue {
-  background: #dbeafe;
-  border-color: #bfdbfe;
-  color: #1e3a8a;
-}
-
-.lv-kpi-blue svg { color: #2563eb; }
-
-.lv-kpi-slate {
-  background: #f1f5f9;
-  border-color: #e2e8f0;
-  color: #334155;
-}
-
-.lv-kpi-slate svg { color: #64748b; }
+.lv-kpi-icon-total    { background: #EFF6FF; color: #2563EB; }
+.lv-kpi-icon-leave    { background: #F0FDF4; color: #16A34A; }
+.lv-kpi-icon-approved { background: #DCFCE7; color: #16A34A; }
+.lv-kpi-icon-pending  { background: #FEF3C7; color: #D97706; }
 
 /* ─── Tab navigation ──────────────────────────────────────────────────────── */
 
@@ -222,6 +214,7 @@
   width: 100%;
   border-collapse: collapse;
   font-size: 13px;
+  table-layout: fixed;
 }
 
 .lv-table th {
@@ -235,105 +228,130 @@
   background: var(--app-surface-subtle, #f8fafc);
   border-bottom: 1px solid var(--app-border, #e2e8f0);
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .lv-table td {
   padding: 10px 12px;
-  border-bottom: 1px solid var(--app-border-subtle, #f1f5f9);
+  border-bottom: 1px solid #F1F5F9;
   vertical-align: middle;
   color: var(--app-text-primary, #0f172a);
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .lv-table tbody tr:last-child td {
   border-bottom: none;
 }
 
-.lv-table tbody tr:hover td {
-  background: var(--app-surface-hover, #f8fafc);
+/* Row */
+.lv-row {
+  min-height: 64px;
+  cursor: pointer;
+  transition: background-color 100ms ease;
 }
 
+.lv-row:nth-child(odd) { background: #FFFFFF; }
+.lv-row:nth-child(even) { background: #FAFBFC; }
+.lv-row:hover { background: rgba(239, 246, 255, 0.25); }
+
+/* Employee column */
 .lv-emp-cell {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 
-.lv-emp-cell > div {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
+.lv-emp-text {
+  text-align: right;
+  min-width: 0;
+  flex: 1;
 }
 
-.lv-emp-cell strong {
+.lv-emp-name {
+  margin: 0;
   font-size: 13px;
   font-weight: 600;
-  color: var(--app-text-primary, #0f172a);
+  color: #0F172A;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.lv-emp-cell span {
+.lv-emp-code {
+  margin: 0;
   font-size: 11px;
-  color: var(--app-text-secondary, #64748b);
+  color: #94A3B8;
+  font-family: monospace;
 }
 
-.lv-emp-avatar {
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  background: var(--app-primary-light, #dbeafe);
-  color: var(--app-primary, #2563eb);
-  font-size: 12px;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  text-transform: uppercase;
-}
-
-.lv-type-chip {
+/* Type badge */
+.lv-type-badge {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 3px 8px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 600;
+  border-radius: 99px;
+  padding: 3px 10px;
+  font-size: 12px;
+  font-weight: 500;
   white-space: nowrap;
 }
 
-.lv-days-cell {
-  font-weight: 700;
+.lv-type-badge.annual    { background: #DBEAFE; color: #1D4ED8; }
+.lv-type-badge.sick      { background: #FEE2E2; color: #DC2626; }
+.lv-type-badge.emergency { background: #FEF3C7; color: #D97706; }
+.lv-type-badge.maternity { background: #FCE7F3; color: #BE185D; }
+.lv-type-badge.paternity { background: #F3E8FF; color: #7C3AED; }
+.lv-type-badge.hajj      { background: #DCFCE7; color: #16A34A; }
+.lv-type-badge.unpaid    { background: #F1F5F9; color: #64748B; }
+
+/* Date cells */
+.lv-date-cell {
+  font-size: 13px;
+  color: #374151;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Days badge */
+.lv-days-badge {
+  display: inline-flex;
+  background: #EFF6FF;
+  color: #2563EB;
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
   text-align: center;
 }
 
+/* Reason cell */
 .lv-reason-cell {
-  max-width: 220px;
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 12px;
-  color: var(--app-text-secondary, #64748b);
+  font-size: 13px;
+  color: #475569;
 }
 
+/* Status badges */
 .lv-status-badge {
   display: inline-flex;
   align-items: center;
-  padding: 3px 10px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 700;
+  border-radius: 99px;
+  padding: 3px 12px;
+  font-size: 12px;
+  font-weight: 600;
   white-space: nowrap;
 }
 
-.lv-badge-pending  { background: #fef3c7; color: #92400e; }
-.lv-badge-approved { background: #dcfce7; color: #14532d; }
-.lv-badge-rejected { background: #fee2e2; color: #991b1b; }
-.lv-badge-cancelled { background: #f1f5f9; color: #475569; }
+.lv-status-pending  { background: #FEF3C7; color: #D97706; }
+.lv-status-approved { background: #DCFCE7; color: #16A34A; }
+.lv-status-rejected { background: #FEE2E2; color: #DC2626; }
+.lv-status-cancelled { background: #F1F5F9; color: #64748B; }
 
-.lv-row-actions {
-  display: flex;
-  gap: 4px;
-}
 
 .lv-empty {
   display: flex;

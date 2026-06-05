@@ -128,6 +128,8 @@
 
 .mono { font-family: var(--font-mono); font-size: 11px; }
 .numEnd { text-align: end; }
+.center { text-align: center; }
+.start { text-align: start; }
 
 .varPos { color: var(--atlas-orange); font-weight: 600; }
 .varNeg { color: var(--atlas-danger); font-weight: 600; }
@@ -164,7 +166,7 @@
 
 .detailTable th {
   text-align: start;
-  padding: 6px 8px;
+  padding: 10px 14px;
   font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.04em;
@@ -174,7 +176,7 @@
 }
 
 .detailTable td {
-  padding: 8px 8px;
+  padding: 11px 14px;
   border-bottom: 1px solid var(--app-border-subtle, var(--app-border));
 }
 

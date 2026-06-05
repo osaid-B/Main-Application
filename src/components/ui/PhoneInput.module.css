@@ -18,6 +18,23 @@
   margin-inline-start: 2px;
 }
 
+.flagBadge {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 100%;
+  font-size: 15px;
+  border-inline-end: 1px solid var(--app-border);
+  background: var(--app-surface-muted, #f8fafc);
+  border-radius: var(--app-radius-sm) 0 0 var(--app-radius-sm);
+  pointer-events: none;
+  /* Force to start side of the flex row regardless of writing direction */
+  order: -1;
+  /* In LTR the flag is on the left; in RTL flex reverses so it ends up on the right — correct */
+}
+
 .field {
   position: relative;
   display: inline-flex;
@@ -76,7 +93,8 @@
   background: transparent;
   color: inherit;
   font: inherit;
-  padding-inline: var(--app-space-3);
+  padding-inline-start: var(--app-space-2);
+  padding-inline-end: var(--app-space-3);
   /* Phone numbers always LTR, even in RTL page layouts */
   direction: ltr;
   text-align: left;

@@ -23,8 +23,7 @@ export type Customer = {
   type?: "individual" | "company" | "institution";
   customerType?: "Individual" | "Business" | "VIP";
   classification?: "standard" | "vip" | "risk";
-  paymentTerms?: "cash" | "net7" | "net15" | "net30" | "net45" | "net60" | "net90" | "half" | "custom";
-  paymentTermsCustom?: string;
+
   status?: "Active" | "Inactive" | "VIP" | "Blocked" | "New" | "active" | "inactive" | "archived";
   preferredContactMethod?: "Phone" | "Email" | "WhatsApp";
   openingBalance?: number;
@@ -34,6 +33,8 @@ export type Customer = {
   joinedAt?: string;
   lastOrderDate?: string;
   salesRep?: string;
+  returnPolicy?: string;
+  returnDays?: number;
   isDeleted?: boolean;
 };
 
@@ -118,6 +119,12 @@ export type Purchase = {
   date: string;
   notes?: string;
   isDeleted?: boolean;
+  paymentStatus?: string;
+  receivedPercent?: number;
+  viewStatus?: string;
+  currency?: string;
+  taxRate?: number;
+  warehouse?: string;
 };
 
 export type InvoiceStatus = "Paid" | "Partial" | "Debit" | "Pending";

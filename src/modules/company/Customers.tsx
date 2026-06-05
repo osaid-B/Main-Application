@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Search } from "lucide-react";
 import { useData } from "../../context/DataContext";
 import { useSettings } from "../../context/SettingsContext";
+import { DeleteConfirmDialog } from "../../components/ui/DeleteConfirmDialog";
 import { RowActions } from "../../components/ui/RowActions";
 
 function StatCard({
@@ -71,25 +72,21 @@ export default function CustomersPage() {
   const { customers: rawCustomers, deleteCustomer } = useData();
   const { formatCurrency } = useSettings();
 
-  // Guard against null/undefined leaking through from corrupted localStorage
-  const customers = Array.isArray(rawCustomers) ? rawCustomers : [];
-
   const [search, setSearch] = useState("");
   const [filterCity, setFilterCity] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
+  const [deleteConfirmItem, setDeleteConfirmItem] = useState<{ itemName: string; onConfirm: () => void } | null>(null);
 
   const activeCustomers = useMemo(
-    // Filter out malformed records: must have a non-empty string id AND a name.
-    // Corrupted localStorage entries can have missing id or name fields.
     () =>
-      (customers ?? []).filter(
+      (Array.isArray(rawCustomers) ? rawCustomers : []).filter(
         (c) =>
           !c.isDeleted &&
           typeof c.id === "string" &&
           c.id !== "" &&
           typeof c.name === "string"
       ),
-    [customers]
+    [rawCustomers]
   );
 
   const stats = useMemo(() => {
@@ -131,10 +128,8 @@ export default function CustomersPage() {
   const [page, setPage] = useState(1);
   const pageItems = (filtered ?? []).slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  function handleDelete(id: string) {
-    if (window.confirm("هل أنت متأكد؟")) {
-      deleteCustomer(id);
-    }
+  function handleDelete(id: string, name: string) {
+    setDeleteConfirmItem({ itemName: name, onConfirm: () => deleteCustomer(id) });
   }
 
   return (
@@ -282,7 +277,7 @@ export default function CustomersPage() {
                         { label: "تعديل", onClick: () => navigate(`/company/customers/${customer.id}/edit`) },
                         { label: "فواتير الزبون", onClick: () => navigate(`/company/invoices?customer=${customer.id}`) },
                         { label: "سجل الدفعات", onClick: () => navigate(`/company/payments?customer=${customer.id}`) },
-                        { label: "حذف", onClick: () => handleDelete(customer.id), variant: "danger" },
+                        { label: "حذف", onClick: () => handleDelete(customer.id, customer.name), variant: "danger" },
                       ]}
                     />
                   </td>
@@ -341,6 +336,13 @@ export default function CustomersPage() {
           )}
         </div>
       </div>
+
+      <DeleteConfirmDialog
+        isOpen={!!deleteConfirmItem}
+        itemName={deleteConfirmItem?.itemName ?? ""}
+        onConfirm={() => { const cb = deleteConfirmItem?.onConfirm; setDeleteConfirmItem(null); if (cb) cb(); }}
+        onCancel={() => setDeleteConfirmItem(null)}
+      />
     </div>
   );
 }

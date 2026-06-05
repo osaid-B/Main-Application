@@ -12,6 +12,7 @@ interface Props {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: (msg: string) => void;
+  defaultValues?: Partial<FormState>;
 }
 
 interface FormState {
@@ -38,9 +39,9 @@ const BLANK: FormState = {
   notes: '',
 };
 
-export function AddTransferModal({ isOpen, onClose, onSuccess }: Props) {
+export function AddTransferModal({ isOpen, onClose, onSuccess, defaultValues }: Props) {
   const { addInstrument } = useTreasury();
-  const [form, setForm] = useState<FormState>(BLANK);
+  const [form, setForm] = useState<FormState>(() => defaultValues ? { ...BLANK, ...defaultValues } : { ...BLANK });
   const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({});
 
   const set = (field: keyof FormState) =>

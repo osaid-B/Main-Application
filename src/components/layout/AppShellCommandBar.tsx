@@ -220,7 +220,7 @@ export default function AppShellCommandBar({ currentPath }: CommandBarProps) {
         label: `${stockAlerts} ${t.shell.signals.stock}`,
         detail: t.shell.signalDetails.stock,
         tone: stockAlerts > 0 ? "important" : "info",
-        path: "/products",
+        path: "/pos/stock",
       },
       {
         id: "pending-purchases",

@@ -52,7 +52,6 @@ export function customerFromRow(r: CustomerRow): Customer {
     governorate: r.governorate ?? undefined,
     type: r.type ?? undefined,
     classification: r.classification ?? undefined,
-    paymentTerms: r.payment_terms ?? undefined,
     currency: r.currency,
     creditLimit: r.credit_limit,
     outstandingBalance: r.outstanding_balance,

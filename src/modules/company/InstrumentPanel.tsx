@@ -15,7 +15,7 @@ interface InstrumentPanelProps {
 
 function formatILS(n: number, currency: string): string {
   const sym = currency === 'ILS' ? '₪' : currency === 'JOD' ? 'د.أ' : '$'
-  return sym + n.toLocaleString('ar-SA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  return sym + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
 function fmtDate(s: string): string {
@@ -965,13 +965,6 @@ export default function InstrumentPanel({ instrument, onClose, onAction }: Instr
           ) : null}
 
           <div className="trs-footer-row">
-            <button
-              className="trs-btn-secondary"
-              onClick={() => window.print()}
-              type="button"
-            >
-              طباعة الإيصال
-            </button>
             <button
               className="trs-btn-ghost"
               onClick={handleCopyRef}

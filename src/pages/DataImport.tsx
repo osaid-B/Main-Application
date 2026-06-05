@@ -166,10 +166,10 @@ const ENTITY_CONFIGS: Record<ImportEntity, EntityConfig> = {
     label: "Suppliers",
     description: "Required fields: Supplier Name, Contact Person, Phone, Email",
     requiredFields: ["supplier_name", "contact_person", "phone", "email"],
-    optionalFields: ["payment_terms", "address"],
-    sampleRow: ["Tech Supplies Co.", "Ahmad Saleh", "0591111111", "contact@tech.com", "Net 30", "Ramallah"],
+    optionalFields: ["address"],
+    sampleRow: ["Tech Supplies Co.", "Ahmad Saleh", "0591111111", "contact@tech.com", "Ramallah"],
     helper: "Create supplier records ready for purchases, invoices, and payables workflows.",
-    previewColumns: ["supplier_name", "contact_person", "phone", "email", "payment_terms", "address"],
+    previewColumns: ["supplier_name", "contact_person", "phone", "email", "address"],
     uniqueFields: ["supplier_name", "phone", "email"],
   },
   invoices: {
@@ -807,7 +807,7 @@ export default function DataImport() {
           phone: row.phone?.trim() || "",
           email: row.email?.trim() || "",
           address: row.address?.trim() || "",
-          notes: [row.contact_person, row.payment_terms].filter(Boolean).join(" • "),
+          notes: row.contact_person || "",
           isDeleted: false,
         }));
         const next = [...prepared, ...suppliers];

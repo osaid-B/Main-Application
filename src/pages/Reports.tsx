@@ -16,18 +16,18 @@ import { Grid } from "../components/layout/Grid";
 import { Stack } from "../components/layout/Stack";
 import { Button } from "../components/ui/Button";
 import { useSettings } from "../context/SettingsContext";
-import { useData } from "../context/DataContext";
+import { useFinancial } from "../context/FinancialContext";
 import { Skeleton } from "../components/ui/Skeleton";
 import { useLoadingDelay } from "../hooks/useLoadingDelay";
 import {
-  MONTHLY_FINANCIALS,
   SALES_BY_CASHIER,
   SALES_BY_METHOD,
   SALES_BY_CATEGORY,
-  PL_ITEMS,
   type BreakdownRow,
   type PLLineItem,
 } from "../data/reportsMock";
+import { useFinancialReports } from "../hooks/useFinancialReports";
+import type { MonthlyRow } from "../lib/reportCompute";
 import styles from "./Reports.module.css";
 
 type TabId = "overview" | "sales" | "expenses" | "pl" | "custom" | "vat";
@@ -38,13 +38,11 @@ const MONTH_AR: Record<string, string> = {
   "Sep": "سبتمبر","Oct": "أكتوبر","Nov": "نوفمبر","Dec": "ديسمبر",
 };
 
-// Previous month baseline for delta calculations
-const PREV = MONTHLY_FINANCIALS[MONTHLY_FINANCIALS.length - 2];
-
 export default function Reports() {
   const { t, formatCurrency, isArabic } = useSettings();
   const tc = t.reports;
-  const { totalRevenue, expenses } = useData();
+  const { summary } = useFinancial();
+  const reportData = useFinancialReports();
 
   const [tab, setTab] = useState<TabId>("overview");
   const [customFrom, setCustomFrom] = useState("");
@@ -52,6 +50,8 @@ export default function Reports() {
   const [generated,  setGenerated]  = useState(false);
 
   const isLoading = useLoadingDelay();
+
+  const prevMonth = reportData.monthly[reportData.monthly.length - 2];
 
   const TABS: { id: TabId; label: string }[] = [
     { id: "overview",  label: tc.tabs.overview  },
@@ -62,14 +62,12 @@ export default function Reports() {
     { id: "vat",       label: tc.tabs.vat        },
   ];
 
-  const liveExpenses = useMemo(
-    () => expenses.filter((e) => !e.isDeleted).reduce((s, e) => s + Number(e.amount || 0), 0),
-    [expenses]
-  );
-  const liveNetProfit = totalRevenue - liveExpenses;
-  const margin = totalRevenue > 0
-    ? ((liveNetProfit / totalRevenue) * 100).toFixed(1) + "%"
-    : "0%";
+  const { totalRevenue, totalExpenses: liveExpenses, netProfit: liveNetProfit, grossMarginPct } = summary;
+  const margin = `${grossMarginPct.toFixed(1)}%`;
+  const curMonth  = reportData.monthly[reportData.monthly.length - 1];
+  const prevRevDelta    = prevMonth ? curMonth.revenue - prevMonth.revenue : undefined;
+  const prevExpDelta    = prevMonth ? curMonth.expenses - prevMonth.expenses : undefined;
+  const prevProfitDelta = prevMonth ? curMonth.netProfit - prevMonth.netProfit : undefined;
 
   function exportTabCSV(activeTab: TabId) {
     let rows: string[][];
@@ -79,11 +77,11 @@ export default function Reports() {
         ...SALES_BY_CASHIER.map((r) => [r.name, String(r.transactions), String(r.amount), r.share.toFixed(1)]),
       ];
     } else if (activeTab === "pl") {
-      rows = [["Label", "Amount"], ...PL_ITEMS.map((r) => [r.label, String(r.amount)])];
+      rows = [["Label", "Amount"], ...reportData.pl.map((r) => [r.label, String(r.amount)])];
     } else {
       rows = [
         ["Month", "Revenue", "Expenses", "Gross Profit", "Net Profit"],
-        ...MONTHLY_FINANCIALS.map((r) => [r.month, String(r.revenue), String(r.expenses), String(r.grossProfit), String(r.netProfit)]),
+        ...reportData.monthly.map((r) => [r.month, String(r.revenue), String(r.expenses), String(r.grossProfit), String(r.netProfit)]),
       ];
     }
     const csv = rows.map((r) => r.join(",")).join("\n");
@@ -114,7 +112,7 @@ export default function Reports() {
             label={tc.kpi.revenue}
             value={formatCurrency(totalRevenue)}
             sub={tc.kpi.revenueSub}
-            delta={totalRevenue - PREV.revenue}
+            delta={prevRevDelta}
             tone="info"
             formatCurrency={formatCurrency}
           />
@@ -122,7 +120,7 @@ export default function Reports() {
             label={tc.kpi.expenses}
             value={formatCurrency(liveExpenses)}
             sub={tc.kpi.expensesSub}
-            delta={liveExpenses - PREV.expenses}
+            delta={prevExpDelta}
             tone="warning"
             formatCurrency={formatCurrency}
             invertDelta
@@ -131,7 +129,7 @@ export default function Reports() {
             label={tc.kpi.netProfit}
             value={formatCurrency(liveNetProfit)}
             sub={tc.kpi.netProfitSub}
-            delta={liveNetProfit - PREV.netProfit}
+            delta={prevProfitDelta}
             tone="success"
             formatCurrency={formatCurrency}
           />
@@ -164,16 +162,16 @@ export default function Reports() {
         ) : (
           <>
             {tab === "overview" && (
-              <OverviewTab tc={tc} formatCurrency={formatCurrency} isArabic={isArabic} />
+              <OverviewTab tc={tc} formatCurrency={formatCurrency} isArabic={isArabic} monthlyData={reportData.monthly} />
             )}
             {tab === "sales" && (
               <SalesTab tc={tc} formatCurrency={formatCurrency} />
             )}
             {tab === "expenses" && (
-              <ExpensesTableTab tc={tc} formatCurrency={formatCurrency} isArabic={isArabic} />
+              <ExpensesTableTab tc={tc} formatCurrency={formatCurrency} isArabic={isArabic} monthlyData={reportData.monthly} />
             )}
             {tab === "pl" && (
-              <PLTab tc={tc} formatCurrency={formatCurrency} />
+              <PLTab tc={tc} formatCurrency={formatCurrency} plItems={reportData.pl} />
             )}
             {tab === "custom" && (
               <CustomTab
@@ -185,6 +183,7 @@ export default function Reports() {
                 setCustomTo={setCustomTo}
                 generated={generated}
                 setGenerated={setGenerated}
+                monthlyData={reportData.monthly}
               />
             )}
             {tab === "vat" && (
@@ -202,10 +201,12 @@ function OverviewTab({
   tc,
   formatCurrency,
   isArabic,
+  monthlyData,
 }: {
   tc: ReturnType<typeof useSettings>["t"]["reports"];
   formatCurrency: (n: number) => string;
   isArabic: boolean;
+  monthlyData: MonthlyRow[];
 }) {
   return (
     <Stack gap="lg">
@@ -214,7 +215,7 @@ function OverviewTab({
         <div className={styles.chartTitle}>{tc.chart.revenue} / {tc.chart.expenses} / {tc.chart.profit}</div>
         <div className={styles.chartWrap}>
           <ResponsiveContainer width="100%" height={280}>
-            <LineChart data={MONTHLY_FINANCIALS} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
+            <LineChart data={monthlyData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--app-border)" />
               <XAxis dataKey="month" tick={{ fontSize: 11 }} tickFormatter={(val: string) => isArabic ? (MONTH_AR[val.slice(0, 3)] ?? val) : val} />
               <YAxis tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 11 }} width={48} />
@@ -250,11 +251,11 @@ function OverviewTab({
             </tr>
           </thead>
           <tbody>
-            {[...MONTHLY_FINANCIALS].reverse().map((row) => {
+            {[...monthlyData].reverse().map((row) => {
               const m = row.revenue > 0 ? ((row.netProfit / row.revenue) * 100).toFixed(1) : "0";
               const monthLabel = isArabic ? (MONTH_AR[row.month.slice(0, 3)] ?? row.month) : row.month;
               return (
-                <tr key={row.month}>
+                <tr key={row.monthKey}>
                   <td className={styles.mono}>{monthLabel}</td>
                   <td className={`${styles.numEnd} ${styles.mono}`}>{formatCurrency(row.revenue)}</td>
                   <td className={`${styles.numEnd} ${styles.mono}`}>{formatCurrency(row.expenses)}</td>
@@ -355,10 +356,12 @@ function ExpensesTableTab({
   tc,
   formatCurrency,
   isArabic,
+  monthlyData,
 }: {
   tc: ReturnType<typeof useSettings>["t"]["reports"];
   formatCurrency: (n: number) => string;
   isArabic: boolean;
+  monthlyData: MonthlyRow[];
 }) {
   return (
     <Stack gap="lg">
@@ -366,7 +369,7 @@ function ExpensesTableTab({
         <div className={styles.chartTitle}>{tc.tabs.expenses}</div>
         <div className={styles.chartWrap}>
           <ResponsiveContainer width="100%" height={260}>
-            <BarChart data={MONTHLY_FINANCIALS} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
+            <BarChart data={monthlyData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--app-border)" />
               <XAxis dataKey="month" tick={{ fontSize: 11 }} tickFormatter={(val: string) => isArabic ? (MONTH_AR[val.slice(0, 3)] ?? val) : val} />
               <YAxis tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 11 }} width={48} />
@@ -394,11 +397,11 @@ function ExpensesTableTab({
             </tr>
           </thead>
           <tbody>
-            {[...MONTHLY_FINANCIALS].reverse().map((row) => {
+            {[...monthlyData].reverse().map((row) => {
               const ratio = row.revenue > 0 ? ((row.expenses / row.revenue) * 100).toFixed(1) : "0";
               const monthLabel = isArabic ? (MONTH_AR[row.month.slice(0, 3)] ?? row.month) : row.month;
               return (
-                <tr key={row.month}>
+                <tr key={row.monthKey}>
                   <td className={styles.mono}>{monthLabel}</td>
                   <td className={`${styles.numEnd} ${styles.mono}`}>{formatCurrency(row.revenue)}</td>
                   <td className={`${styles.numEnd} ${styles.mono}`}>{formatCurrency(row.expenses)}</td>
@@ -417,9 +420,11 @@ function ExpensesTableTab({
 function PLTab({
   tc,
   formatCurrency,
+  plItems,
 }: {
   tc: ReturnType<typeof useSettings>["t"]["reports"];
   formatCurrency: (n: number) => string;
+  plItems: PLLineItem[];
 }) {
   return (
     <div className={styles.tableWrap}>
@@ -430,7 +435,7 @@ function PLTab({
           <col className="col-currency" />
         </colgroup>
         <tbody>
-          {PL_ITEMS.map((item: PLLineItem, idx) => (
+          {plItems.map((item: PLLineItem, idx) => (
             <tr key={idx} className={item.isTotal ? styles.plTotalRow : ""}>
               <td className={item.isTotal ? styles.plTotalLabel : styles.plLabel}>
                 {item.label}
@@ -457,6 +462,7 @@ function CustomTab({
   setCustomTo,
   generated,
   setGenerated,
+  monthlyData,
 }: {
   tc: ReturnType<typeof useSettings>["t"]["reports"];
   formatCurrency: (n: number) => string;
@@ -466,16 +472,17 @@ function CustomTab({
   setCustomTo: (v: string) => void;
   generated: boolean;
   setGenerated: (v: boolean) => void;
+  monthlyData: MonthlyRow[];
 }) {
   const canGenerate = customFrom && customTo;
 
-  // Filter MONTHLY_FINANCIALS to months within the selected range
+  // Filter live monthly data to months within the selected range
   const filteredData = useMemo(() => {
-    if (!generated || !customFrom || !customTo) return MONTHLY_FINANCIALS;
-    return MONTHLY_FINANCIALS.filter((row) => {
-      return row.month >= customFrom.slice(0, 7) && row.month <= customTo.slice(0, 7);
-    });
-  }, [generated, customFrom, customTo]);
+    if (!generated || !customFrom || !customTo) return monthlyData;
+    const fromKey = customFrom.slice(0, 7);
+    const toKey = customTo.slice(0, 7);
+    return monthlyData.filter((row) => row.monthKey >= fromKey && row.monthKey <= toKey);
+  }, [generated, customFrom, customTo, monthlyData]);
 
   return (
     <Stack gap="lg">
@@ -534,7 +541,7 @@ function CustomTab({
                 {filteredData.map((row) => {
                   const m = row.revenue > 0 ? ((row.netProfit / row.revenue) * 100).toFixed(1) : "0";
                   return (
-                    <tr key={row.month}>
+                    <tr key={row.monthKey}>
                       <td className={styles.mono}>{row.month}</td>
                       <td className={`${styles.numEnd} ${styles.mono}`}>{formatCurrency(row.revenue)}</td>
                       <td className={`${styles.numEnd} ${styles.mono}`}>{formatCurrency(row.expenses)}</td>

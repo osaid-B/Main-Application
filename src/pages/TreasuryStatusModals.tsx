@@ -306,7 +306,7 @@ export function LegalInfoModal({ onClose }: LegalInfoModalProps) {
       size="md"
       footer={
         <>
-          <Button variant="ghost" onClick={() => window.print()}>طباعة هذه التعليمات</Button>
+
           <Button variant="primary" onClick={onClose}>إغلاق</Button>
         </>
       }

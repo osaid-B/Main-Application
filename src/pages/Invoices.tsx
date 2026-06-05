@@ -1,9 +1,9 @@
 import "./Invoices.css";
 import { Button } from "../components/ui/Button";
+import { DeleteConfirmDialog } from "../components/ui/DeleteConfirmDialog";
 import { Input } from "../components/ui/Input";
-import { Select } from "../components/ui/Select";
 import { Modal } from "../components/ui/Modal";
-import { Badge } from "../components/ui/Badge";
+import { TableActions } from "../components/ui/TableActions";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent, FormEvent, ReactNode } from "react";
 import { createPortal } from "react-dom";
@@ -12,10 +12,7 @@ import { useCompanySettings } from "../context/CompanySettingsContext";
 import {
   Building2,
   Check,
-  Eye,
   FileText,
-  Filter,
-  Pencil,
   Plus,
   Search,
   Trash2,
@@ -160,7 +157,7 @@ function makeBlankItem(): InvoiceLine {
   return { id: `line-${Date.now()}-${Math.random().toString(36).slice(2)}`, productId: "", label: "", quantity: 1, unitPrice: 0, total: 0 };
 }
 
-const TAB_ORDER: TabKey[] = ["customer", "supplier", "internal"];
+
 
 
 function ModalPortal({ children }: { children: ReactNode }) {
@@ -581,7 +578,7 @@ function seedInvoices(
 }
 
 export default function Invoices() {
-  const { t } = useSettings();
+  const { t, isArabic } = useSettings();
   const { products } = useData();
   const { settings: companySettings } = useCompanySettings();
 
@@ -608,11 +605,9 @@ export default function Invoices() {
     }
     return seedInvoices(customers, suppliers, products, employees).map(normalizeInvoiceRecord);
   });
-  const [hasLoaded] = useState(true);
-
   const [activeTab, setActiveTab] = useState<TabKey>("customer");
   const [filters, setFilters] = useState<FilterState>(EMPTY_FILTERS);
-  const [showFilterMenu, setShowFilterMenu] = useState(false);
+
 
   const [formOpen, setFormOpen] = useState(false);
   const [formMode, setFormMode] = useState<"add" | "edit">("add");
@@ -624,8 +619,7 @@ export default function Invoices() {
 
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
 
-  const [editDeleteCode, setEditDeleteCode] = useState("");
-  const [editDeleteError, setEditDeleteError] = useState("");
+  const [deleteConfirmItem, setDeleteConfirmItem] = useState<{ itemName: string; onConfirm: () => void } | null>(null);
 
   const [detailInvoice, setDetailInvoice] = useState<InvoiceRecord | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -676,9 +670,8 @@ export default function Invoices() {
 
 
   useEffect(() => {
-    if (!hasLoaded) return;
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
-  }, [hasLoaded, records]);
+  }, [records]);
 
   useEffect(() => {
     if (!toast) return;
@@ -736,6 +729,9 @@ export default function Invoices() {
           invoice.department,
           invoice.category,
           invoice.priority,
+          formatDate(invoice.issueDate),
+          money(invoice.totalAmount, invoice.currency),
+          money(invoice.remainingAmount, invoice.currency),
           invoice.items.map((item) => item.label).join(" "),
         ]
           .join(" ")
@@ -772,37 +768,12 @@ export default function Invoices() {
     });
   }, [filters, visibleByTab]);
 
-  const summary = useMemo(() => {
-    const amountDue = visibleByTab.reduce((sum, invoice) => sum + invoice.remainingAmount, 0);
-    const lateCount = visibleByTab.filter(isLate).length;
-    const pendingApprovals = visibleByTab.filter(
-      (invoice) => invoice.type === "internal" && !invoice.approvedBy
-    ).length;
-
-    return {
-      amountDue,
-      lateCount,
-      pendingApprovals,
-      count: visibleByTab.length,
-    };
-  }, [visibleByTab]);
-
-  const activeFilterCount = [
-    filters.status !== "all",
-    filters.due !== "all",
-    filters.paymentMethod !== "all",
-    filters.minAmount.trim() !== "",
-    filters.maxAmount.trim() !== "",
-    filters.sortBy !== "newest",
-  ].filter(Boolean).length;
-
   function pushToast(message: string) {
     setToast(message);
   }
 
   function resetFilters() {
     setFilters(EMPTY_FILTERS);
-    setShowFilterMenu(false);
   }
 
   function updateFilter<K extends keyof FilterState>(key: K, value: FilterState[K]) {
@@ -901,9 +872,8 @@ export default function Invoices() {
 
     setCustomerSearch("");
     setShowCustomerMenu(false);
-    setEditDeleteCode("");
-    setEditDeleteError("");
     setShowDiscardConfirm(false);
+    setDetailInvoice(null);
     setFormOpen(true);
   }
 
@@ -936,8 +906,6 @@ export default function Invoices() {
 
     setCustomerSearch(invoice.type === "customer" ? invoice.partyName : "");
     setShowCustomerMenu(false);
-    setEditDeleteCode("");
-    setEditDeleteError("");
     setShowDiscardConfirm(false);
     setDetailInvoice(null);
     setFormOpen(true);
@@ -948,8 +916,6 @@ export default function Invoices() {
     setFormState(EMPTY_FORM);
     setCustomerSearch("");
     setShowCustomerMenu(false);
-    setEditDeleteCode("");
-    setEditDeleteError("");
   }
 
   function handleFormChange(
@@ -957,42 +923,42 @@ export default function Invoices() {
   ) {
     const { name, value } = event.target;
 
-    setFormState((current) => {
-      if (name === "type") {
-        const nextType = value as TabKey;
+    if (name === "type") {
+      const nextType = value as TabKey;
 
-        setCustomerSearch("");
-        setShowCustomerMenu(false);
+      setCustomerSearch("");
+      setShowCustomerMenu(false);
 
-        return {
-          ...current,
-          type: nextType,
-          title:
-            current.title.trim() === "" || current.title === getDefaultTitle(current.type, t)
-              ? getDefaultTitle(nextType, t)
-              : current.title,
-          paymentMethod: "Bank Transfer",
-          customerId: nextType === "customer" ? current.customerId : "",
-          supplierId: nextType === "supplier" ? current.supplierId : "",
-          partyName: "",
-          partySubtext: "",
-          linkedRecord: "",
-        };
-      }
-
-      if (name === "issueDate") {
-        return {
-          ...current,
-          issueDate: value,
-          dueDate: value,
-        };
-      }
-
-      return {
+      setFormState((current) => ({
         ...current,
-        [name]: value,
-      };
-    });
+        type: nextType,
+        title:
+          current.title.trim() === "" || current.title === getDefaultTitle(current.type, t)
+            ? getDefaultTitle(nextType, t)
+            : current.title,
+        paymentMethod: "Bank Transfer",
+        customerId: nextType === "customer" ? current.customerId : "",
+        supplierId: nextType === "supplier" ? current.supplierId : "",
+        partyName: "",
+        partySubtext: "",
+        linkedRecord: "",
+      }));
+      return;
+    }
+
+    if (name === "issueDate") {
+      setFormState((current) => ({
+        ...current,
+        issueDate: value,
+        dueDate: value,
+      }));
+      return;
+    }
+
+    setFormState((current) => ({
+      ...current,
+      [name]: value,
+    }));
   }
 
   function addItem() {
@@ -1031,7 +997,10 @@ export default function Invoices() {
     const items = formState.items
       .filter((i) => i.productId !== "" || i.unitPrice > 0)
       .map((i) => ({ ...i, total: i.quantity * i.unitPrice }));
-    if (items.length === 0) return;
+    if (items.length === 0) {
+      pushToast(isArabic ? "أضف منتجاً واحداً على الأقل" : "Please add at least one product");
+      return;
+    }
 
     const subtotal = items.reduce((s, i) => s + i.total, 0);
     const vatRate = formState.vatEnabled ? Math.max(0, normalizeNumber(formState.vatRate)) : 0;
@@ -1104,45 +1073,15 @@ export default function Invoices() {
 
   function requestDeleteFromEdit() {
     if (!formState.id) return;
-
-    if (editDeleteCode.trim() !== "123") {
-      setEditDeleteError(t.invoices.delete.error);
-      return;
-    }
-
-    setRecords((current) => current.filter((record) => record.id !== formState.id));
-    pushToast(t.invoices.toast.deleted);
-    closeFormModal();
-  }
-
-  function markAsPaid(invoice: InvoiceRecord) {
-    setRecords((current) =>
-      current.map((record) =>
-        record.id === invoice.id
-          ? {
-              ...record,
-              status: "Paid",
-              paidAmount: record.totalAmount,
-              remainingAmount: 0,
-              updatedAt: new Date().toISOString(),
-            }
-          : record
-      )
-    );
-
-    setDetailInvoice((current) =>
-      current?.id === invoice.id
-        ? {
-            ...current,
-            status: "Paid",
-            paidAmount: current.totalAmount,
-            remainingAmount: 0,
-            updatedAt: new Date().toISOString(),
-          }
-        : current
-    );
-
-    pushToast(t.invoices.toast.markedPaid);
+    const invoiceId = formState.id;
+    setDeleteConfirmItem({
+      itemName: invoiceId,
+      onConfirm: () => {
+        setRecords((current) => current.filter((record) => record.id !== invoiceId));
+        pushToast(t.invoices.toast.deleted);
+        closeFormModal();
+      },
+    });
   }
 
   const editingRecord = useMemo(
@@ -1154,334 +1093,209 @@ export default function Invoices() {
 
   const formSubtotal = formState.items.reduce((s, i) => s + i.total, 0);
 
+  const totalInvoices = visibleByTab.length;
+  const paidInvoices = visibleByTab.filter((i) => i.status === "Paid");
+  const paidCount = paidInvoices.length;
+  const paidAmount = paidInvoices.reduce((s, i) => s + i.paidAmount, 0);
+  const unpaidInvoices = visibleByTab.filter((i) => i.status === "Unpaid" || i.status === "Partial");
+  const unpaidCount = unpaidInvoices.length;
+  const unpaidAmount = unpaidInvoices.reduce((s, i) => s + i.remainingAmount, 0);
+  const overdueInvoices = visibleByTab.filter(isLate);
+  const overdueCount = overdueInvoices.length;
+  const overdueAmount = overdueInvoices.reduce((s, i) => s + i.remainingAmount, 0);
+
+  const [animVals, setAnimVals] = useState({ total: 0, paid: 0, unpaid: 0, overdue: 0, paidAmt: 0, unpaidAmt: 0, overdueAmt: 0 });
+  useEffect(() => {
+    const dur = 500;
+    const steps = 20;
+    const interval = dur / steps;
+    let step = 0;
+    const timer = setInterval(() => {
+      step++;
+      const t = Math.min(step / steps, 1);
+      const ease = 1 - Math.pow(1 - t, 3);
+      setAnimVals({
+        total: Math.round(ease * totalInvoices),
+        paid: Math.round(ease * paidCount),
+        unpaid: Math.round(ease * unpaidCount),
+        overdue: Math.round(ease * overdueCount),
+        paidAmt: Math.round(ease * paidAmount),
+        unpaidAmt: Math.round(ease * unpaidAmount),
+        overdueAmt: Math.round(ease * overdueAmount),
+      });
+      if (step >= steps) clearInterval(timer);
+    }, interval);
+    return () => clearInterval(timer);
+  }, [totalInvoices, paidCount, unpaidCount, overdueCount, paidAmount, unpaidAmount, overdueAmount]);
+
+  const [filterTab, setFilterTab] = useState<"all" | InvoiceStatus>("all");
+  const filterRef = useRef<HTMLDivElement>(null);
+
   return (
     <>
-      <div className="invoice-page">
-        {/* ── Page header ─────────────────────────── */}
-        <div className="inv-page-header">
-          <div className="inv-header-left">
-            <div className="inv-page-icon">
-              <FileText size={22} />
+      <div className="invoice-page inv-full">
+        {/* ── 4 STAT CARDS ──────────────────────────── */}
+        <div className="inv-stats-grid">
+          {[
+            { icon: "📄", bg: "#EFF6FF", color: "#2563EB", label: isArabic ? "إجمالي الفواتير" : "Total Invoices", value: animVals.total, sub: `${money(totalInvoices > 0 ? visibleByTab.reduce((s,i) => s + i.totalAmount, 0) / totalInvoices : 0)} ${isArabic ? "متوسط" : "avg"}`, delay: 0 },
+            { icon: "✅", bg: "#F0FDF4", color: "#16A34A", label: isArabic ? "مدفوعة" : "Paid", value: animVals.paid, sub: `${isArabic ? "₪" : "₪"} ${animVals.paidAmt.toLocaleString()}`, delay: 70 },
+            { icon: "⏳", bg: "#FEF3C7", color: "#D97706", label: isArabic ? "غير مدفوعة" : "Unpaid", value: animVals.unpaid, sub: `${isArabic ? "₪" : "₪"} ${animVals.unpaidAmt.toLocaleString()}`, delay: 140 },
+            { icon: "⚠️", bg: "#FEF2F2", color: "#DC2626", label: isArabic ? "متأخرة" : "Overdue", value: animVals.overdue, sub: `${isArabic ? "₪" : "₪"} ${animVals.overdueAmt.toLocaleString()}`, delay: 210 },
+          ].map((card) => (
+            <div key={card.label} className="inv-stat-card" style={{ animationDelay: `${card.delay}ms` }}>
+              <div>
+                <div className="inv-stat-label">{card.label}</div>
+                <div className="inv-stat-value">{card.value}</div>
+                <div className="inv-stat-sub" style={{ color: card.color }}>{card.sub}</div>
+              </div>
+              <div className="inv-stat-icon" style={{ background: card.bg, color: card.color }}>{card.icon}</div>
             </div>
-            <div className="inv-header-copy">
-              <p>{t.invoices.pageSubtitle}</p>
-            </div>
-          </div>
-          <Button variant="primary" onClick={() => openAddModal(activeTab)} leftIcon={<Plus size={16} />} className="inv-new-btn">
-            {t.invoices.newInvoice}
-          </Button>
+          ))}
         </div>
 
-        {/* ── Invoice type tabs ───────────────────── */}
-        <div className="inv-type-grid">
-          {TAB_ORDER.map((tab) => {
+        {/* ── CATEGORY CARDS ───────────────────────── */}
+        <div className="inv-cat-grid">
+          {([["customer", "👥", "#EFF6FF", "#2563EB"], ["supplier", "🚛", "#FFFBEB", "#D97706"], ["internal", "🏢", "#F5F3FF", "#7C3AED"]] as const).map(([tab, icon, catBg, catColor]) => {
             const config = TAB_CONFIG[tab];
-            const Icon = config.icon;
-            const count = records.filter((invoice) => invoice.type === tab).length;
-
+            const count = records.filter((i) => i.type === tab).length;
+            const isActive = activeTab === tab;
             return (
-              <button
-                key={tab}
-                type="button"
-                className={`inv-type-card ${activeTab === tab ? "active" : ""}`}
-                onClick={() => setActiveTab(tab)}
+              <button key={tab} type="button" className={`inv-cat-card${isActive ? " active" : ""}`} onClick={() => setActiveTab(tab)}
+                style={isActive ? { borderColor: catColor, background: catBg.replace(")", "/0.3)").replace("rgb", "rgba") || `${catBg}33` } : {}}
               >
-                <div className={`inv-type-icon ${tab}`}>
-                  <Icon size={22} />
-                </div>
+                <div className="inv-cat-icon" style={{ background: catBg, color: catColor }}>{icon}</div>
                 <div>
-                  <span>{config.label}</span>
-                  <strong>{count}</strong>
+                  <div className="inv-cat-label">{config.label}</div>
+                  <div className="inv-cat-count" style={{ color: catColor }}>{count}</div>
                 </div>
               </button>
             );
           })}
         </div>
 
-        {/* ── Search + filter ─────────────────────── */}
-        <div className="inv-search-row">
-          <div className="inv-search-box">
-            <Input
-              variant="search"
-              value={filters.search}
-              onChange={(event) => updateFilter("search", event.target.value)}
-              placeholder={t.invoices.searchPlaceholder}
-              leftIcon={<Search size={17} />}
-              fullWidth
-            />
+        {/* ── FILTER PILLS ─────────────────────────── */}
+        <div className="inv-filter-pills-wrap" ref={filterRef}>
+          <div className="inv-filter-pills">
+            {[
+              { key: "all", label: isArabic ? "الكل" : "All" },
+              { key: "Paid", label: `✅ ${isArabic ? "مدفوعة" : "Paid"}` },
+              { key: "Unpaid", label: `⏳ ${isArabic ? "غير مدفوعة" : "Unpaid"}` },
+              { key: "late", label: `⚠️ ${isArabic ? "متأخرة" : "Overdue"}` },
+              { key: "Partial", label: `📝 ${isArabic ? "جزئية" : "Partial"}` },
+            ].map((p) => (
+              <button key={p.key} type="button" className={`inv-filter-pill${filterTab === p.key ? " active" : ""}`}
+                onClick={() => {
+                  setFilterTab(p.key as typeof filterTab);
+                  if (p.key === "all") { resetFilters(); }
+                  else if (p.key === "late") { resetFilters(); updateFilter("due", "late"); }
+                  else { resetFilters(); updateFilter("status", p.key as InvoiceStatus); }
+                }}
+              >{p.label}</button>
+            ))}
           </div>
-
-          <div className="invoice-filter-menu-wrap">
-              <button
-                className={`toolbar-chip ${showFilterMenu ? "active" : ""}`}
-                type="button"
-                onClick={() => setShowFilterMenu((current) => !current)}
-              >
-                <Filter size={15} />
-                {t.invoices.filterBtn}
-                {activeFilterCount > 0 && (
-                  <span className="toolbar-chip-count">{activeFilterCount}</span>
-                )}
-              </button>
-
-              {showFilterMenu && (
-                <div className="invoice-filter-dropdown professional-filter-dropdown">
-                  <Select
-                    label={t.invoices.filter.status}
-                    value={filters.status}
-                    onChange={(event) =>
-                      updateFilter("status", event.target.value as FilterState["status"])
-                    }
-                    options={[
-                      { value: "all", label: t.invoices.filter.allStatuses },
-                      { value: "Paid", label: t.invoices.status.paid },
-                      { value: "Partial", label: t.invoices.status.partial },
-                      { value: "Unpaid", label: t.invoices.status.unpaid },
-                    ]}
-                    fullWidth
-                  />
-
-                  <Select
-                    label={t.invoices.filter.due}
-                    value={filters.due}
-                    onChange={(event) =>
-                      updateFilter("due", event.target.value as DueFilter)
-                    }
-                    options={[
-                      { value: "all", label: t.invoices.filter.allDue },
-                      { value: "late", label: t.invoices.filter.late },
-                      { value: "today", label: t.invoices.filter.dueToday },
-                      { value: "week", label: t.invoices.filter.dueThisWeek },
-                    ]}
-                    fullWidth
-                  />
-
-                  <Select
-                    label={t.invoices.filter.paymentMethod}
-                    value={filters.paymentMethod}
-                    onChange={(event) =>
-                      updateFilter(
-                        "paymentMethod",
-                        event.target.value as FilterState["paymentMethod"]
-                      )
-                    }
-                    options={[
-                      { value: "all", label: t.invoices.filter.allMethods },
-                      { value: "Cash", label: t.invoices.methods.cash },
-                      { value: "Card", label: t.invoices.methods.card },
-                      { value: "Bank Transfer", label: t.invoices.methods.bankTransfer },
-                    ]}
-                    fullWidth
-                  />
-
-                  <div className="filter-two-cols">
-                    <Input
-                      label={t.invoices.filter.minAmount}
-                      variant="number"
-                      min="0"
-                      value={filters.minAmount}
-                      onChange={(event) => updateFilter("minAmount", event.target.value)}
-                      placeholder="0"
-                      fullWidth
-                    />
-
-                    <Input
-                      label={t.invoices.filter.maxAmount}
-                      variant="number"
-                      min="0"
-                      value={filters.maxAmount}
-                      onChange={(event) => updateFilter("maxAmount", event.target.value)}
-                      placeholder={t.invoices.filter.anyPlaceholder}
-                      fullWidth
-                    />
-                  </div>
-
-                  <Select
-                    label={t.invoices.filter.sortBy}
-                    value={filters.sortBy}
-                    onChange={(event) =>
-                      updateFilter("sortBy", event.target.value as SortKey)
-                    }
-                    options={[
-                      { value: "newest", label: t.invoices.filter.newest },
-                      { value: "oldest", label: t.invoices.filter.oldest },
-                      { value: "dueSoon", label: t.invoices.filter.dueSoon },
-                      { value: "amountHigh", label: t.invoices.filter.amountHigh },
-                      { value: "amountLow", label: t.invoices.filter.amountLow },
-                      { value: "amountDueHigh", label: t.invoices.filter.amountDueHigh },
-                    ]}
-                    fullWidth
-                  />
-
-                  <div className="invoice-filter-actions">
-                    <Button variant="secondary" onClick={resetFilters}>{t.common.reset}</Button>
-                    <Button variant="primary" onClick={() => setShowFilterMenu(false)}>{t.common.apply}</Button>
-                  </div>
-                </div>
-              )}
-            </div>
         </div>
 
-        {/* ── Table card ──────────────────────────── */}
-        <div className="inv-table-card">
-          <div className="inv-table-header">
-            <h2>{TAB_CONFIG[activeTab].tableTitle}</h2>
-            <span className="inv-table-total">{money(summary.amountDue)}</span>
+        {/* ── SEARCH BAR + ADD BUTTON ────────────────── */}
+        <div className="inv-toolbar-row">
+          <div className="inv-search-wrap">
+            <span className="inv-search-icon">🔍</span>
+            <input className="inv-search-input" type="text" value={filters.search}
+              onChange={(e) => updateFilter("search", e.target.value)}
+              placeholder={isArabic ? "ابحث برقم الفاتورة أو اسم العميل أو المبلغ أو التاريخ..." : "Search invoice number, customer name, amount, date..."}
+            />
+            {filters.search && <button type="button" className="inv-search-clear" onClick={() => updateFilter("search", "")}>×</button>}
           </div>
+          <Button variant="primary" onClick={() => openAddModal(activeTab)} leftIcon={<Plus size={16} />}>
+            {t.invoices.addInvoice}
+          </Button>
+        </div>
 
-            <div className="invoice-table-wrap app-table-wrap atlas-table-wrapper">
-              <table className="invoice-table app-data-table atlas-table">
-                <colgroup>
-                  <col className="col-w-100" />
-                  <col />
-                  <col className="col-w-140" />
-                  <col className="col-date" />
-                  <col className="col-currency" />
-                  <col className="col-currency" />
-                  <col className="col-w-100" />
-                  <col className="col-actions" />
-                </colgroup>
-                <thead>
+        {/* ── TABLE ────────────────────────────────── */}
+        <div className="inv-table-card">
+          <div className="invoice-table-wrap">
+            <table className="invoice-table atlas-table">
+              <colgroup>
+                <col style={{ width: "13%" }} />
+                <col style={{ width: "17%" }} />
+                <col style={{ width: "11%" }} />
+                <col style={{ width: "11%" }} />
+                <col style={{ width: "11%" }} />
+                <col style={{ width: "11%" }} />
+                <col style={{ width: "9%" }} />
+                <col style={{ width: "9%" }} />
+              </colgroup>
+              <thead>
+                <tr>
+                  <th className="col-code">{t.invoices.cols.invoice}</th>
+                  <th className="col-entity">{getPartyLabel(activeTab, t)}</th>
+                  <th className="col-date">{t.invoices.cols.issueDate}</th>
+                  <th className="col-date">{isArabic ? "تاريخ الاستحقاق" : "Due Date"}</th>
+                  <th className="col-currency">{t.invoices.cols.total}</th>
+                  <th className="col-currency">{t.invoices.cols.amountDue}</th>
+                  <th className="col-badge">{isArabic ? "الحالة" : "Status"}</th>
+                  <th className="col-actions">{t.invoices.cols.actions}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredRecords.length > 0 ? (
+                  filteredRecords.map((invoice) => {
+                    const late = isLate(invoice);
+                    const typeLabel = invoice.type === "customer" ? (isArabic ? "عميل" : "Customer") : invoice.type === "supplier" ? (isArabic ? "مورد" : "Supplier") : (isArabic ? "داخلية" : "Internal");
+                    const typeColors: Record<string, string> = { customer: "#2563EB", supplier: "#D97706", internal: "#7C3AED" };
+                    return (
+                      <tr key={invoice.id} className={`${late ? "row-overdue" : ""}`} onClick={() => setDetailInvoice(invoice)}>
+                        <td>
+                          <div className="inv-code-cell">
+                            <span className="inv-code-text">{invoice.id}</span>
+                            <span className="inv-code-type" style={{ color: typeColors[invoice.type] }}>{typeLabel}</span>
+                          </div>
+                        </td>
+                        <td>
+                          <div className="inv-party-cell">
+                            <span className="inv-party-name">{invoice.partyName}</span>
+                          </div>
+                        </td>
+                        <td><span className={late ? "inv-date-overdue" : "inv-date-normal"}>{formatDate(invoice.issueDate)}</span></td>
+                        <td><span className={late ? "inv-date-overdue" : "inv-date-normal"}>{late ? "⚠ " : ""}{formatDate(invoice.dueDate)}</span></td>
+                        <td><span className="inv-amount">{money(invoice.totalAmount, invoice.currency)}</span></td>
+                        <td>
+                          {invoice.remainingAmount > 0 ? (
+                            <span className="inv-amount-due">{money(invoice.remainingAmount, invoice.currency)}</span>
+                          ) : (
+                            <span className="inv-amount-paid">✓ {isArabic ? "مسدد" : "Paid"}</span>
+                          )}
+                        </td>
+                        <td>
+                          <span className={`inv-status-badge ${late ? "overdue" : invoice.status.toLowerCase()}`}>
+                            {late ? (isArabic ? "متأخرة" : "Overdue") : invoice.status === "Paid" ? (isArabic ? "مدفوعة" : "Paid") : invoice.status === "Unpaid" ? (isArabic ? "غير مدفوعة" : "Unpaid") : invoice.status === "Partial" ? (isArabic ? "جزئية" : "Partial") : invoice.status}
+                          </span>
+                        </td>
+                        <td onClick={(e) => e.stopPropagation()}>
+                          <TableActions
+                            onView={() => setDetailInvoice(invoice)}
+                            onEdit={() => openEditModal(invoice)}
+                            onDelete={() => setDeleteConfirmItem({ itemName: invoice.id, onConfirm: () => { setRecords((prev) => prev.filter((r) => r.id !== invoice.id)); pushToast(t.invoices.toast.deleted); } })}
+                          />
+                        </td>
+                      </tr>
+                    );
+                  })
+                ) : (
                   <tr>
-                    <th className="col-code">{t.invoices.cols.invoice}</th>
-                    <th>{getPartyLabel(activeTab, t)}</th>
-                    <th>{t.invoices.cols.product}</th>
-                    <th className="col-date">{t.invoices.cols.issueDate}</th>
-                    <th className="col-num">{t.invoices.cols.total}</th>
-                    <th className="col-num">{t.invoices.cols.amountDue}</th>
-                    <th className="col-badge">{activeTab === "internal" ? t.invoices.cols.approval : t.invoices.cols.status}</th>
-                    <th className="col-actions">{t.invoices.cols.actions}</th>
+                    <td colSpan={8}>
+                      <div className="empty-state">
+                        <FileText size={34} />
+                        <h3>{t.invoices.noInvoices}</h3>
+                        <Button variant="primary" onClick={() => openAddModal(activeTab)} leftIcon={<Plus size={16} />}>{t.invoices.addInvoice}</Button>
+                      </div>
+                    </td>
                   </tr>
-                </thead>
-
-                <tbody>
-                  {filteredRecords.length > 0 ? (
-                    filteredRecords.map((invoice) => {
-                      const late = isLate(invoice);
-                      const firstItem = invoice.items[0];
-
-                      return (
-                        <tr
-                          key={invoice.id}
-                          className={`${late ? "is-overdue" : ""} row-clickable`}
-                        >
-                          <td className="col-code">
-                            <div className="invoice-id-cell app-cell-stack">
-                              <strong>{invoice.id}</strong>
-                            </div>
-                          </td>
-
-                          <td>
-                            <div className="party-cell">
-                              <strong>{invoice.partyName}</strong>
-                            </div>
-                          </td>
-
-                          <td>
-                            <div className="party-cell">
-                              <strong>{firstItem?.label ?? t.invoices.noProduct}</strong>
-                            </div>
-                          </td>
-
-                          <td className="col-date">
-                            <div className="due-date-cell">
-                              <strong>{formatDate(invoice.issueDate)}</strong>
-                            </div>
-                          </td>
-
-                          <td className="col-num">
-                            <div className="amount-cell">
-                              <strong>{money(invoice.totalAmount, invoice.currency)}</strong>
-                            </div>
-                          </td>
-
-                          <td className="col-num">
-                            <div className="amount-cell amount-cell-emphasis">
-                              <strong>{money(invoice.remainingAmount, invoice.currency)}</strong>
-                            </div>
-                          </td>
-
-                          <td className="col-badge">
-                            {activeTab === "internal" ? (
-                              <div className="status-stack">
-                                <Badge
-                                  variant={invoice.approvedBy ? "success" : "warning"}
-                                  className={`status-pill ${invoice.approvedBy ? "approved" : "pending-approval"}`}
-                                >
-                                  {invoice.approvedBy ? t.invoices.status.approved : t.invoices.status.needsApproval}
-                                </Badge>
-                              </div>
-                            ) : (
-                              <Badge
-                                variant={
-                                  late
-                                    ? "danger"
-                                    : invoice.status === "Paid"
-                                    ? "success"
-                                    : invoice.status === "Partial"
-                                    ? "info"
-                                    : "warning"
-                                }
-                                className={`status-pill ${late ? "overdue" : invoice.status.toLowerCase()}`}
-                              >
-                                {late ? t.invoices.status.late : invoice.status}
-                              </Badge>
-                            )}
-                          </td>
-
-                          <td className="col-actions">
-                            <div className="row-actions">
-                              <Button
-                                variant="icon"
-                                size="sm"
-                                className="inv-action-btn view"
-                                title={t.common.view}
-                                onClick={() => setDetailInvoice(invoice)}
-                              >
-                                <Eye size={15} />
-                              </Button>
-
-                              <Button
-                                variant="icon"
-                                size="sm"
-                                className="inv-action-btn edit"
-                                title={t.common.edit}
-                                onClick={() => openEditModal(invoice)}
-                              >
-                                <Pencil size={15} />
-                              </Button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  ) : (
-                    <tr>
-                      <td colSpan={8}>
-                        <div className="empty-state">
-                          <FileText size={34} />
-                          <h3>{t.invoices.noInvoices}</h3>
-
-                          <Button
-                            variant="primary"
-                            onClick={() => openAddModal(activeTab)}
-                            leftIcon={<Plus size={16} />}
-                            className="primary-action"
-                          >
-                            {t.invoices.addInvoice}
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-
+                )}
+              </tbody>
+            </table>
+          </div>
           <div className="inv-table-footer">
-            <span>
-              {t.invoices.showing} {filteredRecords.length} {filteredRecords.length === 1 ? t.invoices.invoice : t.invoices.invoices}
-            </span>
+            <span>{t.invoices.showing} {filteredRecords.length} {filteredRecords.length === 1 ? t.invoices.invoice : t.invoices.invoices}</span>
           </div>
         </div>
       </div>
@@ -1962,24 +1776,10 @@ export default function Invoices() {
                           </div>
                         </div>
 
-                        <div className="edit-delete-grid">
-                          <input
-                            value={editDeleteCode}
-                            onChange={(event) => {
-                              setEditDeleteCode(event.target.value);
-                              setEditDeleteError("");
-                            }}
-                            placeholder={t.invoices.delete.placeholder}
-                            autoComplete="off"
-                          />
-
-                          <button type="button" className="danger-action" onClick={requestDeleteFromEdit}>
-                            <Trash2 size={16} />
-                            {t.invoices.delete.confirmBtn}
-                          </button>
-                        </div>
-
-                        {editDeleteError && <p className="confirm-error">{editDeleteError}</p>}
+                        <button type="button" className="danger-action" onClick={requestDeleteFromEdit}>
+                          <Trash2 size={16} />
+                          {t.invoices.delete.confirmBtn}
+                        </button>
                       </section>
                     )}
                   </div>
@@ -1989,127 +1789,99 @@ export default function Invoices() {
 
       {detailInvoice && (
         <ModalPortal>
-          <div className="overlay-shell modal-center-shell" onClick={() => setDetailInvoice(null)}>
-            <div
-              className="modal-card invoice-detail-modal"
-              onClick={(event) => event.stopPropagation()}
-            >
-              <div className="modal-header">
-                <div>
-                  <h2>{detailInvoice.id}</h2>
+          <div className="overlay-shell modal-center-shell" onClick={() => setDetailInvoice(null)} onKeyDown={(e) => e.key === "Escape" && setDetailInvoice(null)}>
+            <div className="inv-view-modal" onClick={(e) => e.stopPropagation()}>
+              {/* Header */}
+              <div className="inv-view-head">
+                <div className="inv-view-head-left">
+                  <span className="inv-view-id">{detailInvoice.id}</span>
+                  <span className={`inv-status-badge ${isLate(detailInvoice) ? "overdue" : detailInvoice.status.toLowerCase()}`}>
+                    {isLate(detailInvoice) ? (isArabic ? "متأخرة" : "Overdue") : detailInvoice.status === "Paid" ? (isArabic ? "مدفوعة" : "Paid") : detailInvoice.status === "Unpaid" ? (isArabic ? "غير مدفوعة" : "Unpaid") : detailInvoice.status === "Partial" ? (isArabic ? "جزئية" : "Partial") : detailInvoice.status}
+                  </span>
                 </div>
-
-                <button
-                  type="button"
-                  className="icon-close"
-                  onClick={() => setDetailInvoice(null)}
-                >
-                  <X size={18} />
-                </button>
+                <button type="button" className="inv-view-close" onClick={() => setDetailInvoice(null)}>×</button>
               </div>
 
-              <div className="modal-body">
-                <div className="drawer-grid">
-                  <section className="info-card">
-                    <h3>{t.invoices.detail.invoiceSection}</h3>
-
-                    <dl>
-                      <div>
-                        <dt>{t.invoices.detail.type}</dt>
-                        <dd>{TAB_CONFIG[detailInvoice.type].label}</dd>
-                      </div>
-
-                      <div>
-                        <dt>{getPartyLabel(detailInvoice.type, t)}</dt>
-                        <dd>{detailInvoice.partyName}</dd>
-                      </div>
-
-                      <div>
-                        <dt>{t.invoices.detail.status}</dt>
-                        <dd>{isLate(detailInvoice) ? t.invoices.status.late : detailInvoice.status}</dd>
-                      </div>
-
-                      <div>
-                        <dt>{t.invoices.detail.issueDate}</dt>
-                        <dd>{formatDate(detailInvoice.issueDate)}</dd>
-                      </div>
-
-                      <div>
-                        <dt>{t.invoices.detail.payment}</dt>
-                        <dd>{paymentLabel(detailInvoice.paymentMethod, t)}</dd>
-                      </div>
-                    </dl>
-                  </section>
-
-                  <section className="info-card">
-                    <h3>{t.invoices.detail.amountsSection}</h3>
-
-                    <dl>
-                      <div>
-                        <dt>{t.invoices.detail.total}</dt>
-                        <dd>{money(detailInvoice.totalAmount, detailInvoice.currency)}</dd>
-                      </div>
-
-                      <div>
-                        <dt>{t.invoices.detail.paid}</dt>
-                        <dd>{money(detailInvoice.paidAmount, detailInvoice.currency)}</dd>
-                      </div>
-
-                      <div>
-                        <dt>{t.invoices.detail.amountDue}</dt>
-                        <dd>{money(detailInvoice.remainingAmount, detailInvoice.currency)}</dd>
-                      </div>
-
-                      <div>
-                        <dt>{t.invoices.detail.linkedRecord}</dt>
-                        <dd>{detailInvoice.linkedRecord}</dd>
-                      </div>
-                    </dl>
-                  </section>
-
-                  <section className="info-card full">
-                    <h3>{t.invoices.detail.productSection}</h3>
-
-                    <dl>
-                      {detailInvoice.items.map((item) => (
-                        <div key={item.id}>
-                          <dt>{item.label}</dt>
-                          <dd>
-                            {item.quantity} × {money(item.unitPrice, detailInvoice.currency)}
-                          </dd>
-                        </div>
-                      ))}
-                    </dl>
-                  </section>
-
-                  {detailInvoice.notes && (
-                    <section className="info-card full">
-                      <h3>{t.invoices.detail.notesSection}</h3>
-                      <p>{detailInvoice.notes}</p>
-                    </section>
-                  )}
+              <div className="inv-view-body">
+                {/* Hero */}
+                <div className="inv-view-hero">
+                  <span className="inv-view-hero-name">{detailInvoice.partyName}</span>
+                  <span className="inv-view-hero-type" style={{
+                    background: detailInvoice.type === "customer" ? "#EFF6FF" : detailInvoice.type === "supplier" ? "#FFFBEB" : "#F5F3FF",
+                    color: detailInvoice.type === "customer" ? "#2563EB" : detailInvoice.type === "supplier" ? "#D97706" : "#7C3AED",
+                  }}>
+                    {detailInvoice.type === "customer" ? (isArabic ? "عميل" : "Customer") : detailInvoice.type === "supplier" ? (isArabic ? "مورد" : "Supplier") : (isArabic ? "داخلية" : "Internal")}
+                  </span>
                 </div>
-              </div>
 
-              <div className="modal-footer">
-                <button
-                  type="button"
-                  className="secondary-action"
-                  onClick={() => setDetailInvoice(null)}
-                >
-                  {t.invoices.detail.close}
-                </button>
+                {/* Amounts */}
+                <div className="inv-view-amounts">
+                  <div className="inv-view-amt-card" style={{ background: "#EFF6FF", color: "#1E40AF" }}>
+                    <div className="inv-view-amt-label">{isArabic ? "الإجمالي" : "Total"}</div>
+                    <div className="inv-view-amt-value">{money(detailInvoice.totalAmount, detailInvoice.currency)}</div>
+                  </div>
+                  <div className="inv-view-amt-card" style={{ background: "#F0FDF4", color: "#16A34A" }}>
+                    <div className="inv-view-amt-label">{isArabic ? "المدفوع" : "Paid"}</div>
+                    <div className="inv-view-amt-value">{money(detailInvoice.paidAmount, detailInvoice.currency)}</div>
+                  </div>
+                  <div className="inv-view-amt-card" style={{ background: "#FEF2F2", color: "#DC2626" }}>
+                    <div className="inv-view-amt-label">{isArabic ? "المتبقي" : "Remaining"}</div>
+                    <div className="inv-view-amt-value">{money(detailInvoice.remainingAmount, detailInvoice.currency)}</div>
+                  </div>
+                </div>
 
-                {detailInvoice.status !== "Paid" && (
-                  <button
-                    type="button"
-                    className="primary-action"
-                    onClick={() => markAsPaid(detailInvoice)}
-                  >
-                    <Check size={16} />
-                    {t.invoices.detail.markPaid}
-                  </button>
+                {/* Details */}
+                <div className="inv-view-details">
+                  {[
+                    [isArabic ? "رقم الفاتورة" : "Invoice No.", detailInvoice.id],
+                    [isArabic ? "نوع الفاتورة" : "Invoice Type", TAB_CONFIG[detailInvoice.type].label],
+                    [isArabic ? "تاريخ الإصدار" : "Issue Date", formatDate(detailInvoice.issueDate)],
+                    [isArabic ? "تاريخ الاستحقاق" : "Due Date", formatDate(detailInvoice.dueDate)],
+                    [isArabic ? "طريقة الدفع" : "Payment Method", paymentLabel(detailInvoice.paymentMethod, t)],
+                    [isArabic ? "الحالة" : "Status", isLate(detailInvoice) ? (isArabic ? "متأخرة" : "Overdue") : detailInvoice.status],
+                    [isArabic ? "المرجع" : "Reference", detailInvoice.linkedRecord],
+                  ].map(([label, val]) => (
+                    <div key={String(label)} className="inv-view-dl">
+                      <span className="inv-view-dt">{label}</span>
+                      <span className="inv-view-dd">{val}</span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Items table */}
+                {detailInvoice.items.length > 0 && (
+                  <div className="inv-view-items">
+                    <div className="inv-view-items-head">
+                      <span>{isArabic ? "المنتج" : "Product"}</span>
+                      <span>{isArabic ? "الكمية" : "Qty"}</span>
+                      <span>{isArabic ? "سعر الوحدة" : "Unit Price"}</span>
+                      <span>{isArabic ? "الإجمالي" : "Total"}</span>
+                    </div>
+                    {detailInvoice.items.map((item) => (
+                      <div key={item.id} className="inv-view-items-row">
+                        <span>{item.label}</span>
+                        <span>{item.quantity}</span>
+                        <span>{money(item.unitPrice, detailInvoice.currency)}</span>
+                        <span>{money(item.total, detailInvoice.currency)}</span>
+                      </div>
+                    ))}
+                  </div>
                 )}
+
+                {/* Notes */}
+                {detailInvoice.notes && (
+                  <div className="inv-view-notes">
+                    <span className="inv-view-dt">{isArabic ? "ملاحظات" : "Notes"}</span>
+                    <p>{detailInvoice.notes}</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="inv-view-foot">
+                <button type="button" className="inv-view-btn" onClick={() => { const i = detailInvoice; setDetailInvoice(null); openEditModal(i); }}>✏️ {isArabic ? "تعديل" : "Edit"}</button>
+                <button type="button" className="inv-view-btn inv-view-btn-danger" onClick={() => { const i = detailInvoice; setDetailInvoice(null); setDeleteConfirmItem({ itemName: i.id, onConfirm: () => { setRecords((prev) => prev.filter((r) => r.id !== i.id)); pushToast(t.invoices.toast.deleted); } }); }}>🗑️ {isArabic ? "حذف" : "Delete"}</button>
+                <button type="button" className="inv-view-btn inv-view-btn-primary" onClick={() => setDetailInvoice(null)}>{isArabic ? "إغلاق" : "Close"}</button>
               </div>
             </div>
           </div>
@@ -2145,6 +1917,13 @@ export default function Invoices() {
           </div>
         </ModalPortal>
       )}
+
+      <DeleteConfirmDialog
+        isOpen={deleteConfirmItem !== null}
+        itemName={deleteConfirmItem?.itemName ?? ""}
+        onConfirm={() => { deleteConfirmItem?.onConfirm(); setDeleteConfirmItem(null); }}
+        onCancel={() => setDeleteConfirmItem(null)}
+      />
 
       {toast && (
         <ModalPortal>

@@ -22,7 +22,6 @@ export interface CustomerRow {
   email: Nullable<string>;
   city: Nullable<string>;
   governorate: Nullable<string>;
-  payment_terms: Nullable<"cash" | "net7" | "net15" | "net30" | "net45" | "net60" | "net90" | "half" | "custom">;
   currency: string;
   credit_limit: number;
   outstanding_balance: number;
@@ -239,19 +238,6 @@ export interface PosStockCountRow {
 }
 export type PosStockCountInsert = Omit<PosStockCountRow, "created_at"> & { created_at?: string };
 export type PosStockCountUpdate = Partial<PosStockCountInsert>;
-
-export interface LoyaltyTransactionRow {
-  id: string;
-  customer_id: string;
-  date: string;
-  action: "earn" | "redeem" | "adjust" | "expire";
-  coins: number;
-  trigger: Nullable<string>;
-  balance_after: number;
-  sale_id: Nullable<string>;
-  created_at: string;
-}
-export type LoyaltyTransactionInsert = Omit<LoyaltyTransactionRow, "created_at"> & { created_at?: string };
 
 // ── FACTORY MODULE ────────────────────────────────────────────────────────────
 
@@ -470,7 +456,6 @@ export interface Database {
       pos_sales: { Row: PosSaleRow; Insert: PosSaleInsert; Update: Partial<PosSaleInsert> };
       pos_refunds: { Row: PosRefundRow; Insert: PosRefundInsert; Update: PosRefundUpdate };
       pos_stock_counts: { Row: PosStockCountRow; Insert: PosStockCountInsert; Update: PosStockCountUpdate };
-      loyalty_transactions: { Row: LoyaltyTransactionRow; Insert: LoyaltyTransactionInsert; Update: Partial<LoyaltyTransactionInsert> };
       factory_orders: { Row: FactoryOrderRow; Insert: FactoryOrderInsert; Update: FactoryOrderUpdate };
       factory_boms: { Row: FactoryBomRow; Insert: FactoryBomInsert; Update: Partial<FactoryBomInsert> };
       factory_bom_lines: { Row: FactoryBomLineRow; Insert: FactoryBomLineInsert; Update: Partial<FactoryBomLineInsert> };

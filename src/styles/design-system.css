@@ -102,7 +102,7 @@ body, .ds-body {
   font-size: 13px;
 }
 .ds-table thead th {
-  padding: 10px 16px;
+  padding: 10px 14px;
   background: #F8F9FB;
   font-size: 11px;
   font-weight: 600;
@@ -115,7 +115,7 @@ body, .ds-body {
   user-select: none;
 }
 .ds-table tbody td {
-  padding: 13px 16px;
+  padding: 11px 14px;
   color: var(--color-text);
   text-align: right;
   border-bottom: 1px solid var(--color-border);

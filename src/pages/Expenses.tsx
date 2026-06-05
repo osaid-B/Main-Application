@@ -15,6 +15,8 @@ import { EmptyState } from "../components/ui/EmptyState";
 import { useLoadingDelay } from "../hooks/useLoadingDelay";
 import { EXPENSE_CATEGORIES } from "../data/expensesMock";
 import { type Expense, type ExpenseStatus } from "../data/types";
+import { DeleteConfirmDialog } from "../components/ui/DeleteConfirmDialog";
+
 import styles from "./Expenses.module.css";
 
 type StepId = 1 | 2 | 3;
@@ -75,8 +77,9 @@ export default function Expenses() {
   const [isAdding, setIsAdding]           = useState(false);
   const [editing, setEditing]             = useState<Expense | null>(null);
   const [deleteTarget, setDeleteTarget]   = useState<string | null>(null);
+  const [deleteConfirmItem, setDeleteConfirmItem] = useState<{ itemName: string; onConfirm: () => void } | null>(null);
   const [page, setPage]                   = useState(0);
-  const PAGE_SIZE = 15;
+  const PAGE_SIZE = 200;
 
   const filtered = expenses.filter((e) => {
     if (filterCat && e.category !== filterCat) return false;
@@ -87,7 +90,12 @@ export default function Expenses() {
         !(e.description ?? "").toLowerCase().includes(q) &&
         !(e.payee ?? e.vendor ?? "").toLowerCase().includes(q) &&
         !e.category.toLowerCase().includes(q) &&
-        !(CATEGORY_LABELS[e.category] ?? "").includes(q)
+        !(CATEGORY_LABELS[e.category] ?? "").includes(q) &&
+        !formatCurrency(e.amount).toLowerCase().includes(q) &&
+        !fmtDate(e.date).toLowerCase().includes(q) &&
+        !(e.paymentMethod ?? "").toLowerCase().includes(q) &&
+        !(e.status ?? "").toLowerCase().includes(q) &&
+        !(e.notes ?? "").toLowerCase().includes(q)
       ) return false;
     }
     return !e.isDeleted;
@@ -123,10 +131,6 @@ export default function Expenses() {
       .filter((e) => selected.has(e.id) && e.status === "pending")
       .forEach((e) => updateExpense({ ...e, status: "approved" as ExpenseStatus }));
     setSelected(new Set());
-  }
-
-  function deleteExpense(id: string) {
-    setDeleteTarget(id);
   }
 
   function confirmDeleteExpense() {
@@ -216,14 +220,14 @@ export default function Expenses() {
         <div className={`${styles.tableWrap} atlas-table-wrapper`}>
           <table className={`${styles.table} atlas-table`}>
             <colgroup>
-              <col className="col-check" />
-              <col />
-              <col className="col-w-130" />
-              <col className="col-w-120" />
-              <col className="col-date" />
-              <col className="col-currency" />
-              <col className="col-w-100" />
-              <col className="col-actions" />
+              <col style={{ width: "4%" }} />
+              <col style={{ width: "26%" }} />
+              <col style={{ width: "13%" }} />
+              <col style={{ width: "14%" }} />
+              <col style={{ width: "11%" }} />
+              <col style={{ width: "12%" }} />
+              <col style={{ width: "10%" }} />
+              <col style={{ width: "10%" }} />
             </colgroup>
             <thead>
               <tr>
@@ -236,9 +240,9 @@ export default function Expenses() {
                 </th>
                 <th className="col-entity">{tc.cols.description}</th>
                 <th className="col-badge">{tc.cols.category}</th>
-                <th>{tc.cols.payee}</th>
+                <th className="col-entity">{tc.cols.payee}</th>
                 <th className="col-date">{tc.cols.date}</th>
-                <th className="col-num">{tc.cols.amount}</th>
+                <th className="col-currency">{tc.cols.amount}</th>
                 <th className="col-badge">{tc.cols.status}</th>
                 <th className="col-actions">{tc.cols.actions}</th>
               </tr>
@@ -291,7 +295,7 @@ export default function Expenses() {
                         type="button"
                         className={`${styles.iconBtn} ${styles.iconBtnDanger}`}
                         title={t.common.delete}
-                        onClick={() => deleteExpense(expense.id)}
+                        onClick={() => { setDeleteTarget(expense.id); setDeleteConfirmItem({ itemName: expense.description || expense.id, onConfirm: () => confirmDeleteExpense() }); }}
                       >
                         <Trash2 size={13} />
                       </button>
@@ -317,23 +321,12 @@ export default function Expenses() {
         />
       </Stack>
 
-      {/* Delete confirm modal */}
-      {deleteTarget && (
-        <Modal
-          isOpen
-          onClose={() => setDeleteTarget(null)}
-          title={t.common.confirmDelete}
-          size="sm"
-          footer={
-            <div className={styles.confirmFooter}>
-              <Button variant="ghost" onClick={() => setDeleteTarget(null)}>{t.common.cancel}</Button>
-              <Button variant="primary" onClick={confirmDeleteExpense}>{t.common.delete}</Button>
-            </div>
-          }
-        >
-          <p className={styles.confirmMsg}>{tc.confirmDelete}</p>
-        </Modal>
-      )}
+      <DeleteConfirmDialog
+        isOpen={!!deleteConfirmItem}
+        itemName={deleteConfirmItem?.itemName ?? ""}
+        onConfirm={() => { const cb = deleteConfirmItem?.onConfirm; setDeleteConfirmItem(null); if (cb) cb(); }}
+        onCancel={() => { setDeleteConfirmItem(null); setDeleteTarget(null); }}
+      />
 
       {/* Add / Edit modal (multi-step) */}
       {(isAdding || editing !== null) && (

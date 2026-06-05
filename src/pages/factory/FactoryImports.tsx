@@ -91,15 +91,15 @@ export default function FactoryImports() {
               <thead>
                 <tr>
                   <th className="col-code">{tc.cols.importId}</th>
-                  <th>{tc.cols.supplier}</th>
+                  <th className="col-entity">{tc.cols.supplier}</th>
                   <th className="col-badge">{tc.cols.origin}</th>
                   <th className="col-num">{tc.cols.items}</th>
-                  <th className="col-num">{tc.cols.totalValue}</th>
-                  <th>{tc.cols.currency}</th>
+                  <th className="col-currency">{tc.cols.totalValue}</th>
+                  <th className="col-badge">{tc.cols.currency}</th>
                   <th className="col-date">{tc.cols.orderDate}</th>
                   <th className="col-date">{tc.cols.eta}</th>
                   <th className="col-badge">{tc.cols.status}</th>
-                  <th>{tc.cols.customsRef}</th>
+                  <th className="col-code">{tc.cols.customsRef}</th>
                   <th className="col-actions">{tc.cols.actions}</th>
                 </tr>
               </thead>

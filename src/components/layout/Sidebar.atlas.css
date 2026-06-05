@@ -127,8 +127,8 @@
 
 .atlas-sidebar-search:focus-within {
   background: var(--app-surface);
-  border-color: var(--app-accent);
-  box-shadow: 0 0 0 3px var(--app-accent-subtle);
+  border-color: var(--app-border-strong);
+  box-shadow: none;
 }
 
 .atlas-sidebar-search svg {
@@ -298,49 +298,6 @@
 .is-collapsed .atlas-nav-link.is-active { border-inline-end-color: var(--app-accent); }
 .is-collapsed .atlas-nav-section-title { display: none; }
 .is-collapsed .atlas-brand { justify-content: center; }
-.is-collapsed .atlas-sidebar-customize,
-.is-collapsed .atlas-shortcuts-hint { display: none; }
-
-/* ─── Keyboard shortcuts hint ─────────────────────────────────────── */
-.atlas-shortcuts-hint {
-  display: flex;
-  align-items: center;
-  gap: var(--app-space-2);
-  width: calc(100% - var(--app-space-4));
-  margin: 0 var(--app-space-2) var(--app-space-1);
-  padding: 6px var(--app-space-2);
-  background: var(--app-surface-muted);
-  border: 1px solid var(--app-border);
-  border-radius: var(--app-radius-sm);
-  font: inherit;
-  font-size: 11.5px;
-  font-weight: 500;
-  color: var(--app-text-muted);
-  cursor: pointer;
-  transition: background 130ms ease, border-color 130ms ease, color 130ms ease;
-  text-align: start;
-  flex-shrink: 0;
-}
-
-.atlas-shortcuts-hint:hover {
-  background: var(--app-surface-hover);
-  border-color: #cbd5e1;
-  color: var(--app-text-soft);
-}
-
-.atlas-shortcuts-hint span { flex: 1; }
-
-.atlas-shortcuts-hint kbd {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  padding: 1px 5px;
-  background: var(--app-surface);
-  border: 1px solid var(--app-border);
-  border-radius: var(--app-radius-xs);
-  color: var(--app-text-muted);
-  box-shadow: 0 1px 0 var(--app-border);
-}
-
 /* ─── User profile ────────────────────────────────────────────────── */
 .atlas-sidebar-user {
   display: flex;

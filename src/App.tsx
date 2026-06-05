@@ -17,7 +17,6 @@ import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Customers from "./pages/Customers";
 import AddCustomer from "./pages/AddCustomer";
-import Products from "./pages/Products";
 import Purchases from "./pages/Purchases";
 import Suppliers from "./pages/Suppliers";
 import AddSupplier from "./pages/AddSupplier";
@@ -25,7 +24,6 @@ import Invoices from "./pages/Invoices";
 import Payments from "./pages/Payments";
 import Treasury from "./pages/Treasury";
 import Employees from "./pages/Employees";
-import AddEmployee from "./pages/AddEmployee";
 import Leaves from "./pages/Leaves";
 import CompanySettingsPage from "./pages/CompanySettings";
 import Settings from "./pages/Settings";
@@ -33,10 +31,6 @@ import DataImport from "./pages/DataImport";
 import Preview from "./pages/Preview";
 import CompanyOverview from "./pages/CompanyOverview";
 import PosCheckout from "./pages/pos/Checkout";
-import CoinsHistory from "./pages/pos/CoinsHistory";
-import CoinsReports from "./pages/pos/CoinsReports";
-import CoinsSettings from "./pages/pos/CoinsSettings";
-import LoyaltyProfile from "./pages/pos/LoyaltyProfile";
 import PosReceipts from "./pages/pos/Receipts";
 import PosCashiers from "./pages/pos/Cashiers";
 import PosStockCounts from "./pages/pos/StockCounts";
@@ -67,7 +61,6 @@ import GeneralLedger from "./pages/GeneralLedger";
 import ChartOfAccounts from "./pages/ChartOfAccounts";
 import InventoryOverview from "./pages/InventoryOverview";
 import InventoryMovements from "./pages/InventoryMovements";
-import BarcodeProduct from "./pages/BarcodeProduct";
 import AuditLog from "./pages/AuditLog";
 import ModuleSelector from "./pages/ModuleSelector";
 
@@ -97,9 +90,7 @@ import FactoryModuleReports from "./modules/factory/Reports";
 import PosDashboard from "./modules/pos/Dashboard";
 import PosModuleCheckout from "./modules/pos/Checkout";
 import PosModuleSales from "./modules/pos/Sales";
-import PosModuleProducts from "./modules/pos/Products";
 import PosModuleCategories from "./modules/pos/Categories";
-import PosModuleCustomers from "./modules/pos/Customers";
 import PosModuleCashiers from "./modules/pos/Cashiers";
 import PosModuleReports from "./modules/pos/Reports";
 
@@ -126,8 +117,6 @@ function AppRoutes() {
           <Route path="/customers/new" element={<ErrorBoundary fallback={(_, reset) => <PageCrashFallback onReset={reset} />}><AddCustomer /></ErrorBoundary>} />
           <Route path="/customers/:id/edit" element={<ErrorBoundary fallback={(_, reset) => <PageCrashFallback onReset={reset} />}><AddCustomer /></ErrorBoundary>} />
           <Route path="/customers/:id" element={<Navigate to="/customers" replace />} />
-          <Route path="/products" element={<Products />} />
-          <Route path="/products/barcode/:code" element={<BarcodeProduct />} />
           <Route path="/purchases" element={<Purchases />} />
           <Route path="/suppliers" element={<Suppliers />} />
           <Route path="/suppliers/new" element={<ErrorBoundary fallback={(_, reset) => <PageCrashFallback onReset={reset} />}><AddSupplier /></ErrorBoundary>} />
@@ -135,7 +124,6 @@ function AppRoutes() {
           <Route path="/payments" element={<Payments />} />
           <Route path="/treasury" element={<Treasury />} />
           <Route path="/employees" element={<Employees />} />
-          <Route path="/employees/new" element={<ErrorBoundary fallback={(_, reset) => <PageCrashFallback onReset={reset} />}><AddEmployee /></ErrorBoundary>} />
           <Route path="/leaves" element={<Leaves />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/settings/company" element={<CompanySettingsPage />} />
@@ -197,10 +185,6 @@ function AppRoutes() {
           <Route path="/pos/products" element={<PosProducts />} />
           <Route path="/pos/categories" element={<PosCategories />} />
           <Route path="/pos/stock" element={<PosStockCounts />} />
-          <Route path="/pos/loyalty/profile" element={<LoyaltyProfile />} />
-          <Route path="/pos/loyalty/history" element={<CoinsHistory />} />
-          <Route path="/pos/loyalty/settings" element={<CoinsSettings />} />
-          <Route path="/pos/loyalty/reports" element={<CoinsReports />} />
           <Route path="/pos/cashiers" element={<PosCashiers />} />
           <Route path="/pos/receipts" element={<PosReceipts />} />
 
@@ -241,10 +225,8 @@ function AppRoutes() {
         <Route element={<ModuleLayout />}>
           <Route path="/pos/checkout" element={<PosModuleCheckout />} />
           <Route path="/pos/sales" element={<PosModuleSales />} />
-          <Route path="/pos/products" element={<PosModuleProducts />} />
           <Route path="/pos/categories" element={<PosModuleCategories />} />
-          <Route path="/pos/customers" element={<PosModuleCustomers />} />
-          <Route path="/pos/cashiers" element={<PosModuleCashiers />} />
+<Route path="/pos/cashiers" element={<PosModuleCashiers />} />
           <Route path="/pos/reports" element={<PosModuleReports />} />
         </Route>
       </Route>

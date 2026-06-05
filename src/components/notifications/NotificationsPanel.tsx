@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Bell, Check, CheckCheck, Factory, FileText, Package, ShoppingCart, Star, UserCheck, X } from "lucide-react";
+import { Bell, Check, CheckCheck, Factory, FileText, Package, ShoppingCart, UserCheck, X } from "lucide-react";
 import { useNotifications } from "../../context/NotificationsContext";
 import type { Notification, NotificationCategory, NotificationSeverity } from "../../context/NotificationsContext";
 import { useSettings } from "../../context/SettingsContext";
@@ -14,7 +14,6 @@ const CAT_ICON: Record<NotificationCategory, typeof FileText> = {
   inventory: Package,
   factory:   Factory,
   pos:       ShoppingCart,
-  loyalty:   Star,
   system:    Bell,
   hr:        UserCheck,
 };
@@ -81,7 +80,6 @@ export default function NotificationsPanel() {
     { id: "inventory", label: tn.tabs.inventory },
     { id: "factory",   label: tn.tabs.factory },
     { id: "pos",       label: tn.tabs.pos },
-    { id: "loyalty",   label: tn.tabs.loyalty },
   ];
 
   const displayed = notifications.filter((n) => {

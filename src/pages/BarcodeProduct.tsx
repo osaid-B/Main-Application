@@ -112,7 +112,7 @@ export default function BarcodeProduct() {
           <button type="button" className="bp-btn bp-btn--primary" onClick={() => navigate("/pos/checkout")}>
             <ShoppingCart size={14} /> إضافة للسلة
           </button>
-          <button type="button" className="bp-btn" onClick={() => navigate("/products")}>
+          <button type="button" className="bp-btn" onClick={() => navigate("/pos/products")}>
             عرض المنتج الكامل
           </button>
         </div>

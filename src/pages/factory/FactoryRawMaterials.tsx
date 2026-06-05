@@ -90,15 +90,15 @@ export default function FactoryRawMaterials() {
             <table className={styles.table}>
               <thead>
                 <tr>
-                  <th>{tc.cols.name}</th>
-                  <th>{tc.cols.category}</th>
-                  <th>{tc.cols.origin}</th>
-                  <th>{tc.cols.supplier}</th>
-                  <th className={styles.numEnd}>{tc.cols.onHand}</th>
-                  <th className={styles.numEnd}>{tc.cols.reorderPoint}</th>
-                  <th className={styles.numEnd}>{tc.cols.unitCost}</th>
-                  <th className={styles.numEnd}>{tc.cols.totalValue}</th>
-                  <th>{tc.cols.status}</th>
+                  <th className="col-entity">{tc.cols.name}</th>
+                  <th className="col-badge">{tc.cols.category}</th>
+                  <th className="col-badge">{tc.cols.origin}</th>
+                  <th className="col-entity">{tc.cols.supplier}</th>
+                  <th className="col-num">{tc.cols.onHand}</th>
+                  <th className="col-num">{tc.cols.reorderPoint}</th>
+                  <th className="col-currency">{tc.cols.unitCost}</th>
+                  <th className="col-currency">{tc.cols.totalValue}</th>
+                  <th className="col-badge">{tc.cols.status}</th>
                 </tr>
               </thead>
               <tbody>

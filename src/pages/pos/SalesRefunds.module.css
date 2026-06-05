@@ -29,18 +29,14 @@
 .numEnd { text-align: end; }
 .empty { text-align: center; padding: 32px; color: var(--app-text-muted); font-size: 13px; }
 .reasonTag { font-size: 11px; color: var(--app-text-muted); }
-.rowActions { display: flex; gap: var(--app-space-1); }
-.actionBtn { padding: 4px 10px; border-radius: var(--app-radius-sm); border: 1px solid var(--app-border); background: transparent; color: var(--app-text); font-size: 11px; cursor: pointer; white-space: nowrap; }
-.actionBtn:hover { background: var(--app-surface-hover); }
-.actionBtnDanger { color: var(--atlas-danger); border-color: var(--atlas-danger); }
-.actionBtnDanger:hover { background: color-mix(in srgb, var(--atlas-danger) 8%, transparent); }
+.clickRow { cursor: pointer; }
 
 .drawerMeta { display: grid; grid-template-columns: auto 1fr; gap: var(--app-space-2) var(--app-space-4); font-size: 13px; margin-bottom: var(--app-space-4); }
 .drawerMeta > span:nth-child(odd) { color: var(--app-text-muted); font-weight: 500; }
 .drawerSection { font-size: 11px; font-weight: 600; letter-spacing: .06em; color: var(--app-text-light); padding: var(--app-space-2) 0; text-transform: uppercase; }
 .detailTable { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: var(--app-space-3); }
-.detailTable th { text-align: start; padding: 6px 8px; font-size: 10px; font-weight: 600; color: var(--app-text-light); border-bottom: 1px solid var(--app-border); }
-.detailTable td { padding: 8px; border-bottom: 1px solid var(--app-border-subtle, var(--app-border)); }
+.detailTable th { text-align: start; padding: 10px 14px; font-size: 10px; font-weight: 600; color: var(--app-text-light); border-bottom: 1px solid var(--app-border); }
+.detailTable td { padding: 11px 14px; border-bottom: 1px solid var(--app-border-subtle, var(--app-border)); }
 .detailTable tbody tr:last-child td { border-bottom: 0; }
 .refundTotal { display: flex; justify-content: space-between; font-size: 14px; padding-block-start: var(--app-space-2); border-block-start: 2px solid var(--app-border); }
 .noItems { color: var(--app-text-muted); font-size: 13px; font-style: italic; }

@@ -46,8 +46,8 @@
 .drawerMeta > span:nth-child(odd) { color: var(--app-text-muted); font-weight: 500; }
 .drawerSection { font-size: 11px; font-weight: 600; letter-spacing: .06em; color: var(--app-text-light); padding: var(--app-space-3) 0 var(--app-space-2); text-transform: uppercase; }
 .detailTable { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: var(--app-space-3); }
-.detailTable th { text-align: start; padding: 6px 8px; font-size: 10px; font-weight: 600; color: var(--app-text-light); border-bottom: 1px solid var(--app-border); }
-.detailTable td { padding: 8px; border-bottom: 1px solid var(--app-border-subtle, var(--app-border)); }
+.detailTable th { text-align: start; padding: 10px 14px; font-size: 10px; font-weight: 600; color: var(--app-text-light); border-bottom: 1px solid var(--app-border); }
+.detailTable td { padding: 11px 14px; border-bottom: 1px solid var(--app-border-subtle, var(--app-border)); }
 .detailTable tbody tr:last-child td { border-bottom: 0; }
 .totals { display: flex; flex-direction: column; gap: var(--app-space-1); font-size: 13px; }
 .totalRow { display: flex; justify-content: space-between; padding: var(--app-space-1) 0; }

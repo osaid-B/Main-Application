@@ -540,13 +540,7 @@ function LegalModal({ onClose }: { onClose: () => void }) {
           </ol>
         </div>
         <div className="trs-modal-footer">
-          <button
-            type="button"
-            className="trs-modal-btn trs-modal-btn--ghost"
-            onClick={() => window.print()}
-          >
-            طباعة هذه التعليمات
-          </button>
+
           <button type="button" className="trs-modal-btn trs-modal-btn--primary" onClick={onClose}>
             إغلاق
           </button>

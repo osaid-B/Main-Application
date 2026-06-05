@@ -81,14 +81,14 @@ export default function FactorySources() {
             <table className={styles.table}>
               <thead>
                 <tr>
-                  <th>{tc.cols.material}</th>
-                  <th>{tc.cols.origin}</th>
-                  <th>{tc.cols.supplier}</th>
-                  <th>{tc.cols.country}</th>
-                  <th className={styles.numEnd}>{tc.cols.quantity}</th>
-                  <th className={styles.numEnd}>{tc.cols.unitCost}</th>
-                  <th className={styles.numEnd}>{tc.cols.totalValue}</th>
-                  <th>{tc.cols.purchaseDate}</th>
+                  <th className="col-entity">{tc.cols.material}</th>
+                  <th className="col-badge">{tc.cols.origin}</th>
+                  <th className="col-entity">{tc.cols.supplier}</th>
+                  <th className="col-entity">{tc.cols.country}</th>
+                  <th className="col-num">{tc.cols.quantity}</th>
+                  <th className="col-currency">{tc.cols.unitCost}</th>
+                  <th className="col-currency">{tc.cols.totalValue}</th>
+                  <th className="col-date">{tc.cols.purchaseDate}</th>
                 </tr>
               </thead>
               <tbody>

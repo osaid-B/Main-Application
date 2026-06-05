@@ -315,8 +315,8 @@ body {
 
 .search-wrap:focus-within,
 .auth-input-wrap:focus-within {
-  border-color: var(--app-accent) !important;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1) !important;
+  border-color: var(--app-border-strong);
+  box-shadow: none;
   transform: none !important;
 }
 
@@ -2531,8 +2531,8 @@ td strong,
 }
 
 .category-search-input:focus {
-  border-color: var(--app-accent) !important;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1) !important;
+  border-color: var(--app-border-strong);
+  box-shadow: none;
   outline: none !important;
 }
 

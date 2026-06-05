@@ -221,7 +221,6 @@ export default function PaymentsPage() {
                       primary={{ label: "عرض ←", onClick: () => navigate(`/company/payments/${payment.id}/edit`) }}
                       items={[
                         { label: "تعديل", onClick: () => navigate(`/company/payments/${payment.id}/edit`) },
-                        { label: "طباعة", onClick: () => {} },
                       ]}
                     />
                   </td>

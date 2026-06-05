@@ -390,7 +390,7 @@ function CheckForm({ direction, onDirectionChange, onSave, onClose }: CheckFormP
         </div>
         {currency !== "ILS" && amtNum > 0 && (
           <div style={{ marginTop: 8, fontSize: 12, color: "var(--app-text-muted)" }}>
-            يعادل تقريباً ₪{amountInILS.toLocaleString("ar-PS", { maximumFractionDigits: 0 })} (بسعر الصرف الحالي)
+            يعادل تقريباً ₪{amountInILS.toLocaleString("en-US", { maximumFractionDigits: 0 })} (بسعر الصرف الحالي)
           </div>
         )}
       </div>
@@ -571,7 +571,7 @@ function CheckForm({ direction, onDirectionChange, onSave, onClose }: CheckFormP
         {linkedInvoices.length > 0 && (
           <div className="trs-inv-link-total">
             <span style={{ fontSize: 12.5, fontWeight: 700 }}>الفواتير المرتبطة: {linkedInvoices.length}</span>
-            <span style={{ fontSize: 12.5, color: "var(--app-text-muted)" }}>مبلغ الشيك: ₪{(parseFloat(amount) || 0).toLocaleString("ar-PS")}</span>
+            <span style={{ fontSize: 12.5, color: "var(--app-text-muted)" }}>مبلغ الشيك: ₪{(parseFloat(amount) || 0).toLocaleString("en-US")}</span>
           </div>
         )}
       </div>

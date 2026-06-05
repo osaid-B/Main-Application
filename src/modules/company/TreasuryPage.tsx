@@ -17,7 +17,7 @@ type ViewTab = 'overview' | 'incoming' | 'outgoing' | 'transfers' | 'guarantees'
 const PAGE_SIZE = 20
 
 function formatILS(n: number): string {
-  return '₪' + n.toLocaleString('ar-SA', { minimumFractionDigits: 0 })
+  return '₪' + n.toLocaleString('en-US', { minimumFractionDigits: 0 })
 }
 
 function fmtDate(s: string): string {
@@ -388,7 +388,7 @@ export default function TreasuryPage({
                       <div>
                         <span>
                           {currencySymbol(inst.currency)}
-                          {inst.amount.toLocaleString('ar-SA')}
+                          {inst.amount.toLocaleString('en-US')}
                         </span>
                         {inst.currency !== 'ILS' && (
                           <span className="tc-sub-muted">

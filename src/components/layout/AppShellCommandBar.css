@@ -42,9 +42,9 @@
 }
 
 .shell-command-search:focus-within {
-  border-color: var(--app-accent);
+  border-color: var(--app-border-strong);
   background: var(--app-surface);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  box-shadow: none;
   color: var(--app-text-soft);
 }
 

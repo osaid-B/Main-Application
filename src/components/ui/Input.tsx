@@ -3,11 +3,25 @@ import {
   useId,
   useState,
   type InputHTMLAttributes,
+  type KeyboardEvent,
   type ReactNode,
 } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { cn } from "../../lib/cn";
 import styles from "./Input.module.css";
+
+const NUMERIC_ALLOWED_KEYS = [
+  "Backspace", "Delete", "Tab", "Enter", "Escape",
+  "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown",
+  "Home", "End", ".", ",",
+];
+
+function blockNonNumeric(e: KeyboardEvent<HTMLInputElement>) {
+  if (e.ctrlKey || e.metaKey) return;
+  if (!NUMERIC_ALLOWED_KEYS.includes(e.key) && !/^\d$/.test(e.key)) {
+    e.preventDefault();
+  }
+}
 
 export type InputVariant =
   | "text"
@@ -103,6 +117,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
           hasError && styles.fieldError,
           effectivelyDisabled && styles.fieldDisabled,
         )}
+        data-variant={variant}
       >
         {leftIcon && (
           <span className={cn(styles.icon, styles.iconStart)} aria-hidden="true">
@@ -112,7 +127,8 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
         <input
           ref={ref}
           id={inputId}
-          type={resolvedType}
+          type={resolvedType === "number" ? "text" : resolvedType}
+          inputMode={resolvedType === "number" ? "numeric" : undefined}
           lang={shouldForceWesternDigits ? "en" : lang}
           dir={shouldForceWesternDigits ? "ltr" : dir}
           disabled={effectivelyDisabled}
@@ -124,6 +140,9 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
             (rightIcon || isPassword) && styles.inputWithEnd,
           )}
           {...rest}
+          onKeyDown={resolvedType === "number"
+            ? (e) => { blockNonNumeric(e); rest.onKeyDown?.(e); }
+            : rest.onKeyDown}
         />
         {isPassword ? (
           <button

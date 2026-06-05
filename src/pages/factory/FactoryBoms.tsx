@@ -70,7 +70,7 @@ export default function FactoryBoms() {
               <thead>
                 <tr>
                   <th className="col-code">{tc.cols.bomId}</th>
-                  <th>{tc.cols.product}</th>
+                  <th className="col-entity">{tc.cols.product}</th>
                   <th className="col-badge">{tc.cols.version}</th>
                   <th className="col-date">{tc.cols.effectiveDate}</th>
                   <th className="col-num">{tc.cols.lines}</th>

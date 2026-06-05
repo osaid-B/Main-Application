@@ -5,7 +5,6 @@ import {
   ChevronRight,
   Eye,
   EyeOff,
-  Keyboard,
   LogOut,
   PanelLeftClose,
   PanelLeftOpen,
@@ -28,6 +27,7 @@ import {
   FACTORY_SECTIONS,
   ALL_ITEMS,
 } from "./sidebarItems";
+import { ROUTE_PERMISSIONS } from "../../lib/permissions";
 import "./Sidebar.atlas.css";
 
 type SidebarProps = {
@@ -36,7 +36,6 @@ type SidebarProps = {
   onClose?: () => void;
   collapsed?: boolean;
   onToggleCollapsed?: () => void;
-  onShowShortcuts?: () => void;
 };
 
 const SECTIONS_BY_WORKSPACE: Record<Workspace, NavSection[]> = {
@@ -122,9 +121,8 @@ export default function Sidebar({
   onClose,
   collapsed = false,
   onToggleCollapsed,
-  onShowShortcuts,
 }: SidebarProps) {
-  const { user, logout } = useAuth();
+  const { user, logout, can } = useAuth();
   const { workspace } = useWorkspace();
   const prefs = useSidebarPreferences();
   const { t, isArabic } = useSettings();
@@ -138,7 +136,17 @@ export default function Sidebar({
   const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const userName = user?.username ?? "Sara Halim";
-  const userRole = isArabic ? "المالك" : "Owner";
+  const roleLabels: Record<string, string> = {
+    super_admin: "مدير النظام الأعلى",
+    admin: "مدير",
+    accountant: "محاسب",
+    sales: "مبيعات",
+    warehouse: "مستودع",
+    hr: "موارد بشرية",
+    cashier: "أمين صندوق",
+    viewer: "مشاهد",
+  };
+  const userRole = user?.role ? (isArabic ? roleLabels[user.role] ?? user.role : user.role) : (isArabic ? "المالك" : "Owner");
 
   const sections = SECTIONS_BY_WORKSPACE[workspace];
 
@@ -204,15 +212,21 @@ export default function Sidebar({
       aria-hidden={mobile ? !isOpen : undefined}
     >
       <header className="atlas-brand">
-        <div className="atlas-brand-logo" aria-hidden>
-          {companySettings.logoBase64
-            ? <img src={companySettings.logoBase64} alt="logo" style={{ width: "100%", height: "100%", objectFit: "contain", borderRadius: 4 }} />
-            : companyName[0]?.toUpperCase() ?? "A"
-          }
-        </div>
+        {companySettings.logoBase64 ? (
+          <div className="atlas-brand-logo" aria-hidden>
+            <img src={companySettings.logoBase64} alt="logo" style={{ width: "100%", height: "100%", objectFit: "contain", borderRadius: 4 }} />
+          </div>
+        ) : (
+          <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden style={{ flexShrink: 0 }}>
+            <rect width="32" height="32" rx="8" fill="#1E40AF" />
+            <path d="M6 26 L16 6 L26 26" stroke="white" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+            <path d="M10.5 19.5 L21.5 19.5" stroke="white" strokeWidth="3" strokeLinecap="round" />
+            <path d="M16 6 L13 10 M16 6 L19 10" stroke="#60A5FA" strokeWidth="2" strokeLinecap="round" />
+          </svg>
+        )}
         {(!collapsed || mobile) && (
           <div className="atlas-brand-info">
-            <h3>Atlas</h3>
+            <span style={{ fontSize: 13, fontWeight: 800, color: "var(--app-text)", letterSpacing: "-0.02em" }}>Atlas</span>
             <p>{companyName}</p>
           </div>
         )}
@@ -288,7 +302,14 @@ export default function Sidebar({
           const visibleItems = (editMode
             ? section.items
             : section.items.filter((item) => !prefs.isHidden(item.path))
-          ).filter(matchesQuery);
+          )
+            .filter(matchesQuery)
+            .filter((item) => {
+              if (editMode) return true;
+              const required = ROUTE_PERMISSIONS[item.path];
+              if (!required) return true;
+              return can(required);
+            });
 
           if (visibleItems.length === 0 && (isSearching || !editMode)) return null;
 
@@ -434,19 +455,6 @@ export default function Sidebar({
           onHideWithUndo={hideWithUndo}
           ts={ts}
         />
-      )}
-
-      {onShowShortcuts && (!collapsed || mobile) && (
-        <button
-          type="button"
-          className="atlas-shortcuts-hint"
-          onClick={onShowShortcuts}
-          aria-label={isArabic ? "اختصارات لوحة المفاتيح" : "Keyboard shortcuts"}
-        >
-          <Keyboard size={13} aria-hidden />
-          <span>{isArabic ? "اختصارات لوحة المفاتيح" : "Keyboard shortcuts"}</span>
-          <kbd>?</kbd>
-        </button>
       )}
 
       <footer className="atlas-sidebar-user">

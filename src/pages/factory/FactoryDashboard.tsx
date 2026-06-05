@@ -56,10 +56,10 @@ export default function FactoryDashboard() {
             <table className={styles.table}>
               <thead>
                 <tr>
-                  <th>{to.cols.orderId}</th>
-                  <th>{to.cols.product}</th>
-                  <th className={styles.numEnd}>{to.cols.quantity}</th>
-                  <th>{to.cols.status}</th>
+                  <th className="col-code">{to.cols.orderId}</th>
+                  <th className="col-entity">{to.cols.product}</th>
+                  <th className="col-num">{to.cols.quantity}</th>
+                  <th className="col-badge">{to.cols.status}</th>
                 </tr>
               </thead>
               <tbody>
@@ -80,10 +80,10 @@ export default function FactoryDashboard() {
             <table className={styles.table}>
               <thead>
                 <tr>
-                  <th>{tq.cols.batch}</th>
-                  <th>{tq.cols.product}</th>
-                  <th>{tq.cols.inspector}</th>
-                  <th>{tq.cols.status}</th>
+                  <th className="col-code">{tq.cols.batch}</th>
+                  <th className="col-entity">{tq.cols.product}</th>
+                  <th className="col-entity">{tq.cols.inspector}</th>
+                  <th className="col-badge">{tq.cols.status}</th>
                 </tr>
               </thead>
               <tbody>

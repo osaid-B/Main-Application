@@ -102,15 +102,15 @@ export default function FactoryQc() {
                 <tr>
                   <th className="col-code">{tc.cols.checkId}</th>
                   <th className="col-code">{tc.cols.batch}</th>
-                  <th>{tc.cols.product}</th>
+                  <th className="col-entity">{tc.cols.product}</th>
                   <th className="col-code">{tc.cols.order}</th>
                   <th className="col-date">{tc.cols.date}</th>
-                  <th>{tc.cols.inspector}</th>
+                  <th className="col-entity">{tc.cols.inspector}</th>
                   <th className="col-num">{tc.cols.sampleSize}</th>
                   <th className="col-num">{tc.cols.failedUnits}</th>
                   <th className="col-num">{tc.cols.defectRate}</th>
                   <th className="col-badge">{tc.cols.status}</th>
-                  <th>{tc.cols.notes}</th>
+                  <th className="col-truncate">{tc.cols.notes}</th>
                 </tr>
               </thead>
               <tbody>

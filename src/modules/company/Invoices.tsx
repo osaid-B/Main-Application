@@ -87,7 +87,7 @@ function invoiceActions(
     case "Paid":
       return {
         primary: { label: "عرض ←", onClick: () => navigate(`/company/invoices/${id}/edit`) },
-        items: [{ label: "طباعة", onClick: () => {} }],
+        items: [],
       };
     default:
       return {

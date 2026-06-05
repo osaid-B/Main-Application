@@ -56,15 +56,15 @@ export default function FactoryWarehouse() {
             <table className={styles.table}>
               <thead>
                 <tr>
-                  <th>{tc.cols.locationId}</th>
-                  <th>{tc.cols.name}</th>
-                  <th>{tc.cols.zone}</th>
-                  <th className={styles.numEnd}>{tc.cols.capacity}</th>
-                  <th className={styles.numEnd}>{tc.cols.used}</th>
-                  <th className={styles.numEnd}>{tc.cols.free}</th>
-                  <th>{tc.cols.utilPct}</th>
-                  <th>{tc.cols.temperature}</th>
-                  <th>{tc.cols.notes}</th>
+                  <th className="col-code">{tc.cols.locationId}</th>
+                  <th className="col-entity">{tc.cols.name}</th>
+                  <th className="col-badge">{tc.cols.zone}</th>
+                  <th className="col-num">{tc.cols.capacity}</th>
+                  <th className="col-num">{tc.cols.used}</th>
+                  <th className="col-num">{tc.cols.free}</th>
+                  <th className="col-num">{tc.cols.utilPct}</th>
+                  <th className="col-flex">{tc.cols.temperature}</th>
+                  <th className="col-truncate">{tc.cols.notes}</th>
                 </tr>
               </thead>
               <tbody>

@@ -44,7 +44,7 @@ const ACTION_COLORS: Record<AuditEntry["action"], string> = {
   login:  styles.actionLogin,
 };
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 200;
 
 export default function AuditLog() {
   const { isArabic } = useSettings();

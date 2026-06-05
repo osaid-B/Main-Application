@@ -72,16 +72,16 @@ export default function FactoryFinishedGoods() {
             <table className={styles.table}>
               <thead>
                 <tr>
-                  <th>{tc.cols.name}</th>
-                  <th>{tc.cols.sku}</th>
-                  <th>{tc.cols.category}</th>
-                  <th className={styles.numEnd}>{tc.cols.onHand}</th>
-                  <th className={styles.numEnd}>{tc.cols.reserved}</th>
-                  <th className={styles.numEnd}>{tc.cols.available}</th>
-                  <th className={styles.numEnd}>{tc.cols.unitCost}</th>
-                  <th className={styles.numEnd}>{tc.cols.sellingPrice}</th>
-                  <th className={styles.numEnd}>{tc.cols.margin}</th>
-                  <th>{tc.cols.lastProduced}</th>
+                  <th className="col-entity">{tc.cols.name}</th>
+                  <th className="col-code">{tc.cols.sku}</th>
+                  <th className="col-badge">{tc.cols.category}</th>
+                  <th className="col-num">{tc.cols.onHand}</th>
+                  <th className="col-num">{tc.cols.reserved}</th>
+                  <th className="col-num">{tc.cols.available}</th>
+                  <th className="col-currency">{tc.cols.unitCost}</th>
+                  <th className="col-currency">{tc.cols.sellingPrice}</th>
+                  <th className="col-num">{tc.cols.margin}</th>
+                  <th className="col-date">{tc.cols.lastProduced}</th>
                 </tr>
               </thead>
               <tbody>

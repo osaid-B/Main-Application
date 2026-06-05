@@ -86,14 +86,12 @@ const POS_NAV: NavSection[] = [
   {
     header: "الكتالوج",
     items: [
-      { label: "المنتجات", path: "/pos/products" },
       { label: "الفئات", path: "/pos/categories" },
     ],
   },
   {
     header: "الزبائن",
     items: [
-      { label: "برنامج الولاء", path: "/pos/customers" },
       { label: "الكاشيرون", path: "/pos/cashiers" },
     ],
   },

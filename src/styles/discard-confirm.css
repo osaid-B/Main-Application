@@ -1,0 +1,70 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   ATLAS ERP — Discard Unsaved Changes Dialog
+   Usage: <Modal variant="alert" size="sm" className="discard-confirm" ...>
+          <div className="discard-confirm__body">
+            <div className="discard-confirm__icon">
+              <AlertTriangle size={24} />
+            </div>
+            <h3 className="discard-confirm__heading">Discard unsaved changes?</h3>
+            <p className="discard-confirm__message">You have unsaved information…</p>
+            <div className="discard-confirm__actions">
+              <Button variant="secondary">Keep Editing</Button>
+              <Button variant="danger">Discard</Button>
+            </div>
+          </div>
+═══════════════════════════════════════════════════════════════════════════ */
+
+.discard-confirm.discard-confirm {
+  max-width: 400px;
+}
+
+.discard-confirm .discard-confirm__body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  padding: var(--app-space-7, 32px) var(--app-space-6, 24px)
+           var(--app-space-6, 24px);
+  text-align: center;
+}
+
+.discard-confirm .discard-confirm__icon {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--app-radius-lg, 12px);
+  background: var(--app-warning-subtle, #fffbeb);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--app-warning, #d97706);
+  margin-bottom: var(--app-space-4, 16px);
+  flex-shrink: 0;
+}
+
+.discard-confirm .discard-confirm__heading {
+  margin: 0 0 var(--app-space-2, 8px);
+  font-size: 17px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  color: var(--app-text, #0f172a);
+  line-height: 1.3;
+}
+
+.discard-confirm .discard-confirm__message {
+  margin: 0 0 var(--app-space-5, 20px);
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--app-text-muted, #64748b);
+  max-width: 300px;
+}
+
+.discard-confirm .discard-confirm__actions {
+  display: flex;
+  gap: var(--app-space-3, 12px);
+  width: 100%;
+  justify-content: center;
+}
+
+.discard-confirm .discard-confirm__actions > * {
+  min-width: 120px;
+}

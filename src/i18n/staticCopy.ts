@@ -734,19 +734,6 @@ const baseArCopy: Record<string, string> = {
   "Thinking...": "بفكّر...",
   "Ask me anything about your business data": "اسألني أي شي عن بيانات شغلك",
 
-  // ── KEYBOARD SHORTCUTS OVERLAY ───────────────────────────────
-  "Keyboard Shortcuts": "اختصارات لوحة المفاتيح",
-  "Navigate": "تنقّل",
-  "Create": "إنشاء",
-  "General": "عام",
-  "System": "النظام",
-  "Focus search": "انتقل للبحث",
-  "Show this help": "عرض المساعدة",
-  "Toggle dark mode": "تبديل الوضع الداكن",
-  "Sign out": "تسجيل الخروج",
-  "Light mode": "وضع فاتح",
-  "Dark mode": "وضع داكن",
-
   // ── LOGOUT CONFIRM ───────────────────────────────────────────
   "Sign out?": "تسجيل الخروج؟",
   "Press Enter to confirm or Esc to cancel":

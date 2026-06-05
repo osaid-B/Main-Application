@@ -63,15 +63,15 @@
   --font-mono:   "IBM Plex Mono", "Geist Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
   /* Backgrounds */
-  --app-bg: #f0f2f5;
+  --app-bg: #f8fafc;
   --app-surface: #ffffff;
   --app-surface-strong: #ffffff;
   --app-surface-muted: #f8fafc;
   --app-surface-hover: #f4f6f9;
 
   /* Borders */
-  --app-border: rgba(215, 221, 232, 0.85);
-  --app-border-strong: rgba(148, 163, 184, 0.35);
+  --app-border: var(--color-border, #e2e8f0);
+  --app-border-strong: #cbd5e1;
 
   /* Text */
   --app-text: #0f172a;
@@ -122,6 +122,26 @@
   --app-shadow-soft: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 6px rgba(0, 0, 0, 0.04);
   --app-shadow-strong: 0 4px 12px rgba(0, 0, 0, 0.07), 0 2px 4px rgba(0, 0, 0, 0.05);
   --app-shadow-overlay: 0 20px 60px rgba(0, 0, 0, 0.18), 0 4px 16px rgba(0, 0, 0, 0.08);
+
+  /* Color system */
+  --color-primary:        #1e40af;
+  --color-primary-light:  #dbeafe;
+  --color-primary-mid:    #2563eb;
+  --color-success:        #16a34a;
+  --color-success-light:  #dcfce7;
+  --color-danger:         #dc2626;
+  --color-danger-light:   #fee2e2;
+  --color-warning:        #d97706;
+  --color-warning-light:  #fef3c7;
+  --color-purple:         #7c3aed;
+  --color-purple-light:   #ede9fe;
+  --color-neutral:        #64748b;
+  --color-border:         #e2e8f0;
+  --color-bg-page:        #f8fafc;
+  --color-bg-surface:     #ffffff;
+  --color-text-primary:   #0f172a;
+  --color-text-secondary: #475569;
+  --color-text-muted:     #94a3b8;
 
   /* Spacing */
   --app-space-1: 4px;
@@ -231,10 +251,8 @@ select:focus-visible,
 textarea:focus-visible,
 button:focus-visible,
 a:focus-visible {
-  outline: 2px solid rgba(37, 99, 235, 0.45);
-  outline-offset: 2px;
-  border-color: var(--app-accent);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  outline: 1.5px solid var(--app-border-strong);
+  outline-offset: 1px;
 }
 
 /* ─── App Shell ─────────────────────────────────────────────────────────── */
@@ -686,6 +704,14 @@ kbd {
   --app-accent-strong:  var(--atlas-purple-700);
   --app-accent-subtle:  var(--atlas-purple-100);
   --app-accent-text:    var(--atlas-purple-700);
+}
+
+/* ─── Global Input Focus Ring ─────────────────────────────────────── */
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
 }
 
 /* ─── Status Dots (Atlas) ─────────────────────────────────────────── */

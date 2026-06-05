@@ -84,6 +84,7 @@ export function PhoneInput({
           disabled && styles.fieldDisabled,
         )}
       >
+        <span className={styles.flagBadge} aria-hidden>🇵🇸</span>
         <input
           id={id}
           type="tel"

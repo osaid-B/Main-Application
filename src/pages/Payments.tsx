@@ -1,32 +1,21 @@
 ﻿import { createPortal } from "react-dom";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ArrowUpDown,
   BarChart2,
-  Banknote,
   Calendar,
   CalendarRange,
   CheckCircle2,
-  ChevronRight,
-  CreditCard,
   Download,
-  Eye,
   FileText,
   Filter,
-  Landmark,
-  Pencil,
   Plus,
-  Printer,
   Receipt,
-  RotateCcw,
-  Search,
-  Trash2,
-  Wallet,
   X,
-  XCircle,
 } from "lucide-react";
 import "./Payments.css";
 import { Button } from "../components/ui/Button";
+import { SearchBox } from "../components/ui/SearchBox";
 import { Input } from "../components/ui/Input";
 import { Select } from "../components/ui/Select";
 import { Modal } from "../components/ui/Modal";
@@ -41,13 +30,14 @@ import {
 } from "../data/relations";
 import type { Customer, Invoice, Payment, PaymentMethod, PaymentStatus } from "../data/types";
 import { useSettings } from "../context/SettingsContext";
+import { TableActions } from "../components/ui/TableActions";
 
 type DateRangeFilter = "all" | "today" | "week" | "month";
 type AmountFilter = "all" | "under-500" | "500-2000" | "2000-plus";
 type LinkedFilter = "all" | "linked" | "unlinked";
 type SortKey = "amount" | "status" | "paymentId" | "invoiceNumber" | "date" | "customerName" | "method";
 type SortDirection = "asc" | "desc";
-type DrawerTab = "overview" | "invoice" | "notes" | "receipt" | "history";
+type DetailTab = "overview" | "invoice" | "notes" | "receipt" | "history";
 type QuickFilter = "completed" | "pending" | "failed" | "refunded" | "partial" | "today" | "week";
 
 type ExtendedPayment = Payment & {
@@ -96,7 +86,6 @@ type FilterState = {
   createdBy: string;
 };
 
-type MenuState = { paymentId: string; top: number; left: number };
 type ToastState = { type: "success" | "error" | "warning" | "info"; message: string } | null;
 
 const PAYMENT_METHODS: PaymentMethod[] = ["Cash", "Card", "Bank Transfer", "Wallet", "Cheque"];
@@ -113,8 +102,6 @@ const EMPTY_FORM: PaymentForm = {
   notes: "",
   createdBy: "Admin User",
 };
-
-const DELETE_CONFIRMATION_CODE = "123";
 
 function buildPaymentId(index: number) { return `PAY-${2001 + index}`; }
 
@@ -196,16 +183,6 @@ function formatMethod(method: PaymentMethod) {
   }
 }
 
-function getMethodIcon(method: PaymentMethod) {
-  switch (method) {
-    case "Card": return <CreditCard size={14} />;
-    case "Bank Transfer": return <Landmark size={14} />;
-    case "Wallet": return <Wallet size={14} />;
-    case "Cheque": return <FileText size={14} />;
-    default: return <Banknote size={14} />;
-  }
-}
-
 function getStatusTone(status: PaymentStatus) {
   switch (status) {
     case "Completed": case "Paid": return "status-success";
@@ -245,7 +222,7 @@ function normalizePaymentList(payments: Payment[], invoices: Invoice[], customer
       ...payment,
       paymentId: payment.paymentId ?? payment.id ?? buildPaymentId(index),
       invoiceNumber: invoice?.id ?? "Unlinked",
-      customerName: customer?.name ?? payment.customerName ?? "Unknown Customer",
+      customerName: customer?.name ?? payment.customerName ?? "عميل غير معروف",
       customerEmail: customer?.email ?? "No email",
       amount: roundMoney(Number(payment.amount ?? 0)),
       status: normalizedStatus,
@@ -282,6 +259,325 @@ function validatePaymentForm(values: PaymentForm, invoices: Invoice[], payments:
     errors.amount = `Remaining invoice balance is ${formatMoney(remainingAmount)}.`;
   }
   return errors;
+}
+
+/* ── PaymentDetailModal (centered portal) ─────────────── */
+function PaymentDetailModal({ payment, activeTab, onChangeTab, onClose }: {
+  payment: ExtendedPayment; activeTab: DetailTab;
+  onChangeTab: (tab: DetailTab) => void; onClose: () => void;
+}) {
+  const { t, isArabic } = useSettings();
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  return createPortal(
+    <>
+      <div className="pay-detail-overlay" onClick={onClose} />
+      <div className="pay-detail-modal" role="dialog" aria-modal="true" dir={isArabic ? "rtl" : "ltr"}>
+        <div className="pay-detail-head">
+          <div className="pay-detail-head-left">
+            <span className="eyebrow">{t.payments.detail.overview}</span>
+            <h2>{payment.paymentId}</h2>
+            <p>{payment.customerName} · {formatMoney(payment.amount)}</p>
+          </div>
+          <button type="button" className="pay-detail-close" onClick={onClose} aria-label="Close"><X size={18} /></button>
+        </div>
+        <div className="pay-detail-tabs">
+          {(["overview", "invoice", "notes", "receipt", "history"] as DetailTab[]).map((tab) => (
+            <button key={tab} type="button" className={`pay-detail-tab ${activeTab === tab ? "active" : ""}`} onClick={() => onChangeTab(tab)}>
+              {tab === "overview" && t.payments.detail.overview}{tab === "invoice" && t.payments.detail.invoice}
+              {tab === "notes" && t.payments.detail.notes}{tab === "receipt" && t.payments.detail.receipt}{tab === "history" && t.payments.detail.history}
+            </button>
+          ))}
+        </div>
+        <div className="pay-detail-body">
+          {activeTab === "overview" && (
+            <div className="pay-detail-grid">
+              <div className="pay-detail-card">
+                <h3>{t.payments.detail.paymentOverview}</h3>
+                <dl className="pay-detail-list">
+                  <div><dt>{t.payments.detail.status}</dt><dd><span className={`status-pill ${getStatusTone(payment.status)}`}>{formatStatus(payment.status)}</span></dd></div>
+                  <div><dt>{t.payments.detail.method}</dt><dd>{formatMethod(payment.method)}</dd></div>
+                  <div><dt>{t.payments.detail.paymentDate}</dt><dd>{formatDate(payment.date)}</dd></div>
+                  <div><dt>{t.payments.detail.reference}</dt><dd>{payment.referenceNumber}</dd></div>
+                  <div><dt>{t.payments.detail.receiptId}</dt><dd>{payment.receiptId}</dd></div>
+                  <div><dt>{t.payments.detail.createdBy}</dt><dd>{payment.createdBy}</dd></div>
+                </dl>
+              </div>
+              <div className="pay-detail-card">
+                <h3>{t.payments.detail.financialImpact}</h3>
+                <dl className="pay-detail-list">
+                  <div><dt>{t.payments.detail.invoiceTotal}</dt><dd>{formatMoney(payment.invoiceTotal)}</dd></div>
+                  <div><dt>{t.payments.detail.amountPaidBeforeLabel}</dt><dd>{formatMoney(payment.amountPaidBefore)}</dd></div>
+                  <div><dt>{t.payments.detail.thisPayment}</dt><dd>{formatMoney(payment.amount)}</dd></div>
+                  <div><dt>{t.payments.detail.remainingAfterLabel}</dt><dd>{formatMoney(payment.remainingAfterPayment)}</dd></div>
+                  <div><dt>{t.payments.detail.linkState}</dt><dd>{payment.linkState}</dd></div>
+                  <div><dt>{t.payments.detail.date}</dt><dd>{formatDate(payment.updatedAt)}</dd></div>
+                </dl>
+              </div>
+            </div>
+          )}
+          {activeTab === "invoice" && (
+            <div className="pay-detail-card">
+              <h3>{t.payments.detail.invoiceLinkage}</h3>
+              <dl className="pay-detail-list">
+                <div><dt>{t.payments.detail.linkedInvoice}</dt><dd>{payment.invoiceNumber}</dd></div>
+                <div><dt>{t.payments.detail.customer}</dt><dd>{payment.customerName}</dd></div>
+                <div><dt>{t.payments.detail.customerEmail}</dt><dd>{payment.customerEmail}</dd></div>
+                <div><dt>{t.payments.detail.appStatus}</dt><dd>{payment.linkState}</dd></div>
+                <div><dt>{t.payments.detail.remainingBalance}</dt><dd>{formatMoney(payment.remainingAfterPayment)}</dd></div>
+              </dl>
+            </div>
+          )}
+          {activeTab === "notes" && (
+            <div className="pay-detail-card"><h3>{t.payments.detail.notes}</h3><p className="pay-detail-text">{payment.notes || t.payments.detail.noNotes}</p></div>
+          )}
+          {activeTab === "receipt" && (
+            <div className="pay-detail-card">
+              <h3>{t.payments.detail.receiptAudit}</h3>
+              <dl className="pay-detail-list">
+                <div><dt>{t.payments.detail.receiptId}</dt><dd>{payment.receiptId}</dd></div>
+                <div><dt>{t.payments.detail.refNumber}</dt><dd>{payment.referenceNumber}</dd></div>
+                <div><dt>{t.payments.detail.printableReceipt}</dt><dd>{t.payments.detail.availableFromRow}</dd></div>
+              </dl>
+            </div>
+          )}
+          {activeTab === "history" && (
+            <div className="pay-detail-card">
+              <h3>{t.payments.detail.history}</h3>
+              <ul className="pay-detail-history">
+                <li><span>{t.payments.detail.paymentCaptured}</span><b>{formatDate(payment.date)}</b></li>
+                <li><span>{t.payments.detail.statusLastUpdated}</span><b>{formatDate(payment.updatedAt)}</b></li>
+                <li><span>{t.payments.detail.handledBy}</span><b>{payment.createdBy}</b></li>
+              </ul>
+            </div>
+          )}
+        </div>
+      </div>
+    </>,
+    document.body
+  );
+}
+
+/* ── PaymentViewModal (centered portal) ──────────────── */
+function PaymentViewModal({
+  payment, onClose, onEdit, onDelete,
+}: {
+  payment: ExtendedPayment;
+  onClose: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  const statusColors: Record<string, { bg: string; color: string; label: string }> = {
+    Completed: { bg: "#DCFCE7", color: "#16A34A", label: "مكتملة" },
+    Paid:      { bg: "#DCFCE7", color: "#16A34A", label: "مكتملة" },
+    Pending:   { bg: "#FEF3C7", color: "#D97706", label: "معلقة" },
+    Partial:   { bg: "#FEF3C7", color: "#D97706", label: "جزئية" },
+    Failed:    { bg: "#FEE2E2", color: "#DC2626", label: "فاشلة" },
+    Refunded:  { bg: "#EDE9FE", color: "#7C3AED", label: "مُستردة" },
+    Cancelled: { bg: "#F1F5F9", color: "#64748B", label: "ملغاة" },
+  };
+  const methodEmoji: Record<string, string> = {
+    Cash: "💵", Card: "💳", "Bank Transfer": "🏦", Wallet: "👛", Cheque: "📄",
+  };
+  const sc = statusColors[payment.status] ?? { bg: "#F1F5F9", color: "#64748B", label: payment.status };
+  const isUnlinked = payment.invoiceNumber === "Unlinked" || payment.linkState === "Unlinked";
+
+  const rowStyle: React.CSSProperties = {
+    display: "flex", justifyContent: "space-between", alignItems: "center",
+    padding: "10px 0", borderBottom: "1px solid #F8FAFC",
+  };
+  const keyStyle: React.CSSProperties = { fontSize: 13, color: "#64748B" };
+  const valStyle: React.CSSProperties = { fontSize: 13, fontWeight: 500, color: "#0F172A" };
+
+  return createPortal(
+    <div
+      onClick={onClose}
+      style={{
+        position: "fixed", inset: 0, zIndex: 9000,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        backgroundColor: "rgba(15,23,42,0.48)", backdropFilter: "blur(4px)",
+        WebkitBackdropFilter: "blur(4px)",
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        dir="rtl"
+        style={{
+          background: "#fff", borderRadius: 20, width: 560,
+          maxWidth: "92vw", maxHeight: "88vh", overflowY: "auto",
+          boxShadow: "0 25px 60px rgba(0,0,0,0.15)",
+          animation: "payViewIn 220ms cubic-bezier(0.16,1,0.3,1) forwards",
+          display: "flex", flexDirection: "column",
+        }}
+      >
+        {/* Header */}
+        <div style={{
+          padding: "22px 24px 16px", borderBottom: "1px solid #F1F5F9",
+          display: "flex", justifyContent: "space-between", alignItems: "flex-start",
+          flexShrink: 0, position: "sticky", top: 0, background: "#fff", zIndex: 1,
+        }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <span style={{
+              background: "#EFF6FF", color: "#1D4ED8", borderRadius: 8,
+              padding: "6px 14px", fontSize: 14, fontWeight: 700,
+              fontFamily: "monospace", display: "inline-block",
+            }}>
+              {payment.paymentId}
+            </span>
+            <span style={{
+              background: sc.bg, color: sc.color,
+              borderRadius: 99, padding: "3px 12px",
+              fontSize: 12, fontWeight: 600, display: "inline-block",
+            }}>
+              {sc.label}
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              width: 32, height: 32, borderRadius: 8, border: "none",
+              background: "transparent", cursor: "pointer", fontSize: 18,
+              color: "#94A3B8", display: "flex", alignItems: "center", justifyContent: "center",
+              flexShrink: 0,
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = "#FEF2F2"; e.currentTarget.style.color = "#DC2626"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#94A3B8"; }}
+          >✕</button>
+        </div>
+
+        {/* Body */}
+        <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: 16, flex: 1 }}>
+          {/* Hero amount */}
+          <div style={{
+            background: "linear-gradient(135deg, #EFF6FF, #DBEAFE)",
+            borderRadius: 14, padding: 20, textAlign: "center",
+          }}>
+            <p style={{ fontSize: 12, color: "#64748B", marginBottom: 6, margin: "0 0 6px" }}>المبلغ الإجمالي</p>
+            <strong style={{ fontSize: 32, fontWeight: 800, color: "#1E40AF", fontVariantNumeric: "tabular-nums", display: "block" }}>
+              ₪ {payment.amount.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+            </strong>
+            {payment.remainingAfterPayment > 0 && (
+              <p style={{ margin: "8px 0 0", fontSize: 13, color: "#DC2626" }}>
+                الرصيد المتبقي: ₪ {payment.remainingAfterPayment.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+              </p>
+            )}
+          </div>
+
+          {/* Details rows */}
+          <div>
+            <div style={rowStyle}>
+              <span style={keyStyle}>رقم الدفعة</span>
+              <span style={{ ...valStyle, fontFamily: "monospace" }}>{payment.paymentId}</span>
+            </div>
+            <div style={rowStyle}>
+              <span style={keyStyle}>رقم الإيصال</span>
+              <span style={valStyle}>{payment.receiptId || "—"}</span>
+            </div>
+            <div style={rowStyle}>
+              <span style={keyStyle}>الفاتورة</span>
+              {isUnlinked ? (
+                <span style={{ color: "#F59E0B", fontSize: 13, fontWeight: 500 }}>⚠ غير مرتبطة</span>
+              ) : (
+                <span style={{ ...valStyle, fontFamily: "monospace", color: "#2563EB" }}>{payment.invoiceNumber}</span>
+              )}
+            </div>
+            <div style={rowStyle}>
+              <span style={keyStyle}>العميل</span>
+              <span style={valStyle}>{payment.customerName || "—"}</span>
+            </div>
+            <div style={rowStyle}>
+              <span style={keyStyle}>طريقة الدفع</span>
+              <span style={valStyle}>{methodEmoji[payment.method] ?? ""} {formatMethod(payment.method)}</span>
+            </div>
+            <div style={rowStyle}>
+              <span style={keyStyle}>التاريخ</span>
+              <span style={valStyle}>{formatDate(payment.date)}</span>
+            </div>
+            <div style={{ ...rowStyle, borderBottom: "none" }}>
+              <span style={keyStyle}>المرجع</span>
+              <span style={{ ...valStyle, fontFamily: "monospace" }}>{payment.referenceNumber}</span>
+            </div>
+          </div>
+
+          {/* Notes */}
+          {payment.notes && (
+            <div style={{ background: "#F8FAFC", borderRadius: 10, padding: 14 }}>
+              <p style={{ margin: "0 0 6px", fontSize: 11, color: "#94A3B8", fontWeight: 600, textTransform: "uppercase" }}>ملاحظات</p>
+              <p style={{ margin: 0, fontSize: 13, color: "#475569", lineHeight: 1.6 }}>{payment.notes}</p>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div style={{
+          padding: "16px 24px", borderTop: "1px solid #F1F5F9",
+          display: "flex", gap: 8, flexShrink: 0,
+        }}>
+          <button
+            type="button"
+            onClick={onEdit}
+            style={{
+              border: "1px solid #E2E8F0", color: "#374151", borderRadius: 10,
+              padding: "9px 20px", fontSize: 14, background: "#fff",
+              cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6,
+              transition: "background 150ms ease",
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = "#F1F5F9"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = "#fff"; }}
+          >
+            <i className="ti ti-pencil" style={{ fontSize: 15 }} /> تعديل
+          </button>
+          <button
+            type="button"
+            onClick={onDelete}
+            style={{
+              border: "1px solid #FECACA", color: "#DC2626", borderRadius: 10,
+              padding: "9px 20px", fontSize: 14, background: "#fff",
+              cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6,
+              transition: "background 150ms ease",
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = "#FEF2F2"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = "#fff"; }}
+          >
+            <i className="ti ti-trash" style={{ fontSize: 15 }} /> حذف
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              border: "none", color: "#64748B", borderRadius: 10,
+              padding: "9px 20px", fontSize: 14, background: "transparent",
+              cursor: "pointer", fontFamily: "inherit",
+              transition: "color 150ms ease",
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = "#374151"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = "#64748B"; }}
+          >
+            إغلاق
+          </button>
+        </div>
+      </div>
+      <style>{`
+        @keyframes payViewIn {
+          from { opacity: 0; transform: scale(0.95); }
+          to   { opacity: 1; transform: scale(1); }
+        }
+      `}</style>
+    </div>,
+    document.body
+  );
 }
 
 /* ── PaymentEditor Modal ──────────────────────────────── */
@@ -515,125 +811,6 @@ function PaymentEditor({
   );
 }
 
-/* ── Delete Dialog ────────────────────────────────────── */
-function DeleteDialog({ payment, code, onCodeChange, onClose, onConfirm }: {
-  payment: ExtendedPayment; code: string;
-  onCodeChange: (v: string) => void; onClose: () => void; onConfirm: () => void;
-}) {
-  const { t } = useSettings();
-  return (
-    <div className="payment-modal-overlay" onClick={onClose}>
-      <div className="payment-modal-card delete-modal-card" onClick={(e) => e.stopPropagation()}>
-        <div className="payment-modal-header">
-          <div><h2>{t.payments.delete.title}</h2><p>{t.payments.delete.hint}</p></div>
-          <button type="button" className="icon-btn subtle" onClick={onClose}><X size={18} /></button>
-        </div>
-        <div className="delete-confirm-body">
-          <p>Enter <strong>{DELETE_CONFIRMATION_CODE}</strong> to delete <strong>{payment.paymentId}</strong>.</p>
-          <input value={code} onChange={(e) => onCodeChange(e.target.value)} placeholder={t.payments.delete.placeholder} />
-        </div>
-        <div className="payment-modal-footer">
-          <button type="button" className="secondary-btn" onClick={onClose}>{t.common.cancel}</button>
-          <button type="button" className="danger-btn" disabled={code !== DELETE_CONFIRMATION_CODE} onClick={onConfirm}>{t.payments.delete.confirmBtn}</button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ── Details Drawer ───────────────────────────────────── */
-function PaymentDetailsDrawer({ payment, activeTab, onChangeTab, onClose }: {
-  payment: ExtendedPayment; activeTab: DrawerTab;
-  onChangeTab: (tab: DrawerTab) => void; onClose: () => void;
-}) {
-  const { t } = useSettings();
-  return (
-    <div className="payment-drawer-overlay" onClick={onClose}>
-      <aside className="payment-drawer" onClick={(e) => e.stopPropagation()}>
-        <div className="payment-drawer-header">
-          <div>
-            <span className="eyebrow">Payment details</span>
-            <h2>{payment.paymentId}</h2>
-            <p>{payment.customerName} · {formatMoney(payment.amount)}</p>
-          </div>
-          <button type="button" className="icon-btn subtle" onClick={onClose}><X size={18} /></button>
-        </div>
-        <div className="drawer-tab-strip">
-          {(["overview", "invoice", "notes", "receipt", "history"] as DrawerTab[]).map((tab) => (
-            <button key={tab} type="button" className={`drawer-tab-btn ${activeTab === tab ? "active" : ""}`} onClick={() => onChangeTab(tab)}>
-              {tab === "overview" && t.payments.detail.overview}{tab === "invoice" && t.payments.detail.invoice}
-              {tab === "notes" && t.payments.detail.notes}{tab === "receipt" && t.payments.detail.receipt}{tab === "history" && t.payments.detail.history}
-            </button>
-          ))}
-        </div>
-        <div className="payment-drawer-content">
-          {activeTab === "overview" && (
-            <div className="drawer-grid">
-              <div className="drawer-card">
-                <h3>{t.payments.detail.paymentOverview}</h3>
-                <dl className="key-value-list">
-                  <div><dt>{t.payments.detail.status}</dt><dd><span className={`status-pill ${getStatusTone(payment.status)}`}>{formatStatus(payment.status)}</span></dd></div>
-                  <div><dt>{t.payments.detail.method}</dt><dd>{formatMethod(payment.method)}</dd></div>
-                  <div><dt>{t.payments.detail.paymentDate}</dt><dd>{formatDate(payment.date)}</dd></div>
-                  <div><dt>{t.payments.detail.reference}</dt><dd>{payment.referenceNumber}</dd></div>
-                  <div><dt>{t.payments.detail.receiptId}</dt><dd>{payment.receiptId}</dd></div>
-                  <div><dt>{t.payments.detail.createdBy}</dt><dd>{payment.createdBy}</dd></div>
-                </dl>
-              </div>
-              <div className="drawer-card">
-                <h3>{t.payments.detail.financialImpact}</h3>
-                <dl className="key-value-list">
-                  <div><dt>{t.payments.detail.invoiceTotal}</dt><dd>{formatMoney(payment.invoiceTotal)}</dd></div>
-                  <div><dt>{t.payments.detail.amountPaidBeforeLabel}</dt><dd>{formatMoney(payment.amountPaidBefore)}</dd></div>
-                  <div><dt>{t.payments.detail.thisPayment}</dt><dd>{formatMoney(payment.amount)}</dd></div>
-                  <div><dt>{t.payments.detail.remainingAfterLabel}</dt><dd>{formatMoney(payment.remainingAfterPayment)}</dd></div>
-                  <div><dt>{t.payments.detail.linkState}</dt><dd>{payment.linkState}</dd></div>
-                  <div><dt>{t.payments.detail.date}</dt><dd>{formatDate(payment.updatedAt)}</dd></div>
-                </dl>
-              </div>
-            </div>
-          )}
-          {activeTab === "invoice" && (
-            <div className="drawer-card">
-              <h3>{t.payments.detail.invoiceLinkage}</h3>
-              <dl className="key-value-list">
-                <div><dt>{t.payments.detail.linkedInvoice}</dt><dd>{payment.invoiceNumber}</dd></div>
-                <div><dt>{t.payments.detail.customer}</dt><dd>{payment.customerName}</dd></div>
-                <div><dt>{t.payments.detail.customerEmail}</dt><dd>{payment.customerEmail}</dd></div>
-                <div><dt>{t.payments.detail.appStatus}</dt><dd>{payment.linkState}</dd></div>
-                <div><dt>{t.payments.detail.remainingBalance}</dt><dd>{formatMoney(payment.remainingAfterPayment)}</dd></div>
-              </dl>
-            </div>
-          )}
-          {activeTab === "notes" && (
-            <div className="drawer-card"><h3>{t.payments.detail.notes}</h3><p className="drawer-body-text">{payment.notes || t.payments.detail.noNotes}</p></div>
-          )}
-          {activeTab === "receipt" && (
-            <div className="drawer-card">
-              <h3>{t.payments.detail.receiptAudit}</h3>
-              <dl className="key-value-list">
-                <div><dt>{t.payments.detail.receiptId}</dt><dd>{payment.receiptId}</dd></div>
-                <div><dt>{t.payments.detail.refNumber}</dt><dd>{payment.referenceNumber}</dd></div>
-                <div><dt>{t.payments.detail.printableReceipt}</dt><dd>{t.payments.detail.availableFromRow}</dd></div>
-              </dl>
-            </div>
-          )}
-          {activeTab === "history" && (
-            <div className="drawer-card">
-              <h3>{t.payments.detail.history}</h3>
-              <ul className="history-list">
-                <li><span>{t.payments.detail.paymentCaptured}</span><b>{formatDate(payment.date)}</b></li>
-                <li><span>{t.payments.detail.statusLastUpdated}</span><b>{formatDate(payment.updatedAt)}</b></li>
-                <li><span>{t.payments.detail.handledBy}</span><b>{payment.createdBy}</b></li>
-              </ul>
-            </div>
-          )}
-        </div>
-      </aside>
-    </div>
-  );
-}
-
 /* ── Main Component ───────────────────────────────────── */
 export default function Payments() {
   const { t, isArabic } = useSettings();
@@ -645,7 +822,6 @@ export default function Payments() {
     updatePayment,
     deletePayment: deletePaymentCtx,
   } = useData();
-  const menuRef = useRef<HTMLDivElement | null>(null);
   const payments = useMemo(
     () => normalizePaymentList(rawPayments, invoices, customers),
     [rawPayments, invoices, customers]
@@ -657,20 +833,23 @@ export default function Payments() {
   const [showMoreFilters, setShowMoreFilters] = useState(false);
   const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: SortDirection }>({ key: "date", direction: "desc" });
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
-  const [page, setPage] = useState(1);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [prevFilterSig, setPrevFilterSig] = useState({ searchTerm, filters, quickFilters, rowsPerPage });
+  
   const [showEditor, setShowEditor] = useState(false);
   const [editorMode, setEditorMode] = useState<"create" | "edit">("create");
   const [formState, setFormState] = useState<PaymentForm>(EMPTY_FORM);
   const [formErrors, setFormErrors] = useState<PaymentFormErrors>({});
   const [editingPaymentId, setEditingPaymentId] = useState<string | null>(null);
   const [detailsPayment, setDetailsPayment] = useState<ExtendedPayment | null>(null);
-  const [drawerTab, setDrawerTab] = useState<DrawerTab>("overview");
-  const [menuState, setMenuState] = useState<MenuState | null>(null);
+  const [detailTab, setDetailTab] = useState<DetailTab>("overview");
   const [toast, setToast] = useState<ToastState>(null);
   const [deleteTarget, setDeleteTarget] = useState<ExtendedPayment | null>(null);
-  const [deleteCode, setDeleteCode] = useState("");
+  const [pinValue, setPinValue] = useState("");
+  const [pinError, setPinError] = useState("");
+  const [deleting, setDeleting] = useState(false);
+  const [viewModal, setViewModal] = useState<{ isOpen: boolean; payment: ExtendedPayment | null }>({ isOpen: false, payment: null });
+
+  const openViewModal  = (p: ExtendedPayment) => setViewModal({ isOpen: true,  payment: p });
+  const closeViewModal = ()                    => setViewModal({ isOpen: false, payment: null });
 
   useEffect(() => {
     window.setTimeout(() => setLoading(false), 180);
@@ -678,30 +857,13 @@ export default function Payments() {
 
   useEffect(() => { if (!toast) return; const t = window.setTimeout(() => setToast(null), 2600); return () => window.clearTimeout(t); }, [toast]);
 
-  useEffect(() => {
-    if (!menuState) return;
-    const handleOutside = (e: MouseEvent) => { if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuState(null); };
-    const handleEscape = (e: KeyboardEvent) => { if (e.key === "Escape") setMenuState(null); };
-    const closeMenu = () => setMenuState(null);
-    document.addEventListener("mousedown", handleOutside);
-    document.addEventListener("keydown", handleEscape);
-    window.addEventListener("scroll", closeMenu, true);
-    window.addEventListener("resize", closeMenu);
-    return () => {
-      document.removeEventListener("mousedown", handleOutside);
-      document.removeEventListener("keydown", handleEscape);
-      window.removeEventListener("scroll", closeMenu, true);
-      window.removeEventListener("resize", closeMenu);
-    };
-  }, [menuState]);
-
   const activeFilterCount = useMemo(() => [filters.status, filters.method, filters.customer, filters.invoice, filters.createdBy, filters.linked !== "all" ? filters.linked : "", filters.dateRange !== "all" ? filters.dateRange : "", filters.amount !== "all" ? filters.amount : "", ...quickFilters].filter(Boolean).length, [filters, quickFilters]);
 
   const filteredPayments = useMemo(() => {
     const query = searchTerm.trim().toLowerCase();
     const result = payments.filter((p) => {
       if (query) {
-        const haystack = [p.paymentId, p.invoiceNumber, p.customerName, p.customerEmail, p.amount, p.method, p.status, p.referenceNumber, p.notes, p.receiptId].join(" ").toLowerCase();
+        const haystack = [p.paymentId, p.invoiceNumber, p.customerName, p.customerEmail, p.amount, p.method, p.status, p.referenceNumber, p.notes, p.receiptId, formatDate(p.date), p.createdBy].join(" ").toLowerCase();
         if (!haystack.includes(query)) return false;
       }
       if (filters.status && p.status !== filters.status) return false;
@@ -753,19 +915,7 @@ export default function Payments() {
     });
   }, [filters, payments, quickFilters, searchTerm, sortConfig]);
 
-  if (
-    prevFilterSig.searchTerm !== searchTerm ||
-    prevFilterSig.filters !== filters ||
-    prevFilterSig.quickFilters !== quickFilters ||
-    prevFilterSig.rowsPerPage !== rowsPerPage
-  ) {
-    setPrevFilterSig({ searchTerm, filters, quickFilters, rowsPerPage });
-    setPage(1);
-  }
-
-  const totalPages = Math.max(1, Math.ceil(filteredPayments.length / rowsPerPage));
-  const effectivePage = Math.min(page, totalPages);
-  const paginatedPayments = filteredPayments.slice((effectivePage - 1) * rowsPerPage, effectivePage * rowsPerPage);
+  const displayedPayments = filteredPayments;
 
   const metrics = useMemo(() => {
     const totalAmount = payments.reduce((s, p) => s + p.amount, 0);
@@ -796,7 +946,7 @@ export default function Payments() {
   const customerOptions = useMemo(() => customers.map((c) => ({ value: c.id, label: c.name })), [customers]);
 
   const openCreateModal = () => { setEditorMode("create"); setEditingPaymentId(null); setFormState(EMPTY_FORM); setFormErrors({}); setShowEditor(true); };
-  const openEditModal = (p: ExtendedPayment) => { setEditorMode("edit"); setEditingPaymentId(p.paymentId); setFormState({ invoiceId: p.invoiceId, customerId: p.customerId, amount: String(p.amount), method: p.method, status: p.status, date: p.date, referenceNumber: p.referenceNumber, notes: p.notes, createdBy: p.createdBy }); setFormErrors({}); setShowEditor(true); setMenuState(null); };
+  const openEditModal = (p: ExtendedPayment) => { setEditorMode("edit"); setEditingPaymentId(p.paymentId); setFormState({ invoiceId: p.invoiceId, customerId: p.customerId, amount: String(p.amount), method: p.method, status: p.status, date: p.date, referenceNumber: p.referenceNumber, notes: p.notes, createdBy: p.createdBy }); setFormErrors({}); setShowEditor(true); };
 
   const handleSavePayment = () => {
     const errs = validatePaymentForm(formState, invoices, payments as Payment[], editingPaymentId ?? undefined);
@@ -812,12 +962,31 @@ export default function Payments() {
     setToast({ type: "success", message: editorMode === "create" ? t.payments.toast.created : t.payments.toast.updated });
   };
 
-  const handleDeletePayment = () => {
+  const openDeleteConfirm = (p: ExtendedPayment) => {
+    setDeleteTarget(p);
+    setPinValue("");
+    setPinError("");
+    setDeleting(false);
+  };
+
+  const handleConfirmDelete = () => {
+    if (pinValue !== "123") { setPinError("PIN must be 123"); return; }
     if (!deleteTarget) return;
+    setDeleting(true);
     deletePaymentCtx(deleteTarget.id ?? deleteTarget.paymentId);
-    setDeleteTarget(null); setDeleteCode("");
     setSelectedRows((c) => c.filter((id) => id !== deleteTarget.paymentId));
     setToast({ type: "success", message: t.payments.toast.deleted });
+    setDeleteTarget(null);
+    setPinValue("");
+    setPinError("");
+    setDeleting(false);
+  };
+
+  const cancelDelete = () => {
+    setDeleteTarget(null);
+    setPinValue("");
+    setPinError("");
+    setDeleting(false);
   };
 
   const handleBulkAction = (action: "export" | "refund" | "note" | "delete" | "print") => {
@@ -835,9 +1004,7 @@ export default function Payments() {
 
   const toggleQuickFilter = (v: QuickFilter) => setQuickFilters((c) => c.includes(v) ? c.filter((f) => f !== v) : [...c, v]);
   const clearFilters = () => { setFilters({ status: "", method: "", dateRange: "all", amount: "all", customer: "", invoice: "", linked: "all", createdBy: "" }); setQuickFilters([]); setSearchTerm(""); };
-  const toggleAllRows = (checked: boolean) => setSelectedRows(checked ? paginatedPayments.map((p) => p.paymentId) : []);
   const requestSort = (key: SortKey) => setSortConfig((c) => ({ key, direction: c.key === key ? (c.direction === "asc" ? "desc" : "asc") : (key === "date" || key === "amount" ? "desc" : "asc") }));
-  const allVisibleSelected = paginatedPayments.length > 0 && paginatedPayments.every((p) => selectedRows.includes(p.paymentId));
 
   return (
     <>
@@ -860,26 +1027,22 @@ export default function Payments() {
         {/* ── KPI Row (4 cards) ── */}
         <div className="pay-kpi-row">
           {[
-            { icon: CreditCard, color: "blue", label: "إجمالي الدفعات", value: formatMoney(metrics.totalAmount), meta: "↑ 18.7%", metaClass: "up", sub: "vs last 7 days" },
-            { icon: CalendarRange, color: "purple", label: "دفعات معلقة", value: formatMoney(metrics.pendingAmount), meta: "↑ 12.4%", metaClass: "up", sub: `${metrics.pendingCount} payments` },
-            { icon: CheckCircle2, color: "green", label: "دفعات مكتملة", value: formatMoney(metrics.completedAmount), meta: "↑ 25.4%", metaClass: "up", sub: `${metrics.completedCount} payments` },
-            { icon: XCircle, color: "red", label: "فاشلة / مُستردة", value: formatMoney(metrics.failedRefundedAmount), meta: "— 0%", metaClass: "", sub: `${metrics.failedRefundedCount} payments` },
-          ].map((kpi) => {
-            const Icon = kpi.icon;
-            return (
-              <div key={kpi.label} className="pay-kpi-card">
-                <div className={`pay-kpi-icon ${kpi.color}`}><Icon size={18} /></div>
-                <div className="pay-kpi-body">
-                  <p>{kpi.label}</p>
-                  <strong>{kpi.value}</strong>
-                  <div className="pay-kpi-bottom">
-                    {kpi.meta && <span className={`pay-kpi-trend ${kpi.metaClass}`}>{kpi.meta}</span>}
-                    <small>{kpi.sub}</small>
-                  </div>
+            { emoji: "💳", label: "إجمالي الدفعات",   value: formatMoney(metrics.totalAmount),           count: metrics.total },
+            { emoji: "✅", label: "مكتملة",             value: formatMoney(metrics.completedAmount),       count: metrics.completedCount },
+            { emoji: "⏳", label: "معلقة",              value: formatMoney(metrics.pendingAmount),         count: metrics.pendingCount },
+            { emoji: "↩️", label: "فاشلة / مُستردة",   value: formatMoney(metrics.failedRefundedAmount),  count: metrics.failedRefundedCount },
+          ].map((kpi) => (
+            <div key={kpi.label} className="pay-kpi-card">
+              <div className="pay-kpi-icon">{kpi.emoji}</div>
+              <div className="pay-kpi-body">
+                <p>{kpi.label}</p>
+                <strong>{kpi.value}</strong>
+                <div className="pay-kpi-bottom">
+                  <small>{kpi.count} دفعة</small>
                 </div>
               </div>
-            );
-          })}
+            </div>
+          ))}
         </div>
 
         {/* ── Body: Table + Sidebar ── */}
@@ -895,9 +1058,12 @@ export default function Payments() {
             </div>
             <div className="pay-ops-toolbar">
               <div className="search-input-wrap">
-                <Search size={15} />
-                <input type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Search by reference, inv, customer..." />
+                <SearchBox
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="ابحث برقم الدفعة أو الفاتورة أو اسم العميل..."
+                  fullWidth
+                />
               </div>
               <button type="button" className={`toolbar-btn ${showMoreFilters ? "active" : ""}`}
                 onClick={() => setShowMoreFilters((c) => !c)}>
@@ -954,7 +1120,6 @@ export default function Payments() {
               <div className="bulk-action-list">
                 <button type="button" className="toolbar-btn subtle" onClick={() => handleBulkAction("export")}>Export</button>
                 <button type="button" className="toolbar-btn subtle" onClick={() => handleBulkAction("refund")}>Mark refunded</button>
-                <button type="button" className="toolbar-btn subtle" onClick={() => handleBulkAction("print")}>Print receipts</button>
                 <button type="button" className="toolbar-btn danger-lite" onClick={() => handleBulkAction("delete")}>Delete</button>
               </div>
             </div>
@@ -969,121 +1134,99 @@ export default function Payments() {
               <div className="payments-table-wrap app-table-wrap atlas-table-wrapper">
                 <table className="payments-table app-data-table atlas-table">
                   <colgroup>
-                    <col className="col-check" />
-                    <col className="col-w-100" />
-                    <col className="col-w-100" />
-                    <col />
-                    <col className="col-currency" />
-                    <col className="col-w-110" />
-                    <col className="col-w-90" />
-                    <col className="col-date" />
-                    <col className="col-w-110" />
-                    <col className="col-actions" />
+                    <col style={{ width: "11%" }} />
+                    <col style={{ width: "11%" }} />
+                    <col style={{ width: "18%" }} />
+                    <col style={{ width: "14%" }} />
+                    <col style={{ width: "10%" }} />
+                    <col style={{ width: "10%" }} />
+                    <col style={{ width: "12%" }} />
+                    <col style={{ width: "12%" }} />
+                    <col style={{ width: "2%" }} />
                   </colgroup>
                   <thead>
                     <tr>
-                      <th className="col-check">
-                        <input type="checkbox" checked={allVisibleSelected} onChange={(e) => toggleAllRows(e.target.checked)} />
-                      </th>
-                      <th className="col-code"><button type="button" className="sortable-head" onClick={() => requestSort("paymentId")}>{t.payments.cols.paymentId} <ArrowUpDown size={13} /></button></th>
-                      <th className="col-code"><button type="button" className="sortable-head" onClick={() => requestSort("invoiceNumber")}>{t.payments.cols.invoice} <ArrowUpDown size={13} /></button></th>
-                      <th>{t.payments.cols.customer}</th>
-                      <th className="col-num"><button type="button" className="sortable-head align-right" onClick={() => requestSort("amount")}>{t.payments.cols.amount} <ArrowUpDown size={13} /></button></th>
-                      <th className="col-badge"><button type="button" className="sortable-head" onClick={() => requestSort("method")}>{t.payments.cols.method} <ArrowUpDown size={13} /></button></th>
-                      <th className="col-badge"><button type="button" className="sortable-head" onClick={() => requestSort("status")}>{t.payments.cols.status} <ArrowUpDown size={13} /></button></th>
-                      <th className="col-date"><button type="button" className="sortable-head" onClick={() => requestSort("date")}>{t.payments.cols.date} <ArrowUpDown size={13} /></button></th>
-                      <th>{t.payments.cols.reference}</th>
-                      <th className="col-actions">{t.payments.cols.actions}</th>
+                      <th className="col-code px-3 py-3 whitespace-nowrap truncate"><button type="button" className="sortable-head" onClick={() => requestSort("paymentId")}>{t.payments.cols.paymentId} <ArrowUpDown size={13} /></button></th>
+                      <th className="col-code px-3 py-3 whitespace-nowrap truncate"><button type="button" className="sortable-head" onClick={() => requestSort("invoiceNumber")}>{t.payments.cols.invoice} <ArrowUpDown size={13} /></button></th>
+                      <th className="col-entity px-3 py-3 whitespace-nowrap truncate">{t.payments.cols.customer}</th>
+                      <th className="col-num px-3 py-3 whitespace-nowrap truncate"><button type="button" className="sortable-head align-right" onClick={() => requestSort("amount")}>{t.payments.cols.amount} <ArrowUpDown size={13} /></button></th>
+                      <th className="col-badge px-3 py-3 whitespace-nowrap truncate"><button type="button" className="sortable-head" onClick={() => requestSort("method")}>{t.payments.cols.method} <ArrowUpDown size={13} /></button></th>
+                      <th className="col-badge px-3 py-3 whitespace-nowrap truncate"><button type="button" className="sortable-head" onClick={() => requestSort("status")}>{t.payments.cols.status} <ArrowUpDown size={13} /></button></th>
+                      <th className="col-date px-3 py-3 whitespace-nowrap truncate"><button type="button" className="sortable-head" onClick={() => requestSort("date")}>{t.payments.cols.date} <ArrowUpDown size={13} /></button></th>
+                      <th className="col-code px-3 py-3 whitespace-nowrap truncate">{t.payments.cols.reference}</th>
+                      <th className="col-actions px-3 py-3 whitespace-nowrap truncate">{t.payments.cols.actions}</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {paginatedPayments.map((p) => (
-                      <tr key={p.paymentId} onClick={() => { setDetailsPayment(p); setDrawerTab("overview"); }}>
-                        <td className="col-check" onClick={(e) => e.stopPropagation()}>
-                          <input type="checkbox" checked={selectedRows.includes(p.paymentId)}
-                            onChange={(e) => setSelectedRows((c) => e.target.checked ? [...c, p.paymentId] : c.filter((id) => id !== p.paymentId))} />
-                        </td>
-                        <td className="col-code">
-                          <div className="primary-cell">
-                            <strong>{p.paymentId}</strong>
-                            <span>{p.receiptId}</span>
-                          </div>
-                        </td>
-                        <td className="col-code">
-                          <div className="primary-cell app-cell-stack">
-                            <button type="button" className="text-link-btn" onClick={(e) => { e.stopPropagation(); setDetailsPayment(p); setDrawerTab("invoice"); }}>{p.invoiceNumber}</button>
-                            <small>{formatLinkState(p.linkState)}</small>
-                          </div>
-                        </td>
-                        <td>{p.customerName}</td>
-                        <td className="col-num">
-                          <div className="amount-cell">
-                            <strong>{formatMoney(p.amount)}</strong>
-                            <span>الرصيد بعد {formatMoney(p.remainingAfterPayment)}</span>
-                          </div>
-                        </td>
-                        <td className="col-badge"><span className="method-badge">{getMethodIcon(p.method)}{formatMethod(p.method)}</span></td>
-                        <td className="col-badge"><span className={`status-pill ${getStatusTone(p.status)}`}>{formatStatus(p.status)}</span></td>
-                        <td className="col-date">
-                          <div className="primary-cell">
-                            <strong>{formatDate(p.date)}</strong>
-                            <span>{p.relativeDate}</span>
-                          </div>
-                        </td>
-                        <td>
-                          <div className="primary-cell">
-                            <strong>{p.referenceNumber}</strong>
-                          </div>
-                        </td>
-                        <td className="col-actions" onClick={(e) => e.stopPropagation()}>
-                          <div className="row-actions">
-                            <button type="button" className="pay-action-btn" title={t.common.view} onClick={() => { setDetailsPayment(p); setDrawerTab("overview"); }}><Eye size={14} /></button>
-                            <button type="button" className="pay-action-btn" title={t.common.edit} onClick={() => openEditModal(p)}><Pencil size={14} /></button>
-                            <button type="button" className="pay-action-btn danger" title={t.common.delete} onClick={() => { setDeleteTarget(p); setDeleteCode(""); }}><Trash2 size={14} /></button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                    {displayedPayments.map((p) => {
+                      const methodEmoji: Record<string, string> = { Cash: "💵", Card: "💳", "Bank Transfer": "🏦", Wallet: "👛", Cheque: "📄" };
+                      const isUnlinked = p.invoiceNumber === "Unlinked" || p.linkState === "Unlinked";
+                      return (
+                        <tr
+                          key={p.paymentId}
+                          onClick={() => openViewModal(p)}
+                          className="cursor-pointer odd:bg-white even:bg-slate-50/30"
+                        >
+                          <td className="col-code px-3 py-3 whitespace-nowrap truncate">
+                            <div className="primary-cell">
+                              <strong>{p.paymentId}</strong>
+                              <span>{p.receiptId}</span>
+                            </div>
+                          </td>
+                          <td className="col-code px-3 py-3 whitespace-nowrap truncate">
+                            <div className="primary-cell app-cell-stack">
+                              {isUnlinked ? (
+                                <span style={{ color: "#F59E0B", fontSize: 12, fontWeight: 500 }}>⚠ غير مرتبطة</span>
+                              ) : (
+                                <>
+                                  <button type="button" className="text-link-btn" onClick={(e) => { e.stopPropagation(); openViewModal(p); }}>
+                                    {p.invoiceNumber}
+                                  </button>
+                                  <small>{formatLinkState(p.linkState)}</small>
+                                </>
+                              )}
+                            </div>
+                          </td>
+                          <td className="col-entity px-3 py-3 whitespace-nowrap truncate">{p.customerName}</td>
+                          <td className="col-num px-3 py-3 whitespace-nowrap truncate">
+                            <div className="amount-cell">
+                              <strong style={{ fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{formatMoney(p.amount)}</strong>
+                              <span style={{ fontSize: 11, color: "#94A3B8" }}>الرصيد بعد: {formatMoney(p.remainingAfterPayment)}</span>
+                            </div>
+                          </td>
+                          <td className="col-badge px-3 py-3 whitespace-nowrap truncate">
+                            <span style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "#F8FAFC", borderRadius: 8, padding: "3px 10px", fontSize: 12 }}>
+                              {methodEmoji[p.method] ?? ""} {formatMethod(p.method)}
+                            </span>
+                          </td>
+                          <td className="col-badge px-3 py-3 whitespace-nowrap truncate"><span className={`status-pill ${getStatusTone(p.status)}`}>{formatStatus(p.status)}</span></td>
+                          <td className="col-date px-3 py-3 whitespace-nowrap truncate">
+                            <div className="primary-cell">
+                              <strong>{formatDate(p.date)}</strong>
+                              <span>{p.relativeDate}</span>
+                            </div>
+                          </td>
+                          <td className="col-code px-3 py-3 whitespace-nowrap truncate">
+                            <div className="primary-cell">
+                              <strong>{p.referenceNumber}</strong>
+                            </div>
+                          </td>
+                          <td className="col-actions px-3 py-3 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                            <TableActions
+                              onView={() => openViewModal(p)}
+                              onEdit={() => openEditModal(p)}
+                              onDelete={() => openDeleteConfirm(p)}
+                            />
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
 
-              <div className="pay-ops-footer">
-                <span className="pay-footer-info">
-                  عرض {(effectivePage - 1) * rowsPerPage + 1}–{Math.min(effectivePage * rowsPerPage, filteredPayments.length)} من {filteredPayments.length} دفعة
-                </span>
-                <div className="pay-footer-center">
-                  <button type="button" className="pay-pg-btn" disabled={effectivePage === 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>‹</button>
-                  {Array.from({ length: totalPages }, (_, i) => i + 1)
-                    .filter((n) => n === 1 || n === totalPages || Math.abs(n - effectivePage) <= 1)
-                    .reduce<(number | "…")[]>((acc, n, idx, arr) => {
-                      if (idx > 0 && n - (arr[idx - 1] as number) > 1) acc.push("…");
-                      acc.push(n);
-                      return acc;
-                    }, [])
-                    .map((item, idx) =>
-                      item === "…" ? (
-                        <span key={`e-${idx}`} className="pay-pg-ellipsis">…</span>
-                      ) : (
-                        <button key={item} type="button"
-                          className={`pay-pg-btn${effectivePage === item ? " active" : ""}`}
-                          onClick={() => setPage(item as number)}>
-                          {item}
-                        </button>
-                      )
-                    )}
-                  <button type="button" className="pay-pg-btn" disabled={effectivePage === totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>›</button>
-                </div>
-                <div className="pay-footer-rpp">
-                  <select value={rowsPerPage} onChange={(e) => { setRowsPerPage(Number(e.target.value)); setPage(1); }}>
-                    {[10, 25, 50].map((n) => <option key={n} value={n}>{n} / صفحة</option>)}
-                  </select>
-                </div>
-              </div>
-              <div className="pay-view-all-row">
-                <button type="button" className="pay-view-all-btn" onClick={() => { setSearchTerm(""); clearFilters(); }}>
-                  View all payments <ChevronRight size={14} />
-                </button>
+               <div className="pay-ops-footer">
+                <span className="pay-footer-info">عرض الكل — {filteredPayments.length} دفعة</span>
               </div>
             </>
           )}
@@ -1100,34 +1243,41 @@ export default function Payments() {
           onClose={() => setShowEditor(false)} onSubmit={handleSavePayment} />
       )}
       {detailsPayment && (
-        <PaymentDetailsDrawer payment={detailsPayment} activeTab={drawerTab} onChangeTab={setDrawerTab} onClose={() => setDetailsPayment(null)} />
+        <PaymentDetailModal payment={detailsPayment} activeTab={detailTab} onChangeTab={setDetailTab} onClose={() => setDetailsPayment(null)} />
       )}
-      {deleteTarget && (
-        <DeleteDialog payment={deleteTarget} code={deleteCode} onCodeChange={setDeleteCode}
-          onClose={() => { setDeleteTarget(null); setDeleteCode(""); }} onConfirm={handleDeletePayment} />
+      {viewModal.isOpen && viewModal.payment && (
+        <PaymentViewModal
+          payment={viewModal.payment}
+          onClose={closeViewModal}
+          onEdit={() => { closeViewModal(); openEditModal(viewModal.payment!); }}
+          onDelete={() => { closeViewModal(); openDeleteConfirm(viewModal.payment!); }}
+        />
       )}
 
-      {menuState && createPortal(
-        <div ref={menuRef} className="payment-action-menu" style={{ top: menuState.top, left: menuState.left, transform: menuState.top > window.innerHeight / 2 ? "translateY(-100%)" : "none" }}>
-          {(() => {
-            const p = payments.find((entry) => entry.paymentId === menuState.paymentId);
-            if (!p) return null;
-            return (
-              <>
-                <button type="button" onClick={() => { setDetailsPayment(p); setDrawerTab("overview"); setMenuState(null); }}><Eye size={15} />Open</button>
-                <button type="button" onClick={() => openEditModal(p)}><Plus size={15} />Edit payment</button>
-                <button type="button" onClick={() => { setToast({ type: "success", message: `Receipt ${p.receiptId} downloaded.` }); setMenuState(null); }}><Download size={15} />Download receipt</button>
-                <button type="button" onClick={() => { setToast({ type: "success", message: `Receipt ${p.receiptId} sent to print.` }); setMenuState(null); }}><Printer size={15} />Print receipt</button>
-                <button type="button" onClick={() => { setDetailsPayment(p); setDrawerTab("notes"); setMenuState(null); }}><FileText size={15} />Add note</button>
-                <button type="button" onClick={() => {
-                  updatePayment({ ...p, status: "Refunded" as PaymentStatus, updatedAt: new Date().toISOString().split("T")[0] });
-                  setToast({ type: "success", message: "Payment marked as refunded." }); setMenuState(null);
-                }}><RotateCcw size={15} />Mark as refunded</button>
-                <button type="button" className="danger" onClick={() => { setDeleteTarget(p); setDeleteCode(""); setMenuState(null); }}><Trash2 size={15} />Delete</button>
-              </>
-            );
-          })()}
-        </div>,
+      {deleteTarget && createPortal(
+        <>
+          <div className="pay-delete-overlay" onClick={cancelDelete} />
+          <div className="pay-delete-modal" role="dialog" aria-modal="true" dir={isArabic ? "rtl" : "ltr"}>
+            <div className="pay-delete-head">
+              <h3>{t.common.confirmDelete}</h3>
+              <button type="button" className="pay-delete-close" onClick={cancelDelete}><X size={16} /></button>
+            </div>
+            <div className="pay-delete-body">
+              <p>{isArabic ? "هل أنت متأكد من حذف" : "Are you sure you want to delete"} <strong>{deleteTarget.paymentId}</strong></p>
+              <div className="pay-pin-field">
+                <label>{isArabic ? "أدخل الرقم السري 123 لتأكيد الحذف" : "Enter PIN 123 to confirm deletion"}</label>
+                <input type="password" value={pinValue} onChange={(e) => { setPinValue(e.target.value); setPinError(""); }} placeholder="123" maxLength={10} autoFocus />
+                {pinError && <small className="field-error">{pinError}</small>}
+              </div>
+            </div>
+            <div className="pay-delete-footer">
+              <button type="button" className="pay-btn-secondary" onClick={cancelDelete}>{t.common.cancel}</button>
+              <button type="button" className="pay-btn-danger" onClick={handleConfirmDelete} disabled={deleting}>
+                {deleting ? (isArabic ? "جاري الحذف..." : "Deleting...") : t.common.delete}
+              </button>
+            </div>
+          </div>
+        </>,
         document.body
       )}
 

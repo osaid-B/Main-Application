@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Bar, BarChart, CartesianGrid, Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { ArrowDownRight, ArrowUpRight, Download, Plus } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, Download } from "lucide-react";
 import { Button } from "../components/ui/Button";
 import { Badge } from "../components/ui/Badge";
 import { Container } from "../components/layout/Container";
@@ -221,14 +221,7 @@ export default function CompanyOverview() {
             >
               {t.company.export}
             </Button>
-            <Button
-              variant="primary"
-              size="sm"
-              leftIcon={<Plus size={14} />}
-              onClick={() => window.dispatchEvent(new CustomEvent("atlas:open-quick-create"))}
-            >
-              {t.company.newEntry}
-            </Button>
+
           </div>
         </header>
 

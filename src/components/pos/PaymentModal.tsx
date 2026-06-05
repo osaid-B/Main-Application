@@ -1,15 +1,13 @@
 import { useState } from "react";
-import { Banknote, Check, CheckCircle2, CreditCard, Sparkles, X, Building2 } from "lucide-react";
+import { Banknote, Check, CheckCircle2, CreditCard, Building2 } from "lucide-react";
 import { Modal } from "../ui/Modal";
 import { Button } from "../ui/Button";
-import { Badge } from "../ui/Badge";
 import { Input } from "../ui/Input";
-import type { LoyaltyCustomer } from "../../data/posMock";
-import { formatCurrencyValue, formatIntegerValue } from "../../utils/displayFormatters";
+import { formatCurrencyValue } from "../../utils/displayFormatters";
 import styles from "./PaymentModal.module.css";
 
-type Method = "cash" | "card" | "coins" | "transfer";
-type Screen = "method" | "cash" | "coins" | "transfer" | "success";
+type Method = "cash" | "card" | "transfer";
+type Screen = "method" | "cash" | "transfer" | "success";
 
 interface Props {
   isOpen: boolean;
@@ -18,8 +16,6 @@ interface Props {
   subtotal: number;
   tax: number;
   itemsCount: number;
-  customer: LoyaltyCustomer | null;
-  onAttachCustomer: (c: LoyaltyCustomer) => void;
   onComplete: () => void;
 }
 
@@ -30,12 +26,11 @@ const QUICK_CASH = [15, 20, 50, 100];
  *  method -> cash | coins | transfer -> success
  */
 export function PaymentModal({
-  isOpen, onClose, total, subtotal, tax, itemsCount, customer, onComplete,
+  isOpen, onClose, total, subtotal, tax, itemsCount, onComplete,
 }: Props) {
   const [screen, setScreen] = useState<Screen>("method");
   const [method, setMethod] = useState<Method | null>(null);
   const [cashReceived, setCashReceived] = useState<number>(0);
-  const [coinsToRedeem, setCoinsToRedeem] = useState<number>(0);
   const [transferRef, setTransferRef] = useState("");
 
   const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
@@ -45,15 +40,13 @@ export function PaymentModal({
       setScreen("method");
       setMethod(null);
       setCashReceived(0);
-      setCoinsToRedeem(0);
       setTransferRef("");
     }
   }
 
   function go(m: Method) {
     setMethod(m);
-    if (m === "cash")     setScreen("cash");
-    else if (m === "coins")    setScreen("coins");
+    if (m === "cash")          setScreen("cash");
     else if (m === "transfer") setScreen("transfer");
     else                       setScreen("success"); // card auto-success in demo
   }
@@ -67,9 +60,6 @@ export function PaymentModal({
   }
 
   const change = Math.max(0, cashReceived - total);
-  const maxCoins = customer ? customer.coins : 0;
-  const coinValue = coinsToRedeem * 0.05;
-  const finalTotal = Math.max(0, total - coinValue);
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} size="md" isDismissible={screen !== "success"}>
@@ -109,15 +99,6 @@ export function PaymentModal({
               tone="blue"
               selected={method === "card"}
               onClick={() => setMethod("card")}
-            />
-            <MethodCard
-              icon={<Sparkles size={18} />}
-              label="Coins"
-              hint={customer ? `${formatIntegerValue(customer.coins)} available` : "NO CUSTOMER"}
-              tone="orange"
-              selected={method === "coins"}
-              onClick={() => customer && setMethod("coins")}
-              disabled={!customer}
             />
             <MethodCard
               icon={<Building2 size={18} />}
@@ -194,68 +175,6 @@ export function PaymentModal({
         </div>
       )}
 
-      {/* ─── Screen: COINS ─── */}
-      {screen === "coins" && customer && (
-        <div className={styles.body}>
-          <span className={styles.step}>STEP 2 of 2 · COINS</span>
-          <h2 className={styles.title}>استبدال العملات</h2>
-
-          <div className={styles.balanceBox}>
-            <span>الرصيد المتاح</span>
-            <strong>{formatIntegerValue(customer.coins)} <em>عملة</em></strong>
-          </div>
-
-          <div className={styles.sliderWrap}>
-            <input
-              type="range"
-              min={0}
-              max={maxCoins}
-              step={50}
-              value={coinsToRedeem}
-              onChange={(e) => setCoinsToRedeem(Number(e.target.value))}
-              className={styles.slider}
-              aria-label="Coins to redeem"
-            />
-            <div className={styles.sliderTicks}>
-              <span>0</span>
-              <span>{formatIntegerValue(Math.floor(maxCoins / 2))}</span>
-              <span>{formatIntegerValue(maxCoins)}</span>
-            </div>
-          </div>
-
-          <div className={styles.quickRow}>
-            {[100, 250, 500, 750, maxCoins].map((amt, i) => (
-              <button
-                key={i}
-                type="button"
-                className={`${styles.quickChip} ${coinsToRedeem === amt ? styles.quickActive : ""}`}
-                onClick={() => setCoinsToRedeem(Math.min(amt, maxCoins))}
-                disabled={amt > maxCoins}
-              >
-                {amt === maxCoins ? "Max" : amt}
-              </button>
-            ))}
-          </div>
-
-          <p className={styles.coinsCalc}>
-            استبدال <strong>{formatIntegerValue(coinsToRedeem)}</strong> عملة
-            → خصم <strong>{formatCurrencyValue(coinValue)}</strong>
-          </p>
-
-          <div className={styles.finalBox}>
-            <span>الإجمالي بعد الخصم</span>
-            <strong>{formatCurrencyValue(finalTotal)}</strong>
-          </div>
-
-          <footer className={styles.foot}>
-            <Button variant="secondary" size="md" onClick={() => setScreen("method")}>رجوع</Button>
-            <Button variant="primary" size="md" leftIcon={<Check size={14} />} onClick={complete}>
-              إتمام البيع
-            </Button>
-          </footer>
-        </div>
-      )}
-
       {/* ─── Screen: TRANSFER ─── */}
       {screen === "transfer" && (
         <div className={styles.body}>
@@ -298,25 +217,21 @@ export function PaymentModal({
 
           <div className={styles.successDetails}>
             <Row label="الفاتورة"  value="POS-9821" mono />
-            <Row label="الطريقة"   value={method === "cash" ? "نقد" : method === "card" ? "بطاقة" : method === "coins" ? "عملات + نقد" : "تحويل"} />
-            <Row label="المدفوع"   value={formatCurrencyValue(method === "cash" ? cashReceived : finalTotal)} mono />
+            <Row label="الطريقة"   value={method === "cash" ? "نقد" : method === "card" ? "بطاقة" : "تحويل"} />
+            <Row label="المدفوع"   value={formatCurrencyValue(method === "cash" ? cashReceived : total)} mono />
             {method === "cash" && change > 0 && (
               <Row label="الباقي" value={formatCurrencyValue(change)} mono tone="success" />
-            )}
-            {method === "coins" && coinsToRedeem > 0 && (
-              <Row label="عملات مُستبدلة" value={formatIntegerValue(coinsToRedeem)} mono />
             )}
           </div>
 
           <div className={styles.successActions}>
-            <Button variant="secondary" size="md">طباعة الفاتورة</Button>
+
             <Button variant="secondary" size="md">إرسال WhatsApp</Button>
           </div>
 
           <Button variant="primary" size="md" onClick={done} className={styles.newSaleBtn}>
             بيع جديد
           </Button>
-          <Badge variant="success" size="sm">+{Math.floor(total * 4)} عملة مُكتسبة</Badge>
         </div>
       )}
     </Modal>
@@ -372,5 +287,3 @@ function Row({ label, value, mono, tone }: { label: string; value: string; mono?
   );
 }
 
-// Tiny X-import keeper so linter doesn't whine (we use X inside JSX below)
-void X;

@@ -1744,6 +1744,25 @@
   font: inherit;
 }
 
+.purch-show-all-btn {
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 12px;
+  border: 1px solid #e2ecf5;
+  background: #ffffff;
+  color: #2563eb;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.14s ease, border-color 0.14s ease;
+}
+
+.purch-show-all-btn:hover {
+  background: #f0f6ff;
+  border-color: #c7dcfe;
+}
+
 /* ── Toast ── */
 .purchase-toast {
   position: fixed;

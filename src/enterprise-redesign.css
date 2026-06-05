@@ -314,8 +314,8 @@ body,
 .search-shell:focus-within,
 .toolbar-search:focus-within,
 .invoice-search-shell:focus-within {
-  border-color: var(--app-accent) !important;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1) !important;
+  border-color: var(--app-border-strong);
+  box-shadow: none;
 }
 
 .search-wrap input,
@@ -590,7 +590,6 @@ body,
 /* ─── Table cells ───────────────────────────────────────────────────────── */
 .app-data-table th,
 .app-data-table td {
-  padding: 10px 12px !important;
   background: transparent !important;
   color: var(--app-text) !important;
   font-size: 13px !important;
@@ -601,10 +600,11 @@ body,
 
 .app-data-table td {
   border-top: 1px solid rgba(226, 232, 240, 0.7) !important;
+  padding: 11px 14px !important;
 }
 
 .app-data-table th {
-  padding-top: 0 !important;
+  padding: 10px 14px !important;
   border-top: 0 !important;
   border-bottom: 1px solid var(--app-border) !important;
   color: var(--app-text-muted) !important;
@@ -994,4 +994,56 @@ html[dir="rtl"] .dashboard-table td,
 html[dir="rtl"] .compact-dashboard-table th,
 html[dir="rtl"] .compact-dashboard-table td {
   text-align: right !important;
+}
+
+/* ─── Atlas Table — global compact baseline ─────────────────────────────── */
+.atlas-table-container {
+  width: 100%;
+  overflow-x: auto;
+  border-radius: 12px;
+  border: 1px solid #E2E8F0;
+  background: white;
+}
+
+.atlas-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.atlas-table th {
+  padding: 11px 14px !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  color: #475569 !important;
+  text-align: start !important;
+  white-space: nowrap;
+  letter-spacing: 0.1px;
+  user-select: none;
+  background: #F8FAFC !important;
+  border-bottom: 1.5px solid #E2E8F0 !important;
+  border-top: none !important;
+}
+
+.atlas-table td {
+  padding: 10px 14px !important;
+  vertical-align: middle !important;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border-bottom: 1px solid #F1F5F9 !important;
+  border-top: none !important;
+}
+
+.atlas-table tbody tr:last-child td {
+  border-bottom: none !important;
+}
+
+.atlas-table tbody tr:hover td {
+  background: rgba(239, 246, 255, 0.5) !important;
+}
+
+.atlas-table td.cell-actions {
+  overflow: visible !important;
+  text-overflow: clip !important;
 }

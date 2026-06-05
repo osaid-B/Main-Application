@@ -9,6 +9,7 @@ import { useData } from "../context/DataContext";
 import type { MovementType } from "../data/types";
 import styles from "./InventoryOverview.module.css";
 
+
 const CATEGORY_AR: Record<string, string> = {
   "Electronics":   "إلكترونيات",
   "Accessories":   "إكسسوارات",

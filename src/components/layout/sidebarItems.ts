@@ -8,7 +8,6 @@ import {
   Briefcase,
   Building2,
   ClipboardList,
-  Clock,
   CreditCard,
   DollarSign,
   Factory,
@@ -28,12 +27,10 @@ import {
   ShieldCheck,
   Ship,
   ShoppingCart,
-  Star,
   Tag,
   TrendingUp,
   Truck,
   UserCircle,
-  UserCircle2,
   Users,
   Warehouse,
 } from "lucide-react";
@@ -78,7 +75,7 @@ export const COMPANY_SECTIONS: NavSection[] = [
   {
     title: "ACCOUNTING",       titleAr: "المحاسبة",
     items: [
-      { icon: BookOpen,  label: "General Ledger",    labelAr: "دفتر الأستاذ العام", path: "/general-ledger" },
+      { icon: BookOpen,  label: "General Ledger",    labelAr: "سجل الديون", path: "/general-ledger" },
       { icon: ListTree,  label: "Chart of Accounts", labelAr: "دليل الحسابات",    path: "/chart-of-accounts" },
       { icon: FileText,  label: "Invoices",          labelAr: "الفواتير",         path: "/invoices" },
       { icon: Receipt,   label: "Expenses",          labelAr: "المصروفات",        path: "/expenses" },
@@ -94,18 +91,10 @@ export const COMPANY_SECTIONS: NavSection[] = [
     ],
   },
   {
-    title: "INVENTORY",        titleAr: "المخزون",
-    items: [
-      { icon: Package,        label: "Products",      labelAr: "المنتجات",      path: "/products" },
-      { icon: Warehouse,      label: "Inventory",     labelAr: "المخزون",       path: "/inventory" },
-      { icon: ArrowLeftRight, label: "Movements",     labelAr: "حركة المخزون",  path: "/inventory/movements" },
-      { icon: Factory,        label: "Manufacturing", labelAr: "التصنيع",       path: "/manufacturing" },
-    ],
-  },
-  {
     title: "ADMIN",            titleAr: "الإدارة",
     items: [
       { icon: Bell,          label: "Notifications",    labelAr: "التنبيهات",       path: "/notifications" },
+      { icon: Users,          label: "Users",             labelAr: "المستخدمون",       path: "/users" },
       { icon: Shield,        label: "Permissions",      labelAr: "الصلاحيات",       path: "/permissions" },
       { icon: ClipboardList, label: "Audit Log",         labelAr: "سجل التدقيق",     path: "/audit-log" },
       { icon: Settings,      label: "Settings",          labelAr: "الإعدادات",       path: "/settings" },
@@ -129,15 +118,8 @@ export const POS_SECTIONS: NavSection[] = [
       { icon: Package,       label: "Products",     labelAr: "المنتجات",    path: "/pos/products" },
       { icon: Tag,           label: "Categories",   labelAr: "الفئات",      path: "/pos/categories" },
       { icon: ClipboardList, label: "Stock Counts", labelAr: "جرد المخزون", path: "/pos/stock" },
-    ],
-  },
-  {
-    title: "LOYALTY",          titleAr: "برنامج الولاء",
-    items: [
-      { icon: UserCircle2, label: "Customer Profile", labelAr: "ملف العميل",      path: "/pos/loyalty/profile" },
-      { icon: Clock,       label: "Coins History",    labelAr: "سجل النقاط",      path: "/pos/loyalty/history" },
-      { icon: Star,        label: "Coins Settings",   labelAr: "إعدادات النقاط",  path: "/pos/loyalty/settings" },
-      { icon: BarChart3,   label: "Coins Reports",    labelAr: "تقارير النقاط",   path: "/pos/loyalty/reports" },
+      { icon: Warehouse,      label: "Inventory",     labelAr: "المخزون",       path: "/inventory" },
+      { icon: ArrowLeftRight, label: "Movements",     labelAr: "حركة المخزون",  path: "/inventory/movements" },
     ],
   },
   {
@@ -162,10 +144,12 @@ export const FACTORY_SECTIONS: NavSection[] = [
   {
     title: "INVENTORY",        titleAr: "المخزون",
     items: [
-      { icon: Globe,     label: "Local vs Imported", labelAr: "المواد المحلية والمستوردة", path: "/factory/inventory/sources" },
-      { icon: Boxes,     label: "Raw Materials",     labelAr: "المواد الخام",       path: "/factory/inventory/raw" },
-      { icon: Package,   label: "Finished Goods",    labelAr: "البضائع الجاهزة",   path: "/factory/inventory/finished" },
-      { icon: Warehouse, label: "Warehouse",         labelAr: "المستودع",          path: "/factory/inventory/warehouse" },
+      { icon: Globe,          label: "Local vs Imported", labelAr: "المواد المحلية والمستوردة", path: "/factory/inventory/sources" },
+      { icon: Boxes,          label: "Raw Materials",     labelAr: "المواد الخام",              path: "/factory/inventory/raw" },
+      { icon: Package,        label: "Finished Goods",    labelAr: "البضائع الجاهزة",           path: "/factory/inventory/finished" },
+      { icon: Warehouse,      label: "Warehouse",         labelAr: "المستودع",                  path: "/factory/inventory/warehouse" },
+      { icon: Warehouse,      label: "Inventory",         labelAr: "المخزون",                   path: "/inventory" },
+      { icon: ArrowLeftRight, label: "Movements",         labelAr: "حركة المخزون",              path: "/inventory/movements" },
     ],
   },
   {

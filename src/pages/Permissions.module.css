@@ -300,7 +300,7 @@
 .sidebarMatrix { overflow-x: auto; border-top: 1px solid var(--app-border); }
 .sidebarTable { width: 100%; border-collapse: collapse; font-size: 12px; }
 .sidebarTable th {
-  padding: var(--app-space-2) var(--app-space-3);
+  padding: 10px 14px;
   text-align: start;
   font-size: 11px;
   font-weight: 600;
@@ -311,7 +311,7 @@
   white-space: nowrap;
 }
 .sidebarTable td {
-  padding: var(--app-space-2) var(--app-space-3);
+  padding: 11px 14px;
   border-bottom: 1px solid var(--app-border);
   vertical-align: middle;
 }

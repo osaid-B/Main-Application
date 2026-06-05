@@ -23,14 +23,12 @@ import { Textarea } from "../components/ui/Textarea";
 import { Select } from "../components/ui/Select";
 import { Modal } from "../components/ui/Modal";
 import { Badge } from "../components/ui/Badge";
-import {
-  getProducts,
-  getPurchases,
-  getSuppliers,
-  savePurchases,
-  saveSuppliers,
-} from "../data/storage";
+import { DeleteConfirmDialog } from "../components/ui/DeleteConfirmDialog";
+
+
 import type { Product, Purchase, Supplier } from "../data/types";
+import { useUnsavedChanges } from "../hooks/useUnsavedChanges";
+import { useData } from "../context/DataContext";
 import { useSettings } from "../context/SettingsContext";
 import { formatCurrencyValue } from "../utils/displayFormatters";
 
@@ -45,7 +43,6 @@ type PurchaseFormState = {
   unitPrice: string;
   totalCost: string;
   date: string;
-  paymentTerms: string;
   currency: string;
   taxRate: string;
   warehouse: string;
@@ -69,7 +66,6 @@ type PurchaseRecord = Purchase & {
   paymentStatus?: PaymentStatusView;
   receivedPercent?: number;
   viewStatus?: PurchaseStatusView;
-  paymentTerms?: string;
   currency?: string;
   taxRate?: number;
   warehouse?: string;
@@ -97,7 +93,6 @@ type PurchaseRow = {
   isOverdue: boolean;
   deliveryLabel: string;
   notes: string;
-  paymentTerms: string;
   currency: string;
   warehouse: string;
 };
@@ -134,7 +129,6 @@ const EMPTY_FORM: PurchaseFormState = {
   unitPrice: "",
   totalCost: "",
   date: new Date().toISOString().split("T")[0],
-  paymentTerms: "Net 30",
   currency: "USD",
   taxRate: "0",
   warehouse: "Main Warehouse",
@@ -149,7 +143,7 @@ const EMPTY_FILTERS: FilterState = {
   paymentStatus: "",
 };
 
-const DELETE_CONFIRMATION_CODE = "123";
+
 const TODAY = new Date().toISOString().split("T")[0];
 
 function money(value: number) {
@@ -369,7 +363,6 @@ function buildRows(
         isOverdue: dueMeta.label === "Overdue",
         deliveryLabel: dueMeta.label,
         notes: purchase.notes?.trim() || "No notes",
-        paymentTerms: purchase.paymentTerms || "Net 30",
         currency: purchase.currency || "USD",
         warehouse: purchase.warehouse || "Main Warehouse",
       };
@@ -378,11 +371,16 @@ function buildRows(
 
 export default function Purchases() {
   const { t } = useSettings();
-  const [suppliers, setSuppliers] = useState<Supplier[]>(() => getSuppliers());
-  const [products] = useState<Product[]>(() => getProducts());
-  const [purchases, setPurchases] = useState<PurchaseRecord[]>(
-    () => getPurchases() as PurchaseRecord[]
-  );
+  const {
+    purchases: dataPurchases,
+    addPurchase,
+    updatePurchase,
+    deletePurchase,
+    addSupplier,
+    suppliers,
+    products,
+  } = useData();
+  const purchases = dataPurchases as Purchase[];
 
   const [searchTerm, setSearchTerm] = useState("");
   const [filters, setFilters] = useState<FilterState>(EMPTY_FILTERS);
@@ -391,7 +389,8 @@ export default function Purchases() {
   const [showMoreFilters, setShowMoreFilters] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>("table");
   const [page, setPage] = useState(1);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [rowsPerPage] = useState(50);
+  const [showAll, setShowAll] = useState(false);
   const [prevFilterSig, setPrevFilterSig] = useState({ searchTerm, filters, quickStatus, rowsPerPage });
 
   const [formMode, setFormMode] = useState<"add" | "edit">("add");
@@ -399,20 +398,21 @@ export default function Purchases() {
   const [formState, setFormState] = useState<PurchaseFormState>(EMPTY_FORM);
   const [formErrors, setFormErrors] = useState<FormErrors>({});
   const [formDirty, setFormDirty] = useState(false);
-  const [discardConfirmOpen, setDiscardConfirmOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+
+  const {
+    showDiscard: discardConfirmOpen,
+    confirmDiscard: confirmDiscardChanges,
+    cancelDiscard: cancelDiscardChanges,
+    requestClose: requestDiscardClose,
+  } = useUnsavedChanges({ isDirty: formDirty, onDiscardConfirm: forceCloseForm });
 
   const [detailRecord, setDetailRecord] = useState<PurchaseRow | null>(null);
   const [deleteRecord, setDeleteRecord] = useState<PurchaseRow | null>(null);
-  const [deleteCode, setDeleteCode] = useState("");
-  const [deleteError, setDeleteError] = useState("");
+  const [deleteConfirmItem, setDeleteConfirmItem] = useState<{ itemName: string; onConfirm: () => void } | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
   const filterPopoverRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    savePurchases(purchases);
-  }, [purchases]);
 
   useEffect(() => {
     if (!toast) return;
@@ -445,7 +445,6 @@ export default function Purchases() {
 
   const forceCloseForm = useCallback(() => {
     setFormOpen(false);
-    setDiscardConfirmOpen(false);
     setFormDirty(false);
     setFormErrors({});
     setFormState(EMPTY_FORM);
@@ -453,12 +452,8 @@ export default function Purchases() {
   }, []);
 
   const requestCloseForm = useCallback(() => {
-    if (formDirty) {
-      setDiscardConfirmOpen(true);
-      return;
-    }
-    forceCloseForm();
-  }, [formDirty, forceCloseForm]);
+    requestDiscardClose();
+  }, [requestDiscardClose]);
 
   useEffect(() => {
     if (!formOpen) return;
@@ -595,9 +590,9 @@ export default function Purchases() {
     setPage(1);
   }
 
-  const totalPages = Math.max(1, Math.ceil(filteredRows.length / rowsPerPage));
-  const effectivePage = Math.min(page, totalPages);
-  const paginatedRows = filteredRows.slice((effectivePage - 1) * rowsPerPage, effectivePage * rowsPerPage);
+  const totalPages = showAll ? 1 : Math.max(1, Math.ceil(filteredRows.length / rowsPerPage));
+  const effectivePage = showAll ? 1 : Math.min(page, totalPages);
+  const paginatedRows = showAll ? filteredRows : filteredRows.slice((effectivePage - 1) * rowsPerPage, effectivePage * rowsPerPage);
   const visibleRows = paginatedRows;
 
   const activeAdvancedCount = [
@@ -715,7 +710,6 @@ export default function Purchases() {
         purchase.totalCost || calculateTotal(quantity, unitPrice, taxRate)
       ),
       date: purchase.date,
-      paymentTerms: purchase.paymentTerms || "Net 30",
       currency: purchase.currency || "USD",
       taxRate,
       warehouse: purchase.warehouse || "Main Warehouse",
@@ -782,10 +776,7 @@ export default function Purchases() {
       createdAt: new Date().toISOString(),
     } as Supplier;
 
-    const nextSuppliers = [newSupplier, ...suppliers];
-
-    setSuppliers(nextSuppliers);
-    saveSuppliers(nextSuppliers);
+    addSupplier(newSupplier);
 
     return newSupplier.id;
   }
@@ -828,7 +819,6 @@ export default function Purchases() {
           : nextViewStatus === "Partially Received"
             ? currentRecord?.receivedPercent ?? 50
             : 0,
-      paymentTerms: formState.paymentTerms.trim() || "Net 30",
       currency: formState.currency,
       taxRate: Number(formState.taxRate || 0),
       warehouse: formState.warehouse.trim() || "Main Warehouse",
@@ -837,12 +827,10 @@ export default function Purchases() {
     if (!payload.supplierId || !payload.productId || payload.quantity <= 0) return;
 
     if (formMode === "edit" && editingId) {
-      setPurchases((current) =>
-        current.map((entry) => (entry.id === editingId ? payload : entry))
-      );
+      updatePurchase(payload);
       setToast(mode === "draft" ? t.common.saveAsDraft : t.purchases.toast.updated);
     } else {
-      setPurchases((current) => [payload, ...current]);
+      addPurchase(payload);
       setToast(mode === "draft" ? t.common.saveAsDraft : t.purchases.toast.created);
     }
 
@@ -851,24 +839,13 @@ export default function Purchases() {
 
   function requestDelete(row: PurchaseRow) {
     setDeleteRecord(row);
-    setDeleteCode("");
-    setDeleteError("");
   }
 
   function confirmDelete() {
-    if (deleteCode !== DELETE_CONFIRMATION_CODE) {
-      setDeleteError("Type 123 to confirm");
-      return;
-    }
-
     if (!deleteRecord) return;
 
-    setPurchases((current) =>
-      current.filter((entry) => entry.id !== deleteRecord.purchaseId)
-    );
+    deletePurchase(deleteRecord.purchaseId);
     setDeleteRecord(null);
-    setDeleteCode("");
-    setDeleteError("");
     setToast(t.purchases.toast.deleted);
   }
 
@@ -899,7 +876,7 @@ export default function Purchases() {
           type="button"
           className="purchase-action-icon delete"
           title="Delete"
-          onClick={(e) => { e.stopPropagation(); requestDelete(row); }}
+          onClick={(e) => { e.stopPropagation(); requestDelete(row); setDeleteConfirmItem({ itemName: row.poNumber, onConfirm: () => { confirmDelete(); } }); }}
         >
           <Trash2 size={15} />
         </button>
@@ -1163,13 +1140,13 @@ export default function Purchases() {
 
                     <thead>
                       <tr>
-                        <th><span className="th-sort">{t.purchases.cols.poNumber} <ArrowUpDown size={11} /></span></th>
-                        <th>{t.purchases.cols.supplier}</th>
-                        <th><span className="th-sort">Delivery Date <ArrowUpDown size={11} /></span></th>
-                        <th><span className="th-sort">{t.purchases.cols.total} <ArrowUpDown size={11} /></span></th>
-                        <th><span className="th-sort">{t.purchases.cols.received} <ArrowUpDown size={11} /></span></th>
-                        <th>{t.purchases.cols.status}</th>
-                        <th>{t.purchases.cols.actions}</th>
+                        <th className="col-code"><span className="th-sort">{t.purchases.cols.poNumber} <ArrowUpDown size={11} /></span></th>
+                        <th className="col-entity">{t.purchases.cols.supplier}</th>
+                        <th className="col-date"><span className="th-sort">Delivery Date <ArrowUpDown size={11} /></span></th>
+                        <th className="col-currency"><span className="th-sort">{t.purchases.cols.total} <ArrowUpDown size={11} /></span></th>
+                        <th className="col-num"><span className="th-sort">{t.purchases.cols.received} <ArrowUpDown size={11} /></span></th>
+                        <th className="col-badge">{t.purchases.cols.status}</th>
+                        <th className="col-actions">{t.purchases.cols.actions}</th>
                       </tr>
                     </thead>
 
@@ -1295,30 +1272,32 @@ export default function Purchases() {
                 </div>
               )}
 
-              <div className="purch-table-footer">
-                <span>
-                  Showing {filteredRows.length === 0 ? 0 : (effectivePage - 1) * rowsPerPage + 1} to{" "}
-                  {Math.min(effectivePage * rowsPerPage, filteredRows.length)} of {filteredRows.length} results
-                </span>
+               <div className="purch-table-footer">
+                {showAll ? (
+                  <span>Showing all {filteredRows.length} results</span>
+                ) : (
+                  <span>
+                    Showing {filteredRows.length === 0 ? 0 : (effectivePage - 1) * rowsPerPage + 1} to{" "}
+                    {Math.min(effectivePage * rowsPerPage, filteredRows.length)} of {filteredRows.length} results
+                  </span>
+                )}
                 <div className="purch-footer-right">
-                  <div className="purch-pagination">
-                    <button type="button" className="purch-page-btn" disabled={effectivePage <= 1}
-                      onClick={() => setPage((p) => p - 1)}>‹</button>
-                    {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i + 1).map((n) => (
-                      <button key={n} type="button"
-                        className={`purch-page-btn ${effectivePage === n ? "active" : ""}`}
-                        onClick={() => setPage(n)}>{n}</button>
-                    ))}
-                    <button type="button" className="purch-page-btn" disabled={effectivePage >= totalPages}
-                      onClick={() => setPage((p) => p + 1)}>›</button>
-                  </div>
-                  <div className="purch-rows-select">
-                    <Select
-                      value={String(rowsPerPage)}
-                      onChange={(e) => { setRowsPerPage(Number(e.target.value)); setPage(1); }}
-                      options={[10, 25, 50].map((n) => ({ value: String(n), label: `${n} / page` }))}
-                    />
-                  </div>
+                  {showAll ? null : (
+                    <div className="purch-pagination">
+                      <button type="button" className="purch-page-btn" disabled={effectivePage <= 1}
+                        onClick={() => setPage((p) => p - 1)}>‹</button>
+                      {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i + 1).map((n) => (
+                        <button key={n} type="button"
+                          className={`purch-page-btn ${effectivePage === n ? "active" : ""}`}
+                          onClick={() => setPage(n)}>{n}</button>
+                      ))}
+                      <button type="button" className="purch-page-btn" disabled={effectivePage >= totalPages}
+                        onClick={() => setPage((p) => p + 1)}>›</button>
+                    </div>
+                  )}
+                  <button type="button" className="purch-show-all-btn" onClick={() => setShowAll(v => !v)}>
+                    {showAll ? "Paginate" : "Show all"}
+                  </button>
                 </div>
               </div>
             </div>
@@ -1357,10 +1336,6 @@ export default function Purchases() {
                     <div>
                       <dt>{t.purchases.cols.received}</dt>
                       <dd>{money(detailRecord.receivedAmount)}</dd>
-                    </div>
-                    <div>
-                      <dt>Payment Terms</dt>
-                      <dd>{detailRecord.paymentTerms}</dd>
                     </div>
                     <div>
                       <dt>Warehouse</dt>
@@ -1627,26 +1602,7 @@ export default function Purchases() {
                       </div>
 
                       <div className="purchase-form-grid">
-                        <div className="purchase-field">
-                          <Input
-                            variant="text"
-                            label="Payment Terms"
-                            list="payment-terms-options"
-                            placeholder="Example: Net 30, Cash, 50% upfront..."
-                            value={formState.paymentTerms}
-                            onChange={(event) =>
-                              handleFormChange("paymentTerms", event.target.value)
-                            }
-                          />
-                          <datalist id="payment-terms-options">
-                            <option value="Due on Receipt" />
-                            <option value="Net 7" />
-                            <option value="Net 15" />
-                            <option value="Net 30" />
-                            <option value="Net 45" />
-                            <option value="50% upfront, 50% on delivery" />
-                          </datalist>
-                        </div>
+
 
                         <div className="purchase-field">
                           <Select
@@ -1733,11 +1689,6 @@ export default function Purchases() {
                       </div>
 
                       <div className="summary-kv">
-                        <span>Payment Terms</span>
-                        <strong>{formState.paymentTerms || "--"}</strong>
-                      </div>
-
-                      <div className="summary-kv">
                         <span>Currency</span>
                         <strong>{formState.currency || "--"}</strong>
                       </div>
@@ -1785,68 +1736,32 @@ export default function Purchases() {
 
       <Modal
         isOpen={discardConfirmOpen}
-        onClose={() => setDiscardConfirmOpen(false)}
+        onClose={cancelDiscardChanges}
         variant="alert"
         size="sm"
-        title="Discard unsaved changes?"
-        description="You have unsaved purchase information. Confirm before leaving this form."
-        className="purchase-modal compact discard-confirm-modal"
-        footer={
-          <>
-            <Button
-              variant="secondary"
-              type="button"
-              onClick={() => setDiscardConfirmOpen(false)}
-            >
+        className="discard-confirm"
+        footer={<></>}
+      >
+        <div className="discard-confirm__body">
+          <div className="discard-confirm__icon">
+            <AlertCircle size={24} />
+          </div>
+          <h3 className="discard-confirm__heading">Discard unsaved changes?</h3>
+          <p className="discard-confirm__message">
+            You have unsaved purchase information. Any unsaved data will be lost.
+          </p>
+          <div className="discard-confirm__actions">
+            <Button variant="secondary" type="button" onClick={cancelDiscardChanges}>
               {t.common.keepEditing}
             </Button>
-            <Button variant="danger" type="button" onClick={forceCloseForm}>
+            <Button variant="danger" type="button" onClick={confirmDiscardChanges}>
               {t.common.discard}
             </Button>
-          </>
-        }
-      >
-        <div className="delete-confirm-icon">!</div>
-      </Modal>
-
-      <Modal
-        isOpen={!!deleteRecord}
-        onClose={() => setDeleteRecord(null)}
-        variant="alert"
-        size="sm"
-        title={deleteRecord ? `Delete Purchase ${deleteRecord.poNumber}` : "Delete Purchase"}
-        className="purchase-modal compact"
-        footer={
-          <>
-            <Button
-              variant="secondary"
-              type="button"
-              onClick={() => setDeleteRecord(null)}
-            >
-              {t.common.cancel}
-            </Button>
-            <Button variant="danger" type="button" onClick={confirmDelete}>
-              {t.common.delete}
-            </Button>
-          </>
-        }
-      >
-        <div className="delete-box">
-          <p>
-            Type <strong>123</strong> to confirm deletion.
-          </p>
-          <Input
-            variant="text"
-            value={deleteCode}
-            onChange={(event) => {
-              setDeleteCode(event.target.value);
-              setDeleteError("");
-            }}
-            placeholder="Type 123"
-            error={deleteError || undefined}
-          />
+          </div>
         </div>
       </Modal>
+
+      <DeleteConfirmDialog isOpen={!!deleteConfirmItem} itemName={deleteConfirmItem?.itemName ?? ""} onConfirm={() => { const cb = deleteConfirmItem?.onConfirm; setDeleteConfirmItem(null); if (cb) cb(); }} onCancel={() => setDeleteConfirmItem(null)} />
 
       {toast && (
         <div className="purchase-toast">

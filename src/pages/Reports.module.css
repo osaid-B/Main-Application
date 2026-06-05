@@ -145,7 +145,7 @@
 
 .table th {
   text-align: start;
-  padding: 8px 12px;
+  padding: 10px 14px;
   font-size: 10px;
   font-weight: 600;
   color: var(--app-text-muted);
@@ -155,7 +155,7 @@
 }
 
 .table td {
-  padding: 10px 12px;
+  padding: 11px 14px;
   border-bottom: 1px solid var(--app-border-subtle, var(--app-border));
   vertical-align: middle;
 }

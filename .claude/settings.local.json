@@ -24,7 +24,19 @@
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\oseid\\\\OneDrive\\\\Desktop\\\\github\\\\Main-Application\\\\src\\\\pages\" -Recurse -File)",
       "Bash(Select-Object -ExpandProperty FullName)",
       "Bash(Sort-Object)",
-      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\oseid\\\\OneDrive\\\\Desktop\\\\github\\\\Main-Application\\\\src\\\\pages\" -File | Where-Object { $_.Extension -eq \".tsx\" -or $_.Extension -eq \".css\" } | Select-Object -ExpandProperty FullName | Sort-Object)"
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\oseid\\\\OneDrive\\\\Desktop\\\\github\\\\Main-Application\\\\src\\\\pages\" -File | Where-Object { $_.Extension -eq \".tsx\" -or $_.Extension -eq \".css\" } | Select-Object -ExpandProperty FullName | Sort-Object)",
+      "Bash(findstr /i \"tabler\\\\|icons\")",
+      "Bash(node -e \"const p=require\\('./package.json'\\); console.log\\(JSON.stringify\\(Object.keys\\({...p.dependencies,...p.devDependencies}\\),null,0\\)\\)\")",
+      "Bash(xargs grep -l \"pos\\\\|POS\\\\|refund\\\\|checkout\\\\|sales\")",
+      "Bash(npx eslint *)",
+      "Bash(Get-ChildItem *)",
+      "Bash(xargs grep -l \"reports\\\\|profit\\\\|balance\\\\|revenue\\\\|expense\")",
+      "Bash(grep -n \"const { employees, departments\" src/pages/Employees.tsx)",
+      "Bash(xargs grep -l \"LoyaltyProfile\\\\|loyaltyProfile\\\\|loyalty_profile\\\\|LoyaltyPage\\\\|loyalty-profile\")",
+      "Bash(xargs grep -l \"loyalty\\\\|Loyalty\")",
+      "Bash(xargs grep -l \"LOYALTY_PROFILES\\\\|LOYALTY_SETTINGS\\\\|LOYALTY_CUSTOMERS\\\\|LoyaltyMember\\\\|LoyaltySettings\\\\|LoyaltyTier\")",
+      "Bash(Remove-Item *)",
+      "PowerShell(cd \"C:\\\\Users\\\\oseid\\\\OneDrive\\\\Desktop\\\\github\\\\Main-Application\"; npx tsc --noEmit; echo \"Exit: $LASTEXITCODE\")"
     ]
   }
 }

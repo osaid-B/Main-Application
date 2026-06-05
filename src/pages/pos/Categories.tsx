@@ -186,9 +186,9 @@ export default function Categories() {
                     </colgroup>
                     <thead>
                       <tr>
-                        <th>{tc.cols.name}</th>
+                        <th className="col-entity">{tc.cols.name}</th>
                         <th className="col-code">ID</th>
-                        <th className="col-num">{t.common.price}</th>
+                        <th className="col-currency">{t.common.price}</th>
                         <th className="col-num">{tc.cols.products}</th>
                         <th className="col-badge">{tc.cols.status}</th>
                       </tr>
