@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Container } from "../components/layout/Container";
 import { useSettings } from "../context/SettingsContext";
 import { useData } from "../context/DataContext";
