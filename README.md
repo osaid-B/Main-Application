@@ -33,7 +33,6 @@ npm run dev
 
 Open [http://localhost:5173](http://localhost:5173) in your browser.
 
-The app works immediately — no database required. All data comes from `src/data/*Mock.ts` files and is persisted in `localStorage`.
 
 **Mock login credentials:**
 
