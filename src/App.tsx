@@ -97,7 +97,7 @@ import PosModuleCashiers from "./modules/pos/Cashiers";
 import PosModuleReports from "./modules/pos/Reports";
 
 function AppRoutes() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
 
   return (
     <Routes>
@@ -113,7 +113,10 @@ function AppRoutes() {
 
       <Route element={<ProtectedRoute />}>
         <Route element={<MainLayout />}>
-          <Route path="/dashboard" element={<Dashboard />} />
+          <Route
+            path="/dashboard"
+            element={user?.role === "cashier" ? <Navigate to="/pos/checkout" replace /> : <Dashboard />}
+          />
           <Route path="/company" element={<CompanyOverview />} />
           <Route path="/customers" element={<Customers />} />
           <Route path="/customers/new" element={<ErrorBoundary fallback={(_, reset) => <PageCrashFallback onReset={reset} />}><AddCustomer /></ErrorBoundary>} />

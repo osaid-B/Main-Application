@@ -6,12 +6,25 @@ import AtlasHeader from "./AtlasHeader";
 import AIAssistantPanel from "../ai/AIAssistantPanel";
 import { useAI } from "../../context/AIContext";
 import { useSettings } from "../../context/SettingsContext";
+import { useAuth } from "../../context/AuthContext";
+import { useWorkspace } from "../../contexts/WorkspaceContext";
 
 export default function MainLayout() {
   const { isOpen, initialPrompt, openAI, closeAI } = useAI();
   const { t, isArabic } = useSettings();
   const location = useLocation();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { workspace, setWorkspace } = useWorkspace();
+
+  // Cashier is locked to POS workspace — redirect immediately if they land elsewhere
+  useEffect(() => {
+    if (user?.role !== "cashier") return;
+    if (workspace !== "pos") setWorkspace("pos");
+    if (!location.pathname.startsWith("/pos") && !location.pathname.startsWith("/inventory")) {
+      navigate("/pos/checkout", { replace: true });
+    }
+  }, [user?.role, workspace, setWorkspace, location.pathname, navigate]);
 
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [prevPathname, setPrevPathname] = useState(location.pathname);

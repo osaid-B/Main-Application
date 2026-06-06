@@ -5,6 +5,7 @@ import { Bell, ChevronRight, Moon, Plus, Sun } from "lucide-react";
 import { Button } from "../ui/Button";
 import { useWorkspace, WORKSPACES, type Workspace } from "../../contexts/WorkspaceContext";
 import { useSettings } from "../../context/SettingsContext";
+import { useAuth } from "../../context/AuthContext";
 import NotificationsPanel from "../notifications/NotificationsPanel";
 import { quickCreateActions } from "../../config/moduleRegistry";
 import "./AtlasHeader.css";
@@ -24,6 +25,8 @@ export default function AtlasHeader() {
   const navigate = useNavigate();
   const { workspace, setWorkspace } = useWorkspace();
   const { t, isArabic, theme, toggleTheme } = useSettings();
+  const { user } = useAuth();
+  const visibleTabs: Workspace[] = user?.role === "cashier" ? ["pos"] : TABS;
 
   const [tickerIdx, setTickerIdx] = useState(0);
   const [createOpen, setCreateOpen] = useState(false);
@@ -116,7 +119,7 @@ export default function AtlasHeader() {
       {/* Right: workspace tabs + actions */}
       <div className="atlas-header-right">
         <div className="atlas-workspace-tabs" role="tablist" aria-label={t.header.workspace}>
-          {TABS.map((id) => {
+          {visibleTabs.map((id) => {
             const info = WORKSPACES[id];
             const isActive = workspace === id;
             const wsName = t.header.workspaces[id as keyof typeof t.header.workspaces] ?? info.name;
