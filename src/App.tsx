@@ -12,6 +12,7 @@ import { NotificationsProvider } from "./context/NotificationsContext";
 import { SidebarPreferencesProvider } from "./context/SidebarPreferencesContext";
 import { CompanySettingsProvider } from "./context/CompanySettingsContext";
 import { TreasuryProvider } from "./context/TreasuryContext";
+import { FinancialProvider } from "./context/FinancialContext";
 
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
@@ -62,6 +63,7 @@ import ChartOfAccounts from "./pages/ChartOfAccounts";
 import InventoryOverview from "./pages/InventoryOverview";
 import InventoryMovements from "./pages/InventoryMovements";
 import AuditLog from "./pages/AuditLog";
+import UsersPage from "./pages/UsersPage";
 import ModuleSelector from "./pages/ModuleSelector";
 
 // Company module pages
@@ -133,12 +135,12 @@ function AppRoutes() {
           {/* Finance & Accounting */}
           <Route path="/general-ledger" element={<GeneralLedger />} />
           <Route path="/chart-of-accounts" element={<ChartOfAccounts />} />
-          <Route element={<RoleGuard roles={["Admin", "Manager"]} />}>
+          <Route element={<RoleGuard roles={["super_admin", "admin", "accountant"]} />}>
             <Route path="/reports" element={<Reports />} />
             <Route path="/reports/profit-loss" element={<ProfitLoss />} />
             <Route path="/reports/balance-sheet" element={<BalanceSheet />} />
           </Route>
-          <Route element={<RoleGuard roles={["Admin", "Manager", "Finance"]} />}>
+          <Route element={<RoleGuard roles={["super_admin", "admin", "accountant"]} />}>
             <Route path="/expenses" element={<Expenses />} />
           </Route>
 
@@ -152,8 +154,9 @@ function AppRoutes() {
 
           {/* Org & Access */}
           <Route path="/departments" element={<Departments />} />
-          <Route element={<RoleGuard roles={["Admin"]} />}>
+          <Route element={<RoleGuard roles={["super_admin", "admin"]} />}>
             <Route path="/permissions" element={<Permissions />} />
+            <Route path="/users" element={<UsersPage />} />
           </Route>
 
           {/* System */}
@@ -162,7 +165,7 @@ function AppRoutes() {
 
           {/* Factory workspace — Factory role + Admin */}
           <Route path="/factory" element={<Navigate to="/factory/dashboard" replace />} />
-          <Route element={<RoleGuard roles={["Admin", "Factory"]} />}>
+          <Route element={<RoleGuard roles={["super_admin", "admin", "warehouse"]} />}>
             <Route path="/factory/dashboard" element={<FactoryDashboard />} />
             <Route path="/factory/orders" element={<FactoryOrders />} />
             <Route path="/factory/boms" element={<FactoryBoms />} />
@@ -244,9 +247,11 @@ export default function App() {
           <NotificationsProvider>
             <SidebarPreferencesProvider>
               <TreasuryProvider>
-                <ErrorBoundary>
-                  <AppRoutes />
-                </ErrorBoundary>
+                <FinancialProvider>
+                  <ErrorBoundary>
+                    <AppRoutes />
+                  </ErrorBoundary>
+                </FinancialProvider>
               </TreasuryProvider>
             </SidebarPreferencesProvider>
           </NotificationsProvider>
