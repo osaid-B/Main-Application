@@ -3,14 +3,9 @@
 // ============================================
 
 export type Role =
-  | 'super_admin'   // مدير النظام الأعلى — كل الصلاحيات
-  | 'admin'         // مدير — كل الصلاحيات إلا إدارة المستخدمين
-  | 'accountant'    // محاسب — المالية والتقارير فقط
-  | 'sales'         // مبيعات — POS والعملاء والفواتير
-  | 'warehouse'     // مستودع — المخزون والمنتجات فقط
-  | 'hr'            // موارد بشرية — الموظفين والإجازات فقط
-  | 'cashier'       // أمين صندوق — POS فقط
-  | 'viewer'        // مشاهد — قراءة فقط، بدون تعديل
+  | 'admin'    // مدير النظام — كل الصلاحيات
+  | 'manager'  // مدير — العمليات والتقارير، بدون إعدادات النظام
+  | 'cashier'  // أمين صندوق — POS فقط
 
 export type Permission =
   // Dashboard
@@ -74,6 +69,11 @@ export type Permission =
   | 'payments.create'
   | 'payments.edit'
   | 'payments.delete'
+  // Expenses
+  | 'expenses.view'
+  | 'expenses.create'
+  | 'expenses.edit'
+  | 'expenses.delete'
   // Treasury
   | 'treasury.view'
   | 'treasury.create'
@@ -96,6 +96,10 @@ export type Permission =
   | 'accounts.create'
   | 'accounts.edit'
   | 'accounts.delete'
+  // Debts
+  | 'debts.view'
+  | 'debts.create'
+  | 'debts.edit'
   // Users & Roles
   | 'users.view'
   | 'users.create'
@@ -105,6 +109,9 @@ export type Permission =
   // Settings
   | 'settings.view'
   | 'settings.edit'
+  // Permissions
+  | 'permissions.view'
+  | 'permissions.edit'
   // Notifications
   | 'notifications.view'
   | 'notifications.manage'
@@ -113,122 +120,116 @@ export type Permission =
 // ROLE → PERMISSIONS MAPPING
 // ============================================
 
+const ALL_PERMISSIONS: Permission[] = [
+  'dashboard.view',
+  'company.view', 'company.edit',
+  'customers.view', 'customers.create', 'customers.edit', 'customers.delete',
+  'suppliers.view', 'suppliers.create', 'suppliers.edit', 'suppliers.delete',
+  'employees.view', 'employees.create', 'employees.edit', 'employees.delete', 'employees.salary', 'employees.advances',
+  'departments.view', 'departments.create', 'departments.edit', 'departments.delete',
+  'leaves.view', 'leaves.create', 'leaves.approve', 'leaves.delete',
+  'inventory.view', 'inventory.create', 'inventory.edit', 'inventory.delete', 'inventory.movements',
+  'products.view', 'products.create', 'products.edit', 'products.delete', 'products.price_edit',
+  'pos.access', 'pos.checkout', 'pos.refund', 'pos.discount', 'pos.void',
+  'invoices.view', 'invoices.create', 'invoices.edit', 'invoices.delete', 'invoices.send',
+  'payments.view', 'payments.create', 'payments.edit', 'payments.delete',
+  'expenses.view', 'expenses.create', 'expenses.edit', 'expenses.delete',
+  'treasury.view', 'treasury.create', 'treasury.edit', 'treasury.delete', 'treasury.approve', 'treasury.reconcile',
+  'reports.view', 'reports.profit_loss', 'reports.balance_sheet', 'reports.export',
+  'ledger.view', 'ledger.create', 'ledger.edit', 'ledger.delete',
+  'accounts.view', 'accounts.create', 'accounts.edit', 'accounts.delete',
+  'debts.view', 'debts.create', 'debts.edit',
+  'users.view', 'users.create', 'users.edit', 'users.delete', 'users.assign_roles',
+  'settings.view', 'settings.edit',
+  'permissions.view', 'permissions.edit',
+  'notifications.view', 'notifications.manage',
+]
+
 export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
 
-  super_admin: [
+  // ── ADMIN: كل شيء بدون استثناء
+  admin: [...ALL_PERMISSIONS],
+
+  // ── MANAGER: العمليات والتقارير — بدون إدارة المستخدمين والإعدادات والصلاحيات
+  manager: [
     'dashboard.view',
-    'company.view', 'company.edit',
+    'company.view',
+
     'customers.view', 'customers.create', 'customers.edit', 'customers.delete',
     'suppliers.view', 'suppliers.create', 'suppliers.edit', 'suppliers.delete',
-    'employees.view', 'employees.create', 'employees.edit', 'employees.delete',
-    'employees.salary', 'employees.advances',
-    'departments.view', 'departments.create', 'departments.edit', 'departments.delete',
-    'leaves.view', 'leaves.create', 'leaves.approve', 'leaves.delete',
-    'inventory.view', 'inventory.create', 'inventory.edit', 'inventory.delete',
-    'inventory.movements',
-    'products.view', 'products.create', 'products.edit', 'products.delete',
-    'products.price_edit',
-    'pos.access', 'pos.checkout', 'pos.refund', 'pos.discount', 'pos.void',
-    'invoices.view', 'invoices.create', 'invoices.edit', 'invoices.delete',
-    'invoices.send',
-    'payments.view', 'payments.create', 'payments.edit', 'payments.delete',
-    'treasury.view', 'treasury.create', 'treasury.edit', 'treasury.delete',
-    'treasury.approve', 'treasury.reconcile',
-    'reports.view', 'reports.profit_loss', 'reports.balance_sheet', 'reports.export',
-    'ledger.view', 'ledger.create', 'ledger.edit', 'ledger.delete',
-    'accounts.view', 'accounts.create', 'accounts.edit', 'accounts.delete',
-    'users.view', 'users.create', 'users.edit', 'users.delete', 'users.assign_roles',
-    'settings.view', 'settings.edit',
-    'notifications.view', 'notifications.manage',
-  ],
 
-  admin: [
-    'dashboard.view',
-    'company.view', 'company.edit',
-    'customers.view', 'customers.create', 'customers.edit', 'customers.delete',
-    'suppliers.view', 'suppliers.create', 'suppliers.edit', 'suppliers.delete',
-    'employees.view', 'employees.create', 'employees.edit', 'employees.delete',
-    'employees.salary', 'employees.advances',
-    'departments.view', 'departments.create', 'departments.edit', 'departments.delete',
-    'leaves.view', 'leaves.create', 'leaves.approve', 'leaves.delete',
-    'inventory.view', 'inventory.create', 'inventory.edit', 'inventory.delete',
-    'inventory.movements',
-    'products.view', 'products.create', 'products.edit', 'products.delete',
-    'products.price_edit',
-    'pos.access', 'pos.checkout', 'pos.refund', 'pos.discount', 'pos.void',
-    'invoices.view', 'invoices.create', 'invoices.edit', 'invoices.delete',
-    'invoices.send',
-    'payments.view', 'payments.create', 'payments.edit', 'payments.delete',
-    'treasury.view', 'treasury.create', 'treasury.edit', 'treasury.delete',
-    'treasury.approve', 'treasury.reconcile',
-    'reports.view', 'reports.profit_loss', 'reports.balance_sheet', 'reports.export',
-    'ledger.view', 'ledger.create', 'ledger.edit', 'ledger.delete',
-    'accounts.view', 'accounts.create', 'accounts.edit', 'accounts.delete',
-    'settings.view',
-    'notifications.view', 'notifications.manage',
-  ],
-
-  accountant: [
-    'dashboard.view',
-    'customers.view',
-    'suppliers.view',
-    'invoices.view', 'invoices.create', 'invoices.edit',
-    'payments.view', 'payments.create', 'payments.edit',
-    'treasury.view', 'treasury.create', 'treasury.approve', 'treasury.reconcile',
-    'reports.view', 'reports.profit_loss', 'reports.balance_sheet', 'reports.export',
-    'ledger.view', 'ledger.create', 'ledger.edit',
-    'accounts.view', 'accounts.create', 'accounts.edit',
-    'notifications.view',
-  ],
-
-  sales: [
-    'dashboard.view',
-    'customers.view', 'customers.create', 'customers.edit',
-    'products.view',
-    'inventory.view',
-    'pos.access', 'pos.checkout', 'pos.discount',
-    'invoices.view', 'invoices.create', 'invoices.send',
-    'payments.view', 'payments.create',
-    'notifications.view',
-  ],
-
-  warehouse: [
-    'dashboard.view',
-    'products.view', 'products.create', 'products.edit',
-    'inventory.view', 'inventory.create', 'inventory.edit', 'inventory.movements',
-    'suppliers.view',
-    'notifications.view',
-  ],
-
-  hr: [
-    'dashboard.view',
     'employees.view', 'employees.create', 'employees.edit',
     'employees.salary', 'employees.advances',
     'departments.view', 'departments.create', 'departments.edit',
     'leaves.view', 'leaves.create', 'leaves.approve', 'leaves.delete',
-    'notifications.view',
+
+    'inventory.view', 'inventory.create', 'inventory.edit', 'inventory.delete', 'inventory.movements',
+    'products.view', 'products.create', 'products.edit', 'products.price_edit',
+
+    'pos.access', 'pos.checkout', 'pos.refund', 'pos.discount', 'pos.void',
+
+    'invoices.view', 'invoices.create', 'invoices.edit', 'invoices.send',
+    'payments.view', 'payments.create', 'payments.edit',
+    'expenses.view', 'expenses.create', 'expenses.edit',
+    'treasury.view', 'treasury.create', 'treasury.approve',
+
+    'reports.view', 'reports.profit_loss', 'reports.balance_sheet', 'reports.export',
+    'ledger.view', 'ledger.create',
+    'accounts.view',
+    'debts.view', 'debts.create', 'debts.edit',
+
+    'notifications.view', 'notifications.manage',
+    // NO: users.*, settings.*, permissions.*
   ],
 
+  // ── CASHIER: نقطة البيع فقط
   cashier: [
-    'pos.access', 'pos.checkout', 'pos.refund',
+    'pos.access', 'pos.checkout', 'pos.refund', 'pos.discount',
+    'customers.view', 'customers.create',
     'products.view',
     'inventory.view',
-    'customers.view',
+    'invoices.view', 'invoices.create',
+    'payments.view', 'payments.create',
     'notifications.view',
+    // NO: employees, suppliers, reports, treasury, settings, users
   ],
+}
 
-  viewer: [
-    'dashboard.view',
-    'customers.view',
-    'suppliers.view',
-    'employees.view',
-    'products.view',
-    'inventory.view',
-    'invoices.view',
-    'payments.view',
-    'reports.view',
-    'notifications.view',
-  ],
+// ============================================
+// ROUTE → REQUIRED PERMISSION MAPPING
+// ============================================
+
+export const ROUTE_PERMISSIONS: Record<string, Permission> = {
+  '/dashboard':               'dashboard.view',
+  '/company':                 'company.view',
+  '/customers':               'customers.view',
+  '/suppliers':               'suppliers.view',
+  '/employees':               'employees.view',
+  '/departments':             'departments.view',
+  '/leaves':                  'leaves.view',
+  '/inventory':               'inventory.view',
+  '/inventory/movements':     'inventory.movements',
+  '/products':                'products.view',
+  '/pos/checkout':            'pos.access',
+  '/pos/history':             'invoices.view',
+  '/pos/refunds':             'pos.refund',
+  '/pos/products':            'products.view',
+  '/invoices':                'invoices.view',
+  '/purchases':               'invoices.view',
+  '/payments':                'payments.view',
+  '/expenses':                'expenses.view',
+  '/treasury':                'treasury.view',
+  '/reports':                 'reports.view',
+  '/reports/profit-loss':     'reports.profit_loss',
+  '/reports/balance-sheet':   'reports.balance_sheet',
+  '/general-ledger':          'ledger.view',
+  '/chart-of-accounts':       'accounts.view',
+  '/notifications':           'notifications.view',
+  '/settings':                'settings.view',
+  '/settings/company':        'settings.edit',
+  '/permissions':             'permissions.view',
+  '/users':                   'users.view',
+  '/audit-log':               'users.view',
 }
 
 // ============================================
@@ -236,8 +237,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
 // ============================================
 
 export function hasPermission(userRole: Role, permission: Permission): boolean {
-  const perms = ROLE_PERMISSIONS[userRole] ?? []
-  return perms.includes(permission)
+  return ROLE_PERMISSIONS[userRole]?.includes(permission) ?? false
 }
 
 export function hasAnyPermission(userRole: Role, permissions: Permission[]): boolean {
@@ -248,50 +248,30 @@ export function hasAllPermissions(userRole: Role, permissions: Permission[]): bo
   return permissions.every(p => hasPermission(userRole, p))
 }
 
-// Route → required permission mapping
-export const ROUTE_PERMISSIONS: Record<string, Permission> = {
-  '/dashboard':                 'dashboard.view',
-  '/company':                   'company.view',
-  '/customers':                 'customers.view',
-  '/suppliers':                 'suppliers.view',
-  '/employees':                 'employees.view',
-  '/departments':               'departments.view',
-  '/leaves':                    'leaves.view',
-  '/inventory':                 'inventory.view',
-  '/inventory/movements':       'inventory.movements',
-  '/products':                  'products.view',
-  '/pos/checkout':              'pos.access',
-  '/pos/history':               'invoices.view',
-  '/pos/refunds':               'pos.refund',
-  '/pos/products':              'products.view',
-  '/invoices':                  'invoices.view',
-  '/purchases':                 'invoices.view',
-  '/payments':                  'payments.view',
-  '/treasury':                  'treasury.view',
-  '/reports':                   'reports.view',
-  '/reports/profit-loss':       'reports.profit_loss',
-  '/reports/balance-sheet':     'reports.balance_sheet',
-  '/general-ledger':            'ledger.view',
-  '/chart-of-accounts':         'accounts.view',
-  '/expenses':                  'ledger.view',
-  '/notifications':             'notifications.view',
-  '/settings':                  'settings.view',
-  '/permissions':               'users.assign_roles',
-  '/users':                     'users.view',
-  '/audit-log':                 'users.view',
-}
-
 // ============================================
-// ROLE DISPLAY LABELS
+// ROLE DISPLAY HELPERS
 // ============================================
 
 export const ROLE_LABELS: Record<Role, { ar: string; en: string }> = {
-  super_admin: { ar: 'مدير النظام الأعلى', en: 'Super Admin' },
-  admin:       { ar: 'مدير',               en: 'Admin' },
-  accountant:  { ar: 'محاسب',              en: 'Accountant' },
-  sales:       { ar: 'مبيعات',             en: 'Sales' },
-  warehouse:   { ar: 'مستودع',             en: 'Warehouse' },
-  hr:          { ar: 'موارد بشرية',         en: 'HR' },
-  cashier:     { ar: 'أمين صندوق',          en: 'Cashier' },
-  viewer:      { ar: 'مشاهد',              en: 'Viewer' },
+  admin:   { ar: 'مدير النظام', en: 'Admin'   },
+  manager: { ar: 'مدير',        en: 'Manager' },
+  cashier: { ar: 'أمين صندوق', en: 'Cashier' },
+}
+
+export function getRoleLabel(role: Role | string): string {
+  const labels: Record<string, string> = {
+    admin:   'مدير النظام',
+    manager: 'مدير',
+    cashier: 'أمين صندوق',
+  }
+  return labels[role] ?? role
+}
+
+export function getRoleColor(role: Role | string): { bg: string; color: string } {
+  const colors: Record<string, { bg: string; color: string }> = {
+    admin:   { bg: '#F5F3FF', color: '#7C3AED' },
+    manager: { bg: '#EFF6FF', color: '#2563EB' },
+    cashier: { bg: '#FFF7ED', color: '#EA580C' },
+  }
+  return colors[role] ?? { bg: '#F1F5F9', color: '#64748B' }
 }

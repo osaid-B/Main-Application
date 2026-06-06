@@ -137,14 +137,9 @@ export default function Sidebar({
 
   const userName = user?.username ?? "Sara Halim";
   const roleLabels: Record<string, string> = {
-    super_admin: "مدير النظام الأعلى",
-    admin: "مدير",
-    accountant: "محاسب",
-    sales: "مبيعات",
-    warehouse: "مستودع",
-    hr: "موارد بشرية",
+    admin:   "مدير النظام",
+    manager: "مدير",
     cashier: "أمين صندوق",
-    viewer: "مشاهد",
   };
   const userRole = user?.role ? (isArabic ? roleLabels[user.role] ?? user.role : user.role) : (isArabic ? "المالك" : "Owner");
 

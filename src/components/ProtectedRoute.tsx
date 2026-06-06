@@ -28,14 +28,9 @@ export default function ProtectedRoute({ permission, children }: ProtectedRouteP
 function AccessDenied({ user, logout }: { user: { username: string; role: string } | null; logout: () => void }) {
   const navigate = useNavigate();
   const roleLabels: Record<string, string> = {
-    super_admin: "مدير النظام الأعلى",
-    admin: "مدير",
-    accountant: "محاسب",
-    sales: "مبيعات",
-    warehouse: "مستودع",
-    hr: "موارد بشرية",
+    admin:   "مدير النظام",
+    manager: "مدير",
     cashier: "أمين صندوق",
-    viewer: "مشاهد",
   };
 
   const handleLogout = () => {

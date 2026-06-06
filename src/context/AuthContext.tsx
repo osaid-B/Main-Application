@@ -51,25 +51,27 @@ interface DjangoMeResponse {
   role: string | null;
 }
 
-// Maps backend role codes to frontend UserRole.
-// Includes legacy PascalCase codes for backward compatibility.
+// Maps backend role codes to frontend UserRole (3-role system).
 const BACKEND_ROLE_MAP: Record<string, UserRole> = {
-  super_admin:  "super_admin",
-  admin:        "admin",
-  Admin:        "admin",         // legacy
-  manager:      "admin",         // legacy → maps to admin
-  Manager:      "admin",         // legacy
-  accountant:   "accountant",
-  finance:      "accountant",    // legacy
-  Finance:      "accountant",    // legacy
-  sales:        "sales",
-  warehouse:    "warehouse",
-  factory:      "warehouse",     // legacy
-  Factory:      "warehouse",     // legacy
-  hr:           "hr",
-  cashier:      "cashier",
-  Cashier:      "cashier",       // legacy
-  viewer:       "viewer",
+  // admin tier
+  admin:       "admin",
+  Admin:       "admin",
+  super_admin: "admin",
+  // manager tier
+  manager:     "manager",
+  Manager:     "manager",
+  accountant:  "manager",
+  finance:     "manager",
+  Finance:     "manager",
+  sales:       "manager",
+  warehouse:   "manager",
+  factory:     "manager",
+  Factory:     "manager",
+  hr:          "manager",
+  // cashier tier
+  cashier:     "cashier",
+  Cashier:     "cashier",
+  viewer:      "cashier",
 };
 
 function mapBackendRole(code: string | null): UserRole {
@@ -87,10 +89,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const AUTH_STORAGE_KEY = "dashboard_auth_user";
 
-const VALID_ROLES: UserRole[] = [
-  "super_admin", "admin", "accountant", "sales",
-  "warehouse", "hr", "cashier", "viewer",
-];
+const VALID_ROLES: UserRole[] = ["admin", "manager", "cashier"];
 
 function isValidUser(value: unknown): value is User {
   return (
@@ -104,27 +103,30 @@ function isValidUser(value: unknown): value is User {
 }
 
 // Mock credentials — used when neither Django nor Supabase is configured.
-// Includes legacy usernames mapped to the closest new role.
 const CREDENTIALS: Record<string, { password: string; role: UserRole }> = {
-  // Legacy usernames (still work)
-  admin:   { password: "1234", role: "super_admin" },
-  manager: { password: "1234", role: "admin" },
-  finance: { password: "1234", role: "accountant" },
-  factory: { password: "1234", role: "warehouse" },
-  cashier: { password: "1234", role: "cashier" },
-  // New role usernames
-  super_admin: { password: "1234", role: "super_admin" },
-  accountant:  { password: "1234", role: "accountant" },
-  sales:       { password: "1234", role: "sales" },
-  warehouse:   { password: "1234", role: "warehouse" },
-  hr:          { password: "1234", role: "hr" },
-  viewer:      { password: "1234", role: "viewer" },
-  // Email credentials
-  "admin@atlas-erp.com":      { password: "Admin1234!",      role: "super_admin" },
-  "manager@atlas-erp.com":    { password: "Manager1234!",    role: "admin" },
-  "finance@atlas-erp.com":    { password: "Finance1234!",    role: "accountant" },
-  "factory@atlas-erp.com":    { password: "Factory1234!",    role: "warehouse" },
-  "cashier@atlas-erp.com":    { password: "Cashier1234!",    role: "cashier" },
+  // Primary accounts (new 3-role system)
+  admin:      { password: "1234",   role: "admin"   },
+  manager:    { password: "1234",   role: "manager" },
+  cashier:    { password: "1234",   role: "cashier" },
+  // Legacy usernames → mapped to closest role
+  super_admin: { password: "1234",  role: "admin"   },
+  finance:     { password: "1234",  role: "manager" },
+  factory:     { password: "1234",  role: "manager" },
+  accountant:  { password: "1234",  role: "manager" },
+  sales:       { password: "1234",  role: "manager" },
+  warehouse:   { password: "1234",  role: "manager" },
+  hr:          { password: "1234",  role: "manager" },
+  viewer:      { password: "1234",  role: "cashier" },
+  // Email credentials (spec test accounts)
+  "admin@atlas.ps":    { password: "123456", role: "admin"   },
+  "manager@atlas.ps":  { password: "123456", role: "manager" },
+  "cashier@atlas.ps":  { password: "123456", role: "cashier" },
+  // Legacy email credentials
+  "admin@atlas-erp.com":   { password: "Admin1234!",   role: "admin"   },
+  "manager@atlas-erp.com": { password: "Manager1234!", role: "manager" },
+  "finance@atlas-erp.com": { password: "Finance1234!", role: "manager" },
+  "factory@atlas-erp.com": { password: "Factory1234!", role: "manager" },
+  "cashier@atlas-erp.com": { password: "Cashier1234!", role: "cashier" },
 };
 
 function readStoredUser(): User | null {

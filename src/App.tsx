@@ -135,12 +135,10 @@ function AppRoutes() {
           {/* Finance & Accounting */}
           <Route path="/general-ledger" element={<GeneralLedger />} />
           <Route path="/chart-of-accounts" element={<ChartOfAccounts />} />
-          <Route element={<RoleGuard roles={["super_admin", "admin", "accountant"]} />}>
+          <Route element={<RoleGuard roles={["admin", "manager"]} />}>
             <Route path="/reports" element={<Reports />} />
             <Route path="/reports/profit-loss" element={<ProfitLoss />} />
             <Route path="/reports/balance-sheet" element={<BalanceSheet />} />
-          </Route>
-          <Route element={<RoleGuard roles={["super_admin", "admin", "accountant"]} />}>
             <Route path="/expenses" element={<Expenses />} />
           </Route>
 
@@ -154,7 +152,7 @@ function AppRoutes() {
 
           {/* Org & Access */}
           <Route path="/departments" element={<Departments />} />
-          <Route element={<RoleGuard roles={["super_admin", "admin"]} />}>
+          <Route element={<RoleGuard roles={["admin"]} />}>
             <Route path="/permissions" element={<Permissions />} />
             <Route path="/users" element={<UsersPage />} />
           </Route>
@@ -165,7 +163,7 @@ function AppRoutes() {
 
           {/* Factory workspace — Factory role + Admin */}
           <Route path="/factory" element={<Navigate to="/factory/dashboard" replace />} />
-          <Route element={<RoleGuard roles={["super_admin", "admin", "warehouse"]} />}>
+          <Route element={<RoleGuard roles={["admin", "manager"]} />}>
             <Route path="/factory/dashboard" element={<FactoryDashboard />} />
             <Route path="/factory/orders" element={<FactoryOrders />} />
             <Route path="/factory/boms" element={<FactoryBoms />} />

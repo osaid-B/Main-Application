@@ -21,14 +21,9 @@ interface StoredUser {
 }
 
 const DEFAULT_USERS: StoredUser[] = [
-  { id: "1", username: "super_admin", email: "admin@atlas-erp.com", role: "super_admin", active: true, lastLogin: new Date().toISOString(), createdAt: "2025-01-01" },
-  { id: "2", username: "admin", email: "manager@atlas-erp.com", role: "admin", active: true, lastLogin: new Date().toISOString(), createdAt: "2025-01-01" },
-  { id: "3", username: "accountant", email: "finance@atlas-erp.com", role: "accountant", active: true, lastLogin: new Date().toISOString(), createdAt: "2025-01-01" },
-  { id: "4", username: "sales", email: "sales@atlas-erp.com", role: "sales", active: true, lastLogin: new Date().toISOString(), createdAt: "2025-02-01" },
-  { id: "5", username: "warehouse", email: "factory@atlas-erp.com", role: "warehouse", active: true, lastLogin: new Date().toISOString(), createdAt: "2025-02-01" },
-  { id: "6", username: "hr", email: "hr@atlas-erp.com", role: "hr", active: true, lastLogin: new Date().toISOString(), createdAt: "2025-03-01" },
-  { id: "7", username: "cashier", email: "cashier@atlas-erp.com", role: "cashier", active: true, lastLogin: new Date().toISOString(), createdAt: "2025-03-01" },
-  { id: "8", username: "viewer", email: "viewer@atlas-erp.com", role: "viewer", active: true, lastLogin: new Date().toISOString(), createdAt: "2025-04-01" },
+  { id: "1", username: "admin",   email: "admin@atlas.ps",   role: "admin",   active: true, lastLogin: new Date().toISOString(), createdAt: "2025-01-01" },
+  { id: "2", username: "manager", email: "manager@atlas.ps", role: "manager", active: true, lastLogin: new Date().toISOString(), createdAt: "2025-01-01" },
+  { id: "3", username: "cashier", email: "cashier@atlas.ps", role: "cashier", active: true, lastLogin: new Date().toISOString(), createdAt: "2025-02-01" },
 ];
 
 function loadUsers(): StoredUser[] {
@@ -43,10 +38,7 @@ function saveUsers(users: StoredUser[]) {
   localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
 }
 
-const ALL_ROLES: Role[] = [
-  "super_admin", "admin", "accountant", "sales",
-  "warehouse", "hr", "cashier", "viewer",
-];
+const ALL_ROLES: Role[] = ["admin", "manager", "cashier"];
 
 export default function UsersPage() {
   const { user: currentUser } = useAuth();
