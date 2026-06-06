@@ -1,4 +1,4 @@
-import { Navigate, Outlet, useLocation } from "react-router-dom";
+import { Navigate, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { ROUTE_PERMISSIONS } from "../lib/permissions";
 import type { Permission } from "../lib/permissions";
@@ -9,7 +9,7 @@ interface ProtectedRouteProps {
 }
 
 export default function ProtectedRoute({ permission, children }: ProtectedRouteProps) {
-  const { user, isAuthenticated, can } = useAuth();
+  const { user, isAuthenticated, can, logout } = useAuth();
   const location = useLocation();
 
   if (!isAuthenticated) {
@@ -19,13 +19,14 @@ export default function ProtectedRoute({ permission, children }: ProtectedRouteP
   const requiredPermission = permission || ROUTE_PERMISSIONS[location.pathname];
 
   if (requiredPermission && !can(requiredPermission)) {
-    return <AccessDenied user={user} />;
+    return <AccessDenied user={user} logout={logout} />;
   }
 
   return children ? <>{children}</> : <Outlet />;
 }
 
-function AccessDenied({ user }: { user: { username: string; role: string } | null }) {
+function AccessDenied({ user, logout }: { user: { username: string; role: string } | null; logout: () => void }) {
+  const navigate = useNavigate();
   const roleLabels: Record<string, string> = {
     super_admin: "مدير النظام الأعلى",
     admin: "مدير",
@@ -35,6 +36,11 @@ function AccessDenied({ user }: { user: { username: string; role: string } | nul
     hr: "موارد بشرية",
     cashier: "أمين صندوق",
     viewer: "مشاهد",
+  };
+
+  const handleLogout = () => {
+    logout();
+    navigate("/login", { replace: true });
   };
 
   return (
@@ -58,9 +64,24 @@ function AccessDenied({ user }: { user: { username: string; role: string } | nul
           ليس لديك صلاحية للوصول إلى هذه الصفحة.
           تواصل مع مدير النظام لطلب الصلاحيات المطلوبة.
         </p>
-        <p style={{ fontSize: 12, color: "#94A3B8", margin: 0 }}>
+        <p style={{ fontSize: 12, color: "#94A3B8", margin: "0 0 20px" }}>
           دورك الحالي: <strong>{roleLabels[user?.role ?? ""] || user?.role || "غير محدد"}</strong>
         </p>
+        <button
+          onClick={handleLogout}
+          style={{
+            padding: "8px 24px",
+            background: "#EF4444",
+            color: "#fff",
+            border: "none",
+            borderRadius: 8,
+            fontSize: 14,
+            fontWeight: 600,
+            cursor: "pointer",
+          }}
+        >
+          تسجيل الخروج
+        </button>
       </div>
     </div>
   );
